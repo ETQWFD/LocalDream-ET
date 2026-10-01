@@ -2100,14 +2100,23 @@ fun ModelRunScreen(
                             }
                             // Inline aspect-ratio picker on the generation screen
                             // (no need to open advanced settings). SDXL uses its
-                            // padding presets; DiT maps the ratio onto snapped W/H.
-                            if (model?.usesFixedCanvas == true || model?.isDit == true) {
-                            val ratioPresets = if (model?.isDit == true) {
-                                listOf("1:1", "3:4", "4:3", "9:16", "16:9")
-                            } else {
-                                listOf("1:1", "3:4", "4:3")
+                            // padding presets; DiT/SD1.5 map the ratio onto W/H.
+                            val isDitModel = model?.isDit == true
+                            val isFixedCanvasModel = model?.usesFixedCanvas == true
+                            val isSd15CpuModel =
+                                model?.runOnCpu == true && !isFixedCanvasModel && !isDitModel
+                            if (isFixedCanvasModel || isDitModel || isSd15CpuModel) {
+                            val ratioPresets = when {
+                                isDitModel -> listOf("1:1", "3:4", "4:3", "9:16", "16:9")
+                                isSd15CpuModel -> SD15_ASPECT_PRESETS
+                                else -> listOf("1:1", "3:4", "4:3")
                             }
-                            val ratioIsCustom = aspectRatio !in ratioPresets
+                            val selectedRatio = if (isSd15CpuModel) {
+                                inferAspectRatioString(currentWidth, currentHeight)
+                            } else {
+                                aspectRatio
+                            }
+                            val ratioIsCustom = selectedRatio !in ratioPresets
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -2122,28 +2131,37 @@ fun ModelRunScreen(
                                 )
                                 ratioPresets.forEach { ratio ->
                                     FilterChip(
-                                        selected = aspectRatio == ratio,
+                                        selected = selectedRatio == ratio,
                                         onClick = {
-                                            if (!isRunning && aspectRatio != ratio) {
-                                                if (model?.isDit == true) {
-                                                    val parts = ratio.split(":")
-                                                    val rw = parts.getOrNull(0)?.toIntOrNull() ?: 1
-                                                    val rh = parts.getOrNull(1)?.toIntOrNull() ?: 1
-                                                    val base = minOf(currentWidth, currentHeight)
-                                                        .coerceIn(DIT_MIN_SIZE, DIT_MAX_SIZE)
-                                                    val longer = (base * maxOf(rw, rh) / minOf(rw, rh))
-                                                        .coerceIn(DIT_MIN_SIZE, DIT_MAX_SIZE)
-                                                    currentWidth = snapDitSize(
-                                                        (if (rw >= rh) longer.toFloat() else base.toFloat()),
-                                                    )
-                                                    currentHeight = snapDitSize(
-                                                        (if (rh >= rw) longer.toFloat() else base.toFloat()),
-                                                    )
-                                                    aspectRatio = inferAspectRatioString(
-                                                        currentWidth, currentHeight,
-                                                    )
-                                                } else {
-                                                    aspectRatio = ratio
+                                            if (!isRunning && selectedRatio != ratio) {
+                                                when {
+                                                    isDitModel -> {
+                                                        val parts = ratio.split(":")
+                                                        val rw = parts.getOrNull(0)?.toIntOrNull() ?: 1
+                                                        val rh = parts.getOrNull(1)?.toIntOrNull() ?: 1
+                                                        val base = minOf(currentWidth, currentHeight)
+                                                            .coerceIn(DIT_MIN_SIZE, DIT_MAX_SIZE)
+                                                        val longer = (base * maxOf(rw, rh) / minOf(rw, rh))
+                                                            .coerceIn(DIT_MIN_SIZE, DIT_MAX_SIZE)
+                                                        currentWidth = snapDitSize(
+                                                            (if (rw >= rh) longer.toFloat() else base.toFloat()),
+                                                        )
+                                                        currentHeight = snapDitSize(
+                                                            (if (rh >= rw) longer.toFloat() else base.toFloat()),
+                                                        )
+                                                        aspectRatio = inferAspectRatioString(
+                                                            currentWidth, currentHeight,
+                                                        )
+                                                    }
+                                                    isSd15CpuModel -> {
+                                                        val (w, h) = sd15SizeForRatio(ratio)
+                                                        currentWidth = w
+                                                        currentHeight = h
+                                                        aspectRatio = ratio
+                                                    }
+                                                    else -> {
+                                                        aspectRatio = ratio
+                                                    }
                                                 }
                                                 clearImg2imgState()
                                                 saveAllFields()
@@ -2153,7 +2171,7 @@ fun ModelRunScreen(
                                         enabled = !isRunning,
                                     )
                                 }
-                                if (model?.isDit != true) {
+                                if (!isDitModel && !isSd15CpuModel) {
                                     FilterChip(
                                         selected = ratioIsCustom,
                                         onClick = {
@@ -2215,6 +2233,15 @@ fun ModelRunScreen(
                                         ) {
                                             pendingResolution = resolution
                                             showResolutionChangeDialog = true
+                                        }
+                                    },
+                                    onSd15AspectSelected = { ratio ->
+                                        if (!isRunning) {
+                                            val (w, h) = sd15SizeForRatio(ratio)
+                                            currentWidth = w
+                                            currentHeight = h
+                                            aspectRatio = inferAspectRatioString(w, h)
+                                            saveAllFields()
                                         }
                                     },
                                     onSchedulerChange = { value ->

@@ -532,4 +532,7 @@
     <string name="err_model_file_missing">模型文件缺失，请重新下载该模型。</string>
     <string name="search_models_placeholder">搜索模型…</string>
     <string name="search_models_empty">没有找到匹配的模型。</string>
+    <string name="conversion_failed_detail">转换失败（退出码 %2$d）：%1$s</string>
+    <string name="runtime_label">运行方式</string>
+    <string name="output_aspect_ratio">输出画面比例</string>
 </resources>

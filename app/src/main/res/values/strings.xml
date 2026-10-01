@@ -542,4 +542,7 @@
     <string name="err_model_file_missing">Model file missing. Please download the model again.</string>
     <string name="search_models_placeholder">搜索模型…</string>
     <string name="search_models_empty">No matching models.</string>
+    <string name="conversion_failed_detail">Conversion failed (code %2$d): %1$s</string>
+    <string name="runtime_label">Runtime</string>
+    <string name="output_aspect_ratio">Output aspect ratio</string>
 </resources>

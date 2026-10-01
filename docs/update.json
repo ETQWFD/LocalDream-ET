@@ -1,7 +1,7 @@
 {
-  "versionCode": 78,
-  "versionName": "3.0.0-et.4",
+  "versionCode": 79,
+  "versionName": "3.0.0-et.5",
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
-  "size": 148368683,
-  "releaseNotes": "ET 定制版 v3.0.0-et.4\n• 修复 32 位(armeabi-v7a)手机 CPU 生成图片失败（无法连接 127.0.0.1:8081）：系统库路径按进程 ABI 自动选择（32 位用 /system/lib 与 /vendor/lib/egl，不再误用 lib64），并确保原生引擎具备可执行权限；v7a 引擎依赖的 GLESv2/EGL 驱动现在能正常加载\n• 原生引擎若启动失败，会在界面直接显示真实原因（模型文件缺失 / 驱动加载失败等），不再只有连接失败\n• 模型下载页新增搜索框，可按名称/描述搜索模型（含 Qwen Image 2.1 UC Q4_0）\n• Prompt empty 等英文报错汉化\n• 开发者：ET"
+  "size": 148378263,
+  "releaseNotes": "ET 定制版 v3.0.0-et.5\n• 修复『添加自定义模型』在 32 位手机转换失败：转换器同样按进程位数自动选择 /system/lib 或 lib64，并补齐可执行权限，GLES/EGL 驱动可正常加载；转换失败时显示原生真实原因（格式不支持/算子缺失等），不再笼统提示『请使用 SD1.5』\n• 生成设置新增输出画面比例：SD1.5（CPU/GPU）支持 1:1、2:3、3:4、4:3、3:2、9:16、16:9，自动换算为 8 的倍数、长边 512 的合法分辨率；生成页与高级设置都可直接选择\n• 运行方式(Runtime)等设置项汉化\n• 开发者：ET"
 }

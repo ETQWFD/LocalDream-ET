@@ -3685,6 +3685,13 @@ suspend fun convertCustomModel(
         if (!executableFile.exists()) {
             throw Exception("Executable not found: ${executableFile.absolutePath}")
         }
+        // Some 32-bit ROMs extract native libs without execute/read bits.
+        try {
+            executableFile.setReadable(true, false)
+            executableFile.setExecutable(true, false)
+        } catch (e: Exception) {
+            Log.w("ModelConvert", "setExecutable failed: ${e.message}")
+        }
 
         var command = listOf(
             executableFile.absolutePath,
@@ -3699,11 +3706,16 @@ suspend fun convertCustomModel(
             command += listOf("--clip_skip_2")
         }
         val env = mutableMapOf<String, String>()
+        // Match the system lib namespace to the process ABI: a 32-bit
+        // (armeabi-v7a) converter needs /system/lib and /vendor/lib/egl for its
+        // GLESv2/EGL dependencies; pointing it at lib64 makes it fail to start.
+        val is64BitProc = nativeDir.contains("64")
+        val sl = if (is64BitProc) "lib64" else "lib"
         val systemLibPaths = listOf(
             nativeDir,
-            "/system/lib64",
-            "/vendor/lib64",
-            "/vendor/lib64/egl",
+            "/system/$sl",
+            "/vendor/$sl",
+            "/vendor/$sl/egl",
         ).joinToString(":")
 
         env["LD_LIBRARY_PATH"] = systemLibPaths
@@ -3717,10 +3729,15 @@ suspend fun convertCustomModel(
 
         val process = processBuilder.start()
 
+        val convertTail = java.util.concurrent.ConcurrentLinkedDeque<String>()
         process.inputStream.bufferedReader().use { reader ->
             var line: String?
             while (reader.readLine().also { line = it } != null) {
                 Log.i("ModelConvert", "Convert: $line")
+                line?.let {
+                    convertTail.addLast(it)
+                    while (convertTail.size > 15) convertTail.pollFirst()
+                }
                 withContext(Dispatchers.Main) {
                     onProgress(context.getString(R.string.converting_with_line, line.orEmpty()))
                 }
@@ -3759,7 +3776,17 @@ suspend fun convertCustomModel(
         } else {
             modelDir.deleteRecursively()
             withContext(Dispatchers.Main) {
-                onError(context.getString(R.string.conversion_need_sd15))
+                // Surface the real native reason (unsupported format / missing
+                // op / driver) so "convert failed" is actionable, not a blanket
+                // "must be SD1.5" message.
+                val detail = convertTail.joinToString(" / ").takeLast(400)
+                onError(
+                    if (detail.isBlank()) {
+                        context.getString(R.string.conversion_need_sd15)
+                    } else {
+                        context.getString(R.string.conversion_failed_detail, detail, exitCode)
+                    },
+                )
             }
         }
     } catch (e: Exception) {

@@ -72,6 +72,7 @@ internal fun AdvancedSettingsDialog(
     onAspectRatioSelected: (String) -> Unit,
     onCustomAspectRatioClick: () -> Unit,
     onResolutionSelected: (Resolution) -> Unit,
+    onSd15AspectSelected: (String) -> Unit = {},
     onDitWidthChange: (Float) -> Unit = {},
     onDitHeightChange: (Float) -> Unit = {},
     onSchedulerChange: (String) -> Unit,
@@ -362,12 +363,48 @@ internal fun AdvancedSettingsDialog(
                 if (runOnCpu && !isSdxl) {
                     Column {
                         Text(
+                            stringResource(R.string.output_aspect_ratio),
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        val currentSd15Ratio =
+                            inferAspectRatioString(currentWidth, currentHeight)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(
+                                ButtonGroupDefaults.ConnectedSpaceBetween,
+                            ),
+                        ) {
+                            SD15_ASPECT_PRESETS.forEachIndexed { index, ratio ->
+                                val (w, h) = sd15SizeForRatio(ratio)
+                                val shapes = when (index) {
+                                    0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
+                                    SD15_ASPECT_PRESETS.lastIndex ->
+                                        ButtonGroupDefaults.connectedTrailingButtonShapes()
+                                    else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
+                                }
+                                ToggleButton(
+                                    checked = currentSd15Ratio == ratio,
+                                    onCheckedChange = { checked ->
+                                        if (checked) onSd15AspectSelected(ratio)
+                                    },
+                                    shapes = shapes,
+                                    enabled = !isRunning,
+                                ) {
+                                    Text(ratio)
+                                }
+                            }
+                        }
+                        Text(
                             stringResource(
                                 R.string.image_size,
                                 currentWidth,
                                 currentHeight,
                             ),
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 2.dp),
                         )
                         Slider(
                             value = currentWidth.toFloat(),
@@ -387,7 +424,7 @@ internal fun AdvancedSettingsDialog(
                         ),
                     ) {
                         Text(
-                            "Runtime",
+                            stringResource(R.string.runtime_label),
                             style = MaterialTheme.typography.bodyMedium,
                             modifier = Modifier.padding(end = 4.dp),
                         )

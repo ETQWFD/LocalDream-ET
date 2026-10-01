@@ -254,6 +254,33 @@ const val DIT_SIZE_STEPS = DitResolution.SLIDER_STEPS
 
 fun snapDitSize(value: Float): Int = DitResolution.snap(value)
 
+// SD1.5 (CPU/GPU, MNN) renders directly at width x height. Sizes must be a
+// multiple of 8 and fit 128..512. Given an aspect "W:H", keep the longest edge
+// at [longEdge] (default 512) and round the short edge to a multiple of 8.
+private const val SD15_MIN_SIZE = 128
+private const val SD15_MAX_SIZE = 512
+private const val SD15_SIZE_ALIGN = 8
+
+fun sd15SizeForRatio(ratio: String, longEdge: Int = SD15_MAX_SIZE): Pair<Int, Int> {
+    val parts = ratio.split(":")
+    val rw = parts.getOrNull(0)?.toIntOrNull() ?: 1
+    val rh = parts.getOrNull(1)?.toIntOrNull() ?: 1
+    if (rw <= 0 || rh <= 0) return Pair(longEdge, longEdge)
+    val edge = longEdge.coerceIn(SD15_MIN_SIZE, SD15_MAX_SIZE)
+    fun align(v: Int): Int {
+        val a = ((v + SD15_SIZE_ALIGN / 2) / SD15_SIZE_ALIGN) * SD15_SIZE_ALIGN
+        return a.coerceIn(SD15_MIN_SIZE, SD15_MAX_SIZE)
+    }
+    return if (rw >= rh) {
+        Pair(edge, align(edge * rh / rw))
+    } else {
+        Pair(align(edge * rw / rh), edge)
+    }
+}
+
+// Aspect presets offered for SD1.5 CPU/GPU models (portrait, square, landscape).
+val SD15_ASPECT_PRESETS = listOf("1:1", "2:3", "3:4", "4:3", "3:2", "9:16", "16:9")
+
 /**
  * GCD-reduces (width, height) into a "W:H" aspect-ratio string.
  * Used by reproduce/import paths to recover an aspect from a recorded result size.
