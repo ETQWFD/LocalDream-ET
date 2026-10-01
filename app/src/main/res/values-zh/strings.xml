@@ -527,4 +527,9 @@
     <string name="denoise_strength_fmt">[图生图] 重绘幅度：%1$.2f</string>
     <string name="basic_cfg_fmt">CFG：%1$.1f</string>
     <string name="img2img_short">图生图</string>
+    <string name="err_prompt_empty">提示词为空，请先输入图像生成提示。</string>
+    <string name="err_backend_connect">本地推理引擎启动失败（无法连接 8081）。可能是模型未下载完整、文件损坏，或当前机型不兼容该模型。</string>
+    <string name="err_model_file_missing">模型文件缺失，请重新下载该模型。</string>
+    <string name="search_models_placeholder">搜索模型…</string>
+    <string name="search_models_empty">没有找到匹配的模型。</string>
 </resources>

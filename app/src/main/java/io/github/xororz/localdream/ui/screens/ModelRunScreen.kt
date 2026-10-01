@@ -1727,7 +1727,7 @@ fun ModelRunScreen(
 
             is GenerationState.Error -> {
                 intermediateBitmap = null
-                errorMessage = state.message
+                errorMessage = localizeEngineError(context, state.message)
                 isRunning = false
                 progress = 0f
                 generationStartTime = null
@@ -4154,5 +4154,20 @@ private fun PromptCountLabel(label: String, count: Int, max: Int, showCount: Boo
             Spacer(Modifier.width(6.dp))
             Text(if (max == 0) "$count/∞" else "$count/$max")
         }
+    }
+}
+
+// Maps raw native/backend error strings to localized, user-facing messages.
+private fun localizeEngineError(context: android.content.Context, raw: String?): String? {
+    if (raw == null) return null
+    val l = raw.lowercase()
+    return when {
+        l.contains("prompt empty") ->
+            context.getString(io.github.xororz.localdream.R.string.err_prompt_empty)
+        l.contains("failed to connect to") && l.contains("8081") ->
+            context.getString(io.github.xororz.localdream.R.string.err_backend_connect)
+        l.contains("file not found") ->
+            context.getString(io.github.xororz.localdream.R.string.err_model_file_missing)
+        else -> raw
     }
 }

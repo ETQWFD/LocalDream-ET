@@ -280,6 +280,7 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
     // once and kept in sync as the user pins/unpins/renames.
     var pinnedIds by remember { mutableStateOf(PinnedModels.get(context)) }
     var renameTarget by remember { mutableStateOf<Model?>(null) }
+    var modelSearchQuery by remember { mutableStateOf("") }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scrollBehavior =
@@ -412,6 +413,21 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
     }
     val npuModels = remember(listedModels, pinnedIds) {
         PinnedModels.sort(listedModels.filter { !it.runOnCpu }, pinnedIds)
+    }
+    val searchQ = modelSearchQuery.trim().lowercase()
+    val filteredCpuModels = remember(cpuModels, searchQ) {
+        if (searchQ.isEmpty()) cpuModels else cpuModels.filter {
+            it.name.lowercase().contains(searchQ) ||
+                it.id.lowercase().contains(searchQ) ||
+                it.description.lowercase().contains(searchQ)
+        }
+    }
+    val filteredNpuModels = remember(npuModels, searchQ) {
+        if (searchQ.isEmpty()) npuModels else npuModels.filter {
+            it.name.lowercase().contains(searchQ) ||
+                it.id.lowercase().contains(searchQ) ||
+                it.description.lowercase().contains(searchQ)
+        }
     }
 
     val lastViewedPage = remember {
@@ -1051,17 +1067,46 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                 }
             }
 
+            OutlinedTextField(
+                value = modelSearchQuery,
+                onValueChange = { modelSearchQuery = it },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                placeholder = { Text(stringResource(R.string.search_models_placeholder)) },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                singleLine = true,
+                trailingIcon = {
+                    if (modelSearchQuery.isNotEmpty()) {
+                        IconButton(onClick = { modelSearchQuery = "" }) {
+                            Icon(Icons.Default.Clear, contentDescription = null)
+                        }
+                    }
+                },
+            )
+
             HorizontalPager(
                 state = pagerState,
                 modifier = Modifier.weight(1f),
             ) { page ->
-                val models = if (page == 0) cpuModels else npuModels
+                val models = if (page == 0) filteredCpuModels else filteredNpuModels
 
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(12.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
+                    if (searchQ.isNotEmpty() && models.isEmpty()) {
+                        item {
+                            Text(
+                                stringResource(R.string.search_models_empty),
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(24.dp),
+                            )
+                        }
+                    }
                     if (page == 0 && !remoteActive) {
                         item {
                             AddCustomModelButton(

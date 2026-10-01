@@ -483,6 +483,15 @@ class BackendService : Service() {
                 Log.e(TAG, "error: executable does not exist: ${executableFile.absolutePath}")
                 return false
             }
+            // Native libs are extracted without the execute bit on some
+            // 32-bit devices/ROMs; exec-ing then fails instantly and 8081 never
+            // opens. Make it explicitly executable (owner + group).
+            try {
+                executableFile.setReadable(true, false)
+                executableFile.setExecutable(true, false)
+            } catch (e: Exception) {
+                Log.w(TAG, "setExecutable failed: ${e.message}")
+            }
 
             val preferences = this.getSharedPreferences("app_prefs", MODE_PRIVATE)
             val useImg2img = preferences.getBoolean("use_img2img", true)
@@ -589,22 +598,28 @@ class BackendService : Service() {
             }
             val env = mutableMapOf<String, String>()
 
+            // Pick the system library namespace matching the process ABI. A
+            // 32-bit (armeabi-v7a) process resolves /system/lib and /vendor/lib;
+            // pointing it at lib64 prevents the GLES/EGL driver from loading and
+            // the native server exits before it can bind 8081.
+            val is64Bit = nativeDir.contains("64")
+            val sysLib = if (is64Bit) "lib64" else "lib"
             val systemLibPaths = mutableListOf(
                 runtimeDir.absolutePath,
-                "/system/lib64",
-                "/vendor/lib64",
-                "/vendor/lib64/egl",
+                "/system/$sysLib",
+                "/vendor/$sysLib",
+                "/vendor/$sysLib/egl",
             )
             try {
-                val maliSymlink = File("/system/vendor/lib64/egl/libGLES_mali.so")
+                val maliSymlink = File("/system/vendor/$sysLib/egl/libGLES_mali.so")
                 if (maliSymlink.exists()) {
                     val realPath = maliSymlink.canonicalPath
                     val soc = realPath.split("/").getOrNull(realPath.split("/").size - 2)
 
                     if (soc != null) {
                         val socPaths = listOf(
-                            "/vendor/lib64/$soc",
-                            "/vendor/lib64/egl/$soc",
+                            "/vendor/$sysLib/$soc",
+                            "/vendor/$sysLib/egl/$soc",
                         )
 
                         socPaths.forEach { path ->
@@ -668,11 +683,19 @@ class BackendService : Service() {
 
     private fun startMonitorThread(proc: Process) {
         Thread {
+            // Keep the last native log lines so a startup crash (e.g. a missing
+            // model file or a failed driver dlopen) reports the real reason
+            // instead of a bare "connection refused / exit code".
+            val tail = java.util.concurrent.ConcurrentLinkedDeque<String>()
             val exitCode = try {
                 proc.inputStream.bufferedReader().use { reader ->
                     var line: String?
                     while (reader.readLine().also { line = it } != null) {
                         Log.i(TAG, "Backend: $line")
+                        line?.let {
+                            tail.addLast(it)
+                            while (tail.size > 12) tail.pollFirst()
+                        }
                     }
                 }
                 proc.waitFor()
@@ -688,9 +711,14 @@ class BackendService : Service() {
             // we didn't intentionally stop it; a torn-down or superseded process
             // exiting is expected and must not poison the shared backendState.
             if (isLiveCrash(proc)) {
+                val detail = tail.joinToString(" / ").takeLast(600)
                 updateState(
                     BackendState.Error(
-                        "Backend process exited with code: $exitCode",
+                        if (detail.isBlank()) {
+                            "Backend process exited with code: $exitCode"
+                        } else {
+                            "Backend exited ($exitCode): $detail"
+                        },
                         servingModelId.value,
                     ),
                 )

@@ -537,4 +537,9 @@
     <string name="denoise_strength_fmt">[img2img] Denoise Strength: %1$.2f</string>
     <string name="basic_cfg_fmt">CFG: %1$.1f</string>
     <string name="img2img_short">img2img</string>
+    <string name="err_prompt_empty">Prompt is empty. Please enter a prompt.</string>
+    <string name="err_backend_connect">Local generation engine failed to start (127.0.0.1:8081). The model may be incomplete or this device is incompatible.</string>
+    <string name="err_model_file_missing">Model file missing. Please download the model again.</string>
+    <string name="search_models_placeholder">搜索模型…</string>
+    <string name="search_models_empty">No matching models.</string>
 </resources>
