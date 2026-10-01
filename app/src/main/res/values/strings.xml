@@ -545,4 +545,8 @@
     <string name="conversion_failed_detail">Conversion failed (code %2$d): %1$s</string>
     <string name="runtime_label">Runtime</string>
     <string name="output_aspect_ratio">Output aspect ratio</string>
+    <string name="realisticvision_description">Realistic photorealistic SD1.5 model (uncensored-friendly), converted on device</string>
+    <string name="counterfeit_description">Anime SD1.5 model (uncensored-friendly), converted on device</string>
+    <string name="downloading_converting">Downloading &amp; converting model…</string>
+    <string name="model_download_failed">Model download failed: %1$s</string>
 </resources>

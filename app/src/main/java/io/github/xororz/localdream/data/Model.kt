@@ -112,6 +112,11 @@ data class Model(
     val description: String,
     val baseUrl: String,
     val fileUri: String = "",
+    // When non-empty, the app downloads this raw SD1.5 safetensors (path after
+    // the HF host; mirror/official host chosen at download time) and runs the
+    // on-device converter once. Lets extra SD1.5 models ship without a
+    // prebuilt MNN zip. Empty for normal prebuilt/single-file models.
+    val convertSourceUrl: String = "",
     val generationSize: Int = 512,
     val approximateSize: String = "1GB",
     val isDownloaded: Boolean = false,
@@ -646,6 +651,11 @@ class ModelRepository private constructor(private val context: Context) {
             add(createCuteYukiMixModelCPU())
             add(createChilloutMixModelCPU())
             add(createChilloutMixModel())
+            // Extra SD1.5 models (uncensored-friendly): raw checkpoint is
+            // downloaded and converted to MNN on the device on first install,
+            // so they run on CPU/GPU incl. 32-bit, just like the prebuilt ones.
+            add(createRealisticVisionCpu())
+            add(createCounterfeitCpu())
         }
 
         return customModels + predefinedModels.map { applyConfigDefaults(it) }
@@ -1093,6 +1103,48 @@ class ModelRepository private constructor(private val context: Context) {
         )
     }
 
+    // Extra SD1.5 models shipped without a prebuilt MNN zip. The raw
+    // checkpoint is downloaded (mirror host with official fallback) and the
+    // on-device converter produces the MNN files once, so these run on
+    // CPU/GPU including 32-bit devices.
+    private fun createRealisticVisionCpu(): Model {
+        val id = "realisticvision_cpu"
+        val isDownloaded = Model.isModelDownloaded(context, id, false)
+        return Model(
+            id = id,
+            name = "Realistic Vision V5.1",
+            description = context.getString(R.string.realisticvision_description),
+            baseUrl = "",
+            approximateSize = "2.1GB + 转换",
+            isDownloaded = isDownloaded,
+            codeDefaults = ModelConfig(
+                prompt = "RAW photo, best quality, realistic, photo-realistic, masterpiece, detailed skin, 8k uhd, dslr, soft lighting, high quality, film grain",
+                negativePrompt = "cartoon, anime, drawing, painting, lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, cropped, worst quality, low quality, jpeg artifacts, signature, watermark, deformed, blurry",
+            ),
+            runOnCpu = true,
+            convertSourceUrl = "SG161222/Realistic_Vision_V5.1_noVAE/resolve/main/Realistic_Vision_V5.1_fp16-no-ema.safetensors",
+        )
+    }
+
+    private fun createCounterfeitCpu(): Model {
+        val id = "counterfeit_cpu"
+        val isDownloaded = Model.isModelDownloaded(context, id, false)
+        return Model(
+            id = id,
+            name = "Counterfeit V2.5",
+            description = context.getString(R.string.counterfeit_description),
+            baseUrl = "",
+            approximateSize = "2.1GB + 转换",
+            isDownloaded = isDownloaded,
+            codeDefaults = ModelConfig(
+                prompt = "masterpiece, best quality, 1girl, solo, detailed eyes, anime style",
+                negativePrompt = "lowres, bad anatomy, bad hands, missing fingers, extra fingers, poorly drawn face, fused face, worst face, realistic photo, long fingers, disconnected limbs",
+            ),
+            runOnCpu = true,
+            convertSourceUrl = "gsdf/Counterfeit-V2.5/resolve/main/Counterfeit-V2.5_fp16.safetensors",
+        )
+    }
+
     suspend fun refreshModelState(modelId: String) {
         refreshMutex.withLock {
             val current = models
@@ -1142,6 +1194,8 @@ class ModelRepository private constructor(private val context: Context) {
             // SD 1.5 CPU
             "anythingv5cpu", "qteamixcpu", "cuteyukimixcpu",
             "absoluterealitycpu", "chilloutmixcpu",
+            // SD 1.5 CPU, raw safetensors downloaded then converted on device
+            "realisticvision_cpu", "counterfeit_cpu",
             // DiT
             "z_image_turbo", "flux2_klein_4b", "qwen_image_2_1", "qwen_image_2_1_uc",
         )

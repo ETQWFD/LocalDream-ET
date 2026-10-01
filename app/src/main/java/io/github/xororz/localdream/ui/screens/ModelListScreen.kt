@@ -847,10 +847,67 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                 confirmButton = {
                     TextButton(
                         onClick = {
+                            val target = model
                             showDownloadConfirm = null
-                            downloadingModel = model
-                            currentProgress = null
-                            model.startDownload(context)
+                            if (target.convertSourceUrl.isNotEmpty()) {
+                                // Raw SD1.5 checkpoint: download then convert
+                                // on-device (works on 32-bit CPU/GPU).
+                                downloadingModel = target
+                                currentProgress = null
+                                scope.launch {
+                                    downloadRemoteThenConvertModel(
+                                        context = context,
+                                        model = target,
+                                        onStart = {
+                                            downloadingModel = target
+                                            isConverting = false
+                                        },
+                                        onDownloadProgress = { got, total ->
+                                            currentProgress = DownloadProgress(
+                                                progress = if (total > 0) {
+                                                    (got.toFloat() / total).coerceIn(0f, 1f)
+                                                } else {
+                                                    0f
+                                                },
+                                                downloadedBytes = got,
+                                                totalBytes = total,
+                                            )
+                                        },
+                                        onConvertProgress = { msg ->
+                                            if (downloadingModel != null) {
+                                                downloadingModel = null
+                                                isConverting = true
+                                            }
+                                            conversionProgress = msg
+                                        },
+                                        onSuccess = {
+                                            downloadingModel = null
+                                            isConverting = false
+                                            conversionProgress = ""
+                                            scope.launch {
+                                                modelRepository.refreshAllModels()
+                                                snackbarHostState.showSnackbar(
+                                                    msgModelConversionSuccess,
+                                                )
+                                            }
+                                        },
+                                        onError = { err ->
+                                            downloadingModel = null
+                                            isConverting = false
+                                            conversionProgress = ""
+                                            scope.launch {
+                                                snackbarHostState.showSnackbar(
+                                                    msgModelConversionFailed.format(err),
+                                                )
+                                            }
+                                        },
+                                    )
+                                }
+                            } else {
+                                downloadingModel = model
+                                currentProgress = null
+                                model.startDownload(context)
+                            }
                         },
                     ) {
                         Text(stringResource(R.string.confirm))
@@ -3591,13 +3648,21 @@ suspend fun convertCustomModel(
             onProgress(context.getString(R.string.copying_model_file))
         }
 
-        val inputStream = context.contentResolver.openInputStream(fileUri)
-            ?: throw Exception(context.getString(R.string.cannot_open_file))
         val modelFile = File(modelDir, "model.safetensors")
 
-        inputStream.use { input ->
-            modelFile.outputStream().use { output ->
-                input.copyTo(output)
+        if (fileUri.scheme == "file") {
+            val src = File(fileUri.path ?: "")
+            if (!src.exists()) throw Exception(context.getString(R.string.cannot_open_file))
+            src.inputStream().use { input ->
+                modelFile.outputStream().use { output -> input.copyTo(output) }
+            }
+        } else {
+            val inputStream = context.contentResolver.openInputStream(fileUri)
+                ?: throw Exception(context.getString(R.string.cannot_open_file))
+            inputStream.use { input ->
+                modelFile.outputStream().use { output ->
+                    input.copyTo(output)
+                }
             }
         }
 
@@ -3801,6 +3866,108 @@ suspend fun convertCustomModel(
         withContext(Dispatchers.Main) {
             onError(e.message ?: context.getString(R.string.unknown_error))
         }
+    }
+}
+
+/**
+ * Downloads a raw SD1.5 checkpoint for [model] (mirror first, official HF
+ * fallback) with byte progress, then runs the same on-device converter used by
+ * "add custom model". The converted model lands as a normal CPU model and is
+ * usable on 32-bit/arm64 CPU and GPU.
+ */
+suspend fun downloadRemoteThenConvertModel(
+    context: Context,
+    model: io.github.xororz.localdream.data.Model,
+    onDownloadProgress: (downloaded: Long, total: Long) -> Unit,
+    onConvertProgress: (String) -> Unit,
+    onStart: () -> Unit,
+    onSuccess: () -> Unit,
+    onError: (String) -> Unit,
+) = withContext(Dispatchers.IO) {
+    var tempFile: File? = null
+    try {
+        withContext(Dispatchers.Main) { onStart() }
+
+        val path = model.convertSourceUrl
+        val preferredHost = io.github.xororz.localdream.data
+            .GenerationPreferences(context).getBaseUrl().trimEnd('/')
+        val hosts = linkedSetOf(
+            preferredHost,
+            "https://hf-mirror.com",
+            "https://huggingface.co",
+        )
+
+        val tmpDir = File(context.cacheDir, "ld_remote").apply { mkdirs() }
+        val target = File(tmpDir, "${model.id}.safetensors").also { tempFile = it }
+        if (target.exists()) target.delete()
+
+        var downloaded = false
+        var lastErr: String? = null
+        for (host in hosts) {
+            val url = "$host/$path"
+            try {
+                val conn = (java.net.URL(url).openConnection() as java.net.HttpURLConnection).apply {
+                    connectTimeout = 20000
+                    readTimeout = 30000
+                    instanceFollowRedirects = true
+                    setRequestProperty("User-Agent", "LocalDream-ET")
+                }
+                conn.connect()
+                val code = conn.responseCode
+                if (code !in 200..299) {
+                    lastErr = "HTTP $code ($host)"
+                    conn.disconnect()
+                    continue
+                }
+                val total = conn.contentLengthLong.coerceAtLeast(0L)
+                var got = 0L
+                conn.inputStream.use { input ->
+                    target.outputStream().use { out ->
+                        val buf = ByteArray(64 * 1024)
+                        while (true) {
+                            val n = input.read(buf)
+                            if (n < 0) break
+                            out.write(buf, 0, n)
+                            got += n
+                            onDownloadProgress(got, total)
+                        }
+                        out.flush()
+                    }
+                }
+                conn.disconnect()
+                if (target.length() > 0) { downloaded = true; break }
+            } catch (e: Exception) {
+                lastErr = e.message
+                Log.w("RemoteModel", "download from $host failed: ${e.message}")
+            }
+        }
+        if (!downloaded) {
+            throw Exception(
+                context.getString(R.string.model_download_failed, lastErr ?: "network"),
+            )
+        }
+
+        // Reuse the exact custom-model conversion pipeline (ABI-aware lib path,
+        // cvtbase/clip copy, real error reporting). model.id has no spaces.
+        convertCustomModel(
+            context = context,
+            modelName = model.id,
+            fileUri = Uri.fromFile(target),
+            clipSkip = 1,
+            loraFiles = emptyList(),
+            onProgress = onConvertProgress,
+            onStart = {},
+            // convertCustomModel already invokes callbacks on the Main dispatcher.
+            onSuccess = { onSuccess() },
+            onError = { msg -> onError(msg) },
+        )
+    } catch (e: Exception) {
+        Log.e("RemoteModel", "download/convert failed", e)
+        withContext(Dispatchers.Main) {
+            onError(e.message ?: context.getString(R.string.unknown_error))
+        }
+    } finally {
+        try { tempFile?.delete() } catch (_: Exception) {}
     }
 }
 

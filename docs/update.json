@@ -1,7 +1,7 @@
 {
-  "versionCode": 79,
-  "versionName": "3.0.0-et.5",
+  "versionCode": 80,
+  "versionName": "3.0.0-et.6",
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
-  "size": 148378263,
-  "releaseNotes": "ET 定制版 v3.0.0-et.5\n• 修复『添加自定义模型』在 32 位手机转换失败：转换器同样按进程位数自动选择 /system/lib 或 lib64，并补齐可执行权限，GLES/EGL 驱动可正常加载；转换失败时显示原生真实原因（格式不支持/算子缺失等），不再笼统提示『请使用 SD1.5』\n• 生成设置新增输出画面比例：SD1.5（CPU/GPU）支持 1:1、2:3、3:4、4:3、3:2、9:16、16:9，自动换算为 8 的倍数、长边 512 的合法分辨率；生成页与高级设置都可直接选择\n• 运行方式(Runtime)等设置项汉化\n• 开发者：ET"
+  "size": 148396435,
+  "releaseNotes": "ET 定制版 v3.0.0-et.6\n• CPU 模型新增两个无限制向 SD1.5 模型：Realistic Vision V5.1（写实）、Counterfeit V2.5（动漫）；点下载后自动下载原始模型并在本机转换，32位/64位 CPU/GPU 均可使用，搜索框可搜到。首次需下载约2.1GB并转换一次。\n• 修复『添加自定义模型』在32位手机转换失败：按进程位数匹配系统库、补齐执行权限，失败显示原生真实原因。\n• SD1.5 生成支持画面比例：1:1/2:3/3:4/4:3/3:2/9:16/16:9。\n• 开发者：ET。注：Qwen Image 2.1 UC 为 NPU 大模型，仅高端骁龙64位机型可用。"
 }

@@ -535,4 +535,8 @@
     <string name="conversion_failed_detail">转换失败（退出码 %2$d）：%1$s</string>
     <string name="runtime_label">运行方式</string>
     <string name="output_aspect_ratio">输出画面比例</string>
+    <string name="realisticvision_description">写实向 SD1.5 模型（无限制向），首次下载后在本机转换，CPU/32位可用</string>
+    <string name="counterfeit_description">动漫向 SD1.5 模型（无限制向），首次下载后在本机转换，CPU/32位可用</string>
+    <string name="downloading_converting">正在下载并转换模型（首次较慢）…</string>
+    <string name="model_download_failed">模型下载失败：%1$s</string>
 </resources>
