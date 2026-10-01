@@ -433,6 +433,7 @@
     <string name="z_image_turbo_description">6B DiT，8 步。</string>
     <string name="flux2_klein_description">4B DiT，4 步。</string>
     <string name="qwen_image_2_1_description">Q4_0 DiT + Qwen3-VL-8B，20 步。</string>
+    <string name="qwen_image_2_1_uc_description">无审查(UC) Q4_0 DiT + Qwen3-VL-8B，20 步。</string>
     <string name="flux_edit">编辑</string>
     <string name="flux_base_image">底图</string>
     <string name="flux_reference_images">参考图</string>
@@ -522,4 +523,8 @@
     <string name="update_grant_permission">允许并继续</string>
     <string name="update_permission_denied">未授予安装权限，无法继续更新。</string>
     <string name="developer_label">开发者</string>
+    <string name="cfg_scale">CFG 幅度：%1$.1f</string>
+    <string name="denoise_strength_fmt">[图生图] 重绘幅度：%1$.2f</string>
+    <string name="basic_cfg_fmt">CFG：%1$.1f</string>
+    <string name="img2img_short">图生图</string>
 </resources>

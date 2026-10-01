@@ -344,7 +344,7 @@ internal fun AdvancedSettingsDialog(
 
                 Column {
                     Text(
-                        "CFG Scale: %.1f".format(cfg),
+                        stringResource(R.string.cfg_scale, cfg),
                         style = MaterialTheme.typography.bodyMedium,
                     )
                     Slider(
@@ -429,7 +429,7 @@ internal fun AdvancedSettingsDialog(
                 if (useImg2img) {
                     Column {
                         Text(
-                            "[img2img]Denoise Strength: %.2f".format(denoiseStrength),
+                            stringResource(R.string.denoise_strength_fmt, denoiseStrength),
                             style = MaterialTheme.typography.bodyMedium,
                         )
                         Slider(

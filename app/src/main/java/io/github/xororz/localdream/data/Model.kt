@@ -298,6 +298,21 @@ data class Model(
                 "qwen_image_2.1_vae_bf16.safetensors|vae.safetensors",
         )
 
+        // Uncensored (UC) Q4_0 build of the same DiT; the text encoder, vision
+        // projector, tokenizer and VAE are identical to the stock package, only
+        // dit.gguf changes. Same native "qwen21" pipeline handles it.
+        val QWEN_IMAGE_2_1_UC_PACKAGE_FILES = listOf(
+            "abenzerps/Qwen-Image-2.1-Uncensored-GGUF/resolve/main/" +
+                "qwen-image-2.1-UC-Q4_0.gguf|dit.gguf",
+            "bartowski/Qwen_Qwen3-VL-8B-Instruct-GGUF/resolve/main/" +
+                "Qwen_Qwen3-VL-8B-Instruct-Q4_0.gguf|llm.gguf",
+            "bartowski/Qwen_Qwen3-VL-8B-Instruct-GGUF/resolve/main/" +
+                "mmproj-Qwen_Qwen3-VL-8B-Instruct-f16.gguf|llm_vision.gguf",
+            "Qwen/Qwen3-VL-8B-Instruct/resolve/main/tokenizer.json|tokenizer.json",
+            "Comfy-Org/Qwen-Image-2.1/resolve/main/vae/" +
+                "qwen_image_2.1_vae_bf16.safetensors|vae.safetensors",
+        )
+
         fun isDeviceSupported(): Boolean {
             val soc = getDeviceSoc()
             return getChipsetSuffix(soc) != null
@@ -613,6 +628,7 @@ class ModelRepository private constructor(private val context: Context) {
                 add(createZImageTurboModel())
                 add(createFlux2KleinModel())
                 add(createQwenImage21Model())
+                add(createQwenImage21UcModel())
             }
             if (isSdxlCapableSoc(getDeviceSoc())) {
                 add(createIllustriousV16Model())
@@ -722,6 +738,35 @@ class ModelRepository private constructor(private val context: Context) {
             ),
             codeDefaults = ModelConfig(
                 prompt = "a lovely cat holding a sign that says 'Qwen Image 2.1',",
+                negativePrompt = "",
+                steps = 20f,
+                cfg = 1f,
+                scheduler = "euler",
+                denoiseStrength = 1f,
+            ),
+            runOnCpu = false,
+            ditKind = "qwen21",
+        )
+    }
+
+    private fun createQwenImage21UcModel(): Model {
+        val id = "qwen_image_2_1_uc"
+        return Model(
+            id = id,
+            name = "Qwen Image 2.1 UC Q4_0",
+            description = context.getString(R.string.qwen_image_2_1_uc_description),
+            baseUrl = baseUrl,
+            packageFiles = Model.QWEN_IMAGE_2_1_UC_PACKAGE_FILES,
+            generationSize = 1024,
+            approximateSize = "10.8GB",
+            isDownloaded = Model.isDitPackageDownloaded(
+                context,
+                id,
+                "qwen21",
+                Model.QWEN_IMAGE_2_1_UC_PACKAGE_FILES,
+            ),
+            codeDefaults = ModelConfig(
+                prompt = "a lovely cat holding a sign that says 'Qwen Image 2.1 UC',",
                 negativePrompt = "",
                 steps = 20f,
                 cfg = 1f,
@@ -1098,7 +1143,7 @@ class ModelRepository private constructor(private val context: Context) {
             "anythingv5cpu", "qteamixcpu", "cuteyukimixcpu",
             "absoluterealitycpu", "chilloutmixcpu",
             // DiT
-            "z_image_turbo", "flux2_klein_4b", "qwen_image_2_1",
+            "z_image_turbo", "flux2_klein_4b", "qwen_image_2_1", "qwen_image_2_1_uc",
         )
 
         fun isReservedModelId(id: String): Boolean = id in RESERVED_MODEL_IDS

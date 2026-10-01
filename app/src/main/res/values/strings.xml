@@ -443,6 +443,7 @@
     <string name="z_image_turbo_description">6B DiT, 8 steps.</string>
     <string name="flux2_klein_description">4B DiT, 4 steps.</string>
     <string name="qwen_image_2_1_description">Q4_0 DiT with Qwen3-VL-8B, 20 steps.</string>
+    <string name="qwen_image_2_1_uc_description">Uncensored Q4_0 DiT with Qwen3-VL-8B, 20 steps.</string>
     <string name="flux_edit">Edit</string>
     <string name="flux_base_image">Base</string>
     <string name="flux_reference_images">Reference</string>
@@ -532,4 +533,8 @@
     <string name="update_grant_permission">Allow and continue</string>
     <string name="update_permission_denied">Install permission was not granted, so the update cannot continue.</string>
     <string name="developer_label">Developer</string>
+    <string name="cfg_scale">CFG Scale: %1$.1f</string>
+    <string name="denoise_strength_fmt">[img2img] Denoise Strength: %1$.2f</string>
+    <string name="basic_cfg_fmt">CFG: %1$.1f</string>
+    <string name="img2img_short">img2img</string>
 </resources>

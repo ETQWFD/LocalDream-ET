@@ -82,7 +82,7 @@ fun GenerationParamsDialog(
                         style = MaterialTheme.typography.bodyMedium,
                     )
                     Text(
-                        "CFG: %.1f".format(params.cfg),
+                        stringResource(R.string.basic_cfg_fmt, params.cfg),
                         style = MaterialTheme.typography.bodyMedium,
                     )
                     Text(

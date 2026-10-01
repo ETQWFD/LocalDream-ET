@@ -1,7 +1,7 @@
 {
-  "versionCode": 76,
-  "versionName": "3.0.0-et.2",
+  "versionCode": 77,
+  "versionName": "3.0.0-et.3",
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
-  "size": 148341883,
-  "releaseNotes": "ET 定制版 v3.0.0-et.2\n• 【修复 32 位手机】新增 armeabi-v7a 原生 CPU/GPU 引擎，解决『lib/arm/libstable_diffusion_core.so 找不到 / 转换失败』，32 位设备现在可以正常转换、出图\n• 【修复下载慢/连接失败】模型源默认改用国内镜像 hf-mirror.com，并在官方站与镜像间自动回退、快速超时重试，解决 huggingface.co 30000ms ETIMEDOUT\n• 模型及所有下载/临时文件统一存放到 /storage/emulated/0/LocalDreamET，首次启动自动申请『所有文件访问』权限（未授权时回退应用私有目录）\n• 启动即实时检测官网更新；有新版在应用内下载，完成后自动申请安装权限并直接调起系统安装器，无需文件管理器\n• 更新 ET 品牌启动器图标与标题\n• arm64 设备保留完整 NPU/CPU/GPU 引擎\n• 开发者：ET"
+  "size": 148357059,
+  "releaseNotes": "ET 定制版 v3.0.0-et.3\n• 新增模型：Qwen Image 2.1 UC Q4_0（无审查版 DiT，约10.8GB），与官方 Qwen2.1 同款引擎，可直接在 NPU 模型页下载\n• 修复上传图片被切割：图生图选择照片后默认整张直接使用（等比缩放+补边），不再强制进入裁剪页、不再切掉边缘或分块\n• 生成界面直接选择比例：提示设置区新增 1:1 / 3:4 / 4:3（DiT 另含 9:16 / 16:9）与自定义，无需再进高级设置\n• 生成参数设置全中文：CFG 幅度、[图生图]重绘幅度、图生图入口等均已汉化\n• 沿用 32 位 armeabi-v7a CPU/GPU 引擎与国内镜像加速、统一存储 /storage/emulated/0/LocalDreamET、应用内下载直装\n• 开发者：ET"
 }

@@ -85,6 +85,8 @@ import androidx.compose.material3.ContainedLoadingIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
@@ -718,11 +720,6 @@ fun ModelRunScreen(
         }
     }
 
-    fun processSelectedImage(uri: Uri) {
-        imageUriForCrop = uri
-        showCropScreen = true
-    }
-
     @Suppress("UnusedParameter") // base64String from cropify callback is re-derived later
     fun handleCropComplete(base64String: String, bitmap: Bitmap, rect: AndroidRect) {
         showCropScreen = false
@@ -875,7 +872,11 @@ fun ModelRunScreen(
         }
     }
 
-    fun sendBitmapToImg2img(bitmap: Bitmap) {
+    // whole=true: keep the ENTIRE source image (contain-fit + black padding),
+    // never center-crop edges away. Used by the gallery picker so an uploaded
+    // photo goes through uncut. Default false preserves the legacy behaviour
+    // for result/history re-generation paths.
+    fun sendBitmapToImg2img(bitmap: Bitmap, whole: Boolean = false) {
         scope.launch {
             val ready = try {
                 base64EncodeDone = false
@@ -886,27 +887,46 @@ fun ModelRunScreen(
                 // 1) Center-crop+scale the source to (targetW, targetH).
                 // 2) If aspect padding is in effect, pad up to (currentWidth, currentHeight).
                 val resized = withContext(Dispatchers.Default) {
-                    val srcRatio = bitmap.width.toFloat() / bitmap.height.toFloat()
-                    val dstRatio = targetW.toFloat() / targetH.toFloat()
-                    val centerCropped = if (kotlin.math.abs(srcRatio - dstRatio) < 1e-3f) {
-                        bitmap
+                    if (whole) {
+                        // Contain-fit the WHOLE image inside targetW x targetH, then pad
+                        // to a full canvas with black borders. No pixels are cropped.
+                        val contain = minOf(
+                            targetW.toFloat() / bitmap.width.toFloat(),
+                            targetH.toFloat() / bitmap.height.toFloat(),
+                        )
+                        val fittedW = (bitmap.width * contain).toInt().coerceAtLeast(1)
+                        val fittedH = (bitmap.height * contain).toInt().coerceAtLeast(1)
+                        val fitted = if (
+                            fittedW != bitmap.width || fittedH != bitmap.height
+                        ) {
+                            bitmap.scale(fittedW, fittedH)
+                        } else {
+                            bitmap.copy(Bitmap.Config.ARGB_8888, false)
+                        }
+                        padBitmapToCanvas(fitted, targetW, targetH)
                     } else {
-                        val (cropW, cropH) = if (srcRatio > dstRatio) {
-                            Pair((bitmap.height * dstRatio).toInt(), bitmap.height)
+                        val srcRatio = bitmap.width.toFloat() / bitmap.height.toFloat()
+                        val dstRatio = targetW.toFloat() / targetH.toFloat()
+                        val centerCropped = if (kotlin.math.abs(srcRatio - dstRatio) < 1e-3f) {
+                            bitmap
                         } else {
-                            Pair(bitmap.width, (bitmap.width / dstRatio).toInt())
+                            val (cropW, cropH) = if (srcRatio > dstRatio) {
+                                Pair((bitmap.height * dstRatio).toInt(), bitmap.height)
+                            } else {
+                                Pair(bitmap.width, (bitmap.width / dstRatio).toInt())
+                            }
+                            val cx = (bitmap.width - cropW) / 2
+                            val cy = (bitmap.height - cropH) / 2
+                            Bitmap.createBitmap(bitmap, cx, cy, cropW, cropH)
                         }
-                        val cx = (bitmap.width - cropW) / 2
-                        val cy = (bitmap.height - cropH) / 2
-                        Bitmap.createBitmap(bitmap, cx, cy, cropW, cropH)
+                        val scaled =
+                            if (centerCropped.width != targetW || centerCropped.height != targetH) {
+                                centerCropped.scale(targetW, targetH)
+                            } else {
+                                centerCropped.copy(Bitmap.Config.ARGB_8888, false)
+                            }
+                        scaled
                     }
-                    val scaled =
-                        if (centerCropped.width != targetW || centerCropped.height != targetH) {
-                            centerCropped.scale(targetW, targetH)
-                        } else {
-                            centerCropped.copy(Bitmap.Config.ARGB_8888, false)
-                        }
-                    scaled
                 }
 
                 val displayBitmap = resized
@@ -955,6 +975,47 @@ fun ModelRunScreen(
                 } catch (_: kotlinx.coroutines.CancellationException) {
                     // Animation interrupted by another scroll — img2img data is already set, ignore
                 }
+            }
+        }
+    }
+
+    // Decodes the full image at uri, down-sampling only enough to keep the
+    // longest side <= 2048px (avoids OOM). No region cropping.
+    fun decodeUriWholeBitmap(uri: Uri): Bitmap? {
+        return try {
+            val resolver = context.contentResolver
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            resolver.openInputStream(uri)?.use {
+                BitmapFactory.decodeStream(it, null, bounds)
+            }
+            var sample = 1
+            val maxDim = maxOf(bounds.outWidth, bounds.outHeight)
+            val decodeLimit = 2048
+            while (maxDim / sample > decodeLimit) sample *= 2
+            val opts = BitmapFactory.Options().apply { inSampleSize = sample }
+            resolver.openInputStream(uri)?.use {
+                BitmapFactory.decodeStream(it, null, opts)
+            }
+        } catch (e: Exception) {
+            Log.w("ModelRunScreen", "decode whole image failed: ${e.message}")
+            null
+        }
+    }
+
+    fun processSelectedImage(uri: Uri) {
+        // Whole-image upload: decode the full picture and send it straight to
+        // img2img (contain-fit, never cropped/tiled). The forced crop screen is
+        // skipped so an uploaded photo is used as one complete image.
+        scope.launch {
+            val bmp = withContext(Dispatchers.IO) { decodeUriWholeBitmap(uri) }
+            if (bmp != null) {
+                sendBitmapToImg2img(bmp, whole = true)
+            } else {
+                Toast.makeText(
+                    context,
+                    msgImg2imgFailed.format(msgUnknownError),
+                    Toast.LENGTH_SHORT,
+                ).show()
             }
         }
     }
@@ -1974,7 +2035,7 @@ fun ModelRunScreen(
                                                 if (supportsReferenceEditing) {
                                                     stringResource(R.string.flux_edit)
                                                 } else {
-                                                    "img2img"
+                                                    stringResource(R.string.img2img_short)
                                                 },
                                                 style = MaterialTheme.typography.bodyMedium,
                                                 modifier = Modifier.padding(end = 4.dp),
@@ -2036,6 +2097,81 @@ fun ModelRunScreen(
                                         modifier = Modifier.size(20.dp),
                                     )
                                 }
+                            }
+                            // Inline aspect-ratio picker on the generation screen
+                            // (no need to open advanced settings). SDXL uses its
+                            // padding presets; DiT maps the ratio onto snapped W/H.
+                            if (model?.usesFixedCanvas == true || model?.isDit == true) {
+                            val ratioPresets = if (model?.isDit == true) {
+                                listOf("1:1", "3:4", "4:3", "9:16", "16:9")
+                            } else {
+                                listOf("1:1", "3:4", "4:3")
+                            }
+                            val ratioIsCustom = aspectRatio !in ratioPresets
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState()),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                Text(
+                                    stringResource(R.string.aspect_ratio),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    modifier = Modifier.padding(end = 4.dp),
+                                )
+                                ratioPresets.forEach { ratio ->
+                                    FilterChip(
+                                        selected = aspectRatio == ratio,
+                                        onClick = {
+                                            if (!isRunning && aspectRatio != ratio) {
+                                                if (model?.isDit == true) {
+                                                    val parts = ratio.split(":")
+                                                    val rw = parts.getOrNull(0)?.toIntOrNull() ?: 1
+                                                    val rh = parts.getOrNull(1)?.toIntOrNull() ?: 1
+                                                    val base = minOf(currentWidth, currentHeight)
+                                                        .coerceIn(DIT_MIN_SIZE, DIT_MAX_SIZE)
+                                                    val longer = (base * maxOf(rw, rh) / minOf(rw, rh))
+                                                        .coerceIn(DIT_MIN_SIZE, DIT_MAX_SIZE)
+                                                    currentWidth = snapDitSize(
+                                                        (if (rw >= rh) longer.toFloat() else base.toFloat()),
+                                                    )
+                                                    currentHeight = snapDitSize(
+                                                        (if (rh >= rw) longer.toFloat() else base.toFloat()),
+                                                    )
+                                                    aspectRatio = inferAspectRatioString(
+                                                        currentWidth, currentHeight,
+                                                    )
+                                                } else {
+                                                    aspectRatio = ratio
+                                                }
+                                                clearImg2imgState()
+                                                saveAllFields()
+                                            }
+                                        },
+                                        label = { Text(ratio) },
+                                        enabled = !isRunning,
+                                    )
+                                }
+                                if (model?.isDit != true) {
+                                    FilterChip(
+                                        selected = ratioIsCustom,
+                                        onClick = {
+                                            if (!isRunning) showCustomAspectRatioDialog = true
+                                        },
+                                        label = {
+                                            Text(
+                                                if (ratioIsCustom) {
+                                                    aspectRatio
+                                                } else {
+                                                    stringResource(R.string.aspect_ratio_custom)
+                                                },
+                                            )
+                                        },
+                                        enabled = !isRunning,
+                                    )
+                                }
+                            }
                             }
                             if (showAdvancedSettings) {
                                 AdvancedSettingsDialog(
