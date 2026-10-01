@@ -100,6 +100,10 @@
       <a class="btn primary" href="https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk" download>⬇ 下载最新 APK</a>
       <a class="btn ghost" href="https://github.com/ETQWFD/LocalDream-ET" target="_blank" rel="noopener">GitHub 仓库</a>
     </div>
+    <div class="cta" style="margin-top:12px;">
+      <a class="btn primary" href="https://github.com/ETQWFD/LocalDream-ET/releases/download/desktop-v1.0.0/LocalDream-ET-Setup-1.0.0.exe" download>💻 下载电脑版安装包（Windows x64）</a>
+      <a class="btn ghost" href="https://github.com/ETQWFD/LocalDream-ET/releases/download/desktop-v1.0.0/LocalDream-ET-Windows-Portable.zip" download>电脑版免安装 ZIP</a>
+    </div>
     <div class="ver">当前版本 <b>v3.0.0-et.7</b>（build 81）· 开发者 <b>ET</b> · 支持 arm64-v8a / armeabi-v7a</div>
     <div class="note" style="margin-top:14px;text-align:left;max-width:760px;margin-left:auto;margin-right:auto;">
       <b>v3.0.0-et.7 更新：</b>① <b>修复 SD1.5（CuteYukiMix 等）生成结果变成马赛克噪声/塑料块</b>：原因是部分预置动漫模型自带过高的 CFG（如 12），在 32 位 CPU 半精度下采样溢出成噪声；现对 SD1.5 CPU/GPU 将 CFG 安全限制在 1–9（加载与出图两处生效，滑块同步限制），画面恢复正常；② CPU 模型再增 <b>DreamShaper 8</b>（全能、写实/插画/动漫都稳、少报错），连同 Realistic Vision V5.1、Counterfeit V2.5 均为下载后本机自动转换，32 位可用、速度与内置模型一致；③ 搜索框可直接搜模型。<br>
@@ -163,6 +167,16 @@
       ✅ 32 位：v3.0.0-et.2 起安装包已内置 armeabi-v7a 原生 CPU/GPU（MNN/OpenCL）引擎，32 位手机可直接转换模型与出图，无需自行编译。NPU 所用的高通 QNN 库仅有 64 位版本，因此 32 位设备走 CPU/GPU 引擎；
       大模型（尤其 SDXL）对内存要求较高，32 位设备建议使用 SD1.5。
     </div>
+  </section>
+  <section id="desktop">
+    <h2>电脑版（Windows x64）</h2>
+    <p>使用 <b>C 语言</b>编写的原生桌面启动器，底层为开源 stable-diffusion.cpp（leejet, MIT）CPU 引擎，Windows 10/11 64 位本地离线出图，免费、不上传图片。右键程序“属性→详细信息”显示开发者 ET。</p>
+    <div class="cards">
+      <div class="card"><h3>① 下载安装</h3><p>点顶部「下载电脑版安装包」，或下免安装 ZIP 解压即用；安装版自动创建桌面与开始菜单快捷方式。</p></div>
+      <div class="card"><h3>② 下载模型</h3><p>内置 Absolute Reality（写实）、Counterfeit（动漫）、DreamShaper 8（全能少报错），点一下下载，默认国内镜像、失败回退官方源。</p></div>
+      <div class="card"><h3>③ 本地出图</h3><p>桌面端直接读取 safetensors 无需转换；可调步数、CFG（1–9 防噪点）、比例（含 9:16）、种子；图片存于 AppData 下 output。</p></div>
+    </div>
+    <div class="note">模型位于 <code>%LOCALAPPDATA%\LocalDreamET\models</code>，图片位于 <code>…\LocalDreamET\output</code>；首次需联网下载模型（每个约 2.1GB），之后离线可用。</div>
   </section>
 </div>
 
