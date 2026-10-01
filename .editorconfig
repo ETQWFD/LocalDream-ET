@@ -1,0 +1,35 @@
+root = true
+
+[*]
+end_of_line = lf
+insert_final_newline = true
+charset = utf-8
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+[*.{kt,kts}]
+max_line_length = 120
+ktlint_code_style = android_studio
+# Composable functions use PascalCase; skip function-naming rule for them
+ktlint_function_naming_ignore_when_annotated_with = Composable
+# Keep design-token PascalCase (e.g. Motion.DurationShort) and other non-screaming-snake constants
+ktlint_standard_property-naming = disabled
+ktlint_standard_backing-property-naming = disabled
+# Don't ask to rename source files (e.g. PresetSchemes.kt -> ThemePreset.kt)
+ktlint_standard_filename = disabled
+# Compose code legitimately uses wildcard imports for icons / material3 packages
+ktlint_standard_no-wildcard-imports = disabled
+# Default-prompt string literals in data classes are long by nature
+ktlint_standard_max-line-length = disabled
+ij_kotlin_allow_trailing_comma = true
+ij_kotlin_allow_trailing_comma_on_call_site = true
+
+[*.{xml,json,yml,yaml}]
+indent_size = 4
+
+[Makefile]
+indent_style = tab
+
+[*.md]
+trim_trailing_whitespace = false

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- Downloaded APKs are written to cacheDir/updates. -->
+    <cache-path
+        name="update_apks"
+        path="updates/" />
+    <cache-path
+        name="cache_root"
+        path="." />
+    <external-cache-path
+        name="external_update_apks"
+        path="updates/" />
+    <files-path
+        name="files_root"
+        path="." />
+</paths>

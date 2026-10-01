@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Local Dream ET · 安卓本地 AI 绘画（开发者：ET）</title>
+<meta name="description" content="Local Dream ET：安卓端本地 Stable Diffusion，支持骁龙 NPU / CPU / GPU 推理，内置应用内检测更新与一键安装，兼容 32 位设备。开发者：ET。" />
+<link rel="icon" href="icon.png" />
+<style>
+  :root{
+    --bg:#0b1117; --bg2:#0f1720; --card:#141e29; --line:#22303e;
+    --txt:#e8eef4; --mut:#9fb0c0; --acc:#2dd4bf; --acc2:#38bdf8; --warn:#fbbf24;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;
+    background:radial-gradient(1200px 600px at 80% -10%,rgba(45,212,191,.12),transparent 60%),
+               radial-gradient(900px 500px at 0% 0%,rgba(56,189,248,.10),transparent 55%),
+               var(--bg);
+    color:var(--txt);line-height:1.7;-webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:0 22px}
+  a{color:var(--acc2);text-decoration:none}
+  /* nav */
+  header.nav{position:sticky;top:0;z-index:20;backdrop-filter:blur(10px);
+    background:rgba(11,17,23,.72);border-bottom:1px solid var(--line)}
+  .navin{display:flex;align-items:center;gap:12px;height:62px}
+  .navin img{width:34px;height:34px;border-radius:9px}
+  .brand{font-weight:700;font-size:18px;letter-spacing:.3px}
+  .brand small{display:block;font-size:11px;color:var(--mut);font-weight:500;letter-spacing:1px}
+  .et{margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#06281f;
+    background:linear-gradient(90deg,var(--acc),var(--acc2));padding:5px 12px;border-radius:999px;font-weight:700}
+  nav.links{margin-left:14px;display:flex;gap:18px;font-size:14px}
+  nav.links a{color:var(--mut)}
+  nav.links a:hover{color:var(--txt)}
+  /* hero */
+  .hero{padding:84px 0 56px;text-align:center}
+  .hero img.logo{width:92px;height:92px;border-radius:22px;box-shadow:0 18px 50px rgba(0,0,0,.5)}
+  .hero h1{font-size:clamp(30px,6vw,52px);margin:22px 0 12px;font-weight:800;letter-spacing:.5px;
+    background:linear-gradient(90deg,#fff,#9fe9e0 60%,var(--acc2));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .hero p.sub{color:var(--mut);font-size:clamp(15px,2.4vw,19px);max-width:720px;margin:0 auto 30px}
+  .cta{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+  .btn{display:inline-flex;align-items:center;gap:8px;padding:13px 26px;border-radius:13px;font-weight:700;font-size:15px;transition:.18s;border:1px solid transparent}
+  .btn.primary{background:linear-gradient(90deg,var(--acc),var(--acc2));color:#05232a}
+  .btn.primary:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(45,212,191,.28)}
+  .btn.ghost{border-color:var(--line);color:var(--txt);background:rgba(255,255,255,.02)}
+  .btn.ghost:hover{border-color:var(--acc)}
+  .ver{margin-top:18px;font-size:13px;color:var(--mut)}
+  .ver b{color:var(--acc)}
+  /* sections */
+  section{padding:54px 0}
+  h2{font-size:clamp(22px,4vw,30px);margin-bottom:8px;font-weight:800}
+  .lead{color:var(--mut);margin-bottom:30px;max-width:760px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:24px;transition:.18s}
+  .card:hover{border-color:rgba(45,212,191,.5);transform:translateY(-3px)}
+  .card .ic{font-size:26px;margin-bottom:12px}
+  .card h3{font-size:17px;margin-bottom:7px}
+  .card p{color:var(--mut);font-size:14px}
+  .tag{display:inline-block;font-size:12px;padding:2px 10px;border-radius:999px;margin:2px 6px 2px 0;
+    border:1px solid var(--line);color:var(--mut)}
+  .tag.ok{color:#7ef0dd;border-color:rgba(45,212,191,.4);background:rgba(45,212,191,.08)}
+  .tag.warn{color:#f8cf7a;border-color:rgba(251,191,36,.4);background:rgba(251,191,36,.08)}
+  /* steps */
+  ol.steps{list-style:none;counter-reset:s;display:grid;gap:14px}
+  ol.steps li{counter-increment:s;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 18px 18px 58px;position:relative}
+  ol.steps li::before{content:counter(s);position:absolute;left:18px;top:18px;width:28px;height:28px;border-radius:50%;
+    background:linear-gradient(90deg,var(--acc),var(--acc2));color:#05232a;font-weight:800;display:grid;place-items:center}
+  .note{background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.32);color:#f5d896;border-radius:14px;padding:18px 20px;font-size:14px;margin-top:22px}
+  code{background:#0a1016;border:1px solid var(--line);padding:2px 7px;border-radius:7px;font-size:13px;color:#9fe9e0}
+  footer{border-top:1px solid var(--line);padding:34px 0;color:var(--mut);font-size:13px;text-align:center}
+  footer .big{color:var(--txt);font-weight:700;font-size:15px;margin-bottom:6px}
+</style>
+</head>
+<body>
+<header class="nav">
+  <div class="wrap navin">
+    <img src="icon.png" alt="logo" />
+    <div class="brand">Local Dream ET<small>ANDROID · LOCAL AI IMAGING</small></div>
+    <nav class="links">
+      <a href="#features">特性</a>
+      <a href="#update">检测更新</a>
+      <a href="#install">安装</a>
+      <a href="#compat">兼容</a>
+    </nav>
+    <span class="et">开发者：ET</span>
+  </div>
+</header>
+
+<div class="wrap">
+  <section class="hero">
+    <img class="logo" src="icon.png" alt="Local Dream ET" />
+    <h1>手机本地跑 Stable Diffusion</h1>
+    <p class="sub">
+      Local Dream ET 是基于开源项目 Local Dream 的 ET 定制版，在安卓端本地完成 AI 绘画，
+      支持骁龙 NPU 加速与 CPU/GPU 推理；内置应用内检测更新，下载完成直接调起系统安装器，无需任何应用商店或文件管理器。
+    </p>
+    <div class="cta">
+      <a class="btn primary" href="https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk" download>⬇ 下载最新 APK</a>
+      <a class="btn ghost" href="https://github.com/ETQWFD/LocalDream-ET" target="_blank" rel="noopener">GitHub 仓库</a>
+    </div>
+    <div class="ver">当前版本 <b>v3.0.0-et.1</b>（build 75）· 开发者 <b>ET</b> · 支持 arm64-v8a / armeabi-v7a</div>
+  </section>
+
+  <section id="features">
+    <h2>核心特性</h2>
+    <p class="lead">把大模型装进手机，数据不出本机，离线也能出图。</p>
+    <div class="grid">
+      <div class="card"><div class="ic">⚡</div><h3>NPU / CPU / GPU</h3>
+        <p>SD1.5 支持 Hexagon V68 及以上骁龙 NPU；SDXL 支持骁龙 8 Gen 3 及以上；其它机型可用 CPU/GPU（OpenCL）推理。</p></div>
+      <div class="card"><div class="ic">🔄</div><h3>应用内检测更新</h3>
+        <p>设置里点「检测更新」，新版本在应用内直接下载并显示进度，完成后自动调起系统打包安装器，一步到位。</p></div>
+      <div class="card"><div class="ic">🔐</div><h3>自动申请安装权限</h3>
+        <p>首次更新自动跳转「允许安装未知应用」授权页，授权后立即继续安装，不经过任何第三方软件。</p></div>
+      <div class="card"><div class="ic">📱</div><h3>32 位设备支持</h3>
+        <p>已加入 <code>armeabi-v7a</code> ABI 配置，32 位老设备走 CPU/GPU 引擎（NPU 加速仅 arm64）。</p></div>
+      <div class="card"><div class="ic">🎨</div><h3>SD1.5 / SDXL</h3>
+        <p>文生图、图生图、局部重绘、超分放大，支持导入自定义 SD1.5 / SDXL MNN 模型包。</p></div>
+      <div class="card"><div class="ic">🛰️</div><h3>设备联动</h3>
+        <p>局域网内可让一台高性能设备跑模型，其它设备远程控制生成。</p></div>
+    </div>
+  </section>
+
+  <section id="update">
+    <h2>检测更新如何工作</h2>
+    <p class="lead">更新清单由本官网（GitHub Pages）提供，应用启动检测时读取 <code>update.json</code>，版本号更高则提示更新。</p>
+    <ol class="steps">
+      <li>打开 App → 右上角菜单 → <b>设置</b>。</li>
+      <li>点击最下方的 <b>检测更新</b>，应用联网比对 <code>versionCode</code>。</li>
+      <li>有新版本时点「下载并安装」，安装包在应用内下载并实时显示百分比与已下载大小。</li>
+      <li>首次使用会跳到系统设置，允许本应用「安装未知应用」，返回后自动继续。</li>
+      <li>下载完成立即调起安卓系统打包安装程序（Package Installer），确认即可覆盖安装，全程不经过文件管理器或应用商店。</li>
+    </ol>
+    <div class="note">更新清单地址：<code>https://etqwfd.github.io/LocalDream-ET/update.json</code>　|　安装包地址：GitHub Release 最新版 <code>LocalDream-ET.apk</code>。</div>
+  </section>
+
+  <section id="install">
+    <h2>安装说明</h2>
+    <div class="grid">
+      <div class="card"><h3>① 下载 APK</h3><p>点击顶部「下载最新 APK」，或到 GitHub Releases 下载 <code>LocalDream-ET.apk</code>。</p></div>
+      <div class="card"><h3>② 允许安装</h3><p>安装时若系统提示，请允许当前浏览器/应用「安装未知应用」。</p></div>
+      <div class="card"><h3>③ 下载模型</h3><p>首次进入在模型列表选择 SD1.5 / SDXL 模型下载；CPU/GPU 模型适配更多机型。</p></div>
+      <div class="card"><h3>④ 开始生成</h3><p>输入提示词即可本地出图，无需联网上传图片。</p></div>
+    </div>
+  </section>
+
+  <section id="compat">
+    <h2>架构与机型兼容</h2>
+    <p class="lead">安装包包含两种 ABI，系统会自动匹配。</p>
+    <p>
+      <span class="tag ok">arm64-v8a · 64 位</span>
+      <span class="tag ok">NPU 加速（骁龙）</span>
+      <span class="tag ok">CPU / GPU</span>
+      <span class="tag warn">armeabi-v7a · 32 位</span>
+      <span class="tag warn">仅 CPU / GPU</span>
+    </p>
+    <div class="note">
+      ⚠️ 关于 32 位：应用与界面已完整支持 armeabi-v7a。NPU 所用的高通 QNN 库仅有 64 位版本，因此 32 位设备使用 CPU/GPU（MNN/OpenCL）引擎；
+      32 位原生推理引擎需用 NDK 对 <code>app/src/main/cpp</code> 交叉编译后打入 <code>jniLibs/armeabi-v7a</code>（仓库已提供配置与说明）。
+      大模型（尤其 SDXL）对内存要求较高，32 位设备建议使用 SD1.5。
+    </div>
+  </section>
+</div>
+
+<footer>
+  <div class="big">Local Dream ET · 开发者：ET</div>
+  <div>本定制版基于开源项目 <a href="https://github.com/xororz/local-dream" target="_blank" rel="noopener">xororz/local-dream</a>，遵循其开源许可。版权与定制内容 © ET</div>
+</footer>
+</body>
+</html>

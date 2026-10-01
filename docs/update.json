@@ -1,0 +1,7 @@
+{
+  "versionCode": 75,
+  "versionName": "3.0.0-et.1",
+  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
+  "size": 0,
+  "releaseNotes": "ET 定制版 v3.0.0-et.1\n• 设置内新增「检测更新」：应用内直接下载，完成后自动调起系统安装器，无需文件管理器\n• 首次更新自动申请安装权限\n• 设置页显示开发者与版本号\n• 加入 armeabi-v7a（32 位）ABI 配置，32 位设备走 CPU/GPU 引擎\n• 开发者：ET"
+}

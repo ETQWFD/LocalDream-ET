@@ -1,0 +1,503 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="app_name">Local Dream ET</string>
+
+    <!-- Models -->
+    <string name="anythingv5_description">애니풍 이미지 생성</string>
+    <string name="cyberrealistic_description">사실적인 이미지 생성</string>
+    <string name="illustriousv16_description">WAI Illustrious SDXL v16</string>
+    <string name="dmd2_description">DMD2 LoRA 병합</string>
+    <string name="capture_logs">로그 수집</string>
+    <string name="capture_logs_hint">모델 실행 중 앱 로그를 수집하고 종료 후 표시합니다</string>
+    <string name="listen_on_all_addresses">LAN 접근 허용</string>
+    <string name="listen_on_all_addresses_hint">같은 네트워크의 다른 기기가 백엔드(포트 8081)에 접근할 수 있게 합니다. 끄면 로컬에서만 접근할 수 있습니다.</string>
+    <string name="tag_autocomplete">태그 자동 완성</string>
+    <string name="tag_autocomplete_hint">프롬프트를 입력하는 동안 태그를 제안하고 수정합니다</string>
+    <string name="tag_alias_label">별칭</string>
+    <string name="tag_correction_label">수정</string>
+    <string name="tag_embedding_label">임베딩</string>
+    <string name="tag_main_dictionary">태그 사전</string>
+    <string name="tag_main_dictionary_hint">가져오지 않았습니다. CSV(예: danbooru.csv)를 가져올 때까지 제안을 사용할 수 없습니다.</string>
+    <string name="tag_translation_dictionary">번역 사전(선택 사항)</string>
+    <string name="tag_translation_dictionary_hint">가져오지 않았습니다. 2열 또는 3열 CSV를 가져오면 원하는 언어로 검색할 수 있습니다.</string>
+    <plurals name="tag_imported_status">
+        <item quantity="other">%1$s · %2$d개 항목</item>
+    </plurals>
+    <string name="tag_import">CSV 가져오기</string>
+    <string name="tag_reimport">교체</string>
+    <string name="tag_clear">지우기</string>
+    <plurals name="tag_import_success">
+        <item quantity="other">%1$d개 항목을 가져왔습니다</item>
+    </plurals>
+    <string name="tag_import_failed">가져오기 실패</string>
+    <string name="sdxl_lowram">SDXL 저메모리 모드</string>
+    <string name="sdxl_lowram_hint">SDXL 전용: 각 모델을 필요할 때만 로드하고 사용 후 해제합니다. RAM이 16GB 미만인 기기에서 필요합니다. 생성 중 미리보기가 비활성화됩니다.</string>
+    <string name="anima_lowram">Anima 저메모리 모드</string>
+    <string name="anima_lowram_hint">Anima 전용: 각 모델을 필요할 때만 로드하고 사용 후 해제합니다. RAM이 16GB 미만인 기기에서 필요합니다. 생성 중 미리보기가 비활성화됩니다.</string>
+    <string name="anima_seq_dit">Anima DiT 순차 로드</string>
+    <string name="anima_seq_dit_hint">Anima 저메모리 모드에서만 적용: DiT의 두 부분을 동시에 메모리에 두지 않습니다. RAM이 12GB인데도 Anima 저메모리 모드가 실행되지 않으면 활성화하세요. 스텝마다 느려집니다.</string>
+    <string name="captured_logs_title">수집된 로그</string>
+    <string name="log_saved">%1$s에 저장했습니다</string>
+    <string name="log_save_failed">로그 저장 실패</string>
+    <string name="no_logs_captured">수집된 로그가 없습니다</string>
+    <string name="chilloutmix_description">ChilloutMix 시리즈</string>
+    <string name="qteamix_description">치비 스타일 애니 이미지 생성</string>
+    <string name="cuteyukimix_description">귀여운 스타일 애니 이미지 생성</string>
+    <string name="absolutereality_description">사실적인 이미지 생성</string>
+    <!-- Models -->
+    <string name="backend_notify">모델 백엔드 서비스 실행 중</string>
+    <string name="backend_notify_title">SD 모델 백엔드</string>
+    <string name="generating_notify">이미지 생성 중…</string>
+
+    <!-- Common -->
+    <string name="settings">설정</string>
+    <string name="appearance">화면</string>
+    <string name="theme_preset">색상 테마</string>
+    <string name="theme_preset_hint">동적 색상을 사용하지 않을 때 적용됩니다</string>
+    <string name="dynamic_color">동적 색상</string>
+    <string name="dynamic_color_hint">배경화면 색상에 맞춥니다(Android 12+)</string>
+    <string name="dark_mode">다크 모드</string>
+    <string name="dark_mode_system">시스템</string>
+    <string name="dark_mode_light">라이트</string>
+    <string name="dark_mode_dark">다크</string>
+    <string name="theme_tangerine">탠저린</string>
+    <string name="theme_forest">포레스트</string>
+    <string name="theme_ocean">오션</string>
+    <string name="theme_amber">앰버</string>
+    <string name="confirm">확인</string>
+    <string name="cancel">취소</string>
+    <string name="save">저장</string>
+    <string name="back">뒤로</string>
+    <string name="close">닫기</string>
+    <string name="delete">삭제</string>
+    <string name="delete_model">모델 삭제</string>
+    <string name="delete_confirm">선택한 모델 %s개를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.</string>
+    <string name="got_it">알겠습니다!</string>
+    <string name="yes">예</string>
+    <string name="about_app">참고</string>
+    <string name="must_read">이 앱은 CPU/GPU와 일부 Qualcomm NPU에서 Stable Diffusion 이미지 생성을 실행할 수 있습니다.\n\nSD1.5 모델은 Hexagon V68 아키텍처 이상의 Snapdragon NPU에서 지원됩니다.\n\nSDXL 모델은 Snapdragon 8 Gen 3 이상 기기에서 지원됩니다.\n\n사용 중인 칩이 위 범위에 해당하지 않으면 CPU/GPU에서만 실행할 수 있습니다.\n\n이 프로젝트는 https://github.com/xororz/local-dream 에서 오픈소스로 공개되어 있으며, 소스 코드를 확인하거나 이슈를 제출할 수 있습니다.\n\n문서: https://ld.chino.icu</string>
+    <string name="help">도움말</string>
+    <string name="more_options">더보기</string>
+
+    <!-- Model List Screen -->
+    <string name="available_models">사용 가능한 모델</string>
+    <plurals name="selected_items">
+        <item quantity="other">%d개 선택됨</item>
+    </plurals>
+    <string name="download">다운로드</string>
+    <string name="download_from">다운로드 소스</string>
+    <string name="download_settings_hint">Hugging Face 또는 다른 미러 URL에서 다운로드</string>
+    <string name="source_huggingface">Hugging Face</string>
+    <string name="source_hf_mirror">hf-mirror</string>
+    <string name="source_custom">사용자 지정</string>
+    <string name="downloaded">다운로드 완료</string>
+    <string name="delete_success">삭제됨</string>
+    <string name="delete_failed">삭제 중 오류 발생</string>
+    <string name="cannot_download">다운로드할 수 없음</string>
+    <string name="cannot_download_hint">모델을 다운로드하는 중입니다. 잠시 기다려 주세요.</string>
+    <string name="download_model">모델 다운로드</string>
+    <string name="download_model_hint">%s을(를) 다운로드하시겠습니까? 다운로드 중에는 앱을 종료하지 마세요.\n\n현재는 모든 Qualcomm 칩에서 NPU 모델을 다운로드할 수 있지만, 오래된 칩에서는 실행되지 않을 수 있습니다.</string>
+    <string name="download_done">다운로드 완료</string>
+    <string name="unsupport_npu">이 기기는 지원되지 않습니다. CPU 모델을 사용해 보세요.</string>
+    <string name="cpu_models">CPU 모델</string>
+    <string name="npu_models">NPU 모델</string>
+    <string name="no_cpu_models">모델 없음</string>
+    <string name="no_npu_models">모델 없음</string>
+    <string name="img2img_hint">img2img 기능을 사용합니다. 필요하지 않거나 문제가 발생하면 끄세요. 끄면 SDXL 화면비 기능과 UltraFix도 비활성화됩니다.</string>
+    <string name="show_process">생성 과정 표시</string>
+    <string name="show_process_hint">NPU 모델에서만 작동합니다. 중간 생성 스텝을 표시합니다. 생성 속도가 느려지므로 과정이 궁금할 때만 켜세요.</string>
+    <string name="preview_stride">미리보기 간격</string>
+    <plurals name="preview_stride_hint">
+        <item quantity="other">미리보기를 %d 스텝마다 업데이트합니다(1~10).</item>
+    </plurals>
+    <!-- Crop Screen -->
+    <string name="crop_image">이미지 자르기</string>
+    <string name="crop_hint">드래그하여 자를 영역을 조정하세요</string>
+
+    <!-- Inpaint Screen -->
+    <string name="set_inpaint_area">인페인트 영역 설정</string>
+    <string name="inpaint_hint">인페인트할 영역을 칠하세요</string>
+    <string name="undo">실행 취소</string>
+    <string name="redo">다시 실행</string>
+    <string name="brush_color">브러시 색상</string>
+
+    <!-- Run Screen -->
+    <string name="prompt_settings">프롬프트</string>
+    <string name="advanced_settings">고급</string>
+    <string name="advanced_settings_title">고급 설정</string>
+    <string name="image_prompt">이미지 생성 프롬프트</string>
+    <string name="negative_prompt">네거티브 프롬프트</string>
+    <string name="generate_image">생성</string>
+    <string name="generating">이미지 생성 중</string>
+    <string name="no_results">아직 결과가 없습니다</string>
+    <string name="no_results_hint">먼저 이미지를 생성해 보세요.</string>
+    <string name="go_to_generate">생성하기</string>
+    <string name="prompt_tab">프롬프트</string>
+    <string name="result_tab">결과</string>
+    <string name="history_tab">기록</string>
+    <string name="no_history">생성 기록이 없습니다</string>
+    <string name="no_history_hint">생성 후 기록이 저장됩니다</string>
+    <plurals name="selected_items_count">
+        <item quantity="other">%d개 항목 선택됨</item>
+    </plurals>
+    <string name="generation_params_title">생성 파라미터</string>
+    <string name="delete_image">이미지 삭제</string>
+    <string name="delete_image_confirm">이 이미지를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.</string>
+    <string name="deleted">삭제됨</string>
+    <string name="delete_failed_message">삭제 실패</string>
+    <string name="batch_delete">일괄 삭제</string>
+    <plurals name="batch_delete_confirm">
+        <item quantity="other">선택한 이미지 %d개를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.</item>
+    </plurals>
+    <string name="batch_save">일괄 저장</string>
+    <plurals name="batch_save_confirm">
+        <item quantity="other">선택한 이미지 %d개를 갤러리에 저장하시겠습니까?</item>
+    </plurals>
+    <string name="batch_saving_progress">%1$d / %2$d 저장 중</string>
+    <plurals name="saved_count">
+        <item quantity="other">이미지 %d개를 저장했습니다</item>
+    </plurals>
+    <string name="saved_count_with_failed" tools:ignore="PluralsCandidate">이미지 %1$d개 저장, %2$d개 실패</string>
+    <plurals name="deleted_count">
+        <item quantity="other">%d개 항목을 삭제했습니다</item>
+    </plurals>
+    <string name="deleted_count_with_failed" tools:ignore="PluralsCandidate">%1$d개 항목 삭제 성공, %2$d개 실패</string>
+    <string name="confirm_exit">종료 확인</string>
+    <string name="confirm_exit_hint">생성이 진행 중입니다. 종료하면 현재 생성이 중단됩니다. 종료하시겠습니까?</string>
+    <string name="interrupt_generation">생성 중단</string>
+    <string name="interrupt_generation_hint">생성이 진행 중입니다. 중단하시겠습니까?</string>
+    <string name="generation_interrupted">생성이 중단되었습니다</string>
+    <string name="reset">초기화</string>
+    <string name="reset_hint">모든 파라미터를 초기화하시겠습니까? 이 작업은 되돌릴 수 없습니다.</string>
+    <string name="media_permission_hint">img2img 생성에는 미디어 권한이 필요합니다</string>
+    <string name="backend_failed">백엔드 시작에 실패했습니다. 기기가 지원되지 않을 수 있습니다.</string>
+
+    <!-- Parameter Settings -->
+    <string name="generation_params">생성 파라미터</string>
+    <string name="steps">스텝: %d</string>
+    <string name="image_size">이미지 크기: %1$dx%2$d</string>
+    <string name="width">너비</string>
+    <string name="height">높이</string>
+    <string name="random_seed">랜덤 시드(선택 사항)</string>
+    <string name="use_last_seed">마지막 시드 사용 (%s)</string>
+    <string name="batch_count">배치 수: %d</string>
+    <string name="reproduce">재사용</string>
+    <string name="reproduce_params_title">파라미터 재사용</string>
+    <string name="reproduce_params_hint">프롬프트 페이지에 적용할 항목을 선택하세요.</string>
+    <string name="select_all">모두 선택</string>
+    <string name="deselect_all">모두 선택 해제</string>
+    <string name="result_params">스텝: %1$s / CFG: %2$.1f / 시드: %3$s</string>
+    <string name="result_params_2">크기: %1$sx%2$s / 시간: %3$s / %4$s</string>
+    <string name="params_detail">세부 정보</string>
+    <string name="basic_params">기본</string>
+    <string name="basic_model">모델: %s</string>
+    <string name="basic_step">스텝: %d</string>
+    <string name="basic_size">크기: %1$dx%2$d</string>
+    <string name="basic_seed">시드: %s</string>
+    <string name="basic_runtime">실행 환경: %s</string>
+    <string name="basic_mode">모드: %s</string>
+    <string name="basic_denoise">디노이징 강도: %.2f</string>
+    <string name="basic_time">소요 시간: %s</string>
+    <string name="opencl_warning">GPU 런타임 경고: 각 해상도에서 처음 실행할 때 캐시 파일을 생성하므로 느릴 수 있습니다. 이후 실행은 훨씬 빨라집니다.</string>
+
+    <!-- Parameter Share -->
+    <string name="share">공유</string>
+    <string name="share_params_title">파라미터 공유</string>
+    <string name="share_params_hint">복사할 필드를 선택하세요. 결과는 클립보드에 복사되어 어디에나 붙여넣을 수 있습니다.</string>
+    <string name="share_use_base64">Base64 인코딩</string>
+    <string name="share_use_base64_hint">페이로드를 Base64로 인코딩합니다.</string>
+    <string name="share_copy_to_clipboard">복사</string>
+    <string name="share_copied">파라미터를 클립보드에 복사했습니다</string>
+    <string name="share_field_steps">스텝</string>
+    <string name="share_field_cfg">CFG</string>
+    <string name="share_field_seed">시드</string>
+    <string name="share_field_denoise">디노이징 강도</string>
+    <string name="share_field_mode">모드</string>
+    <string name="import_params_title">공유 파라미터 적용</string>
+    <string name="import_params_hint">클립보드에서 공유 파라미터를 찾았습니다. 적용할 필드를 선택하세요.</string>
+    <string name="import_clear_clipboard">닫은 후 클립보드 지우기</string>
+    <string name="import_clear_clipboard_hint">적용 또는 취소 여부와 관계없이 이 대화상자를 닫은 후 클립보드에서 공유 페이로드를 제거합니다.</string>
+    <string name="import_apply">적용</string>
+    <string name="import_applied">파라미터를 적용했습니다</string>
+    <string name="import_from_clipboard">클립보드에서 가져오기</string>
+    <string name="import_no_params">클립보드에서 공유 파라미터를 찾을 수 없습니다</string>
+
+    <!-- Error Messages -->
+    <string name="error_download_failed">다운로드 실패: %s</string>
+    <string name="error_request_failed">요청 실패: %s</string>
+    <string name="unknown_error">알 수 없는 오류</string>
+
+    <!-- Info Messages -->
+    <string name="image_saved">이미지를 갤러리에 저장했습니다</string>
+    <string name="loading_model">모델 로드 중…</string>
+
+    <!-- File Manager -->
+    <string name="file_manager">파일 관리자</string>
+    <string name="delete_file">파일 삭제</string>
+    <string name="delete_file_confirm">\"%s\" 파일을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.</string>
+    <string name="file_deleted">파일을 삭제했습니다</string>
+    <string name="no_model_files">모델 파일을 찾을 수 없습니다</string>
+    <string name="loading_files">파일 로드 중…</string>
+    <string name="back_to_folders">폴더 목록으로 돌아가기</string>
+    <string name="model_folder">모델: %s</string>
+    <plurals name="file_count">
+        <item quantity="other">파일 %d개</item>
+    </plurals>
+    <string name="clear_cache">캐시 지우기</string>
+    <string name="clear_cache_with_size">캐시 지우기(%s)</string>
+    <string name="clear_cache_confirm">이 모델의 캐시 디렉터리를 지우시겠습니까? 캐시된 프롬프트 임베딩과 OpenCL 커널은 다음 사용 시 다시 생성됩니다.</string>
+    <string name="cache_cleared">캐시를 지웠습니다</string>
+
+    <!-- Settings -->
+    <string name="download_source">다운로드 소스</string>
+    <string name="feature_settings">기능 설정</string>
+
+    <!-- Custom Model -->
+    <string name="add_custom_model">사용자 지정 모델 추가</string>
+    <string name="add_custom_npu_model">모델 ZIP 가져오기</string>
+    <string name="custom_model">사용자 지정 모델</string>
+    <string name="custom_model_name">모델 이름</string>
+    <string name="custom_model_name_hint">모델 이름 입력</string>
+    <string name="custom_model_id_reserved">이 이름은 내장 모델과 충돌합니다. 다른 이름을 선택하세요.</string>
+    <string name="pin_to_top">상단 고정</string>
+    <string name="unpin_from_top">고정 해제</string>
+    <string name="rename">이름 변경</string>
+    <string name="rename_model">모델 이름 변경</string>
+    <string name="rename_model_label">새 이름</string>
+    <string name="rename_name_exists">같은 이름의 모델이 이미 있습니다.</string>
+    <string name="rename_success">이름이 변경되었습니다</string>
+    <string name="rename_failed">이름 변경 실패</string>
+    <string name="select_model_file">모델 파일 선택</string>
+    <string name="select_zip_file">ZIP 파일 선택</string>
+    <string name="zip_file_selected">ZIP 파일을 선택했습니다</string>
+    <string name="file_selected">파일을 선택했습니다</string>
+    <string name="add_model">모델 추가</string>
+    <string name="custom_model_hint">SD1.5 아키텍처의 .safetensors 모델 파일만 지원합니다</string>
+    <string name="custom_npu_model_hint">QNN 또는 SDXL MNN 모델 ZIP을 가져옵니다. QNN은 지원되는 Qualcomm 기기가 필요하며, MNN은 CPU/GPU에서 실행됩니다. 일부 모델은 https://huggingface.co/xororz/sd-qnn 및 https://huggingface.co/xororz/sdxl-qnn 또는 Hugging Face의 다른 곳에서 찾을 수 있습니다.</string>
+    <string name="converting">변환 중…</string>
+    <string name="model_conversion_success">모델 변환에 성공했습니다!</string>
+    <string name="model_conversion_failed">변환 실패: %s</string>
+    <string name="npu_model_added_success">모델을 추가했습니다!</string>
+    <string name="npu_model_add_failed">모델 가져오기 실패: %s</string>
+    <string name="preparing_model">모델 준비 중…</string>
+    <string name="preparing_npu_model">모델 준비 중…</string>
+    <string name="extracting_zip_file">ZIP 파일 추출 중…</string>
+    <string name="copying_model_file">모델 파일 복사 중…</string>
+    <string name="copying_base_files">기본 파일 복사 중…</string>
+    <string name="converting_model">모델 변환 중…</string>
+    <string name="clip_skip_hint">CLIP skip 레이어 수를 설정합니다(1 또는 2)</string>
+    <string name="lora_files_optional">LoRA 파일(선택 사항)</string>
+    <string name="add_lora_file">LoRA 파일 추가</string>
+    <string name="selected_lora_files">선택한 LoRA 파일:</string>
+    <string name="copying_lora_files">LoRA 파일 복사 중…</string>
+    <string name="lora_weight">가중치:</string>
+
+    <!-- Embedding Manager -->
+    <string name="embedding_manager">임베딩 관리자</string>
+    <string name="no_embeddings">임베딩 파일을 찾을 수 없습니다</string>
+    <string name="import_embedding">임베딩 가져오기</string>
+    <string name="delete_embedding">임베딩 삭제</string>
+    <string name="delete_embedding_confirm">임베딩 \"%s\"을(를) 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.</string>
+    <string name="embedding_deleted">임베딩을 삭제했습니다</string>
+    <string name="embedding_imported">임베딩을 가져왔습니다</string>
+    <string name="embedding_import_failed">임베딩 가져오기 실패: %s</string>
+    <string name="only_safetensors_supported">.safetensors 파일만 지원합니다</string>
+
+    <!-- Upscaler -->
+    <string name="select_upscaler_model">업스케일러 모델 선택</string>
+    <string name="upscale_scale_label">배율</string>
+    <string name="upscale_factor">%d×</string>
+    <string name="upscale_scale_hint">모델은 항상 4×로 업스케일하며, 2×와 3×는 결과를 다른 용도로 축소할 뿐입니다.</string>
+    <string name="upscaling_image">이미지 업스케일 중…</string>
+    <string name="upscale_failed">업스케일에 실패했습니다: %s</string>
+
+    <!-- UltraFix -->
+    <string name="ultrafix">UltraFix</string>
+    <string name="ultrafix_confirm_hint">UltraFix는 타일 기반 img2img로 이미지 전체를 정교화합니다. denoise steps / steps 비율은 0.5 이하를 권장합니다. 애니메이션 모델에서 가장 효과적이므로 해당 모델에서, 그리고 가장 마음에 드는 이미지에만 사용하세요. 처리 시간이 오래 걸리므로 기기가 과열된 상태에서는 사용하지 마세요.</string>
+    <string name="ultrafix_seed_random">랜덤</string>
+    <string name="ultrafix_denoise_steps_label">디노이즈 스텝: %d</string>
+    <string name="ultrafix_source_info">이미지: %1$dx%2$d  ·  타일: %3$dpx</string>
+    <string name="ultrafix_restore_defaults">기본값으로 복원</string>
+    <string name="ultrafix_other_params_hint">프롬프트, CFG, 스케줄러, 시드는 프롬프트 화면의 값을 사용합니다. 거기서 수정하세요.</string>
+    <string name="ultrafix_preparing">UltraFix 준비 중…</string>
+    <string name="ultrafix_failed">UltraFix에 실패했습니다: %s</string>
+    <string name="ultrafix_quality_denoise_desc">다음 프롬프트로 디노이즈합니다: %s. 끄면 입력란의 프롬프트를 사용합니다.</string>
+    <string name="download_model_first">먼저 모델을 다운로드하세요</string>
+    <string name="upscaler_anime">애니풍</string>
+    <string name="upscaler_anime_desc">애니풍 및 만화 이미지에 최적화되어 있습니다</string>
+    <string name="upscaler_realistic">실사</string>
+    <string name="upscaler_realistic_desc">실사 사진에 최적화되어 있습니다</string>
+    <string name="image_upscale">이미지 업스케일</string>
+    <string name="upscale">업스케일</string>
+    <string name="add_image">이미지 추가</string>
+    <string name="clear_image">이미지 지우기</string>
+    <string name="save_image">이미지 저장</string>
+    <string name="selected_image">선택한 이미지</string>
+    <string name="upscaled_image">업스케일된 이미지</string>
+    <string name="click_to_add_image">업스케일할 이미지를 추가하려면 탭하세요</string>
+    <string name="image_resolution_too_large">이미지 해상도가 너무 큽니다(%1$d×%2$d). 2048x2048보다 작은 이미지를 선택하세요</string>
+    <string name="failed_to_load_image">이미지를 로드하지 못했습니다: %s</string>
+    <string name="model_download_channel">모델 다운로드</string>
+    <string name="model_download_channel_desc">모델 다운로드 진행률 알림</string>
+    <string name="downloading_model">%s 다운로드 중</string>
+    <string name="download_complete">다운로드 완료</string>
+    <string name="download_failed">다운로드 실패</string>
+    <string name="download_background_hint">다운로드는 백그라운드에서 계속됩니다. 다른 앱으로 전환해도 됩니다.</string>
+    <string name="switch_resolution">해상도 변경</string>
+    <string name="switch_resolution_hint">해상도를 변경하면 백엔드 서비스가 다시 시작되고 현재 생성이 중단됩니다. 계속하시겠습니까?</string>
+    <string name="resolution">해상도</string>
+    <string name="aspect_ratio">화면비</string>
+    <string name="aspect_ratio_custom">사용자 지정</string>
+    <string name="aspect_ratio_custom_title">사용자 지정 화면비</string>
+    <string name="aspect_ratio_custom_hint">양의 정수 두 개를 입력하세요(예: 21 9)</string>
+    <string name="aspect_ratio_invalid">잘못된 비율입니다. 양의 정수 두 개여야 합니다.</string>
+    <string name="scheduler">스케줄러</string>
+    <string name="extracting">추출 중…</string>
+
+    <!-- History migration -->
+    <string name="migration_title">기록을 가져오는 중</string>
+    <string name="migration_subtitle">첫 실행 시 기존 기록을 가져와야 합니다. 완료될 때까지 앱을 닫지 마세요.</string>
+    <string name="migration_progress">%1$d / %2$d</string>
+    <string name="migration_current_model">현재 모델: %1$s</string>
+    <string name="migration_failed_title">가져오기 실패</string>
+    <string name="migration_retry">다시 시도</string>
+    <string name="migration_skip">건너뛰기</string>
+    <string name="migration_skip_warning">건너뛰면 기존 기록을 새 기록 화면에서 볼 수 없습니다.</string>
+
+    <!-- History backup -->
+    <string name="backup_restore">백업 및 복원</string>
+    <string name="backup_hint">생성 기록(이미지 및 매개변수)을 zip 파일로 내보내거나 백업을 가져와 현재 기록과 병합합니다. 중복 항목은 자동으로 건너뜁니다.</string>
+    <string name="backup_stats_all">전체: %1$d장 (%2$s)</string>
+    <string name="backup_stats_favorites">즐겨찾기: %1$d장 (%2$s)</string>
+    <string name="backup_scope_all">전체</string>
+    <string name="backup_scope_favorites">즐겨찾기만</string>
+    <string name="backup_export">내보내기</string>
+    <string name="backup_import">가져오기</string>
+    <string name="backup_preparing">준비 중…</string>
+    <string name="backup_exporting">내보내는 중 %1$d / %2$d</string>
+    <string name="backup_importing">가져오는 중 %1$d / %2$d</string>
+    <string name="backup_export_done">%1$d장을 내보냈습니다</string>
+    <string name="backup_import_done">%1$d개 가져옴, 중복 %2$d개 건너뜀, %3$d개 실패</string>
+    <string name="backup_import_orphan_note">백업에 설치되지 않은 모델 %1$d개가 있습니다. 해당 기록은 가져왔으며 기록 필터의 \'모든 모델\'에서 볼 수 있습니다.</string>
+    <string name="backup_failed">작업 실패: %1$s</string>
+    <string name="backup_invalid_file">유효한 Local Dream 백업 파일이 아닙니다</string>
+    <string name="delete_keep_history">생성 기록 유지</string>
+    <string name="delete_keep_history_hint">모델 삭제 후에도 기록 페이지에서 볼 수 있습니다</string>
+
+    <!-- History filter -->
+    <string name="history_filter_apply">적용</string>
+    <string name="history_filter_reset">초기화</string>
+    <string name="history_filter_models">모델</string>
+    <string name="history_filter_current_model_only">현재 모델만</string>
+    <string name="history_filter_all_models">모든 모델</string>
+    <string name="history_filter_all">전체</string>
+    <string name="history_filter_favorites">즐겨찾기</string>
+    <string name="history_filter_favorite">즐겨찾기됨</string>
+    <string name="history_filter_not_favorite">즐겨찾기 안 함</string>
+    <string name="history_filter_modes">모드</string>
+    <string name="history_filter_time_range">기간</string>
+    <string name="history_filter_time_any">전체 기간</string>
+    <string name="history_filter_size">이미지 크기</string>
+    <string name="history_filter_scheduler">스케줄러</string>
+    <string name="history_filter_device">실행 장치</string>
+    <string name="history_filter_prompt_search">프롬프트에 포함된 내용…</string>
+    <string name="history_filter_sort">정렬</string>
+    <string name="history_filter_sort_desc">최신순</string>
+    <string name="history_filter_sort_asc">오래된순</string>
+    <string name="history_view_filter">필터</string>
+
+    <!-- Permissions -->
+    <string name="permission_storage_required">생성된 이미지를 저장하려면 저장소 권한이 필요합니다</string>
+    <string name="permission_notification_required">백그라운드 이미지 생성에는 알림 권한이 필요합니다</string>
+
+    <!-- Run Screen extras -->
+    <string name="gpu_runtime_warning_title">GPU 런타임 경고</string>
+    <string name="please_crop_first">먼저 이미지를 자르세요</string>
+    <string name="no_image_available">사용할 수 있는 이미지가 없습니다</string>
+    <string name="image_load_failed">이미지를 로드하지 못했습니다</string>
+
+    <!-- Report -->
+    <string name="report">신고</string>
+    <string name="report_image_confirm">이 이미지가 부적절하다고 생각되면 신고하세요. 매개변수와 이미지가 검토를 위해 서버로 전송됩니다.</string>
+    <string name="report_success">신고해 주셔서 감사합니다.</string>
+    <string name="report_failed">신고 실패</string>
+
+    <!-- Error messages extras -->
+    <string name="error_title">오류</string>
+    <string name="ok">확인</string>
+    <string name="error_with_detail">오류: %s</string>
+    <string name="save_failed_detail">저장 실패: %s</string>
+    <string name="img2img_failed_detail">img2img 실패: %s</string>
+    <string name="failed_to_start_backend">백엔드 시작 실패: %s</string>
+    <string name="dit_engine_missing">DiT 엔진이 설치되지 않았습니다</string>
+    <string name="z_image_turbo_description">6B DiT, 8 스텝.</string>
+    <string name="flux2_klein_description">4B DiT, 4 스텝.</string>
+    <string name="qwen_image_2_1_description">Q4_0 DiT + Qwen3-VL-8B, 20 스텝.</string>
+    <string name="flux_edit">편집</string>
+    <string name="flux_base_image">기본 이미지</string>
+    <string name="flux_reference_images">참조 이미지</string>
+    <string name="flux_add_reference">참조 이미지 추가</string>
+    <string name="executable_not_found">실행 파일을 찾을 수 없습니다: %s</string>
+    <string name="cannot_open_file">선택한 파일을 열 수 없습니다</string>
+    <string name="only_qualcomm_npu">사용자 지정 NPU 모델은 Qualcomm 기기만 지원합니다</string>
+    <string name="conversion_need_sd15">SD1.5 safetensors 모델을 사용하세요</string>
+    <string name="converting_with_line">변환 중: %s</string>
+
+    <!-- Temp file cleanup -->
+    <string name="clean_temp_files">임시 파일 정리</string>
+    <string name="clean_temp_confirm">임시 파일(중단된 다운로드 및 임시 버퍼) %s을(를) 정리할까요?</string>
+    <string name="clean_temp_none">정리할 임시 파일이 없습니다</string>
+    <string name="clean_temp_done">%s 확보됨</string>
+
+    <!-- Device link (remote control between two devices) -->
+    <string name="remote_link">기기 연결</string>
+    <string name="remote_host_section">호스트 모드(이 기기에서 모델 실행)</string>
+    <string name="remote_host_hint">같은 네트워크의 다른 Local Dream 기기가 이 기기의 모델을 탐색하고 이미지를 생성할 수 있게 합니다. 호스트 모드 동안 제어 포트(8808)와 생성 포트(8081)가 로컬 네트워크에 개방됩니다.</string>
+    <string name="remote_host_start">호스트 모드 시작</string>
+    <string name="remote_host_stop">호스트 모드 종료</string>
+    <string name="remote_host_addresses">이 기기의 주소</string>
+    <string name="remote_no_network">네트워크 주소를 찾을 수 없습니다. 먼저 Wi-Fi에 연결하세요.</string>
+    <string name="remote_host_serving">실행 중인 모델: %1$s</string>
+    <string name="remote_host_no_model">로드된 모델 없음</string>
+    <string name="remote_connect_section">호스트에 연결(이 기기를 리모컨으로 사용)</string>
+    <string name="remote_connect_hint">호스트 기기에 표시된 주소를 입력하세요. 연결하면 모델 목록에 호스트의 모델이 표시되며 생성은 호스트에서 실행됩니다.</string>
+    <string name="remote_host_field">호스트 주소</string>
+    <string name="remote_connect">연결</string>
+    <string name="remote_disconnect">연결 해제</string>
+    <string name="remote_refresh_models">모델 목록 새로고침</string>
+    <string name="remote_refresh_models_short">새로고침</string>
+    <string name="remote_connect_failed_unreachable">호스트에 연결할 수 없습니다. 주소를 확인하고 호스트 모드가 켜져 있는지 확인하세요.</string>
+    <string name="remote_connected_to">%1$s에 연결됨</string>
+    <string name="remote_banner_connected">%1$s의 모델</string>
+    <string name="remote_banner_offline">호스트에 연결할 수 없음</string>
+    <string name="remote_select_failed">호스트에서 모델을 시작하지 못했습니다</string>
+    <string name="remote_port_hint">기본 제어 포트: %1$d. 주소:포트 형식으로 변경할 수 있습니다.</string>
+    <string name="remote_host_notify_title">호스트 모드 실행 중</string>
+    <string name="remote_host_notify">Local Dream을 로컬 네트워크에서 제어할 수 있습니다</string>
+    <string name="remote_screen_shield">검은 화면(계속 실행)</string>
+    <string name="remote_screen_shield_exit">탭하여 종료</string>
+    <string name="ultrafix_import_action">로컬 이미지 가져오기</string>
+    <string name="ultrafix_import_title">UltraFix용 이미지 가져오기</string>
+    <string name="ultrafix_import_requirement">긴 변 최대 %1$d. UltraFix에는 긴 변 1024 초과, 짧은 변 %2$d 이상이 필요합니다. 작은 이미지는 가져온 후 업스케일할 수 있습니다.</string>
+    <string name="ultrafix_import_output">출력 크기: %1$d×%2$d</string>
+    <string name="ultrafix_import_scale">배율: %1$d%%</string>
+    <string name="ultrafix_longpress_hint">팁: 업스케일 또는 UltraFix 버튼을 길게 누르면 로컬 이미지를 가져올 수 있습니다.</string>
+    <string name="draw_title">그리기</string>
+    <string name="draw_done">완료</string>
+    <string name="draw_original_background">원본 배경</string>
+    <string name="draw_clear_title">캔버스 지우기</string>
+    <string name="draw_clear_message">모든 그림을 삭제하시겠습니까?</string>
+    <string name="draw_clear_confirm">지우기</string>
+    <string name="draw_size">크기: %1$d</string>
+    <string name="draw_transparency">투명도: %1$d%%</string>
+    <string name="draw_blur">흐림: %1$d</string>
+    <string name="draw_pipette">색상 선택기</string>
+    <string name="draw_eraser">지우개</string>
+    <string name="draw_new_layer">새 레이어</string>
+    <string name="draw_zoom">확대/축소</string>
+    <string name="draw_touch_mode">터치 모드</string>
+    <string name="draw_clear_all">전체 지우기</string>
+    <string name="draw_select_color">색상 선택</string>
+    <string name="draw_result">결과:</string>
+    <string name="draw_select">선택</string>
+</resources>

@@ -1,0 +1,149 @@
+build:
+  maxIssues: 0
+  excludeCorrectable: false
+
+complexity:
+  # Compose screens legitimately have many composables / large parameter lists
+  LongMethod:
+    active: false
+  LongParameterList:
+    active: false
+  TooManyFunctions:
+    active: false
+  CyclomaticComplexMethod:
+    active: false
+  NestedBlockDepth:
+    active: false
+  ComplexCondition:
+    threshold: 6
+
+style:
+  # Compose UI code uses magic numbers heavily (.dp values, alphas, durations)
+  MagicNumber:
+    active: false
+  WildcardImport:
+    active: false
+  ReturnCount:
+    active: false
+  MaxLineLength:
+    active: false
+  UnnecessaryAbstractClass:
+    active: false
+  ForbiddenComment:
+    active: false
+  # Tag dictionary / model parsing legitimately uses multi-jump loops
+  UseCheckOrError:
+    active: false
+  LoopWithTooManyJumpStatements:
+    active: false
+  ThrowsCount:
+    active: false
+  # 'modifier' is the standard Compose convention parameter even when not applied
+  UnusedParameter:
+    allowedNames: 'ignored|expected|modifier'
+
+naming:
+  # Composables are PascalCase
+  FunctionNaming:
+    ignoreAnnotated: ['Composable']
+  TopLevelPropertyNaming:
+    constantPattern: '[A-Z][A-Za-z0-9_]*'
+  # Allow SCREAMING_SNAKE for private constants holding Preferences.Key etc
+  VariableNaming:
+    privateVariablePattern: '(_)?[a-z][A-Za-z0-9]*|[A-Z][A-Z0-9_]*'
+  # Allow _backingProperty convention for state holders and SCREAMING_SNAKE for const-like vals
+  ObjectPropertyNaming:
+    constantPattern: '[A-Za-z][_A-Za-z0-9]*'
+    propertyPattern: '(_)?[A-Za-z][A-Za-z0-9]*|[A-Z][A-Z0-9_]*'
+    privatePropertyPattern: '(_)?[A-Za-z][A-Za-z0-9]*|[A-Z][A-Z0-9_]*'
+  # File 'Foo.kt' can hold a single class 'Bar' (e.g. Navigation.kt -> Screen)
+  MatchingDeclarationName:
+    active: false
+
+empty-blocks:
+  EmptyFunctionBlock:
+    ignoreOverridden: true
+
+exceptions:
+  # Catching Exception/Throwable is common around backend interop
+  TooGenericExceptionCaught:
+    active: false
+  TooGenericExceptionThrown:
+    active: false
+  SwallowedException:
+    active: false
+  InstanceOfCheckForException:
+    active: false
+
+performance:
+  SpreadOperator:
+    active: false
+
+# detekt-formatting wraps ktlint's rules. The standalone ktlint plugin already
+# owns formatting/style, and its `no-unused-imports` does not actually flag
+# unused imports, so the ONLY rule we want from this ruleset is NoUnusedImports.
+# Every other rule that is active by default is turned off here to avoid
+# double-enforcing (and conflicting with) the project's ktlint config.
+formatting:
+  active: true
+  android: true
+  autoCorrect: true
+  NoUnusedImports:
+    active: true
+    autoCorrect: true
+  # --- everything else off (defaults that are otherwise active) ---
+  AnnotationOnSeparateLine: { active: false }
+  AnnotationSpacing: { active: false }
+  ArgumentListWrapping: { active: false }
+  BlockCommentInitialStarAlignment: { active: false }
+  ChainWrapping: { active: false }
+  CommentSpacing: { active: false }
+  CommentWrapping: { active: false }
+  EnumEntryNameCase: { active: false }
+  Filename: { active: false }
+  FinalNewline: { active: false }
+  FunKeywordSpacing: { active: false }
+  FunctionReturnTypeSpacing: { active: false }
+  FunctionStartOfBodySpacing: { active: false }
+  FunctionTypeReferenceSpacing: { active: false }
+  ImportOrdering: { active: false }
+  Indentation: { active: false }
+  KdocWrapping: { active: false }
+  MaximumLineLength: { active: false }
+  ModifierListSpacing: { active: false }
+  ModifierOrdering: { active: false }
+  MultiLineIfElse: { active: false }
+  NoBlankLineBeforeRbrace: { active: false }
+  NoBlankLinesInChainedMethodCalls: { active: false }
+  NoConsecutiveBlankLines: { active: false }
+  NoEmptyClassBody: { active: false }
+  NoEmptyFirstLineInMethodBlock: { active: false }
+  NoLineBreakAfterElse: { active: false }
+  NoLineBreakBeforeAssignment: { active: false }
+  NoMultipleSpaces: { active: false }
+  NoSemicolons: { active: false }
+  NoTrailingSpaces: { active: false }
+  NoUnitReturn: { active: false }
+  NoWildcardImports: { active: false }
+  NullableTypeSpacing: { active: false }
+  PackageName: { active: false }
+  ParameterListWrapping: { active: false }
+  ParameterWrapping: { active: false }
+  PropertyWrapping: { active: false }
+  SpacingAroundAngleBrackets: { active: false }
+  SpacingAroundColon: { active: false }
+  SpacingAroundComma: { active: false }
+  SpacingAroundCurly: { active: false }
+  SpacingAroundDot: { active: false }
+  SpacingAroundDoubleColon: { active: false }
+  SpacingAroundKeyword: { active: false }
+  SpacingAroundOperators: { active: false }
+  SpacingAroundParens: { active: false }
+  SpacingAroundRangeOperator: { active: false }
+  SpacingAroundUnaryOperator: { active: false }
+  SpacingBetweenDeclarationsWithAnnotations: { active: false }
+  SpacingBetweenDeclarationsWithComments: { active: false }
+  SpacingBetweenFunctionNameAndOpeningParenthesis: { active: false }
+  StringTemplate: { active: false }
+  UnnecessaryParenthesesBeforeTrailingLambda: { active: false }
+  Wrapping: { active: false }

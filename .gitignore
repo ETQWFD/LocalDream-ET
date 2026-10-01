@@ -1,0 +1,26 @@
+*.iml
+.gradle
+/local.properties
+/.idea
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+app/src/main/jniLibs
+app/release
+app/basic
+app/filter
+app/src/main/assets/qnnlibs
+app/src/main/assets/licenses/qnn-*
+
+# Kotlin compiler session artifacts
+.kotlin/
+
+app/src/main/cpp/build/
+app/src/main/assets/ditlibs
+
+# ET release signing (do not commit)
+et-release.jks
+release-keystore.properties
