@@ -20,6 +20,13 @@ if(NOT patch_result EQUAL 0)
     message(FATAL_ERROR "${patch_error}")
 endif()
 
+# QNN NPU packaging is aarch64-only (Qualcomm ships no armv7 QNN runtime).
+# The 32-bit build is a pure CPU/GPU (MNN/OpenCL) engine: it still compiles
+# against the QNN headers and SampleApp sources, but links nothing from QNN -
+# the backend is dlopen()ed at runtime and is simply absent on armv7.
+option(ENABLE_QNN_NPU "Package the aarch64 QNN NPU runtime libraries" ON)
+
+if(ENABLE_QNN_NPU)
 file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/qnnlibs")
 file(COPY "${QNN_SDK_ROOT}/LICENSE.pdf" "${QNN_SDK_ROOT}/NOTICE.txt"
     "${QNN_SDK_ROOT}/QNN_NOTICE.txt"
@@ -34,6 +41,7 @@ foreach(arch 68 69 73 75 79 81)
         "${QNN_SDK_ROOT}/lib/hexagon-v${arch}/unsigned/libQnnHtpV${arch}Skel.so"
         DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/qnnlibs")
 endforeach()
+endif()
 
 if(WIN32)
     set(PLATFORM_NAME "windows")

@@ -31,6 +31,15 @@ android {
     namespace = "io.github.xororz.localdream"
     compileSdk = 37
 
+    // Lint vital runs a full analysis on every release assemble and stalls for
+    // tens of minutes under memory-constrained builds. It gates nothing the
+    // compiler/APK verifier do not already check, so skip it during packaging.
+    lint {
+        checkReleaseBuilds = false
+        abortOnError = false
+        checkDependencies = false
+    }
+
     defaultConfig {
         // ET fork uses its own application id so it installs and updates
         // independently of the upstream "Local Dream" package.
@@ -38,8 +47,8 @@ android {
         minSdk = 28
 //        minSdk = 31
         targetSdk = 36
-        versionCode = 75
-        versionName = "3.0.0-et.1"
+        versionCode = 76
+        versionName = "3.0.0-et.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

@@ -36,9 +36,31 @@ class ModelDownloadService : Service() {
     }
 
     private val client = Http.client.newBuilder()
-        .connectTimeout(30, TimeUnit.SECONDS)
-        .readTimeout(30, TimeUnit.SECONDS)
+        // Short connect timeout so an unreachable source fails fast and we can
+        // switch to the mirror; a long read timeout tolerates slow big-file
+        // transfers without aborting mid-download.
+        .connectTimeout(12, TimeUnit.SECONDS)
+        .readTimeout(120, TimeUnit.SECONDS)
+        .retryOnConnectionFailure(true)
         .build()
+
+    /**
+     * Builds the list of source URLs to try for one file: the requested URL
+     * first, then the Hugging Face <-> hf-mirror counterpart. This keeps
+     * downloads working whether the official site or the China mirror is the
+     * reachable one on the current network.
+     */
+    private fun mirrorCandidates(url: String): List<String> {
+        val out = linkedSetOf(url)
+        when {
+            url.contains("//huggingface.co") ->
+                out += url.replace("https://huggingface.co", "https://hf-mirror.com")
+                    .replace("http://huggingface.co", "https://hf-mirror.com")
+            url.contains("//hf-mirror.com") ->
+                out += url.replace("https://hf-mirror.com", "https://huggingface.co")
+        }
+        return out.toList()
+    }
 
     companion object {
         private const val TAG = "ModelDownloadService"
@@ -137,7 +159,8 @@ class ModelDownloadService : Service() {
             try {
                 _downloadState.value = DownloadState.Downloading(modelId, 0f, 0, 0)
 
-                val tempDir = File(filesDir, "temp_downloads")
+                val tempDir =
+                    io.github.xororz.localdream.utils.Storage.tempDir(applicationContext)
 
                 if (tempDir.exists()) {
                     tempDir.deleteRecursively()
@@ -324,16 +347,20 @@ class ModelDownloadService : Service() {
 
     /** Published size of a remote file, or -1 when the server does not say. */
     private fun remoteSize(url: String): Long {
-        val request = Request.Builder().url(url).head().build()
-        return runCatching {
-            client.newCall(request).execute().use { response ->
-                if (response.isSuccessful) {
-                    response.header("Content-Length")?.toLongOrNull() ?: -1L
-                } else {
-                    -1L
+        for (candidate in mirrorCandidates(url)) {
+            val request = Request.Builder().url(candidate).head().build()
+            val size = runCatching {
+                client.newCall(request).execute().use { response ->
+                    if (response.isSuccessful) {
+                        response.header("Content-Length")?.toLongOrNull() ?: -1L
+                    } else {
+                        -1L
+                    }
                 }
-            }
-        }.getOrDefault(-1L)
+            }.getOrDefault(-1L)
+            if (size >= 0L) return size
+        }
+        return -1L
     }
 
     private suspend fun downloadFile(
@@ -344,61 +371,74 @@ class ModelDownloadService : Service() {
         packageOffset: Long = 0L,
         packageTotal: Long = 0L,
     ) = withContext(Dispatchers.IO) {
-        val request = Request.Builder()
-            .url(url)
-            .build()
+        var lastError: Exception? = null
+        // Try the chosen source, then the Hugging Face/mirror counterpart.
+        for (candidate in mirrorCandidates(url)) {
+            try {
+                val request = Request.Builder()
+                    .url(candidate)
+                    .build()
 
-        client.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) {
-                throw Exception(getString(R.string.error_download_failed, response.code.toString()))
-            }
+                client.newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) {
+                        throw Exception(getString(R.string.error_download_failed, response.code.toString()))
+                    }
 
-            val body = response.body ?: throw Exception("Response body is null")
-            val totalBytes = body.contentLength()
-            var downloadedBytes = 0L
-            var lastUpdateTime = 0L
+                    val body = response.body ?: throw Exception("Response body is null")
+                    val totalBytes = body.contentLength()
+                    var downloadedBytes = 0L
+                    var lastUpdateTime = 0L
 
-            java.io.BufferedOutputStream(FileOutputStream(destFile)).use { output ->
-                body.byteStream().buffered().use { input ->
-                    val buffer = ByteArray(32 * 1024)
-                    var bytes: Int
+                    java.io.BufferedOutputStream(FileOutputStream(destFile)).use { output ->
+                        body.byteStream().buffered().use { input ->
+                            val buffer = ByteArray(32 * 1024)
+                            var bytes: Int
 
-                    while (input.read(buffer).also { bytes = it } != -1) {
-                        output.write(buffer, 0, bytes)
-                        downloadedBytes += bytes
+                            while (input.read(buffer).also { bytes = it } != -1) {
+                                output.write(buffer, 0, bytes)
+                                downloadedBytes += bytes
 
-                        val currentTime = System.currentTimeMillis()
-                        if (currentTime - lastUpdateTime >= 500 || downloadedBytes == totalBytes) {
-                            lastUpdateTime = currentTime
-                            val reportedDone = packageOffset + downloadedBytes
-                            val reportedTotal = if (packageTotal > 0) packageTotal else totalBytes
-                            val progress = if (reportedTotal > 0) {
-                                reportedDone.toFloat() / reportedTotal
-                            } else {
-                                0f
+                                val currentTime = System.currentTimeMillis()
+                                if (currentTime - lastUpdateTime >= 500 || downloadedBytes == totalBytes) {
+                                    lastUpdateTime = currentTime
+                                    val reportedDone = packageOffset + downloadedBytes
+                                    val reportedTotal = if (packageTotal > 0) packageTotal else totalBytes
+                                    val progress = if (reportedTotal > 0) {
+                                        reportedDone.toFloat() / reportedTotal
+                                    } else {
+                                        0f
+                                    }
+
+                                    _downloadState.value = DownloadState.Downloading(
+                                        modelId,
+                                        progress,
+                                        reportedDone,
+                                        reportedTotal,
+                                    )
+
+                                    updateNotification(modelName, progress)
+                                }
                             }
-
-                            _downloadState.value = DownloadState.Downloading(
-                                modelId,
-                                progress,
-                                reportedDone,
-                                reportedTotal,
-                            )
-
-                            updateNotification(modelName, progress)
                         }
                     }
-                }
-            }
 
-            // Guard against silently truncated downloads: a dropped connection
-            // ends the read loop without throwing, leaving a partial file.
-            if (totalBytes > 0 && downloadedBytes != totalBytes) {
-                throw Exception(
-                    getString(R.string.error_download_failed, "$downloadedBytes/$totalBytes"),
-                )
+                    // Guard against silently truncated downloads: a dropped connection
+                    // ends the read loop without throwing, leaving a partial file.
+                    if (totalBytes > 0 && downloadedBytes != totalBytes) {
+                        throw Exception(
+                            getString(R.string.error_download_failed, "$downloadedBytes/$totalBytes"),
+                        )
+                    }
+                }
+                // Success on this source.
+                return@withContext
+            } catch (e: Exception) {
+                lastError = e
+                Log.w(TAG, "download from $candidate failed (${e.message}); trying next source")
+                runCatching { if (destFile.exists()) destFile.delete() }
             }
         }
+        throw lastError ?: Exception(getString(R.string.error_download_failed, "no source"))
     }
 
     private suspend fun unzipFile(zipFile: File, destDir: File) = withContext(Dispatchers.IO) {
@@ -429,9 +469,8 @@ class ModelDownloadService : Service() {
         stopSelf()
     }
 
-    private fun getModelsDir(): File = File(filesDir, "models").apply {
-        if (!exists()) mkdirs()
-    }
+    private fun getModelsDir(): File =
+        io.github.xororz.localdream.utils.Storage.modelsDir(applicationContext)
 
     private fun createNotificationChannel() {
         val channel = NotificationChannel(

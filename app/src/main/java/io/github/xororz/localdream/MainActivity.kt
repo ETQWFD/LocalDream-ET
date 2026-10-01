@@ -1,9 +1,13 @@
 package io.github.xororz.localdream
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Environment
+import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -54,6 +58,22 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    // Android 11+: "All files access" lives in a system settings screen, not a
+    // normal runtime dialog. On return we verify and create the public folder.
+    private val allFilesAccessLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult(),
+    ) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && !Environment.isExternalStorageManager()) {
+            Toast.makeText(
+                this,
+                getString(R.string.permission_storage_required),
+                Toast.LENGTH_LONG,
+            ).show()
+        } else {
+            io.github.xororz.localdream.utils.Storage.publicRoot().mkdirs()
+        }
+    }
+
     private val requestNotificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) { isGranted: Boolean ->
@@ -67,28 +87,53 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun checkStoragePermission() {
-        // < Android 10
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
-            when {
-                ContextCompat.checkSelfPermission(
+        // Android 11 (API 30) and above: All files access for the shared folder.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            if (!Environment.isExternalStorageManager()) {
+                Toast.makeText(
                     this,
-                    Manifest.permission.WRITE_EXTERNAL_STORAGE,
-                ) == PackageManager.PERMISSION_GRANTED -> {
-                    // ok
+                    getString(R.string.permission_storage_required),
+                    Toast.LENGTH_LONG,
+                ).show()
+                val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
+                    data = Uri.parse("package:$packageName")
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
+                runCatching {
+                    allFilesAccessLauncher.launch(intent)
+                }.getOrElse {
+                    // Some devices lack the per-app screen: open the generic list.
+                    allFilesAccessLauncher.launch(
+                        Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                    )
+                }
+            } else {
+                io.github.xororz.localdream.utils.Storage.publicRoot().mkdirs()
+            }
+            return
+        }
 
-                shouldShowRequestPermissionRationale(Manifest.permission.WRITE_EXTERNAL_STORAGE) -> {
-                    Toast.makeText(
-                        this,
-                        getString(R.string.permission_storage_required),
-                        Toast.LENGTH_LONG,
-                    ).show()
-                    requestStoragePermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                }
+        // API 28–29: classic runtime storage permission.
+        when {
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE,
+            ) == PackageManager.PERMISSION_GRANTED -> {
+                // ok
+            }
 
-                else -> {
-                    requestStoragePermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                }
+            shouldShowRequestPermissionRationale(Manifest.permission.WRITE_EXTERNAL_STORAGE) -> {
+                Toast.makeText(
+                    this,
+                    getString(R.string.permission_storage_required),
+                    Toast.LENGTH_LONG,
+                ).show()
+                requestStoragePermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+            }
+
+            else -> {
+                requestStoragePermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
             }
         }
     }

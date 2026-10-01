@@ -1,0 +1,24 @@
+diff --git a/rust/src/lib.rs b/rust/src/lib.rs
+index e8c94a3..9a6fd5e 100644
+--- a/rust/src/lib.rs
++++ b/rust/src/lib.rs
+@@ -215,7 +215,8 @@ extern "C" fn tokenizers_get_decode_str(
+ ) {
+     unsafe {
+         *out_cstr = (*handle).decode_str.as_mut_ptr();
+-        *out_len = (*handle).decode_str.len();
++        let decoded: &String = &(*handle).decode_str;
++        *out_len = decoded.len();
+     }
+ }
+ 
+@@ -248,7 +249,8 @@ extern "C" fn tokenizers_id_to_token(
+         };
+ 
+         *out_cstr = (*handle).id_to_token_result.as_mut_ptr();
+-        *out_len = (*handle).id_to_token_result.len();
++        let token_result: &String = &(*handle).id_to_token_result;
++        *out_len = token_result.len();
+     }
+ }
+ 

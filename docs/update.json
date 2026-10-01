@@ -1,7 +1,7 @@
 {
-  "versionCode": 75,
-  "versionName": "3.0.0-et.1",
+  "versionCode": 76,
+  "versionName": "3.0.0-et.2",
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
-  "size": 144592966,
-  "releaseNotes": "ET 定制版 v3.0.0-et.1\n• 设置内新增「检测更新」：应用内直接下载，完成后自动调起系统安装器，无需文件管理器\n• 首次更新自动申请安装权限\n• 设置页显示开发者与版本号\n• 加入 armeabi-v7a（32 位）ABI 配置，32 位设备走 CPU/GPU 引擎\n• arm64 安装包已内置完整 NPU/CPU/GPU 原生引擎\n• 开发者：ET"
+  "size": 148341883,
+  "releaseNotes": "ET 定制版 v3.0.0-et.2\n• 【修复 32 位手机】新增 armeabi-v7a 原生 CPU/GPU 引擎，解决『lib/arm/libstable_diffusion_core.so 找不到 / 转换失败』，32 位设备现在可以正常转换、出图\n• 【修复下载慢/连接失败】模型源默认改用国内镜像 hf-mirror.com，并在官方站与镜像间自动回退、快速超时重试，解决 huggingface.co 30000ms ETIMEDOUT\n• 模型及所有下载/临时文件统一存放到 /storage/emulated/0/LocalDreamET，首次启动自动申请『所有文件访问』权限（未授权时回退应用私有目录）\n• 启动即实时检测官网更新；有新版在应用内下载，完成后自动申请安装权限并直接调起系统安装器，无需文件管理器\n• 更新 ET 品牌启动器图标与标题\n• arm64 设备保留完整 NPU/CPU/GPU 引擎\n• 开发者：ET"
 }

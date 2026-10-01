@@ -42,12 +42,19 @@ private enum class UpdatePhase { CHECKING, UP_TO_DATE, AVAILABLE, DOWNLOADING, R
  * system package installer.
  */
 @Composable
-internal fun UpdateDialog(onDismiss: () -> Unit) {
+internal fun UpdateDialog(
+    onDismiss: () -> Unit,
+    prefetched: AppUpdater.UpdateInfo? = null,
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    var phase by remember { mutableStateOf(UpdatePhase.CHECKING) }
-    var info by remember { mutableStateOf<AppUpdater.UpdateInfo?>(null) }
+    var phase by remember {
+        mutableStateOf(
+            if (prefetched != null) UpdatePhase.AVAILABLE else UpdatePhase.CHECKING,
+        )
+    }
+    var info by remember { mutableStateOf(prefetched) }
     var downloadedFile by remember { mutableStateOf<File?>(null) }
     var progress by remember { mutableFloatStateOf(0f) }
     var statusText by remember { mutableStateOf("") }
@@ -121,7 +128,12 @@ internal fun UpdateDialog(onDismiss: () -> Unit) {
         }
     }
 
-    LaunchedEffect(checkToken) { beginCheck() }
+    LaunchedEffect(checkToken) {
+        // A prefetched result means we arrived from the silent startup check;
+        // only hit the network again on explicit retry.
+        if (checkToken == 0 && prefetched != null) return@LaunchedEffect
+        beginCheck()
+    }
 
     val title = when (phase) {
         UpdatePhase.CHECKING -> stringResource(R.string.update_checking)

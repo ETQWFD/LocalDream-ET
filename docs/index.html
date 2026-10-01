@@ -100,7 +100,7 @@
       <a class="btn primary" href="https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk" download>⬇ 下载最新 APK</a>
       <a class="btn ghost" href="https://github.com/ETQWFD/LocalDream-ET" target="_blank" rel="noopener">GitHub 仓库</a>
     </div>
-    <div class="ver">当前版本 <b>v3.0.0-et.1</b>（build 75）· 开发者 <b>ET</b> · 支持 arm64-v8a / armeabi-v7a</div>
+    <div class="ver">当前版本 <b>v3.0.0-et.2</b>（build 76）· 开发者 <b>ET</b> · 支持 arm64-v8a / armeabi-v7a</div>
   </section>
 
   <section id="features">
@@ -156,8 +156,7 @@
       <span class="tag warn">仅 CPU / GPU</span>
     </p>
     <div class="note">
-      ⚠️ 关于 32 位：应用与界面已完整支持 armeabi-v7a。NPU 所用的高通 QNN 库仅有 64 位版本，因此 32 位设备使用 CPU/GPU（MNN/OpenCL）引擎；
-      32 位原生推理引擎需用 NDK 对 <code>app/src/main/cpp</code> 交叉编译后打入 <code>jniLibs/armeabi-v7a</code>（仓库已提供配置与说明）。
+      ✅ 32 位：v3.0.0-et.2 起安装包已内置 armeabi-v7a 原生 CPU/GPU（MNN/OpenCL）引擎，32 位手机可直接转换模型与出图，无需自行编译。NPU 所用的高通 QNN 库仅有 64 位版本，因此 32 位设备走 CPU/GPU 引擎；
       大模型（尤其 SDXL）对内存要求较高，32 位设备建议使用 SD1.5。
     </div>
   </section>

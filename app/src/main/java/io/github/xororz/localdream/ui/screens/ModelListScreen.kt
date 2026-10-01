@@ -291,6 +291,10 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
     var showCleanTempDialog by remember { mutableStateOf(false) }
     var tempScanBytes by remember { mutableLongStateOf(0L) }
     var showUpdateDialog by remember { mutableStateOf(false) }
+    // Result of the silent on-launch update check; null = manual check.
+    var startupUpdate by remember {
+        mutableStateOf<io.github.xororz.localdream.utils.AppUpdater.UpdateInfo?>(null)
+    }
     var showEmbeddingManagerDialog by remember { mutableStateOf(false) }
     var showCustomModelDialog by remember { mutableStateOf(false) }
     var showCustomNpuModelDialog by remember { mutableStateOf(false) }
@@ -298,9 +302,9 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
     var conversionProgress by remember { mutableStateOf("") }
     var extractByteProgress by remember { mutableStateOf<ExtractByteProgress?>(null) }
     var tempBaseUrl by remember { mutableStateOf("") }
-    var selectedSource by remember { mutableStateOf("huggingface") }
+    var selectedSource by remember { mutableStateOf("hf-mirror") }
     val generationPreferences = remember { GenerationPreferences(context) }
-    var currentBaseUrl by remember { mutableStateOf("https://huggingface.co/") }
+    var currentBaseUrl by remember { mutableStateOf("https://hf-mirror.com/") }
 
     val modelRepository = remember { ModelRepository.getInstance(context) }
     val upscalerRepository = remember { UpscalerRepository.getInstance(context) }
@@ -315,6 +319,19 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
     val isFirstLaunch = remember {
         context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
             .getBoolean("is_first_launch", true)
+    }
+
+    // Real-time update check on launch: query the official site once; when a
+    // newer build exists, surface the in-app download/install dialog. Failures
+    // are silent so an offline launch is never blocked.
+    LaunchedEffect(Unit) {
+        val info = runCatching {
+            io.github.xororz.localdream.utils.AppUpdater.check()
+        }.getOrNull()
+        if (info != null) {
+            startupUpdate = info
+            showUpdateDialog = true
+        }
     }
 
     // Collected (not keyed on the state) so a state transition cannot cancel
@@ -838,7 +855,7 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                 title = {
                     Column {
                         Text(
-                            text = "Local Dream✨",
+                            text = stringResource(R.string.app_name),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
@@ -1857,7 +1874,10 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                         SettingNavCard(
                             icon = Icons.Default.SystemUpdate,
                             label = stringResource(R.string.check_for_updates),
-                            onClick = { showUpdateDialog = true },
+                            onClick = {
+                                startupUpdate = null
+                                showUpdateDialog = true
+                            },
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
@@ -1882,7 +1902,13 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
     }
 
     if (showUpdateDialog) {
-        UpdateDialog(onDismiss = { showUpdateDialog = false })
+        UpdateDialog(
+            onDismiss = {
+                showUpdateDialog = false
+                startupUpdate = null
+            },
+            prefetched = startupUpdate,
+        )
     }
 
     BlockingProgressOverlay(visible = isConverting) {
@@ -3120,7 +3146,7 @@ suspend fun extractNpuModel(
 
         val modelId = modelName.replace(" ", "")
 
-        val modelsDir = File(context.filesDir, "models")
+        val modelsDir = io.github.xororz.localdream.utils.Storage.modelsDir(context)
         if (!modelsDir.exists()) {
             modelsDir.mkdirs()
         }
@@ -3213,7 +3239,7 @@ suspend fun extractNpuModel(
         Log.e("NpuModelExtract", "Extraction failed", e)
 
         val modelId = modelName.replace(" ", "")
-        val modelDir = File(File(context.filesDir, "models"), modelId)
+        val modelDir = File(io.github.xororz.localdream.utils.Storage.modelsDir(context), modelId)
         if (modelDir.exists()) {
             modelDir.deleteRecursively()
         }
@@ -3505,7 +3531,7 @@ suspend fun convertCustomModel(
 
         val modelId = modelName.replace(" ", "")
 
-        val modelsDir = File(context.filesDir, "models")
+        val modelsDir = io.github.xororz.localdream.utils.Storage.modelsDir(context)
         if (!modelsDir.exists()) {
             modelsDir.mkdirs()
         }
@@ -3695,7 +3721,7 @@ suspend fun convertCustomModel(
         Log.e("ModelConvert", "Conversion failed", e)
 
         val modelId = modelName.replace(" ", "")
-        val modelDir = File(File(context.filesDir, "models"), modelId)
+        val modelDir = File(io.github.xororz.localdream.utils.Storage.modelsDir(context), modelId)
         if (modelDir.exists()) {
             modelDir.deleteRecursively()
         }
