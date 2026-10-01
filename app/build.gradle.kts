@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -60,7 +62,7 @@ android {
             // Load ET release signing material from app/release-keystore.properties
             // (git-ignored). Falls back to -P properties / env if absent.
             val propsFile = rootProject.file("release-keystore.properties")
-            val releaseProps = java.util.Properties().apply {
+            val releaseProps = Properties().apply {
                 if (propsFile.exists()) propsFile.inputStream().use { load(it) }
             }
             fun prop(key: String): String? =

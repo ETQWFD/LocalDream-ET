@@ -1,84 +1,96 @@
 <div align="center">
 
-# Local Dream <img src="./assets/icon.png" width="32" alt="Local Dream">
+# Local Dream ET <img src="./assets/icon.png" width="32" alt="Local Dream ET">
 
-**Android Stable Diffusion with Snapdragon NPU acceleration**  
-_Also supports CPU/GPU inference_
-
-<img src="./assets/demo1.jpg" alt="App Demo" width="800">
+**安卓本地 Stable Diffusion · 骁龙 NPU / CPU / GPU 加速**
+### ET 定制版（开发者：ET）
 
 </div>
 
-## About this Repo
+## 这是什么
 
-This project is **now open sourced and completely free**. Hope you enjoy it!
+Local Dream ET 是基于开源项目 [xororz/local-dream](https://github.com/xororz/local-dream) 的定制版本，
+可在安卓手机上**本地**运行 Stable Diffusion 出图，数据不出本机。ET 版在原版基础上加入了
+应用内自更新、32 位适配与品牌定制。
 
-If you like it, please consider [sponsor](#-support-this-project) this project.
+> 本版本的定制修改版权归 **ET** 所有；底层代码遵循原项目及其第三方依赖的开源许可。
 
-> [!NOTE]
-> Currently focused on SD1.5 and SDXL models. SD2.1 is no longer maintained due to poor quality and limited popularity.
->
-> **NPU support:**
->
-> - SD1.5 models are supported on Snapdragon NPUs with Hexagon V68 architecture or newer.
-> - SDXL models are supported on Snapdragon 8 Gen 3 and newer devices.
->
-> CPU/GPU inference supports SD1.5 and imported SDXL MNN packages. Large SDXL
-> models require substantially more memory than SD1.5.
->
-> You can join our [telegram group](https://t.me/local_dream) for discussion or help with testing.
+## ET 版新增
 
-## User Guide
+- **设置内「检测更新」**：应用读取本仓库 GitHub Pages 上的 `update.json` 比对版本号。
+- **应用内直接下载**：发现新版本后在 App 内下载并显示百分比 / 已下载大小。
+- **下载完直接安装**：首次自动申请 `REQUEST_INSTALL_PACKAGES`（“允许安装未知应用”），
+  授权后立即调起**系统打包安装程序（Package Installer）**覆盖安装，全程不经过文件管理器或任何应用商店。
+- **品牌**：应用名 *Local Dream ET*，独立包名 `io.github.etqwfd.localdreamet`，设置页显示开发者与版本。
+- **32 位**：`abiFilters` 增加 `armeabi-v7a`（仅 CPU/GPU，说明见下文）。
 
-For certain reasons, all guides and documentation have been moved to [Guide Site](https://ld-guide.chino.icu).
+## 官网与下载
 
-## Credits & Acknowledgments
+- 官网（GitHub Pages）：<https://etqwfd.github.io/LocalDream-ET/>
+- 更新清单：<https://etqwfd.github.io/LocalDream-ET/update.json>
+- 最新安装包：见 [Releases](https://github.com/ETQWFD/LocalDream-ET/releases)，资产固定名 `LocalDream-ET.apk`。
 
-Local Dream is built on top of many excellent open-source projects. Sincere thanks to all the authors and contributors whose work made this project possible.
+## 关于原生引擎与 32 位（重要）
 
-### C++ Libraries
+本仓库是 Android（Kotlin/Jetpack Compose）外壳 + 原生推理后端（C++）。
+原生后端 `libstable_diffusion_core.so`、`libdit_engine.so` 以及高通 QNN 库**不属于源码仓库**，
+需要用 NDK + 高通 QNN SDK 通过 `app/src/main/cpp/build.sh` 单独编译后放入：
 
-- **[Qualcomm QNN SDK](https://www.qualcomm.com/developer/software/qualcomm-ai-engine-direct-sdk)** - NPU model execution
-- **[alibaba/MNN](https://github.com/alibaba/MNN/)** - CPU model execution
-- **[happyyzy/stable-diffusion.cpp](https://github.com/happyyzy/stable-diffusion.cpp)** - Deep performance optimizations for on-device DiT inference
-- **[xtensor-stack](https://github.com/xtensor-stack)** - Tensor operations & scheduling
-- **[mlc-ai/tokenizers-cpp](https://github.com/mlc-ai/tokenizers-cpp)** - Text tokenization
-- **[yhirose/cpp-httplib](https://github.com/yhirose/cpp-httplib)** - HTTP server
-- **[nothings/stb](https://github.com/nothings/stb)** - Image processing
-- **[facebook/zstd](https://github.com/facebook/zstd)** - Model compression
-- **[nlohmann/json](https://github.com/nlohmann/json)** - JSON processing
+- `app/src/main/jniLibs/<abi>/libstable_diffusion_core.so`
+- `app/src/main/jniLibs/<abi>/libdit_engine.so`
+- `app/src/main/assets/qnnlibs/`、`app/src/main/assets/ditlibs/`（QNN / DiT 运行库）
 
-### Android Libraries
+**架构说明：**
 
-- **[square/okhttp](https://github.com/square/okhttp)** - HTTP client
-- **[coil-kt/coil](https://github.com/coil-kt/coil)** - Image loading & processing
-- **[MoyuruAizawa/Cropify](https://github.com/MoyuruAizawa/Cropify)** - Image cropping
-- **AOSP, Material Design, Jetpack Compose** - UI framework
+| ABI | 位数 | CPU/GPU(MNN/OpenCL) | NPU(QNN) |
+| --- | --- | --- | --- |
+| `arm64-v8a` | 64 位 | 支持 | 支持（骁龙，详见上游说明） |
+| `armeabi-v7a` | 32 位 | 支持（需用 NDK 交叉编译 v7a 引擎） | 不支持（QNN 仅 aarch64） |
 
-### Models
+高通 QNN 只提供 `aarch64` 库，因此 **32 位设备只能走 CPU/GPU 引擎**；
+发布的 arm64 安装包可直接使用，而可在 32 位设备上出图的 v7a 引擎需在装有
+Android NDK（如 r28）与 Qualcomm QNN SDK 2.50 的 Linux 主机上执行交叉编译
+（`ANDROID_ABI=armeabi-v7a`），本仓库已在 Gradle 中开启该 ABI 打包位。
+大模型（尤其 SDXL）内存需求高，32 位设备建议使用 SD1.5。
 
-- **[CompVis/stable-diffusion](https://github.com/CompVis/stable-diffusion)** and all other model creators
-- **[xinntao/Real-ESRGAN](https://github.com/xinntao/Real-ESRGAN)** - Image upscaling
-- **[Kim2091/UltraSharpV2](https://huggingface.co/Kim2091/UltraSharpV2)** - Image upscaling
-- **[bhky/opennsfw2](https://github.com/bhky/opennsfw2)** - NSFW content filtering
+## 从源码构建
 
----
+需要 JDK 17、Android SDK（compileSdk 37）。原生引擎按上节单独构建。
 
-## 💖 Support This Project
+```bash
+# 拉取子模块
+git submodule update --init --recursive
 
-If you find Local Dream useful, please consider supporting its development:
+# 只编译 APK（jniLibs/assets 中需已存在对应引擎，否则仅界面可用）
+./gradlew :app:assembleBasicRelease
+```
 
-### What Your Support Helps With:
+Release 签名在 `app/release-keystore.properties` 中配置（已被 .gitignore 忽略）：
 
-- **Additional Models** - More AI model integrations
-- **New Features** - Enhanced functionality and capabilities
-- **Bug Fixes** - Continuous improvement and maintenance
+```properties
+RELEASE_STORE_FILE=../et-release.jks
+RELEASE_STORE_PASSWORD=...
+RELEASE_KEY_ALIAS=...
+RELEASE_KEY_PASSWORD=...
+```
 
-<a href="https://ko-fi.com/xororz">
-    <img height="36" style="border:0px;height:36px;" src="https://storage.ko-fi.com/cdn/kofi2.png?v=3" border="0" alt="Buy Me a Coffee at ko-fi.com" />
-</a>
-<a href="https://afdian.com/a/xororz">
-    <img height="36" style="border-radius:12px;height:36px;" src="https://pic1.afdiancdn.com/static/img/welcome/button-sponsorme.jpg" alt="在爱发电支持我" />
-</a>
+> 自更新要求“已安装版本”和“更新包”使用**同一签名**，否则系统会拒绝覆盖安装。
 
-Your sponsorship helps maintain and improve Local Dream for everyone!
+## 更新机制工作原理
+
+1. 设置 → **检测更新** → `AppUpdater.check()` 拉取 `update.json`（失败则回退到 GitHub Release API）。
+2. `versionCode` 更高时弹窗显示新版本说明与大小。
+3. 点“下载并安装”→ `AppUpdater.download()` 流式下载到缓存并回调进度。
+4. 若无安装权限 → 跳转系统授权页，返回后继续。
+5. `FileProvider` 授予安装器读取权限，`ACTION_VIEW` + `application/vnd.android.package-archive`
+   直接打开系统打包安装程序。
+
+发布新版本时：上传新 APK 到 Release（命名 `LocalDream-ET.apk`），
+并更新 `docs/update.json` 的 `versionCode / versionName / releaseNotes`。
+
+## 致谢
+
+感谢上游 [xororz/local-dream](https://github.com/xororz/local-dream) 及 README 中列出的
+MNN、stable-diffusion.cpp、Qualcomm QNN、xtensor、tokenizers-cpp 等所有开源项目与作者。
+
+<div align="center">定制版 © ET</div>
