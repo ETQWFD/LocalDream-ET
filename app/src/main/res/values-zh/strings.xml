@@ -539,4 +539,5 @@
     <string name="counterfeit_description">动漫向 SD1.5 模型（无限制向），首次下载后在本机转换，CPU/32位可用</string>
     <string name="downloading_converting">正在下载并转换模型（首次较慢）…</string>
     <string name="model_download_failed">模型下载失败：%1$s</string>
+    <string name="dreamshaper_description">全能高稳定 SD1.5（写实/插画/动漫皆可、少报错），首次下载后本机转换，CPU/32位可用</string>
 </resources>

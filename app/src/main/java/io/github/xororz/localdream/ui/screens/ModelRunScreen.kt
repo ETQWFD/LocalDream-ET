@@ -1068,7 +1068,10 @@ fun ModelRunScreen(
                     putExtra("prompt", ultrafixPrompt)
                     putExtra("negative_prompt", negativePromptField.text)
                     putExtra("steps", totalSteps)
-                    putExtra("cfg", cfg)
+                    putExtra(
+                        "cfg",
+                        safeSd15Cfg(model?.runOnCpu == true, model?.usesFixedCanvas == true, model?.isDit == true, cfg),
+                    )
                     seed.toLongOrNull()?.let { putExtra("seed", it) }
                     putExtra("width", bmp.width)
                     putExtra("height", bmp.height)
@@ -1467,7 +1470,15 @@ fun ModelRunScreen(
             )
 
             steps = if (isFirstRun) defaults.steps else prefs.steps
-            cfg = if (isFirstRun) defaults.cfg else prefs.cfg
+            // Prebuilt anime packages may carry default_cfg up to 12, which
+            // diverges the fp16 SD1.5 sampler into NaN/mosaic on CPU (worse on
+            // 32-bit). Clamp on load so the very first run is already stable.
+            cfg = safeSd15Cfg(
+                runOnCpu = model?.runOnCpu == true,
+                isSdxl = model?.usesFixedCanvas == true,
+                isDit = model?.isDit == true,
+                cfg = if (isFirstRun) defaults.cfg else prefs.cfg,
+            )
             seed = prefs.seed
             denoiseStrength = if (isFirstRun) defaults.denoiseStrength else prefs.denoiseStrength
             useOpenCL = prefs.useOpenCL
@@ -1874,7 +1885,12 @@ fun ModelRunScreen(
             onConfirm = {
                 val defaults = model?.defaults ?: GenerationDefaults.GLOBAL
                 steps = defaults.steps
-                cfg = defaults.cfg
+                cfg = safeSd15Cfg(
+                    model?.runOnCpu == true,
+                    model?.usesFixedCanvas == true,
+                    model?.isDit == true,
+                    defaults.cfg,
+                )
                 seed = defaults.seed
                 batchCounts = defaults.batchCounts
                 scheduler = defaults.scheduler
@@ -2433,7 +2449,15 @@ fun ModelRunScreen(
                                                 negativePromptField.text,
                                             )
                                             putExtra("steps", steps.roundToInt())
-                                            putExtra("cfg", cfg)
+                                            putExtra(
+                                                "cfg",
+                                                safeSd15Cfg(
+                                                    model?.runOnCpu == true,
+                                                    model?.usesFixedCanvas == true,
+                                                    model?.isDit == true,
+                                                    cfg,
+                                                ),
+                                            )
                                             seed.toLongOrNull()
                                                 ?.let { putExtra("seed", it) }
                                             putExtra("width", currentWidth)

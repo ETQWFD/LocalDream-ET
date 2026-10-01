@@ -281,6 +281,25 @@ fun sd15SizeForRatio(ratio: String, longEdge: Int = SD15_MAX_SIZE): Pair<Int, In
 // Aspect presets offered for SD1.5 CPU/GPU models (portrait, square, landscape).
 val SD15_ASPECT_PRESETS = listOf("1:1", "2:3", "3:4", "4:3", "3:2", "9:16", "16:9")
 
+// SD1.5 on the MNN CPU/GPU backend runs in fp16. On 32-bit devices in
+// particular, a high classifier-free-guidance scale (some prebuilt anime
+// packages ship default_cfg as high as 12) overflows the half-precision
+// accumulator, the sampler diverges to NaN and the VAE decodes pure mosaic
+// noise. Capping guidance keeps it stable while staying strongly adherent.
+const val SD15_CPU_MAX_CFG = 9f
+
+fun safeSd15Cfg(
+    runOnCpu: Boolean,
+    isSdxl: Boolean,
+    isDit: Boolean,
+    cfg: Float,
+): Float =
+    if (runOnCpu && !isSdxl && !isDit) {
+        cfg.coerceIn(1f, SD15_CPU_MAX_CFG)
+    } else {
+        cfg.coerceIn(1f, 30f)
+    }
+
 /**
  * GCD-reduces (width, height) into a "W:H" aspect-ratio string.
  * Used by reproduce/import paths to recover an aspect from a recorded result size.

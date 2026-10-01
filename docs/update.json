@@ -1,7 +1,7 @@
 {
-  "versionCode": 80,
-  "versionName": "3.0.0-et.6",
+  "versionCode": 81,
+  "versionName": "3.0.0-et.7",
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
-  "size": 148396435,
-  "releaseNotes": "ET 定制版 v3.0.0-et.6\n• CPU 模型新增两个无限制向 SD1.5 模型：Realistic Vision V5.1（写实）、Counterfeit V2.5（动漫）；点下载后自动下载原始模型并在本机转换，32位/64位 CPU/GPU 均可使用，搜索框可搜到。首次需下载约2.1GB并转换一次。\n• 修复『添加自定义模型』在32位手机转换失败：按进程位数匹配系统库、补齐执行权限，失败显示原生真实原因。\n• SD1.5 生成支持画面比例：1:1/2:3/3:4/4:3/3:2/9:16/16:9。\n• 开发者：ET。注：Qwen Image 2.1 UC 为 NPU 大模型，仅高端骁龙64位机型可用。"
+  "size": 148398555,
+  "releaseNotes": "ET 定制版 v3.0.0-et.7\n• 修复 CuteYukiMix 等 SD1.5 模型生成马赛克/塑料噪声：预置动漫模型默认 CFG 过高(如12)，32位CPU半精度采样溢出；现对 SD1.5 CPU/GPU 限制 CFG 1-9，画面恢复正常。\n• CPU 新增 DreamShaper 8（全能稳定少报错），连同 Realistic Vision V5.1、Counterfeit V2.5 下载后本机自动转换，32位可用，速度与内置模型一致。\n• 开发者：ET。"
 }

@@ -100,9 +100,9 @@
       <a class="btn primary" href="https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk" download>⬇ 下载最新 APK</a>
       <a class="btn ghost" href="https://github.com/ETQWFD/LocalDream-ET" target="_blank" rel="noopener">GitHub 仓库</a>
     </div>
-    <div class="ver">当前版本 <b>v3.0.0-et.6</b>（build 80）· 开发者 <b>ET</b> · 支持 arm64-v8a / armeabi-v7a</div>
+    <div class="ver">当前版本 <b>v3.0.0-et.7</b>（build 81）· 开发者 <b>ET</b> · 支持 arm64-v8a / armeabi-v7a</div>
     <div class="note" style="margin-top:14px;text-align:left;max-width:760px;margin-left:auto;margin-right:auto;">
-      <b>v3.0.0-et.6 更新：</b>① CPU 模型新增两个<b>无限制向 SD1.5 模型</b>——<b>Realistic Vision V5.1（写实）</b>与 <b>Counterfeit V2.5（动漫）</b>，点下载后<b>自动下载原始模型并在本机转换</b>，32 位/64 位 CPU 与 GPU 都能用，搜索框可直接搜到；② 修复“添加自定义模型”在 <b>32 位手机转换失败</b>（自动匹配系统库位数、补齐执行权限，失败时显示真实原因）；③ SD1.5 生成可在设置/生成页直接选<b>画面比例</b>（1:1 / 2:3 / 3:4 / 4:3 / 3:2 / 9:16 / 16:9）。<br>
+      <b>v3.0.0-et.7 更新：</b>① <b>修复 SD1.5（CuteYukiMix 等）生成结果变成马赛克噪声/塑料块</b>：原因是部分预置动漫模型自带过高的 CFG（如 12），在 32 位 CPU 半精度下采样溢出成噪声；现对 SD1.5 CPU/GPU 将 CFG 安全限制在 1–9（加载与出图两处生效，滑块同步限制），画面恢复正常；② CPU 模型再增 <b>DreamShaper 8</b>（全能、写实/插画/动漫都稳、少报错），连同 Realistic Vision V5.1、Counterfeit V2.5 均为下载后本机自动转换，32 位可用、速度与内置模型一致；③ 搜索框可直接搜模型。<br>
       <b>说明：</b>这两个新模型首次需下载约 2.1GB 并在本机转换一次（耗时数分钟），之后直接使用；Qwen Image 2.1 UC 为 NPU 大模型，仅骁龙 8 至尊版及以上 64 位机型可用，32 位设备请使用上面两个 SD1.5 模型。
     </div>
   </section>

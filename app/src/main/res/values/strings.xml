@@ -549,4 +549,5 @@
     <string name="counterfeit_description">Anime SD1.5 model (uncensored-friendly), converted on device</string>
     <string name="downloading_converting">Downloading &amp; converting model…</string>
     <string name="model_download_failed">Model download failed: %1$s</string>
+    <string name="dreamshaper_description">Versatile, very stable general-purpose SD1.5 (realistic/art/anime), converted on device</string>
 </resources>

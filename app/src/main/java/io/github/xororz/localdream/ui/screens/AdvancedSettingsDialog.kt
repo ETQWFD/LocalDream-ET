@@ -344,15 +344,19 @@ internal fun AdvancedSettingsDialog(
                 }
 
                 Column {
+                    // SD1.5 fp16 CPU/GPU diverges into NaN/mosaic at very high
+                    // guidance (worse on 32-bit), so cap its CFG at 9.
+                    val cfgMax = if (runOnCpu && !isSdxl && !isDit) SD15_CPU_MAX_CFG else 30f
+                    val cfgSteps = if (cfgMax <= 10f) 15 else 57
                     Text(
-                        stringResource(R.string.cfg_scale, cfg),
+                        stringResource(R.string.cfg_scale, cfg.coerceAtMost(cfgMax)),
                         style = MaterialTheme.typography.bodyMedium,
                     )
                     Slider(
-                        value = cfg,
+                        value = cfg.coerceAtMost(cfgMax),
                         onValueChange = onCfgChange,
-                        valueRange = 1f..30f,
-                        steps = 57,
+                        valueRange = 1f..cfgMax,
+                        steps = cfgSteps,
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }

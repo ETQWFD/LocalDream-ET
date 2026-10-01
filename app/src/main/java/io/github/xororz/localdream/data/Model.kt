@@ -656,6 +656,7 @@ class ModelRepository private constructor(private val context: Context) {
             // so they run on CPU/GPU incl. 32-bit, just like the prebuilt ones.
             add(createRealisticVisionCpu())
             add(createCounterfeitCpu())
+            add(createDreamShaperCpu())
         }
 
         return customModels + predefinedModels.map { applyConfigDefaults(it) }
@@ -1145,6 +1146,27 @@ class ModelRepository private constructor(private val context: Context) {
         )
     }
 
+    // Versatile, very stable general-purpose SD1.5 checkpoint (good for
+    // realistic, art and anime alike; known for low failure rate).
+    private fun createDreamShaperCpu(): Model {
+        val id = "dreamshaper_cpu"
+        val isDownloaded = Model.isModelDownloaded(context, id, false)
+        return Model(
+            id = id,
+            name = "DreamShaper 8",
+            description = context.getString(R.string.dreamshaper_description),
+            baseUrl = "",
+            approximateSize = "2.1GB + 转换",
+            isDownloaded = isDownloaded,
+            codeDefaults = ModelConfig(
+                prompt = "masterpiece, best quality, highly detailed, sharp focus, professional, 8k uhd",
+                negativePrompt = "lowres, bad anatomy, bad hands, missing fingers, extra fingers, poorly drawn face, worst quality, low quality, jpeg artifacts, signature, watermark, blurry, deformed",
+            ),
+            runOnCpu = true,
+            convertSourceUrl = "digiplay/DreamShaper_8/resolve/main/dreamshaper_8.safetensors",
+        )
+    }
+
     suspend fun refreshModelState(modelId: String) {
         refreshMutex.withLock {
             val current = models
@@ -1195,7 +1217,7 @@ class ModelRepository private constructor(private val context: Context) {
             "anythingv5cpu", "qteamixcpu", "cuteyukimixcpu",
             "absoluterealitycpu", "chilloutmixcpu",
             // SD 1.5 CPU, raw safetensors downloaded then converted on device
-            "realisticvision_cpu", "counterfeit_cpu",
+            "realisticvision_cpu", "counterfeit_cpu", "dreamshaper_cpu",
             // DiT
             "z_image_turbo", "flux2_klein_4b", "qwen_image_2_1", "qwen_image_2_1_uc",
         )
