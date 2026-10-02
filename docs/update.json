@@ -1,7 +1,7 @@
 {
-  "versionCode": 85,
-  "versionName": "3.0.0-et.11",
+  "versionCode": 86,
+  "versionName": "3.0.0-et.12",
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
-  "size": 148452767,
-  "releaseNotes": "ET 定制版 v3.0.0-et.11\n• 下载源可自己切换：设置里新增「魔搭 ModelScope（国内最快·推荐）/ hf-mirror / Hugging Face 官方 / 自定义地址」，默认走魔搭国内 CDN；所选源作为首选，其余自动回退，某个源慢或连不上会自动换源续传，不再卡死。\n• 下载提速：读取缓冲 64KB→256KB，配合 et.10 的断点续传/前台通知/关机恢复，2GB 大文件下载更稳更快。\n• 再新增 6 个无限制扩散模型（均已实测魔搭+hf-mirror 直链与体积，约 2.1–2.3GB fp16）：AniReality Mix（2.5D 半写实动漫）、ChillyMix（写实人像）、2-KWI（韩系写实）、BeautifulArt（唯美艺术）、CoffeeMix v2（暖色动漫）、LemonPastel（柔和粉彩动漫）。\n• 图生图默认更忠于你上传的原图：重绘强度默认 0.6→0.45，构图/姿态保持更像原图，仍可用滑块调大改动幅度。\n• 延续：模型防损坏、通知栏后台下载、提示词不限长度无审查、中文整句翻译、32/64 位 CPU 可用。开发者：ET。"
+  "size": 148460227,
+  "releaseNotes": "ET 定制版 v3.0.0-et.12\n• 修复 32 位手机转换崩溃（退出码 134 / Cannot read tensor data: time_embed.0.weight）：根因是个别模型原始文件超过 2.14GB（越过 32 位寻址上限），已下架 FantasyTime V1.22、CoffeeMix v2、LemonPastel v1.1 这三个会崩的模型，32 位/64 位转换都不再闪退。\n• 改用 9 个全新健康模型（逐个用文件头自洽校验、均小于 2.14GB，32 位可安全转换），比下架的多 6 个：Photon、Realisian v5、CosplayMix v2、NextPhoto v3（写实/人像）；LemonCreami、MeinaPastel v3、AbyssOrangeMix2 Hard、Hassaku v1.3、Colorful v3.1（动漫/2.5D）。全部魔搭国内 CDN + hf-mirror 双源可用。\n• “须知”里的仓库与文档链接替换为我们自己的：仓库 github.com/ETQWFD/LocalDream-ET，官网/文档 etqwfd.github.io/LocalDream-ET（中英日韩四语同步）。\n• 延续：下载源可切换（默认魔搭最快）、断点续传/通知栏后台下载/关机恢复、图生图忠于原图、提示词不限长度无审查、中文整句翻译、32/64 位 CPU。开发者：ET。"
 }
