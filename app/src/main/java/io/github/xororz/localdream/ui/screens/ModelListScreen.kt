@@ -303,7 +303,7 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
     var conversionProgress by remember { mutableStateOf("") }
     var extractByteProgress by remember { mutableStateOf<ExtractByteProgress?>(null) }
     var tempBaseUrl by remember { mutableStateOf("") }
-    var selectedSource by remember { mutableStateOf("hf-mirror") }
+    var selectedSource by remember { mutableStateOf("modelscope") }
     val generationPreferences = remember { GenerationPreferences(context) }
     var currentBaseUrl by remember { mutableStateOf("https://hf-mirror.com/") }
 
@@ -1360,6 +1360,7 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                                     value = when (selectedSource) {
                                         "huggingface" -> "https://huggingface.co/"
                                         "hf-mirror" -> "https://hf-mirror.com/"
+                                        "modelscope" -> "https://modelscope.cn/ （魔搭 · 国内最快 · 推荐）"
                                         else -> tempBaseUrl
                                     },
                                     onValueChange = {
@@ -1407,6 +1408,17 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                                     expanded = expanded,
                                     onDismissRequest = { expanded = false },
                                 ) {
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.source_modelscope)) },
+                                        onClick = {
+                                            selectedSource = "modelscope"
+                                            tempBaseUrl = "https://modelscope.cn/"
+                                            expanded = false
+                                            scope.launch {
+                                                generationPreferences.saveSelectedSource("modelscope")
+                                            }
+                                        },
+                                    )
                                     DropdownMenuItem(
                                         text = { Text(stringResource(R.string.source_huggingface)) },
                                         onClick = {

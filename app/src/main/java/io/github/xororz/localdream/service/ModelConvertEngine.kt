@@ -100,7 +100,7 @@ object ModelConvertEngine {
 
                 FileOutputStream(partFile, resumed).use { out ->
                     conn.inputStream.use { input ->
-                        val buf = ByteArray(64 * 1024)
+                        val buf = ByteArray(256 * 1024)
                         while (true) {
                             if (isCancelled()) throw CancelledException()
                             val n = input.read(buf)
@@ -154,19 +154,55 @@ object ModelConvertEngine {
 
     private fun candidateUrls(context: Context, path: String): List<String> {
         val p = path.removePrefix("/")
-        val preferred = kotlinx.coroutines.runBlocking {
-            GenerationPreferences(context).getBaseUrl()
-        }.trimEnd('/')
+        val prefs = GenerationPreferences(context)
+        val source = kotlinx.coroutines.runBlocking { prefs.getSelectedSource() }
+        val customBase = kotlinx.coroutines.runBlocking { prefs.getBaseUrl() }.trimEnd('/')
         val repo = p.substringBefore("/resolve/")
         val file = p.substringAfter("/resolve/main/", "")
-        val out = linkedSetOf<String>()
-        if (preferred.isNotEmpty()) out += "$preferred/$p"
-        out += "https://hf-mirror.com/$p"
-        if (repo.isNotEmpty() && file.isNotEmpty()) {
+
+        val hfMirror = "https://hf-mirror.com/$p"
+        val official = "https://huggingface.co/$p"
+        val modelScope = if (repo.isNotEmpty() && file.isNotEmpty()) {
             val enc = URLEncoder.encode(file, "UTF-8").replace("+", "%20")
-            out += "https://modelscope.cn/api/v1/models/$repo/repo?Revision=master&FilePath=$enc"
+            "https://modelscope.cn/api/v1/models/$repo/repo?Revision=master&FilePath=$enc"
+        } else {
+            ""
         }
-        out += "https://huggingface.co/$p"
-        return out.toList()
+        val custom = if (customBase.isNotEmpty() &&
+            !customBase.contains("hf-mirror.com") &&
+            !customBase.contains("huggingface.co") &&
+            !customBase.contains("modelscope.cn")
+        ) "$customBase/$p" else ""
+
+        // Primary first per the user's setting; the rest stay as automatic
+        // fallbacks so a source that is slow/down for one file never blocks it.
+        val ordered = linkedSetOf<String>()
+        when (source) {
+            "modelscope" -> {
+                if (modelScope.isNotEmpty()) ordered += modelScope
+                ordered += hfMirror
+                ordered += official
+                if (custom.isNotEmpty()) ordered += custom
+            }
+            "huggingface" -> {
+                ordered += official
+                ordered += hfMirror
+                if (modelScope.isNotEmpty()) ordered += modelScope
+                if (custom.isNotEmpty()) ordered += custom
+            }
+            "custom" -> {
+                if (custom.isNotEmpty()) ordered += custom
+                if (modelScope.isNotEmpty()) ordered += modelScope
+                ordered += hfMirror
+                ordered += official
+            }
+            else -> { // hf-mirror
+                ordered += hfMirror
+                if (modelScope.isNotEmpty()) ordered += modelScope
+                ordered += official
+                if (custom.isNotEmpty()) ordered += custom
+            }
+        }
+        return ordered.toList()
     }
 }

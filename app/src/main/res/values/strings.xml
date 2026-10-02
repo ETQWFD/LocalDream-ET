@@ -90,6 +90,7 @@
     <string name="download">Download</string>
     <string name="download_from">Download From</string>
     <string name="download_settings_hint">Download from huggingface or other mirror url</string>
+    <string name="source_modelscope">ModelScope (China · fastest)</string>
     <string name="source_huggingface">Hugging Face</string>
     <string name="source_hf_mirror">hf-mirror</string>
     <string name="source_custom">Custom</string>
@@ -558,4 +559,10 @@
     <string name="darksushi_description">Dark Sushi 2.5D vivid anime SD1.5, converted on device</string>
     <string name="breakdomain_description">BreakDomain Realistic R2333 clean anime SD1.5, converted on device</string>
     <string name="helloworld_description">HelloWorld v3 detailed illustration SD1.5, converted on device</string>
+    <string name="anireality_description">AniReality v1 semi-realistic 2.5D anime SD1.5, converted on device</string>
+    <string name="chillymix_description">ChillyMix v1 photorealistic portrait SD1.5, converted on device</string>
+    <string name="twokwi_description">2-KWI v1.0 realistic K-style portrait SD1.5, converted on device</string>
+    <string name="beautifulart_description">BeautifulArt v1 fine-art / portrait SD1.5, converted on device</string>
+    <string name="coffeemix_description">CoffeeMix v2 warm-tone anime SD1.5, converted on device</string>
+    <string name="lemonpastel_description">LemonPastel v1.1 soft pastel anime SD1.5, converted on device</string>
 </resources>

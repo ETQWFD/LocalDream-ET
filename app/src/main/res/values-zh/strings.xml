@@ -86,7 +86,8 @@
     </plurals>
     <string name="download">下载</string>
     <string name="download_from">下载地址</string>
-    <string name="download_settings_hint">设置模型下载地址\n默认为https://huggingface.co/\n国内用户可使用镜像https://hf-mirror.com/</string>
+    <string name="download_settings_hint">选择模型下载源：默认魔搭 ModelScope（国内最快，推荐）；也可切换 hf-mirror、Hugging Face 或填自定义地址。某个源慢或失败时会自动用其它源续传。</string>
+    <string name="source_modelscope">魔搭 ModelScope（国内最快 · 推荐）</string>
     <string name="source_huggingface">Hugging Face</string>
     <string name="source_hf_mirror">hf-mirror</string>
     <string name="source_custom">自定义</string>
@@ -548,4 +549,10 @@
     <string name="darksushi_description">Dark Sushi 2.5D 鲜艳动漫风 SD1.5，首次下载后本机转换，CPU/32位可用</string>
     <string name="breakdomain_description">BreakDomain Realistic R2333 清爽动漫风 SD1.5，首次下载后本机转换，CPU/32位可用</string>
     <string name="helloworld_description">HelloWorld v3 精致插画风 SD1.5，首次下载后本机转换，CPU/32位可用</string>
+    <string name="anireality_description">AniReality v1 半写实 2.5D 动漫风 SD1.5，首次下载后本机转换，CPU/32位可用</string>
+    <string name="chillymix_description">ChillyMix v1 写实人像 SD1.5，首次下载后本机转换，CPU/32位可用</string>
+    <string name="twokwi_description">2-KWI v1.0 写实韩系人像 SD1.5，首次下载后本机转换，CPU/32位可用</string>
+    <string name="beautifulart_description">BeautifulArt v1 唯美艺术/人像 SD1.5，首次下载后本机转换，CPU/32位可用</string>
+    <string name="coffeemix_description">CoffeeMix v2 暖色调动漫 SD1.5，首次下载后本机转换，CPU/32位可用</string>
+    <string name="lemonpastel_description">LemonPastel v1.1 柔和粉彩动漫 SD1.5，首次下载后本机转换，CPU/32位可用</string>
 </resources>

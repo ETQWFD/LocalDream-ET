@@ -427,7 +427,7 @@ class ModelDownloadService : Service() {
 
                     java.io.BufferedOutputStream(FileOutputStream(destFile, append)).use { output ->
                         body.byteStream().buffered().use { input ->
-                            val buffer = ByteArray(32 * 1024)
+                            val buffer = ByteArray(256 * 1024)
                             var bytes: Int
 
                             while (input.read(buffer).also { bytes = it } != -1) {

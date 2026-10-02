@@ -18,7 +18,10 @@ data class GenerationDefaults(
     val cfg: Float = 7f,
     val scheduler: String = "dpm",
     val seed: String = "",
-    val denoiseStrength: Float = 0.6f,
+    // img2img default: keep the uploaded image's composition/pose. 0.45 still
+    // applies the prompt (style/subject tweaks) but stays noticeably closer to
+    // the original than the previous 0.6; the slider lets users raise it.
+    val denoiseStrength: Float = 0.45f,
     val batchCounts: Int = 1,
     val aspectRatio: String = "1:1",
     // UltraFix runs with its own steps/denoise, independent of the main params

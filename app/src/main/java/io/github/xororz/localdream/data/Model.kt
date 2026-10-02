@@ -697,6 +697,13 @@ class ModelRepository private constructor(private val context: Context) {
             add(createDarkSushiCpu())
             add(createBreakDomainCpu())
             add(createHelloWorldCpu())
+            // et.11 batch: six more unrestricted SD1.5 checkpoints.
+            add(createAniRealityCpu())
+            add(createChillyMixCpu())
+            add(createTwoKwiCpu())
+            add(createBeautifulArtCpu())
+            add(createCoffeeMixCpu())
+            add(createLemonPastelCpu())
         }
 
         return customModels + predefinedModels.map { applyConfigDefaults(it) }
@@ -1330,6 +1337,63 @@ class ModelRepository private constructor(private val context: Context) {
         defaultNegative = "lowres, bad anatomy, bad hands, missing fingers, extra fingers, poorly drawn face, realistic photo, worst quality, low quality, jpeg artifacts, signature, watermark, blurry, deformed",
     )
 
+    // ---- et.11 batch: six more unrestricted SD1.5 checkpoints ----
+    private fun createAniRealityCpu(): Model = convertCpuModel(
+        id = "anireality_cpu",
+        name = "AniReality Mix v1",
+        descRes = R.string.anireality_description,
+        url = "digiplay/AniRealityMix_v1/resolve/main/anirealityMix_v1.safetensors",
+        defaultPrompt = "masterpiece, best quality, 1girl, solo, 2.5d semi-realistic anime, detailed eyes, smooth skin, cinematic light, sharp focus, 8k",
+        defaultNegative = "lowres, bad anatomy, bad hands, missing fingers, extra fingers, poorly drawn face, worst quality, low quality, jpeg artifacts, signature, watermark, blurry, deformed",
+    )
+
+    private fun createChillyMixCpu(): Model = convertCpuModel(
+        id = "chillymix_cpu",
+        name = "ChillyMix v1",
+        descRes = R.string.chillymix_description,
+        url = "digiplay/ChillyMix_v1/resolve/main/chillymix_V1Fp16.safetensors",
+        defaultPrompt = "RAW photo, best quality, masterpiece, photorealistic portrait, ultra detailed skin, beautiful detailed eyes, 8k uhd, dslr, soft cinematic light, sharp focus",
+        defaultNegative = "cartoon, anime, drawing, painting, lowres, bad anatomy, bad hands, missing fingers, extra digit, worst quality, low quality, jpeg artifacts, signature, watermark, deformed, blurry",
+    )
+
+    private fun createTwoKwiCpu(): Model = convertCpuModel(
+        id = "twokwi_cpu",
+        name = "2-KWI v1.0",
+        descRes = R.string.twokwi_description,
+        url = "digiplay/2-KWI/resolve/main/2KWI_v10.safetensors",
+        defaultPrompt = "RAW photo, best quality, masterpiece, photorealistic, natural portrait, natural skin texture, detailed eyes, 8k uhd, dslr, soft lighting, sharp focus, film grain",
+        defaultNegative = "cartoon, anime, drawing, 3d render, lowres, bad anatomy, bad hands, missing fingers, extra digit, worst quality, low quality, jpeg artifacts, signature, watermark, deformed, blurry",
+    )
+
+    private fun createBeautifulArtCpu(): Model = convertCpuModel(
+        id = "beautifulart_cpu",
+        name = "BeautifulArt v1",
+        descRes = R.string.beautifulart_description,
+        url = "digiplay/BeautifulArt_v1/resolve/main/beautifulArt_v10.safetensors",
+        defaultPrompt = "masterpiece, best quality, fine art, highly detailed, elegant, dramatic lighting, professional photography, painterly, sharp focus, 8k",
+        defaultNegative = "lowres, bad anatomy, bad hands, missing fingers, extra fingers, poorly drawn face, worst quality, low quality, jpeg artifacts, signature, watermark, blurry, deformed",
+    )
+
+    private fun createCoffeeMixCpu(): Model = convertCpuModel(
+        id = "coffeemix_cpu",
+        name = "CoffeeMix v2",
+        descRes = R.string.coffeemix_description,
+        size = "2.3GB + 转换",
+        url = "digiplay/CoffeeMix_v2/resolve/main/coffeemix_v20.safetensors",
+        defaultPrompt = "masterpiece, best quality, 1girl, solo, anime style, warm color, detailed eyes, detailed face, soft shading, sharp focus, 8k",
+        defaultNegative = "lowres, bad anatomy, bad hands, missing fingers, extra fingers, poorly drawn face, realistic photo, worst quality, low quality, jpeg artifacts, signature, watermark, blurry, deformed",
+    )
+
+    private fun createLemonPastelCpu(): Model = convertCpuModel(
+        id = "lemonpastel_cpu",
+        name = "LemonPastel Mix v1.1",
+        descRes = R.string.lemonpastel_description,
+        size = "2.3GB + 转换",
+        url = "digiplay/LemonPastelMix_v1.1/resolve/main/lemonpastelmix_v11.safetensors",
+        defaultPrompt = "masterpiece, best quality, 1girl, solo, soft pastel anime, delicate colors, detailed eyes, dreamy lighting, sharp focus, 8k",
+        defaultNegative = "lowres, bad anatomy, bad hands, missing fingers, extra fingers, poorly drawn face, realistic photo, harsh contrast, worst quality, low quality, jpeg artifacts, signature, watermark, blurry, deformed",
+    )
+
     suspend fun refreshModelState(modelId: String) {
         refreshMutex.withLock {
             val current = models
@@ -1390,6 +1454,9 @@ class ModelRepository private constructor(private val context: Context) {
             // et.10 batch
             "juggernaut_cpu", "fantasytime_cpu", "camelliansfw_cpu",
             "darksushi_cpu", "breakdomain_cpu", "helloworld_cpu",
+            // et.11 batch
+            "anireality_cpu", "chillymix_cpu", "twokwi_cpu",
+            "beautifulart_cpu", "coffeemix_cpu", "lemonpastel_cpu",
             // DiT
             "z_image_turbo", "flux2_klein_4b", "qwen_image_2_1", "qwen_image_2_1_uc",
         )

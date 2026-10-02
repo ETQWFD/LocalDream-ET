@@ -114,7 +114,10 @@ class GenerationPreferences(private val context: Context) {
 
     suspend fun getSelectedSource(): String = context.dataStore.data
         .map { preferences ->
-            preferences[SELECTED_SOURCE_KEY] ?: "hf-mirror"
+            // ModelScope (Alibaba CDN) is the default: fastest inside China and
+            // it mirrors the digiplay/SD checkpoints these models download.
+            // Prebuilt MNN zips still use getBaseUrl() (hf-mirror by default).
+            preferences[SELECTED_SOURCE_KEY] ?: "modelscope"
         }.first()
 
     suspend fun saveAllFields(
