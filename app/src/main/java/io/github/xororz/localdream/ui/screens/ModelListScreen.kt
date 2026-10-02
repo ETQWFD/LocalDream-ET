@@ -361,6 +361,15 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                     }
                 }
 
+                is ModelDownloadService.DownloadState.Converting -> {
+                    val model = modelRepository.models.find { it.id == state.modelId }
+                    if (model != null) {
+                        downloadingModel = null
+                        isConverting = true
+                        conversionProgress = state.message
+                    }
+                }
+
                 is ModelDownloadService.DownloadState.Success -> {
                     modelRepository.refreshModelState(state.modelId)
                     downloadingModel = null
@@ -849,65 +858,18 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                         onClick = {
                             val target = model
                             showDownloadConfirm = null
-                            if (target.convertSourceUrl.isNotEmpty()) {
-                                // Raw SD1.5 checkpoint: download then convert
-                                // on-device (works on 32-bit CPU/GPU).
-                                downloadingModel = target
-                                currentProgress = null
-                                scope.launch {
-                                    downloadRemoteThenConvertModel(
-                                        context = context,
-                                        model = target,
-                                        onStart = {
-                                            downloadingModel = target
-                                            isConverting = false
-                                        },
-                                        onDownloadProgress = { got, total ->
-                                            currentProgress = DownloadProgress(
-                                                progress = if (total > 0) {
-                                                    (got.toFloat() / total).coerceIn(0f, 1f)
-                                                } else {
-                                                    0f
-                                                },
-                                                downloadedBytes = got,
-                                                totalBytes = total,
-                                            )
-                                        },
-                                        onConvertProgress = { msg ->
-                                            if (downloadingModel != null) {
-                                                downloadingModel = null
-                                                isConverting = true
-                                            }
-                                            conversionProgress = msg
-                                        },
-                                        onSuccess = {
-                                            downloadingModel = null
-                                            isConverting = false
-                                            conversionProgress = ""
-                                            scope.launch {
-                                                modelRepository.refreshAllModels()
-                                                snackbarHostState.showSnackbar(
-                                                    msgModelConversionSuccess,
-                                                )
-                                            }
-                                        },
-                                        onError = { err ->
-                                            downloadingModel = null
-                                            isConverting = false
-                                            conversionProgress = ""
-                                            scope.launch {
-                                                snackbarHostState.showSnackbar(
-                                                    msgModelConversionFailed.format(err),
-                                                )
-                                            }
-                                        },
-                                    )
-                                }
-                            } else {
-                                downloadingModel = model
-                                currentProgress = null
-                                model.startDownload(context)
-                            }
+                            // All downloads - including raw-checkpoint models
+                            // that are converted on device - go through the
+                            // foreground ModelDownloadService: live notification,
+                            // background/lock-screen continuity, resumable bytes
+                            // and a half-model that never looks installed after a
+                            // reboot. The downloadState collector below drives
+                            // the progress / converting UI.
+                            downloadingModel = target
+                            currentProgress = null
+                            isConverting = false
+                            conversionProgress = ""
+                            target.startDownload(context)
                         },
                     ) {
                         Text(stringResource(R.string.confirm))

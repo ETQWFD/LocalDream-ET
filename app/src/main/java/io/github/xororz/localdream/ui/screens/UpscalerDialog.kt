@@ -139,6 +139,9 @@ fun UpscalerPickerFlow(
                         downloadingUpscalerId = null
                     }
                 }
+
+                // Unrelated to upscaler downloads.
+                is ModelDownloadService.DownloadState.Converting -> {}
             }
         }
     }

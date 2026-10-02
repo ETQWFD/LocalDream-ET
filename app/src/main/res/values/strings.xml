@@ -552,4 +552,10 @@
     <string name="dreamshaper_description">Versatile, very stable general-purpose SD1.5 (realistic/art/anime), converted on device</string>
     <string name="majicmix_description">Premium photorealistic portrait SD1.5 (natural skin, high-end look), converted on device</string>
     <string name="analogmadness_description">Vintage analog-film realistic SD1.5 (film grain, natural colors), converted on device</string>
+    <string name="juggernaut_description">Juggernaut Final photorealistic SD1.5 (uncensored, highly detailed), converted on device</string>
+    <string name="fantasytime_description">FantasyTime V1.22 realistic portrait SD1.5 (uncensored, natural skin), converted on device</string>
+    <string name="camelliansfw_description">CamelliaMix NSFW v1.1 semi-realistic 2.5D SD1.5 (uncensored), converted on device</string>
+    <string name="darksushi_description">Dark Sushi 2.5D vivid anime SD1.5, converted on device</string>
+    <string name="breakdomain_description">BreakDomain Realistic R2333 clean anime SD1.5, converted on device</string>
+    <string name="helloworld_description">HelloWorld v3 detailed illustration SD1.5, converted on device</string>
 </resources>

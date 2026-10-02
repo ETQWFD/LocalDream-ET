@@ -5,11 +5,14 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
+import android.net.Uri
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import io.github.xororz.localdream.R
 import io.github.xororz.localdream.data.Model
+import io.github.xororz.localdream.ui.screens.LoRAFile
+import io.github.xororz.localdream.ui.screens.convertCustomModel
 import io.github.xororz.localdream.utils.Http
 import java.io.File
 import java.io.FileOutputStream
@@ -30,6 +33,11 @@ import okhttp3.Request
 class ModelDownloadService : Service() {
     private val serviceScope = CoroutineScope(Dispatchers.IO + Job())
     private var downloadJob: Job? = null
+
+    // Polled by the resumable checkpoint downloader so an explicit cancel also
+    // stops an in-flight read without cancelling the foreground service itself.
+    @Volatile
+    private var convertCancelled: Boolean = false
 
     private val notificationManager by lazy {
         getSystemService(NOTIFICATION_SERVICE) as NotificationManager
@@ -81,6 +89,12 @@ class ModelDownloadService : Service() {
         const val TYPE_SD = "sd"
         const val TYPE_UPSCALER = "upscaler"
 
+        // Raw SD1.5 checkpoint downloaded with byte-range resume, then
+        // converted to MNN on the device inside this foreground service.
+        const val TYPE_CONVERT_SD = "convert_sd"
+        const val EXTRA_CONVERT_PATH = "convert_path"
+        const val EXTRA_CLIP_SKIP = "clip_skip"
+
         // Package downloaded as individual files instead of one zip. A DiT
         // package is many gigabytes, and unzipping one needs the archive and its
         // contents on disk at the same time; fetching the files straight into
@@ -104,6 +118,9 @@ class ModelDownloadService : Service() {
         ) : DownloadState()
 
         data class Extracting(val modelId: String) : DownloadState()
+
+        // On-device conversion of a freshly downloaded raw checkpoint.
+        data class Converting(val modelId: String, val message: String) : DownloadState()
         data class Success(val modelId: String) : DownloadState()
         data class Error(val modelId: String, val message: String) : DownloadState()
     }
@@ -118,22 +135,32 @@ class ModelDownloadService : Service() {
             ACTION_START_DOWNLOAD -> {
                 val modelId = intent.getStringExtra(EXTRA_MODEL_ID) ?: return START_NOT_STICKY
                 val modelName = intent.getStringExtra(EXTRA_MODEL_NAME) ?: modelId
-                val fileUrl = intent.getStringExtra(EXTRA_FILE_URL) ?: return START_NOT_STICKY
-                val isZip = intent.getBooleanExtra(EXTRA_IS_ZIP, false)
                 val modelType = intent.getStringExtra(EXTRA_MODEL_TYPE) ?: TYPE_SD
-                val fileNames = intent.getStringArrayListExtra(EXTRA_FILE_NAMES)
-                val markerFile = intent.getStringExtra(EXTRA_MARKER_FILE)
 
-                startForeground(NOTIFICATION_ID, createNotification(modelName, 0f))
-                startDownload(
-                    modelId = modelId,
-                    modelName = modelName,
-                    fileUrl = fileUrl,
-                    isZip = isZip,
-                    modelType = modelType,
-                    fileNames = fileNames.orEmpty(),
-                    markerFile = markerFile,
-                )
+                if (modelType == TYPE_CONVERT_SD) {
+                    val convertPath =
+                        intent.getStringExtra(EXTRA_CONVERT_PATH) ?: return START_NOT_STICKY
+                    val clipSkip = intent.getIntExtra(EXTRA_CLIP_SKIP, 1)
+                    startForeground(NOTIFICATION_ID, createNotification(modelName, 0f))
+                    startConvertDownload(modelId, modelName, convertPath, clipSkip)
+                } else {
+                    val fileUrl =
+                        intent.getStringExtra(EXTRA_FILE_URL) ?: return START_NOT_STICKY
+                    val isZip = intent.getBooleanExtra(EXTRA_IS_ZIP, false)
+                    val fileNames = intent.getStringArrayListExtra(EXTRA_FILE_NAMES)
+                    val markerFile = intent.getStringExtra(EXTRA_MARKER_FILE)
+
+                    startForeground(NOTIFICATION_ID, createNotification(modelName, 0f))
+                    startDownload(
+                        modelId = modelId,
+                        modelName = modelName,
+                        fileUrl = fileUrl,
+                        isZip = isZip,
+                        modelType = modelType,
+                        fileNames = fileNames.orEmpty(),
+                        markerFile = markerFile,
+                    )
+                }
             }
 
             ACTION_CANCEL_DOWNLOAD -> {
@@ -162,10 +189,10 @@ class ModelDownloadService : Service() {
                 val tempDir =
                     io.github.xororz.localdream.utils.Storage.tempDir(applicationContext)
 
-                if (tempDir.exists()) {
-                    tempDir.deleteRecursively()
-                }
-                tempDir.mkdirs()
+                // Do NOT wipe the whole temp directory: it holds the resumable
+                // scratch of raw-checkpoint conversions (conv_<id>) and other
+                // models' .part files. Each download owns its own named file.
+                if (!tempDir.exists()) tempDir.mkdirs()
 
                 if (modelType == TYPE_MULTI_FILE) {
                     downloadPackageFiles(modelId, modelName, fileUrl, fileNames, markerFile)
@@ -180,7 +207,9 @@ class ModelDownloadService : Service() {
                     return@launch
                 }
 
-                tempFile = File(tempDir, "${modelId}_${System.currentTimeMillis()}.tmp")
+                // Stable per-model name lets a restarted/retried download resume
+                // this file's leftover bytes instead of starting from zero.
+                tempFile = File(tempDir, "${modelId}_$modelType.part")
 
                 downloadFile(fileUrl, tempFile, modelId, modelName)
 
@@ -251,7 +280,8 @@ class ModelDownloadService : Service() {
             } catch (e: Exception) {
                 Log.e(TAG, "Download failed", e)
 
-                tempFile?.delete()
+                // Keep tempFile: downloadFile resumes its bytes on the next tap.
+                // Only drop the half-extracted tree.
                 extractTempDir?.deleteRecursively()
                 discardPartialFiles(modelType, modelId)
 
@@ -374,22 +404,28 @@ class ModelDownloadService : Service() {
         var lastError: Exception? = null
         // Try the chosen source, then the Hugging Face/mirror counterpart.
         for (candidate in mirrorCandidates(url)) {
+            // Resume from whatever a previous attempt already wrote. A server
+            // that answers 200 (ignores Range) restarts the file instead.
+            val have = if (destFile.exists()) destFile.length().coerceAtLeast(0L) else 0L
             try {
-                val request = Request.Builder()
-                    .url(candidate)
-                    .build()
+                val requestBuilder = Request.Builder().url(candidate)
+                if (have > 0L) requestBuilder.header("Range", "bytes=$have-")
 
+                requestBuilder.build().let { request ->
                 client.newCall(request).execute().use { response ->
-                    if (!response.isSuccessful) {
+                    val append = response.code == 206
+                    if (!append && response.code !in 200..299) {
                         throw Exception(getString(R.string.error_download_failed, response.code.toString()))
                     }
 
                     val body = response.body ?: throw Exception("Response body is null")
-                    val totalBytes = body.contentLength()
-                    var downloadedBytes = 0L
+                    val segmentLen = body.contentLength()
+                    // Absolute size of this file when resuming a 206 response.
+                    val totalThisFile = if (append && segmentLen > 0) have + segmentLen else segmentLen
+                    var downloadedBytes = if (append) have else 0L
                     var lastUpdateTime = 0L
 
-                    java.io.BufferedOutputStream(FileOutputStream(destFile)).use { output ->
+                    java.io.BufferedOutputStream(FileOutputStream(destFile, append)).use { output ->
                         body.byteStream().buffered().use { input ->
                             val buffer = ByteArray(32 * 1024)
                             var bytes: Int
@@ -399,10 +435,11 @@ class ModelDownloadService : Service() {
                                 downloadedBytes += bytes
 
                                 val currentTime = System.currentTimeMillis()
-                                if (currentTime - lastUpdateTime >= 500 || downloadedBytes == totalBytes) {
+                                if (currentTime - lastUpdateTime >= 500 || downloadedBytes == totalThisFile) {
                                     lastUpdateTime = currentTime
                                     val reportedDone = packageOffset + downloadedBytes
-                                    val reportedTotal = if (packageTotal > 0) packageTotal else totalBytes
+                                    val reportedTotal =
+                                        if (packageTotal > 0) packageTotal else totalThisFile
                                     val progress = if (reportedTotal > 0) {
                                         reportedDone.toFloat() / reportedTotal
                                     } else {
@@ -424,18 +461,20 @@ class ModelDownloadService : Service() {
 
                     // Guard against silently truncated downloads: a dropped connection
                     // ends the read loop without throwing, leaving a partial file.
-                    if (totalBytes > 0 && downloadedBytes != totalBytes) {
+                    if (totalThisFile > 0 && downloadedBytes != totalThisFile) {
                         throw Exception(
-                            getString(R.string.error_download_failed, "$downloadedBytes/$totalBytes"),
+                            getString(R.string.error_download_failed, "$downloadedBytes/$totalThisFile"),
                         )
                     }
+                }
                 }
                 // Success on this source.
                 return@withContext
             } catch (e: Exception) {
                 lastError = e
                 Log.w(TAG, "download from $candidate failed (${e.message}); trying next source")
-                runCatching { if (destFile.exists()) destFile.delete() }
+                // Keep destFile so the next mirror resumes from these bytes
+                // instead of discarding potentially gigabytes of progress.
             }
         }
         throw lastError ?: Exception(getString(R.string.error_download_failed, "no source"))
@@ -462,7 +501,103 @@ class ModelDownloadService : Service() {
         }
     }
 
+    /**
+     * Raw-SD1.5 path: resumable mirror download (this foreground service, live
+     * notification, survives background/screen-off/reboot) followed by the same
+     * native on-device conversion used by "add custom model".
+     */
+    private fun startConvertDownload(
+        modelId: String,
+        modelName: String,
+        convertPath: String,
+        clipSkip: Int,
+    ) {
+        convertCancelled = false
+        downloadJob?.cancel()
+        downloadJob = serviceScope.launch {
+            try {
+                _downloadState.value = DownloadState.Downloading(modelId, 0f, 0, 0)
+
+                val source = withContext(Dispatchers.IO) {
+                    ModelConvertEngine.downloadCheckpoint(
+                        context = applicationContext,
+                        modelId = modelId,
+                        convertPath = convertPath,
+                        onProgress = { got, total ->
+                            val p = if (total > 0) (got.toFloat() / total).coerceIn(0f, 1f) else 0f
+                            _downloadState.value = DownloadState.Downloading(modelId, p, got, total)
+                            updateNotification(modelName, p)
+                        },
+                        isCancelled = { convertCancelled },
+                    )
+                }
+                if (convertCancelled) throw ModelConvertEngine.CancelledException()
+
+                // Conversion stage.
+                _downloadState.value =
+                    DownloadState.Converting(modelId, getString(R.string.preparing_model))
+                updateNotification(modelName, 0f, isExtracting = true)
+
+                var ok = false
+                var failure: String? = null
+                convertCustomModel(
+                    context = applicationContext,
+                    modelName = modelId,
+                    fileUri = Uri.fromFile(source),
+                    clipSkip = clipSkip,
+                    loraFiles = emptyList<LoRAFile>(),
+                    onProgress = { msg ->
+                        _downloadState.value = DownloadState.Converting(modelId, msg)
+                        updateNotification(modelName, 0f, isExtracting = true)
+                    },
+                    onStart = {},
+                    onSuccess = { ok = true },
+                    onError = { msg -> failure = msg },
+                )
+                if (!ok) throw Exception(failure ?: getString(R.string.conversion_need_sd15))
+
+                // Fully installed: drop the 2 GB scratch checkpoint.
+                runCatching { ModelConvertEngine.scratchDir(applicationContext, modelId).deleteRecursively() }
+
+                _downloadState.value = DownloadState.Success(modelId)
+                updateNotification(modelName, 100f, true)
+                withContext(Dispatchers.Main) {
+                    kotlinx.coroutines.delay(2000)
+                    _downloadState.value = DownloadState.Idle
+                    stopForeground(STOP_FOREGROUND_REMOVE)
+                    stopSelf()
+                }
+            } catch (e: ModelConvertEngine.CancelledException) {
+                // Keep the .part / finished checkpoint: a later tap resumes.
+                _downloadState.value = DownloadState.Idle
+                withContext(Dispatchers.Main) {
+                    stopForeground(STOP_FOREGROUND_REMOVE)
+                    stopSelf()
+                }
+            } catch (e: CancellationException) {
+                // Coroutine cancelled (new download started / service stopped).
+                // Not an error; scratch is preserved for resume.
+                throw e
+            } catch (e: Exception) {
+                Log.e(TAG, "convert download failed", e)
+                // The half-converted model dir is removed by convertCustomModel;
+                // the downloaded checkpoint stays in scratch so a retry does not
+                // re-fetch it.
+                _downloadState.value =
+                    DownloadState.Error(modelId, e.message ?: getString(R.string.unknown_error))
+                updateNotification(modelName, 0f, false, e.message)
+                withContext(Dispatchers.Main) {
+                    kotlinx.coroutines.delay(4000)
+                    _downloadState.value = DownloadState.Idle
+                    stopForeground(STOP_FOREGROUND_REMOVE)
+                    stopSelf()
+                }
+            }
+        }
+    }
+
     private fun cancelDownload() {
+        convertCancelled = true
         downloadJob?.cancel()
         _downloadState.value = DownloadState.Idle
         stopForeground(STOP_FOREGROUND_REMOVE)

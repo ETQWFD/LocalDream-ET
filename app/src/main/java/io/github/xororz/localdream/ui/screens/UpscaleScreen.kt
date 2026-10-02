@@ -736,6 +736,10 @@ fun UpscaleScreen(navController: NavController, modifier: Modifier = Modifier) {
                             downloadingUpscalerId = null
                         }
                     }
+
+                    // On-device SD checkpoint conversion is unrelated to the
+                    // upscaler download flow; ignore it here.
+                    is ModelDownloadService.DownloadState.Converting -> {}
                 }
             }
         }

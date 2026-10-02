@@ -166,6 +166,24 @@ data class Model(
         }
 
     fun startDownload(context: Context) {
+        // Raw checkpoint that is converted on device: handled by the foreground
+        // convert-download path (resumable download + native conversion).
+        if (convertSourceUrl.isNotEmpty()) {
+            val intent = Intent(context, ModelDownloadService::class.java).apply {
+                action = ModelDownloadService.ACTION_START_DOWNLOAD
+                putExtra(ModelDownloadService.EXTRA_MODEL_ID, id)
+                putExtra(ModelDownloadService.EXTRA_MODEL_NAME, name)
+                putExtra(
+                    ModelDownloadService.EXTRA_MODEL_TYPE,
+                    ModelDownloadService.TYPE_CONVERT_SD,
+                )
+                putExtra(ModelDownloadService.EXTRA_CONVERT_PATH, convertSourceUrl)
+                putExtra(ModelDownloadService.EXTRA_CLIP_SKIP, 1)
+            }
+            context.startForegroundService(intent)
+            return
+        }
+
         // A multi-file package carries its sources in packageFiles instead.
         if (isCustom || (fileUri.isEmpty() && packageFiles.isEmpty())) return
 
@@ -345,7 +363,12 @@ data class Model(
         fun getModelsDir(context: Context): File =
             io.github.xororz.localdream.utils.Storage.modelsDir(context)
 
-        fun isModelDownloaded(context: Context, modelId: String, isCustom: Boolean = false): Boolean {
+        fun isModelDownloaded(
+            context: Context,
+            modelId: String,
+            isCustom: Boolean = false,
+            requireFinished: Boolean = false,
+        ): Boolean {
             if (isCustom) {
                 return true
             }
@@ -353,6 +376,14 @@ data class Model(
             val modelDir = File(getModelsDir(context), modelId)
             if (!modelDir.exists() || !modelDir.isDirectory) {
                 return false
+            }
+
+            // On-device-converted checkpoints only become usable when the native
+            // converter writes "finished". Without this, a kill/reboot mid-download
+            // or mid-conversion leaves a non-empty half model that used to be
+            // reported as installed and then failed on first use.
+            if (requireFinished) {
+                return File(modelDir, "finished").isFile
             }
 
             val files = modelDir.listFiles()
@@ -659,6 +690,13 @@ class ModelRepository private constructor(private val context: Context) {
             add(createDreamShaperCpu())
             add(createMajicmixCpu())
             add(createAnalogMadnessCpu())
+            // et.10 batch: six more unrestricted SD1.5 checkpoints.
+            add(createJuggernautCpu())
+            add(createFantasyTimeCpu())
+            add(createCamelliaNsfwCpu())
+            add(createDarkSushiCpu())
+            add(createBreakDomainCpu())
+            add(createHelloWorldCpu())
         }
 
         return customModels + predefinedModels.map { applyConfigDefaults(it) }
@@ -1112,7 +1150,7 @@ class ModelRepository private constructor(private val context: Context) {
     // CPU/GPU including 32-bit devices.
     private fun createRealisticVisionCpu(): Model {
         val id = "realisticvision_cpu"
-        val isDownloaded = Model.isModelDownloaded(context, id, false)
+        val isDownloaded = Model.isModelDownloaded(context, id, false, requireFinished = true)
         return Model(
             id = id,
             name = "Realistic Vision V5.1",
@@ -1131,7 +1169,7 @@ class ModelRepository private constructor(private val context: Context) {
 
     private fun createCounterfeitCpu(): Model {
         val id = "counterfeit_cpu"
-        val isDownloaded = Model.isModelDownloaded(context, id, false)
+        val isDownloaded = Model.isModelDownloaded(context, id, false, requireFinished = true)
         return Model(
             id = id,
             name = "Counterfeit V2.5",
@@ -1152,7 +1190,7 @@ class ModelRepository private constructor(private val context: Context) {
     // realistic, art and anime alike; known for low failure rate).
     private fun createDreamShaperCpu(): Model {
         val id = "dreamshaper_cpu"
-        val isDownloaded = Model.isModelDownloaded(context, id, false)
+        val isDownloaded = Model.isModelDownloaded(context, id, false, requireFinished = true)
         return Model(
             id = id,
             name = "DreamShaper 8",
@@ -1171,7 +1209,7 @@ class ModelRepository private constructor(private val context: Context) {
 
     private fun createMajicmixCpu(): Model {
         val id = "majicmix_cpu"
-        val isDownloaded = Model.isModelDownloaded(context, id, false)
+        val isDownloaded = Model.isModelDownloaded(context, id, false, requireFinished = true)
         return Model(
             id = id,
             name = "majicMIX Realistic v7",
@@ -1190,7 +1228,7 @@ class ModelRepository private constructor(private val context: Context) {
 
     private fun createAnalogMadnessCpu(): Model {
         val id = "analogmadness_cpu"
-        val isDownloaded = Model.isModelDownloaded(context, id, false)
+        val isDownloaded = Model.isModelDownloaded(context, id, false, requireFinished = true)
         return Model(
             id = id,
             name = "Analog Madness v7",
@@ -1207,6 +1245,91 @@ class ModelRepository private constructor(private val context: Context) {
         )
     }
 
+    // ---- et.10 batch: six additional unrestricted SD1.5 checkpoints ----
+    // Raw fp16 checkpoints (~2.1-2.4 GB) downloaded with resume and converted
+    // on device, so they run on CPU/GPU including 32-bit devices.
+    private fun convertCpuModel(
+        id: String,
+        name: String,
+        descRes: Int,
+        url: String,
+        defaultPrompt: String,
+        defaultNegative: String,
+        size: String = "2.1GB + 转换",
+    ): Model {
+        val isDownloaded =
+            Model.isModelDownloaded(context, id, false, requireFinished = true)
+        return Model(
+            id = id,
+            name = name,
+            description = context.getString(descRes),
+            baseUrl = "",
+            approximateSize = size,
+            isDownloaded = isDownloaded,
+            codeDefaults = ModelConfig(
+                prompt = defaultPrompt,
+                negativePrompt = defaultNegative,
+            ),
+            runOnCpu = true,
+            convertSourceUrl = url,
+        )
+    }
+
+    private fun createJuggernautCpu(): Model = convertCpuModel(
+        id = "juggernaut_cpu",
+        name = "Juggernaut Final",
+        descRes = R.string.juggernaut_description,
+        url = "digiplay/Juggernaut_final/resolve/main/juggernaut_final.safetensors",
+        defaultPrompt = "RAW photo, best quality, masterpiece, photorealistic, ultra detailed, 8k uhd, dslr, sharp focus, natural skin texture, soft lighting",
+        defaultNegative = "cartoon, anime, drawing, 3d render, lowres, bad anatomy, bad hands, missing fingers, extra digit, worst quality, low quality, jpeg artifacts, signature, watermark, deformed, blurry",
+    )
+
+    private fun createFantasyTimeCpu(): Model = convertCpuModel(
+        id = "fantasytime_cpu",
+        name = "FantasyTime V1.22",
+        descRes = R.string.fantasytime_description,
+        size = "2.4GB + 转换",
+        url = "digiplay/hellofantasytime_v1.22/resolve/main/hellofantasytime_fantasytime122Pruned.safetensors",
+        defaultPrompt = "RAW photo, best quality, masterpiece, photorealistic, ultra detailed skin, beautiful detailed eyes, 8k uhd, dslr, soft cinematic light, sharp focus",
+        defaultNegative = "cartoon, anime, drawing, painting, lowres, bad anatomy, bad hands, missing fingers, extra digit, worst quality, low quality, jpeg artifacts, signature, watermark, deformed, blurry",
+    )
+
+    private fun createCamelliaNsfwCpu(): Model = convertCpuModel(
+        id = "camelliansfw_cpu",
+        name = "CamelliaMix NSFW v1.1",
+        descRes = R.string.camelliansfw_description,
+        url = "digiplay/CamelliaMix_NSFW_diffusers_v1.1/resolve/main/camelliamixNSFW_v11.safetensors",
+        defaultPrompt = "masterpiece, best quality, highly detailed, 2.5d, semi-realistic, sharp focus, cinematic lighting, 8k",
+        defaultNegative = "lowres, bad anatomy, bad hands, missing fingers, extra fingers, poorly drawn face, worst quality, low quality, jpeg artifacts, signature, watermark, blurry, deformed",
+    )
+
+    private fun createDarkSushiCpu(): Model = convertCpuModel(
+        id = "darksushi_cpu",
+        name = "Dark Sushi 2.5D",
+        descRes = R.string.darksushi_description,
+        url = "digiplay/DarkSushi2.5D_v1/resolve/main/darkSushi25D25D_v10.safetensors",
+        defaultPrompt = "masterpiece, best quality, 1girl, solo, highly detailed, 2.5d anime, vivid color, detailed eyes, sharp focus",
+        defaultNegative = "lowres, bad anatomy, bad hands, missing fingers, extra fingers, poorly drawn face, realistic photo, worst quality, low quality, jpeg artifacts, signature, watermark, blurry, deformed",
+    )
+
+    private fun createBreakDomainCpu(): Model = convertCpuModel(
+        id = "breakdomain_cpu",
+        name = "BreakDomain Realistic R2333",
+        descRes = R.string.breakdomain_description,
+        url = "digiplay/breakdomainrealistic_R2333/resolve/main/breakdomainrealistic_R2333.safetensors",
+        defaultPrompt = "masterpiece, best quality, 1girl, solo, detailed anime style, detailed eyes, clean lineart, vibrant, sharp focus",
+        defaultNegative = "lowres, bad anatomy, bad hands, missing fingers, extra fingers, poorly drawn face, realistic photo, 3d render, worst quality, low quality, jpeg artifacts, signature, watermark, blurry, deformed",
+    )
+
+    private fun createHelloWorldCpu(): Model = convertCpuModel(
+        id = "helloworld_cpu",
+        name = "HelloWorld v3",
+        descRes = R.string.helloworld_description,
+        url = "digiplay/helloworld_v3/resolve/main/helloWorld_v3.safetensors",
+        defaultPrompt = "masterpiece, best quality, highly detailed illustration, beautiful detailed eyes, soft color, detailed background, sharp focus, 8k",
+        defaultNegative = "lowres, bad anatomy, bad hands, missing fingers, extra fingers, poorly drawn face, realistic photo, worst quality, low quality, jpeg artifacts, signature, watermark, blurry, deformed",
+    )
+
     suspend fun refreshModelState(modelId: String) {
         refreshMutex.withLock {
             val current = models
@@ -1221,7 +1344,12 @@ class ModelRepository private constructor(private val context: Context) {
                                 model.packageFiles,
                             )
                         } else {
-                            Model.isModelDownloaded(context, modelId, model.isCustom)
+                            Model.isModelDownloaded(
+                                context,
+                                modelId,
+                                model.isCustom,
+                                requireFinished = model.convertSourceUrl.isNotEmpty(),
+                            )
                         }
                         applyConfigDefaults(
                             model.copy(isDownloaded = isDownloaded),
@@ -1259,6 +1387,9 @@ class ModelRepository private constructor(private val context: Context) {
             // SD 1.5 CPU, raw safetensors downloaded then converted on device
             "realisticvision_cpu", "counterfeit_cpu", "dreamshaper_cpu",
             "majicmix_cpu", "analogmadness_cpu",
+            // et.10 batch
+            "juggernaut_cpu", "fantasytime_cpu", "camelliansfw_cpu",
+            "darksushi_cpu", "breakdomain_cpu", "helloworld_cpu",
             // DiT
             "z_image_turbo", "flux2_klein_4b", "qwen_image_2_1", "qwen_image_2_1_uc",
         )

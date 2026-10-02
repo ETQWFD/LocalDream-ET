@@ -542,4 +542,10 @@
     <string name="dreamshaper_description">全能高稳定 SD1.5（写实/插画/动漫皆可、少报错），首次下载后本机转换，CPU/32位可用</string>
     <string name="majicmix_description">高质感写实人像 SD1.5（皮肤通透、出片高级），首次下载后本机转换，CPU/32位可用</string>
     <string name="analogmadness_description">复古胶片写实风 SD1.5（胶卷颗粒、自然色彩），首次下载后本机转换，CPU/32位可用</string>
+    <string name="juggernaut_description">Juggernaut Final 超写实 SD1.5（无限制、细节丰富），首次下载后本机转换，CPU/32位可用</string>
+    <string name="fantasytime_description">FantasyTime V1.22 写实人像 SD1.5（无限制、皮肤自然），首次下载后本机转换，CPU/32位可用</string>
+    <string name="camelliansfw_description">CamelliaMix NSFW v1.1 半写实 2.5D SD1.5（无限制），首次下载后本机转换，CPU/32位可用</string>
+    <string name="darksushi_description">Dark Sushi 2.5D 鲜艳动漫风 SD1.5，首次下载后本机转换，CPU/32位可用</string>
+    <string name="breakdomain_description">BreakDomain Realistic R2333 清爽动漫风 SD1.5，首次下载后本机转换，CPU/32位可用</string>
+    <string name="helloworld_description">HelloWorld v3 精致插画风 SD1.5，首次下载后本机转换，CPU/32位可用</string>
 </resources>

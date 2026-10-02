@@ -39,9 +39,9 @@
 #include <time.h>
 #include <wchar.h>
 
-#define APP_VERSION L"2.1.0"
-#define APP_CODE    3
-#define APP_TITLE   L"Local Dream ET  ·  电脑版 v2.1.0  ·  开发者 ET"
+#define APP_VERSION L"2.2.0"
+#define APP_CODE    4
+#define APP_TITLE   L"Local Dream ET  ·  电脑版 v2.2.0  ·  开发者 ET"
 #define MAX_CFG_SD  9.0f
 #define UPDATE_MANIFEST \
     L"https://etqwfd.github.io/LocalDream-ET/desktop-update.json"
@@ -137,6 +137,48 @@ static const CatalogModel g_models[] = {
       0, 1, { { "gsdf/Counterfeit-V2.5/resolve/main/Counterfeit-V2.5_fp16.safetensors",
               MS("AI-ModelScope/Counterfeit-V2.5", "Counterfeit-V2.5_fp16.safetensors"),
               L"Counterfeit-V2.5_fp16.safetensors" } } },
+    { L"juggernaut", L"Juggernaut Final",
+      L"顶级超写实，细节极丰富（无限制）", L"Top photorealistic, highly detailed (uncensored)",
+      L"约 2.1GB", L"~2.1GB", L"SD1.5",
+      L"RAW photo, best quality, masterpiece, photorealistic, ultra detailed, 8k uhd, dslr, sharp focus, natural skin texture, soft lighting",
+      0, 1, { { "digiplay/Juggernaut_final/resolve/main/juggernaut_final.safetensors",
+              MS("digiplay/Juggernaut_final", "juggernaut_final.safetensors"),
+              L"juggernaut_final.safetensors" } } },
+    { L"fantasytime", L"FantasyTime V1.22",
+      L"写实人像，皮肤通透自然（无限制）", L"Realistic portrait, natural skin (uncensored)",
+      L"约 2.4GB", L"~2.4GB", L"SD1.5",
+      L"RAW photo, best quality, masterpiece, photorealistic, ultra detailed skin, beautiful detailed eyes, 8k uhd, dslr, soft cinematic light, sharp focus",
+      0, 1, { { "digiplay/hellofantasytime_v1.22/resolve/main/hellofantasytime_fantasytime122Pruned.safetensors",
+              MS("digiplay/hellofantasytime_v1.22", "hellofantasytime_fantasytime122Pruned.safetensors"),
+              L"hellofantasytime_fantasytime122Pruned.safetensors" } } },
+    { L"camelliansfw", L"CamelliaMix NSFW v1.1",
+      L"半写实 2.5D，质感细腻（无限制）", L"Semi-realistic 2.5D (uncensored)",
+      L"约 2.1GB", L"~2.1GB", L"SD1.5",
+      L"masterpiece, best quality, highly detailed, 2.5d, semi-realistic, sharp focus, cinematic lighting, 8k",
+      0, 1, { { "digiplay/CamelliaMix_NSFW_diffusers_v1.1/resolve/main/camelliamixNSFW_v11.safetensors",
+              MS("digiplay/CamelliaMix_NSFW_diffusers_v1.1", "camelliamixNSFW_v11.safetensors"),
+              L"camelliamixNSFW_v11.safetensors" } } },
+    { L"darksushi", L"Dark Sushi 2.5D",
+      L"鲜艳 2.5D 动漫风，色彩浓郁", L"Vivid 2.5D anime style",
+      L"约 2.1GB", L"~2.1GB", L"SD1.5",
+      L"masterpiece, best quality, 1girl, solo, highly detailed, 2.5d anime, vivid color, detailed eyes, sharp focus",
+      0, 1, { { "digiplay/DarkSushi2.5D_v1/resolve/main/darkSushi25D25D_v10.safetensors",
+              MS("digiplay/DarkSushi2.5D_v1", "darkSushi25D25D_v10.safetensors"),
+              L"darkSushi25D25D_v10.safetensors" } } },
+    { L"breakdomain", L"BreakDomain Realistic R2333",
+      L"清爽动漫风，线条干净", L"Clean anime style",
+      L"约 2.2GB", L"~2.2GB", L"SD1.5",
+      L"masterpiece, best quality, 1girl, solo, detailed anime style, detailed eyes, clean lineart, vibrant, sharp focus",
+      0, 1, { { "digiplay/breakdomainrealistic_R2333/resolve/main/breakdomainrealistic_R2333.safetensors",
+              MS("digiplay/breakdomainrealistic_R2333", "breakdomainrealistic_R2333.safetensors"),
+              L"breakdomainrealistic_R2333.safetensors" } } },
+    { L"helloworld", L"HelloWorld v3",
+      L"精致插画风，细节丰富", L"Detailed illustration style",
+      L"约 2.1GB", L"~2.1GB", L"SD1.5",
+      L"masterpiece, best quality, highly detailed illustration, beautiful detailed eyes, soft color, detailed background, sharp focus, 8k",
+      0, 1, { { "digiplay/helloworld_v3/resolve/main/helloWorld_v3.safetensors",
+              MS("digiplay/helloworld_v3", "helloWorld_v3.safetensors"),
+              L"helloWorld_v3.safetensors" } } },
     { L"qwen21uc", L"Qwen-Image 2.1 Uncensored (Q4_0)",
       L"新一代大模型，原生懂中文、画质极强。约 10.6GB，建议 16GB 内存/独显，纯 CPU 较慢",
       L"New-gen large model, native Chinese, top quality. ~10.6GB, 16GB/GPU advised; CPU slow",

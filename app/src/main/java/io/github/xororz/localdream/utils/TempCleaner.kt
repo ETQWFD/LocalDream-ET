@@ -58,10 +58,17 @@ object TempCleaner {
         // Download scratch dir: only when no transfer is using it.
         val downloadActive = ModelDownloadService.downloadState.value.let { state ->
             state is ModelDownloadService.DownloadState.Downloading ||
-                state is ModelDownloadService.DownloadState.Extracting
+                state is ModelDownloadService.DownloadState.Extracting ||
+                state is ModelDownloadService.DownloadState.Converting
         }
         if (!downloadActive) {
-            Storage.tempDir(context).takeIf { it.exists() }?.let { targets += it }
+            // Keep conv_<id> resume points: they hold a multi-GB checkpoint that
+            // a later tap (possibly after a reboot) continues from via Range.
+            // Remove only unrelated scratch entries.
+            Storage.tempDir(context).takeIf { it.isDirectory }
+                ?.listFiles()
+                ?.filterNot { it.isDirectory && it.name.startsWith("conv_") }
+                ?.forEach { targets += it }
 
             // Unrecognized leftovers under models/ (stray files, half-extracted
             // dirs). Built-in models, upscalers and finished custom models are
