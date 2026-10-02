@@ -142,13 +142,18 @@ class BackgroundGenerationService : Service() {
         var negativePrompt = data.getStringExtra("negative_prompt") ?: ""
 
         // SD1.5's CLIP text encoder only understands English. Chinese characters
-        // map to garbage tokens (blank/ignored results), so offline-translate to
-        // English tags for these models. DiT models (e.g. Qwen) natively accept
-        // Chinese and must be passed through untouched.
-        if (data.getBooleanExtra("prompt_english_only", false)) {
+        // map to garbage tokens (blank/ignored results), so the prompt must be
+        // turned into English tags. The UI normally does full-sentence online
+        // translation on an IO dispatcher and passes the result marked as
+        // pretranslated; only fall back to the offline dictionary here if an
+        // older caller sent raw Chinese without pretranslating. DiT models (e.g.
+        // Qwen) natively accept Chinese and are passed through untouched.
+        val englishOnly = data.getBooleanExtra("prompt_english_only", false)
+        val pretranslated = data.getBooleanExtra("prompt_pretranslated", false)
+        if (englishOnly && !pretranslated) {
             if (io.github.xororz.localdream.util.ChinesePrompt.hasChinese(prompt)) {
                 prompt = io.github.xororz.localdream.util.ChinesePrompt.translatePrompt(prompt)
-                Log.d("GenerationService", "translated prompt: $prompt")
+                Log.d("GenerationService", "offline-translated prompt: $prompt")
             }
             if (io.github.xororz.localdream.util.ChinesePrompt.hasChinese(negativePrompt)) {
                 negativePrompt =

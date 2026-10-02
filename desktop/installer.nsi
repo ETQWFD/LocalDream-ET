@@ -3,10 +3,10 @@ SetCompressor /SOLID lzma
 
 !define APPNAME "Local Dream ET"
 !define COMPANY "ET"
-!define VERSION "2.0.0.0"
+!define VERSION "2.1.0.0"
 
 Name "${APPNAME}"
-OutFile "LocalDream-ET-Setup-2.0.0.exe"
+OutFile "LocalDream-ET-Setup-2.1.0.exe"
 ; Per-user install into a writable folder -> models live in the program's own
 ; "models" subfolder (the requested portable layout) and no admin / UAC is needed.
 InstallDir "$LOCALAPPDATA\Programs\${APPNAME}"
@@ -30,13 +30,13 @@ ShowUnInstDetails show
 
 !insertmacro MUI_LANGUAGE "SimpChinese"
 
-VIProductVersion "2.0.0.0"
+VIProductVersion "2.1.0.0"
 VIAddVersionKey /LANG=2052 "CompanyName" "ET"
-VIAddVersionKey /LANG=2052 "FileDescription" "Local Dream ET v2.0.0 Installer"
+VIAddVersionKey /LANG=2052 "FileDescription" "Local Dream ET v2.1.0 Installer"
 VIAddVersionKey /LANG=2052 "LegalCopyright" "Copyright (C) 2026 ET"
 VIAddVersionKey /LANG=2052 "ProductName" "Local Dream ET"
-VIAddVersionKey /LANG=2052 "ProductVersion" "2.0.0.0"
-VIAddVersionKey /LANG=2052 "FileVersion" "2.0.0.0"
+VIAddVersionKey /LANG=2052 "ProductVersion" "2.1.0.0"
+VIAddVersionKey /LANG=2052 "FileVersion" "2.1.0.0"
 
 Section "Local Dream ET" SecCore
   SectionIn RO
@@ -67,7 +67,7 @@ Section "Local Dream ET" SecCore
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" \
       "Publisher" "ET"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" \
-      "DisplayVersion" "2.0.0"
+      "DisplayVersion" "2.1.0"
 SectionEnd
 
 Section "Uninstall"

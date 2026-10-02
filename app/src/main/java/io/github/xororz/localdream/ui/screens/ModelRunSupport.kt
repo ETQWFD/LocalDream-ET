@@ -568,6 +568,10 @@ internal fun bitmapToBase64Jpeg(bitmap: Bitmap, quality: Int = 95): String {
     return Base64.getEncoder().encodeToString(baos.toByteArray())
 }
 
+/** Whether this device exposes a 64-bit ABI (arm64/x86_64). */
+private fun is64BitAbi(): Boolean =
+    android.os.Build.SUPPORTED_ABIS.any { it.contains("64") }
+
 /** Default generation canvas side length for a model class. */
 internal fun defaultGenerationSize(
     usesFixedCanvas: Boolean,
@@ -580,7 +584,11 @@ internal fun defaultGenerationSize(
 
     usesFixedCanvas -> 1024
 
-    runOnCpu -> 256
+    // 256x256 looks soft/blurry. On a 64-bit device render SD1.5 at its native
+    // 512x512 by default for crisp detail. 32-bit CPUs are far slower and some
+    // are address-space constrained, so keep them at 256 (user can still pick a
+    // ratio/larger size manually).
+    runOnCpu -> if (is64BitAbi()) 512 else 256
 
     else -> 512
 }

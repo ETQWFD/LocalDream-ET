@@ -1,5 +1,10 @@
 package io.github.xororz.localdream.util
 
+import java.net.HttpURLConnection
+import java.net.URL
+import java.net.URLEncoder
+import org.json.JSONObject
+
 /**
  * Offline Chinese -> Stable-Diffusion-prompt helper.
  *
@@ -266,4 +271,94 @@ object ChinesePrompt {
 
     /** A Chinese-friendly universal negative prompt (SD1.5 understands English). */
     fun defaultNegative(): String = NEG_HINT
+
+    /* ------------------------------------------------------------------ *
+     * Online full-sentence translation.
+     *
+     * The offline dictionary only maps isolated words and drops any Chinese
+     * phrase it does not know, so a complex sentence like
+     * "一个穿黑色旗袍的短发女孩站在樱花树下" collapsed into generic tags and the
+     * generated picture ignored the user. We therefore first ask a keyless,
+     * China-reachable MT endpoint (Youdao aidemo) for a full English sentence,
+     * then reshape that sentence into comma-separated SD tags. If the network
+     * is unavailable we transparently fall back to the offline dictionary, so
+     * generation never blocks on translation.
+     *
+     * MUST be called off the main thread (the UI already builds generation
+     * intents inside Dispatchers.IO).
+     * ------------------------------------------------------------------ */
+
+    private const val MT_ENDPOINT = "https://aidemo.youdao.com/trans"
+    private const val MT_TIMEOUT_MS = 8000
+
+    @Volatile private var onlineOk: Boolean = true
+
+    /**
+     * Best-effort Chinese -> SD English tags. English input is returned as-is.
+     * Tries online full-sentence MT first (after the first hard failure this
+     * process skips straight to offline to avoid repeated 8s waits), then the
+     * local dictionary as a guaranteed fallback.
+     */
+    fun translatePromptBest(input: String?): String {
+        if (input.isNullOrBlank()) return ""
+        if (!hasChinese(input)) return input.trim()
+        if (onlineOk) {
+            val online = translateOnline(input)
+            if (!online.isNullOrBlank()) return toTags(online)
+        }
+        return translatePrompt(input)
+    }
+
+    private fun translateOnline(q: String): String? = try {
+        val body = "q=" + URLEncoder.encode(q, "UTF-8") + "&from=zh-CHS&to=en"
+        val conn = (URL(MT_ENDPOINT).openConnection() as HttpURLConnection).apply {
+            requestMethod = "POST"
+            connectTimeout = MT_TIMEOUT_MS
+            readTimeout = MT_TIMEOUT_MS
+            doOutput = true
+            instanceFollowRedirects = true
+            setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
+            setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android) LocalDreamET")
+        }
+        conn.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
+        val code = conn.responseCode
+        if (code != 200) { onlineOk = false; return null }
+        val text = conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
+        val arr = JSONObject(text).optJSONArray("translation")
+        if (arr == null || arr.length() == 0) null else arr.optString(0, "").trim()
+    } catch (_: Exception) {
+        onlineOk = false
+        null
+    }
+
+    /** Turn a plain English sentence ("A girl in a black dress is standing") into SD tags. */
+    private fun toTags(sentence: String): String {
+        var s = sentence.lowercase()
+            .replace(Regex("[._\\-]"), " ")
+            .replace(Regex("[^a-z0-9, ]+"), " ")
+        // replace connecting/stop words with commas so the phrase becomes a tag list
+        for (w in listOf(
+            "there is", "there are", "is standing", "is sitting", "is holding",
+            " who ", " which ", " that ", " with ", " wearing ", " inside ",
+            " in front of ", " in the ", " in a ", " in ", " on the ", " on a ",
+            " under the ", " under ", " over ", " next to ", " near ", " behind ",
+            " beside ", " between ", " while ", " when ", " then ", " and ", " the ",
+            " this ", " that ", " with a ", " of a ", " of the ", " of ", " is ",
+            " are ", " am ", " be ", " being ", " to ", " at ", " by ", " as ",
+        )) {
+            s = s.replace(w, ", ")
+        }
+        val tags = s.split(",", " ")
+            .map { it.trim() }
+            .filter { it.length >= 2 && it !in STOPWORDS }
+            .distinct()
+        val body = tags.joinToString(", ")
+        return if (body.isBlank()) QUALITY else "$body, $QUALITY"
+    }
+
+    private val STOPWORDS = setOf(
+        "a", "an", "the", "is", "are", "of", "in", "on", "at", "to", "and",
+        "with", "by", "as", "be", "she", "he", "it", "they", "her", "his",
+        "who", "which", "that", "this", "there", "here", "while", "when",
+    )
 }

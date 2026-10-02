@@ -5,8 +5,8 @@
 1 ICON "app.ico"
 
 1 VERSIONINFO
-FILEVERSION 2,0,0,0
-PRODUCTVERSION 2,0,0,0
+FILEVERSION 2,1,0,0
+PRODUCTVERSION 2,1,0,0
 FILEOS VOS_NT_WINDOWS32
 FILETYPE VFT_APP
 BEGIN
@@ -16,12 +16,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "ET"
             VALUE "FileDescription", "Local Dream ET - local Stable Diffusion (desktop)"
-            VALUE "FileVersion", "2.0.0.0"
+            VALUE "FileVersion", "2.1.0.0"
             VALUE "InternalName", "LocalDream-ET"
             VALUE "LegalCopyright", "Copyright (C) 2026 ET"
             VALUE "OriginalFilename", "LocalDream-ET.exe"
             VALUE "ProductName", "Local Dream ET"
-            VALUE "ProductVersion", "2.0.0.0"
+            VALUE "ProductVersion", "2.1.0.0"
             VALUE "Comments", "Developer: ET"
         END
     END

@@ -1,5 +1,5 @@
 /*
- * Local Dream ET - Windows desktop launcher  (v2.0)
+ * Local Dream ET - Windows desktop launcher  (v2.1)
  * Developer (开发者): ET   Copyright (C) 2026 ET
  *
  * Pure Win32 C front-end around the official stable-diffusion.cpp engine
@@ -39,9 +39,9 @@
 #include <time.h>
 #include <wchar.h>
 
-#define APP_VERSION L"2.0.0"
-#define APP_CODE    2
-#define APP_TITLE   L"Local Dream ET  ·  电脑版 v2.0.0  ·  开发者 ET"
+#define APP_VERSION L"2.1.0"
+#define APP_CODE    3
+#define APP_TITLE   L"Local Dream ET  ·  电脑版 v2.1.0  ·  开发者 ET"
 #define MAX_CFG_SD  9.0f
 #define UPDATE_MANIFEST \
     L"https://etqwfd.github.io/LocalDream-ET/desktop-update.json"
@@ -75,7 +75,16 @@ static void setupColors(void)
 
 /* =============================== model catalog ============================ */
 
-typedef struct { const char *url; const wchar_t *rel; } DlFile;
+/*
+ * Each file has a Hugging Face repo-relative path (hf) used to build the
+ * hf-mirror / official fallbacks, and an optional full China mirror URL (cn,
+ * ModelScope CDN) tried first. The HF LFS resolve links 302 to a signed
+ * cas-bridge.xethub.hf.co CDN which is frequently unreachable from mainland
+ * China ("cannot download"); ModelScope's cdn-lfs-cn is directly reachable, so
+ * it is the primary source whenever an equivalent file exists there. The Qwen
+ * Uncensored DiT has no China mirror and stays HF-only.
+ */
+typedef struct { const char *hf; const char *cn; const wchar_t *rel; } DlFile;
 typedef struct {
     const wchar_t *id, *name, *descZh, *descEn, *sizeZh, *sizeEn, *badge, *defPrompt;
     int kind;       /* 0 SD1.5 single, 1 Qwen2.1 multi-file */
@@ -83,42 +92,50 @@ typedef struct {
     DlFile files[4];
 } CatalogModel;
 
+#define MS(repo,file) "https://modelscope.cn/api/v1/models/" repo "/repo?Revision=master&FilePath=" file
+
 static const CatalogModel g_models[] = {
     { L"absolutereality", L"Absolute Reality 1.8.1",
       L"写实真人，皮肤质感自然，出片稳定", L"Photorealistic people, natural skin, stable",
       L"约 2.1GB", L"~2.1GB", L"SD1.5",
       L"RAW photo, best quality, realistic, photo-realistic, masterpiece, highly detailed skin, 8k uhd, dslr, soft lighting",
       0, 1, { { "digiplay/AbsoluteReality_v1.8.1/resolve/main/absolutereality_v181.safetensors",
+              MS("digiplay/AbsoluteReality_v1.8.1", "absolutereality_v181.safetensors"),
               L"AbsoluteReality_v181.safetensors" } } },
     { L"realisticvision", L"Realistic Vision V5.1",
       L"顶级写实人像，电影级光影，少翻车", L"Top photorealistic portraits, cinematic light",
       L"约 2.1GB", L"~2.1GB", L"SD1.5",
       L"RAW photo, best quality, realistic, photo-realistic, masterpiece, detailed skin, 8k uhd, dslr, soft lighting, film grain",
       0, 1, { { "SG161222/Realistic_Vision_V5.1_noVAE/resolve/main/Realistic_Vision_V5.1_fp16-no-ema.safetensors",
+              MS("AI-ModelScope/Realistic_Vision_V5.1_noVAE", "Realistic_Vision_V5.1_fp16-no-ema.safetensors"),
               L"Realistic_Vision_V5.1_fp16-no-ema.safetensors" } } },
     { L"majicmix", L"majicMIX Realistic v7",
       L"高质感写实，人像通透高级", L"Premium realistic portraits, high-end look",
       L"约 2.1GB", L"~2.1GB", L"SD1.5",
       L"RAW photo, best quality, masterpiece, photorealistic, 8k uhd, dslr, ultra detailed skin, soft natural lighting, sharp focus, film grain",
       0, 1, { { "digiplay/majicMIX_realistic_v7/resolve/main/majicmixRealistic_v7.safetensors",
+              MS("digiplay/majicMIX_realistic_v7", "majicmixRealistic_v7.safetensors"),
               L"majicmixRealistic_v7.safetensors" } } },
     { L"analogmadness", L"Analog Madness v7",
       L"复古胶片写实，胶卷颗粒、自然色彩", L"Vintage analog-film realism, grain, natural color",
       L"约 2.1GB", L"~2.1GB", L"SD1.5",
       L"analog photo, film photography, best quality, masterpiece, realistic, 35mm film, grain, natural color, soft light, dslr",
       0, 1, { { "digiplay/AnalogMadness-realistic-model-v7/resolve/main/analogMadness_v70.safetensors",
+              MS("digiplay/AnalogMadness-realistic-model-v7", "analogMadness_v70.safetensors"),
               L"analogMadness_v70.safetensors" } } },
     { L"dreamshaper", L"DreamShaper 8",
       L"全能高稳定，写实/插画/动漫皆可、少报错", L"Versatile all-rounder, very stable",
       L"约 2.1GB", L"~2.1GB", L"SD1.5",
       L"masterpiece, best quality, highly detailed, sharp focus, professional, 8k uhd",
       0, 1, { { "digiplay/DreamShaper_8/resolve/main/dreamshaper_8.safetensors",
+              MS("digiplay/DreamShaper_8", "dreamshaper_8.safetensors"),
               L"dreamshaper_8.safetensors" } } },
     { L"counterfeit", L"Counterfeit V2.5",
       L"动漫二次元，高人气画风", L"Anime / 2D style",
       L"约 2.1GB", L"~2.1GB", L"SD1.5",
       L"masterpiece, best quality, 1girl, solo, detailed eyes, anime style",
       0, 1, { { "gsdf/Counterfeit-V2.5/resolve/main/Counterfeit-V2.5_fp16.safetensors",
+              MS("AI-ModelScope/Counterfeit-V2.5", "Counterfeit-V2.5_fp16.safetensors"),
               L"Counterfeit-V2.5_fp16.safetensors" } } },
     { L"qwen21uc", L"Qwen-Image 2.1 Uncensored (Q4_0)",
       L"新一代大模型，原生懂中文、画质极强。约 10.6GB，建议 16GB 内存/独显，纯 CPU 较慢",
@@ -127,12 +144,16 @@ static const CatalogModel g_models[] = {
       L"a lovely cat holding a sign that says 'Local Dream ET', masterpiece, best quality, highly detailed",
       1, 4, {
         { "abenzerps/Qwen-Image-2.1-Uncensored-GGUF/resolve/main/qwen-image-2.1-UC-Q4_0.gguf",
+          NULL,
           L"qwenuc\\qwen-image-2.1-UC-Q4_0.gguf" },
         { "Qwen/Qwen3-VL-8B-Instruct-GGUF/resolve/main/Qwen3VL-8B-Instruct-Q4_K_M.gguf",
+          MS("Qwen/Qwen3-VL-8B-Instruct-GGUF", "Qwen3VL-8B-Instruct-Q4_K_M.gguf"),
           L"qwenuc\\Qwen3VL-8B-Instruct-Q4_K_M.gguf" },
         { "Comfy-Org/Qwen-Image-2.1/resolve/main/vae/qwen_image_2.1_vae_bf16.safetensors",
+          MS("Comfy-Org/Qwen-Image-2.1", "vae%2Fqwen_image_2.1_vae_bf16.safetensors"),
           L"qwenuc\\qwen_image_2.1_vae_bf16.safetensors" },
         { "Qwen/Qwen3-VL-8B-Instruct-GGUF/resolve/main/mmproj-Qwen3VL-8B-Instruct-Q8_0.gguf",
+          MS("Qwen/Qwen3-VL-8B-Instruct-GGUF", "mmproj-Qwen3VL-8B-Instruct-Q8_0.gguf"),
           L"qwenuc\\mmproj-Qwen3VL-8B-Instruct-Q8_0.gguf" },
       } },
 };
@@ -212,9 +233,127 @@ static int hasCjk(const wchar_t *s)
     return 0;
 }
 
+/* ---- online full-sentence Chinese -> English (keyless Youdao aidemo) ---- */
+
+/* Replace stop/connecting words with commas so the English sentence becomes SD tags. */
+static void sentenceToTags(const wchar_t *in, wchar_t *out, size_t outc)
+{
+    static wchar_t buf[6000];
+    _snwprintf(buf, 6000, L"%ls", in);
+    _wcslwr(buf);
+    for (wchar_t *p = buf; *p; p++) {
+        wchar_t c = *p;
+        int ok = (c >= L'a' && c <= L'z') || (c >= L'0' && c <= L'9') || c == L',' || c == L' ';
+        if (!ok) *p = L' ';
+    }
+    static const wchar_t *stops[] = {
+        L"there is", L"there are", L" is standing", L" is sitting", L" is holding",
+        L" who ", L" which ", L" that ", L" wearing ", L" inside ",
+        L" in front of ", L" in the ", L" in a ", L" in ", L" on the ", L" on a ",
+        L" under the ", L" under ", L" over ", L" next to ", L" near ", L" behind ",
+        L" beside ", L" between ", L" while ", L" when ", L" then ", L" and ",
+        L" with a ", L" with ", L" of a ", L" of the ", L" of ", L" the ",
+        L" this ", L" that ", L" is ", L" are ", L" am ", L" be ", L" being ",
+        L" to ", L" at ", L" by ", L" as ", NULL
+    };
+    for (int i = 0; stops[i]; i++) {
+        wchar_t *p;
+        while ((p = wcsstr(buf, stops[i])) != NULL) {
+            size_t n = wcslen(stops[i]);
+            memmove(p + 2, p + n, (wcslen(p + n) + 1) * sizeof(wchar_t));
+            p[0] = L','; p[1] = L' ';
+        }
+    }
+    /* collapse + dedupe comma tokens */
+    wchar_t res[6000]; res[0] = 0;
+    wchar_t copy[6000]; _snwprintf(copy, 6000, L"%ls", buf);
+    wchar_t *tok = wcstok(copy, L" ,");
+    while (tok) {
+        if (wcslen(tok) >= 2) {
+            int seen = 0;
+            for (wchar_t *q = res; ; ) { wchar_t *c = wcschr(q, L','); size_t L = c ? (size_t)(c - q) : wcslen(q);
+                if (wcslen(tok) == L && _wcsnicmp(q, tok, L) == 0) { seen = 1; break; }
+                if (!c) break; q = c + 1;
+            }
+            if (!seen && wcslen(res) + wcslen(tok) + 4 < 5900) {
+                if (res[0]) wcscat(res, L", ");
+                wcscat(res, tok);
+            }
+        }
+        tok = wcstok(NULL, L" ,");
+    }
+    _snwprintf(out, outc, res[0] ? L"%ls, masterpiece, best quality"
+                                  : L"masterpiece, best quality", res);
+}
+
+/* Returns 1 and fills out[] with an English sentence on success. */
+static int translateOnline(const wchar_t *zh, wchar_t *out, size_t outc)
+{
+    int n = WideCharToMultiByte(CP_UTF8, 0, zh, -1, NULL, 0, NULL, NULL);
+    if (n <= 0 || n > 2000) return 0;
+    char *u8 = (char *)malloc(n);
+    if (!u8) return 0;
+    WideCharToMultiByte(CP_UTF8, 0, zh, -1, u8, n, NULL, NULL);
+    DWORD el = 0;
+    char *enc = (char *)malloc(n * 3 + 32);
+    if (!enc) { free(u8); return 0; }
+    el = InternetCanonicalizeUrlA(u8, enc, &(DWORD){n * 3 + 32}, ICU_ENCODE_PERCENT) ? 0 : 0;
+    (void)el;
+    char body[6200]; int bl = _snprintf(body, sizeof(body), "q=%s&from=zh-CHS&to=en", enc);
+    free(enc); free(u8);
+
+    HINTERNET hN = InternetOpenA("LocalDreamET/2.1", INTERNET_OPEN_TYPE_PRECONFIG, NULL, NULL, 0);
+    if (!hN) return 0;
+    InternetSetOptionA(hN, INTERNET_OPTION_CONNECT_TIMEOUT, &(DWORD){8000}, sizeof(DWORD));
+    InternetSetOptionA(hN, INTERNET_OPTION_RECEIVE_TIMEOUT, &(DWORD){8000}, sizeof(DWORD));
+    HINTERNET hC = InternetConnectA(hN, "aidemo.youdao.com", INTERNET_DEFAULT_HTTPS_PORT,
+                                    NULL, NULL, INTERNET_SERVICE_HTTP, 0, 0);
+    if (!hC) { InternetCloseHandle(hN); return 0; }
+    HINTERNET hR = HttpOpenRequestA(hC, "POST", "/trans", NULL, NULL, NULL,
+                                    INTERNET_FLAG_SECURE | INTERNET_FLAG_NO_CACHE_WRITE |
+                                    INTERNET_FLAG_RELOAD | INTERNET_FLAG_NO_UI, 0);
+    int ok = 0;
+    if (hR) {
+        HttpAddRequestHeadersA(hR,
+            "Content-Type: application/x-www-form-urlencoded\r\nUser-Agent: Mozilla/5.0\r\n",
+            (DWORD)-1L, HTTP_ADDREQ_FLAG_ADD);
+        if (HttpSendRequestA(hR, NULL, 0, body, bl)) {
+            char rb[8192]; DWORD got = 0, tot = sizeof(rb) - 1;
+            if (InternetReadFile(hR, rb, tot, &got) && got > 0) {
+                rb[got] = 0;
+                char *p = strstr(rb, "\"translation\"");
+                if (p) { p = strchr(p, '['); if (p) p = strchr(p, '"'); }
+                if (p) {
+                    p++;
+                    char en[2048]; int j = 0;
+                    for (char *q = p; *q && *q != '"' && j < 2040; q++) {
+                        if (*q == '\\' && (q[1] == '"' || q[1] == '\\')) continue;
+                        en[j++] = *q;
+                    }
+                    en[j] = 0;
+                    if (j > 0) {
+                        wchar_t wen[2048];
+                        MultiByteToWideChar(CP_UTF8, 0, en, -1, wen, 2048);
+                        sentenceToTags(wen, out, outc);
+                        ok = out[0] != 0;
+                    }
+                }
+            }
+        }
+        InternetCloseHandle(hR);
+    }
+    InternetCloseHandle(hC); InternetCloseHandle(hN);
+    return ok;
+}
+
 static void translatePrompt(const wchar_t *in, wchar_t *out, size_t outc)
 {
     if (!hasCjk(in)) { _snwprintf(out, outc, L"%ls", in); return; }
+    /* Prefer full-sentence online MT (understands the whole description); fall
+       back to the offline word dictionary when the network is unavailable. */
+    static wchar_t onl[6000];
+    if (translateOnline(in, onl, 6000)) { _snwprintf(out, outc, L"%ls", onl); return; }
+
     static wchar_t work[6000];
     _snwprintf(work, 6000, L"%ls", in);
     for (int i = 0; i < ZE_COUNT; i++) {
@@ -366,44 +505,104 @@ static void saveConfig(void)
 
 /* ================================ download =============================== */
 
-static BOOL httpDownload(const char *path, const wchar_t *dest,
+/* Single GET attempt against one absolute URL with Range-based resume.
+ * Follows the LFS/CDN redirect automatically. A resumed .part is kept only if
+ * the server honours the Range request (206); a 200 means restart from zero. */
+static BOOL httpGetFile(const char *fullUrl, const wchar_t *dest,
+                        void (*prog)(int, void *), void *ctx)
+{
+    wchar_t wurl[1400];
+    MultiByteToWideChar(CP_UTF8, 0, fullUrl, -1, wurl, 1400);
+    HINTERNET hN = InternetOpenW(L"LocalDreamET/2.1", INTERNET_OPEN_TYPE_PRECONFIG, NULL, NULL, 0);
+    if (!hN) return FALSE;
+    InternetSetOptionW(hN, INTERNET_OPTION_CONNECT_TIMEOUT, &(DWORD){15000}, sizeof(DWORD));
+    InternetSetOptionW(hN, INTERNET_OPTION_RECEIVE_TIMEOUT, &(DWORD){30000}, sizeof(DWORD));
+
+    wchar_t part[MAX_PATH]; _snwprintf(part, MAX_PATH, L"%ls.part", dest);
+    WIN32_FILE_ATTRIBUTE_DATA fa;
+    ULONGLONG startOff = 0;
+    if (GetFileAttributesExW(part, GetFileExInfoStandard, &fa))
+        startOff = ((ULONGLONG)fa.nFileSizeHigh << 32) | fa.nFileSizeLow;
+
+    wchar_t hdr[64] = {0};
+    if (startOff > 0) _snwprintf(hdr, 64, L"Range: bytes=%llu-\r\n", startOff);
+
+    HINTERNET hU = InternetOpenUrlW(hN, wurl,
+        startOff ? hdr : NULL, startOff ? (DWORD)-1L : 0,
+        INTERNET_FLAG_RELOAD | INTERNET_FLAG_NO_CACHE_WRITE | INTERNET_FLAG_SECURE |
+        INTERNET_FLAG_NO_UI | INTERNET_FLAG_PRAGMA_NOCACHE, 0);
+    if (!hU) { InternetCloseHandle(hN); return FALSE; }
+
+    wchar_t code[16] = {0}; DWORD csz = sizeof(code);
+    HttpQueryInfoW(hU, HTTP_QUERY_STATUS_CODE, code, &csz, NULL);
+    int sc = code[0] ? _wtoi(code) : 0;
+    if (sc >= 400) { InternetCloseHandle(hU); InternetCloseHandle(hN); return FALSE; }
+
+    /* If we asked to resume but the server answers 200 (full content) or the
+       returned range does not start where we are, discard the partial file. */
+    if (startOff > 0 && sc != 206) startOff = 0;
+    if (sc == 206 && startOff > 0) {
+        wchar_t cr[128] = {0}; DWORD crsz = sizeof(cr);
+        if (HttpQueryInfoW(hU, HTTP_QUERY_CONTENT_RANGE, cr, &crsz, NULL)) {
+            /* cr like "bytes 1234-5678/9012" */
+            if (wcsstr(cr, L"bytes ") != cr) startOff = 0;
+        }
+    }
+
+    ULONGLONG total = 0;
+    {
+        char clen[32] = {0}; DWORD clenSz = sizeof(clen), idxH = 0;
+        if (HttpQueryInfoA(hU, HTTP_QUERY_CONTENT_LENGTH, clen, &clenSz, &idxH))
+            total = (ULONGLONG)_strtoui64(clen, NULL, 10);
+    }
+    if (sc == 206 && total) total += startOff;   /* Content-Length is the remaining chunk */
+
+    HANDLE hf = CreateFileW(part, GENERIC_WRITE, 0, NULL,
+                            startOff ? OPEN_EXISTING : CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (hf == INVALID_HANDLE_VALUE) { InternetCloseHandle(hU); InternetCloseHandle(hN); return FALSE; }
+    if (startOff) SetFilePointer(hf, 0, NULL, FILE_END);
+
+    char buf[128 * 1024]; DWORD got = 0, rd, wr; BOOL ok = TRUE;
+    while (InternetReadFile(hU, buf, sizeof(buf), &rd) && rd > 0) {
+        if (!WriteFile(hf, buf, rd, &wr, NULL) || wr != rd) { ok = FALSE; break; }
+        got += rd;
+        if (prog && total) {
+            ULONGLONG nowp = startOff + got;
+            prog((int)(nowp * 100ULL / total), ctx);
+        } else if (prog) {
+            prog(-1, ctx);
+        }
+    }
+    CloseHandle(hf); InternetCloseHandle(hU); InternetCloseHandle(hN);
+
+    if (!ok) return FALSE;
+    ULONGLONG finalSize = 0;
+    if (GetFileAttributesExW(part, GetFileExInfoStandard, &fa))
+        finalSize = ((ULONGLONG)fa.nFileSizeHigh << 32) | fa.nFileSizeLow;
+    /* If we knew the total, a truncated transfer must not masquerade as done. */
+    if (total && finalSize < total) return FALSE;
+    if (finalSize == 0) return FALSE;
+    MoveFileExW(part, dest, MOVEFILE_REPLACE_EXISTING);
+    return TRUE;
+}
+
+/* Try, in order: China mirror (ModelScope CDN), hf-mirror, official HF. */
+static BOOL httpDownload(const char *hfPath, const char *cnUrl, const wchar_t *dest,
                          void (*prog)(int, void *), void *ctx, char *err, size_t errc)
 {
+    char url[1400];
+    /* 1) China mirror */
+    if (cnUrl && cnUrl[0]) {
+        if (httpGetFile(cnUrl, dest, prog, ctx)) return TRUE;
+        DeleteFileW(dest);
+    }
     static const char *hosts[] = { "https://hf-mirror.com", "https://huggingface.co" };
     for (int hi = 0; hi < 2; hi++) {
-        char url[1200]; _snprintf(url, sizeof(url), "%s/%s", hosts[hi], path);
-        wchar_t wurl[1300]; MultiByteToWideChar(CP_UTF8, 0, url, -1, wurl, 1300);
-        HINTERNET hN = InternetOpenW(L"LocalDreamET/2.0", INTERNET_OPEN_TYPE_PRECONFIG, NULL, NULL, 0);
-        if (!hN) continue;
-        HINTERNET hU = InternetOpenUrlW(hN, wurl, NULL, 0,
-            INTERNET_FLAG_RELOAD | INTERNET_FLAG_NO_CACHE_WRITE | INTERNET_FLAG_SECURE | INTERNET_FLAG_NO_UI, 0);
-        if (!hU) { InternetCloseHandle(hN); continue; }
-        wchar_t code[16] = {0}; DWORD csz = sizeof(code);
-        HttpQueryInfoW(hU, HTTP_QUERY_STATUS_CODE, code, &csz, NULL);
-        if (code[0] && _wtoi(code) >= 400) { InternetCloseHandle(hU); InternetCloseHandle(hN); continue; }
-        DWORD total = 0, idxH = 0; char clen[32]; DWORD clenSz = sizeof(clen);
-        if (HttpQueryInfoA(hU, HTTP_QUERY_CONTENT_LENGTH, clen, &clenSz, &idxH))
-            total = (DWORD)_strtoui64(clen, NULL, 10);
-        wchar_t part[MAX_PATH]; _snwprintf(part, MAX_PATH, L"%ls.part", dest);
-        DWORD startOff = 0;
-        WIN32_FILE_ATTRIBUTE_DATA fa;
-        if (GetFileAttributesExW(part, GetFileExInfoStandard, &fa))
-            startOff = (DWORD)(((ULONGLONG)fa.nFileSizeHigh << 32) | fa.nFileSizeLow);
-        HANDLE hf = CreateFileW(part, GENERIC_WRITE, 0, NULL,
-                                startOff ? OPEN_EXISTING : CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-        if (hf == INVALID_HANDLE_VALUE) { InternetCloseHandle(hU); InternetCloseHandle(hN); continue; }
-        if (startOff) SetFilePointer(hf, 0, NULL, FILE_END);
-        char buf[64 * 1024]; DWORD got = 0, readn; BOOL ok = TRUE;
-        while (InternetReadFile(hU, buf, sizeof(buf), &readn) && readn > 0) {
-            DWORD wr;
-            if (!WriteFile(hf, buf, readn, &wr, NULL) || wr != readn) { ok = FALSE; break; }
-            got += readn;
-            if (prog) prog(total > 0 ? (int)((double)(startOff + got) * 100.0 / total) : -1, ctx);
-        }
-        CloseHandle(hf); InternetCloseHandle(hU); InternetCloseHandle(hN);
-        if (ok && got > 0) { MoveFileExW(part, dest, MOVEFILE_REPLACE_EXISTING); return TRUE; }
+        _snprintf(url, sizeof(url), "%s/%s", hosts[hi], hfPath);
+        if (httpGetFile(url, dest, prog, ctx)) return TRUE;
+        DeleteFileW(dest);
     }
-    _snprintf(err, errc, "all hosts failed");
+    _snprintf(err, errc, "all mirrors failed");
     return FALSE;
 }
 
@@ -433,13 +632,16 @@ static DWORD WINAPI downloadThread(LPVOID arg)
         wchar_t sub[MAX_PATH]; _snwprintf(sub, MAX_PATH, L"%ls", dest);
         wchar_t *sl = wcsrchr(sub, L'\\'); if (sl) { sl[0] = 0; CreateDirectoryW(sub, NULL); }
         ctx.file = fi;
-        const char *us = g_models[idx].files[fi].url;
+        const DlFile *dlf = &g_models[idx].files[fi];
+        const char *us = dlf->hf;
         const char *nm = strrchr(us, '/') ? strrchr(us, '/') + 1 : us;
         wchar_t wnm[160]; MultiByteToWideChar(CP_UTF8, 0, nm, -1, wnm, 160);
         _snwprintf(st, 320, S(L"下载 %ls（%d/%d）", L"Downloading %ls (%d/%d)"),
                    wnm, fi + 1, g_models[idx].nfiles);
         postStatus(st);
-        if (!httpDownload(us, dest, dlProgCb, &ctx, err, sizeof(err))) { ok = FALSE; break; }
+        if (!httpDownload(dlf->hf, dlf->cn, dest, dlProgCb, &ctx, err, sizeof(err))) {
+            ok = FALSE; break;
+        }
     }
     if (ok) { g_mstate[idx] = 1; g_mpct[idx] = 100; postDone(1, S(L"模型下载完成", L"Model downloaded")); }
     else {
@@ -965,7 +1167,7 @@ static DWORD WINAPI updateThread(LPVOID arg)
     int code = 0;
     char *p = strstr(json, "\"versionCode\"");
     if (p) { p = strchr(p, ':'); if (p) code = atoi(p + 1); }
-    if (code <= APP_CODE) { postDone(1, S(L"已是最新版本（v2.0.0）", L"Already up to date (v2.0.0)")); return 0; }
+    if (code <= APP_CODE) { postDone(1, S(L"已是最新版本（v2.1.0）", L"Already up to date (v2.1.0)")); return 0; }
 
     char url[1024] = {0}, ver[64] = {0}, notes[2048] = {0};
     jsonStr(json, "url", url, sizeof(url));
@@ -1070,7 +1272,7 @@ static void shellOpen(const wchar_t *p)
 static void showAbout(void)
 {
     MessageBoxW(g_hMain,
-        L"Local Dream ET  电脑版 v2.0.0\n\n"
+        L"Local Dream ET  电脑版 v2.1.0\n\n"
         L"开发者 / Developer：ET\nCopyright (C) 2026 ET\n\n"
         L"本地离线 Stable Diffusion 出图，免费、不上传图片。\n"
         L"引擎 stable-diffusion.cpp（sd-cli / ggml）\n"

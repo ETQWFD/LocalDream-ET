@@ -1064,10 +1064,32 @@ fun ModelRunScreen(
                     File(context.filesDir, "ultrafix.txt").writeText(bitmapToBase64Jpeg(bmp))
                 }
                 pendingUltrafix = true
+                val ufNeedEnglish = model?.isDit != true
+                val ufPrompt = withContext(Dispatchers.IO) {
+                    if (ufNeedEnglish &&
+                        io.github.xororz.localdream.util.ChinesePrompt.hasChinese(ultrafixPrompt)
+                    ) {
+                        io.github.xororz.localdream.util.ChinesePrompt
+                            .translatePromptBest(ultrafixPrompt)
+                    } else {
+                        ultrafixPrompt
+                    }
+                }
+                val ufNegative = withContext(Dispatchers.IO) {
+                    if (ufNeedEnglish &&
+                        io.github.xororz.localdream.util.ChinesePrompt.hasChinese(negativePromptField.text)
+                    ) {
+                        io.github.xororz.localdream.util.ChinesePrompt
+                            .translatePromptBest(negativePromptField.text)
+                    } else {
+                        negativePromptField.text
+                    }
+                }
                 val intent = Intent(context, BackgroundGenerationService::class.java).apply {
-                    putExtra("prompt", ultrafixPrompt)
-                    putExtra("prompt_english_only", model?.isDit != true)
-                    putExtra("negative_prompt", negativePromptField.text)
+                    putExtra("prompt", ufPrompt)
+                    putExtra("prompt_pretranslated", ufNeedEnglish)
+                    putExtra("prompt_english_only", ufNeedEnglish)
+                    putExtra("negative_prompt", ufNegative)
                     putExtra("steps", totalSteps)
                     putExtra(
                         "cfg",
@@ -1522,6 +1544,17 @@ fun ModelRunScreen(
                     currentWidth = sw
                     currentHeight = sh
                     aspectRatio = inferAspectRatioString(sw, sh)
+                }
+                // One-time clarity migration for upgraders: earlier releases
+                // defaulted SD1.5 CPU to 256x256 (soft). On a 64-bit device lift a
+                // default-looking square 256 up to the native 512. User-chosen
+                // non-square ratios are left untouched.
+                if (prefs.width == 256 && prefs.height == 256 &&
+                    currentWidth == 256 && currentHeight == 256 &&
+                    android.os.Build.SUPPORTED_ABIS.any { it.contains("64") }
+                ) {
+                    currentWidth = 512
+                    currentHeight = 512
                 }
             }
 
@@ -2453,21 +2486,43 @@ fun ModelRunScreen(
                                             scheduler = scheduler,
                                         )
 
+                                        val needEnglish = model?.isDit != true
+                                        val rawPrompt = promptField.text
+                                        val rawNegative = negativePromptField.text
+                                        // Full-sentence Chinese->English tags (online
+                                        // MT with offline fallback) done on this IO
+                                        // dispatcher; DiT models take Chinese natively.
+                                        val finalPrompt = if (needEnglish &&
+                                            io.github.xororz.localdream.util.ChinesePrompt.hasChinese(rawPrompt)
+                                        ) {
+                                            io.github.xororz.localdream.util.ChinesePrompt
+                                                .translatePromptBest(rawPrompt)
+                                        } else {
+                                            rawPrompt
+                                        }
+                                        val finalNegative = if (needEnglish &&
+                                            io.github.xororz.localdream.util.ChinesePrompt.hasChinese(rawNegative)
+                                        ) {
+                                            io.github.xororz.localdream.util.ChinesePrompt
+                                                .translatePromptBest(rawNegative)
+                                        } else {
+                                            rawNegative
+                                        }
+
                                         val batchIntent = Intent(
                                             context,
                                             BackgroundGenerationService::class.java,
                                         ).apply {
-                                            putExtra("prompt", promptField.text)
-                                            // Non-DiT (SD1.5/SDXL CLIP) models only
-                                            // understand English; the service
-                                            // offline-translates Chinese for them.
+                                            putExtra("prompt", finalPrompt)
+                                            // Already converted to English tags above.
+                                            putExtra("prompt_pretranslated", needEnglish)
                                             putExtra(
                                                 "prompt_english_only",
                                                 model?.isDit != true,
                                             )
                                             putExtra(
                                                 "negative_prompt",
-                                                negativePromptField.text,
+                                                finalNegative,
                                             )
                                             putExtra("steps", steps.roundToInt())
                                             putExtra(
