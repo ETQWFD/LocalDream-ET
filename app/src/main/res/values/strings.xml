@@ -77,7 +77,7 @@
     <string name="got_it">Got It!</string>
     <string name="yes">Yes</string>
     <string name="about_app">Note</string>
-    <string name="must_read">This APP supports running stable diffusion image generation on CPU/GPU and some Qualcomm NPUs.\n\nSD1.5 models are supported on Snapdragon NPUs with Hexagon V68 architecture or newer.\n\nSDXL models are supported on Snapdragon 8 Gen 3 and newer devices.\n\nIf your chip is outside the above scope, you can only run on CPU/GPU.\n\nThis project is open source at https://github.com/xororz/local-dream where you can view the source code or submit issues\n\nDocumentation: https://ld.chino.icu</string>
+    <string name="must_read">This APP supports running stable diffusion image generation on CPU/GPU and some Qualcomm NPUs.\n\nSD1.5 models are supported on Snapdragon NPUs with Hexagon V68 architecture or newer.\n\nSDXL models are supported on Snapdragon 8 Gen 3 and newer devices.\n\nIf your chip is outside the above scope, you can only run on CPU/GPU.\n\nLocal Dream ET (developer: ET) is published at https://github.com/ETQWFD/LocalDream-ET where you can view the source code, download releases or submit issues\n\nOfficial site / documentation: https://etqwfd.github.io/LocalDream-ET/</string>
     <string name="help">Help</string>
     <string name="more_options">More</string>
 
@@ -564,5 +564,13 @@
     <string name="twokwi_description">2-KWI v1.0 realistic K-style portrait SD1.5, converted on device</string>
     <string name="beautifulart_description">BeautifulArt v1 fine-art / portrait SD1.5, converted on device</string>
     <string name="coffeemix_description">CoffeeMix v2 warm-tone anime SD1.5, converted on device</string>
-    <string name="lemonpastel_description">LemonPastel v1.1 soft pastel anime SD1.5, converted on device</string>
+    <string name="photon_description">Photon v1 photorealistic SD1.5, converted on device</string>
+    <string name="lemoncreami_description">LemonCreami v1 creamy soft anime SD1.5, converted on device</string>
+    <string name="meinapastel_description">MeinaPastel v3 soft pastel illustration SD1.5, converted on device</string>
+    <string name="realisianv5_description">Realisian v5 realistic portrait SD1.5, converted on device</string>
+    <string name="abyssomix_description">AbyssOrangeMix2 Hard vibrant anime SD1.5, converted on device</string>
+    <string name="hassaku_description">Hassaku v1.3 anime illustration SD1.5, converted on device</string>
+    <string name="colorful_description">Colorful v3.1 vivid colorful anime SD1.5, converted on device</string>
+    <string name="cosplaymix_description">CosplayMix v2 photoreal cosplay portrait SD1.5, converted on device</string>
+    <string name="nextphoto_description">NextPhoto v3 candid photorealistic SD1.5, converted on device</string>
 </resources>

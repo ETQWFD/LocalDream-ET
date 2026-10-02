@@ -75,7 +75,7 @@
     <string name="got_it">知道了!</string>
     <string name="yes">是</string>
     <string name="about_app">须知</string>
-    <string name="must_read">此APP支持在CPU/GPU和部分高通NPU上运行stable diffusion图像生成。\n\n支持在 Hexagon V68 架构及以上的骁龙 NPU 上运行 SD1.5 模型。\n\n支持在骁龙 8 Gen 3 及更新的设备上运行 SDXL 模型。\n\n若您的芯片不在上述范围内，则只能使用 CPU/GPU 运行。\n\n本项目在 https://github.com/xororz/local-dream 开源，可以在github上查看源代码或提交问题\n\n文档：https://ld.chino.icu</string>
+    <string name="must_read">此APP支持在CPU/GPU和部分高通NPU上运行stable diffusion图像生成。\n\n支持在 Hexagon V68 架构及以上的骁龙 NPU 上运行 SD1.5 模型。\n\n支持在骁龙 8 Gen 3 及更新的设备上运行 SDXL 模型。\n\n若您的芯片不在上述范围内，则只能使用 CPU/GPU 运行。\n\n本应用 Local Dream ET（开发者：ET）发布于 https://github.com/ETQWFD/LocalDream-ET ，可在此查看源代码、下载版本或提交问题\n\n官网 / 文档：https://etqwfd.github.io/LocalDream-ET/</string>
     <string name="help">帮助</string>
     <string name="more_options">更多</string>
 
@@ -554,5 +554,13 @@
     <string name="twokwi_description">2-KWI v1.0 写实韩系人像 SD1.5，首次下载后本机转换，CPU/32位可用</string>
     <string name="beautifulart_description">BeautifulArt v1 唯美艺术/人像 SD1.5，首次下载后本机转换，CPU/32位可用</string>
     <string name="coffeemix_description">CoffeeMix v2 暖色调动漫 SD1.5，首次下载后本机转换，CPU/32位可用</string>
-    <string name="lemonpastel_description">LemonPastel v1.1 柔和粉彩动漫 SD1.5，首次下载后本机转换，CPU/32位可用</string>
+    <string name="photon_description">Photon v1 写实摄影 SD1.5，首次下载后本机转换，CPU/32位可用</string>
+    <string name="lemoncreami_description">LemonCreami v1 奶油柔感动漫 SD1.5，首次下载后本机转换，CPU/32位可用</string>
+    <string name="meinapastel_description">MeinaPastel v3 柔和粉彩插画 SD1.5，首次下载后本机转换，CPU/32位可用</string>
+    <string name="realisianv5_description">Realisian v5 写实人像 SD1.5，首次下载后本机转换，CPU/32位可用</string>
+    <string name="abyssomix_description">AbyssOrangeMix2 Hard 鲜艳动漫 SD1.5，首次下载后本机转换，CPU/32位可用</string>
+    <string name="hassaku_description">Hassaku v1.3 动漫插画 SD1.5，首次下载后本机转换，CPU/32位可用</string>
+    <string name="colorful_description">Colorful v3.1 绚丽多彩动漫 SD1.5，首次下载后本机转换，CPU/32位可用</string>
+    <string name="cosplaymix_description">CosplayMix v2 写实 cosplay 人像 SD1.5，首次下载后本机转换，CPU/32位可用</string>
+    <string name="nextphoto_description">NextPhoto v3 写实抓拍摄影 SD1.5，首次下载后本机转换，CPU/32位可用</string>
 </resources>
