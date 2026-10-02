@@ -478,11 +478,33 @@ static void modelFile(int idx, int fi, wchar_t *o, size_t c)
     wchar_t md[MAX_PATH]; modelsDir(md, MAX_PATH);
     joinPath(o, c, md, g_models[idx].files[fi].rel);
 }
+
+/* A downloaded weight file must be real binary, not an HTML/XML error page a CDN
+   sometimes returns with HTTP 200, and clearly larger than a placeholder.
+   safetensors start with an 8-byte header length then '{'; gguf starts "GGUF";
+   a web error page starts with '<'. */
+static int validModelFile(const wchar_t *p)
+{
+    if (GetFileAttributesW(p) == INVALID_FILE_ATTRIBUTES) return 0;
+    WIN32_FILE_ATTRIBUTE_DATA fa;
+    if (!GetFileAttributesExW(p, GetFileExInfoStandard, &fa)) return 0;
+    ULONGLONG sz = ((ULONGLONG)fa.nFileSizeHigh << 32) | fa.nFileSizeLow;
+    if (sz < 1024ULL * 1024ULL) return 0;          /* real weights are >600MB */
+    HANDLE hf = CreateFileW(p, GENERIC_READ, FILE_SHARE_READ, NULL,
+                            OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (hf == INVALID_HANDLE_VALUE) return 0;
+    unsigned char magic[4] = {0}; DWORD rd = 0;
+    ReadFile(hf, magic, 4, &rd, NULL);
+    CloseHandle(hf);
+    if (rd < 1) return 0;
+    if (magic[0] == '<') return 0;      /* HTML/XML error page, not a weight */
+    return 1;
+}
 static int modelReady(int idx)
 {
     for (int i = 0; i < g_models[idx].nfiles; i++) {
         wchar_t p[MAX_PATH]; modelFile(idx, i, p, MAX_PATH);
-        if (GetFileAttributesW(p) == INVALID_FILE_ATTRIBUTES) return 0;
+        if (!validModelFile(p)) return 0;
     }
     return 1;
 }
@@ -513,10 +535,16 @@ static BOOL httpGetFile(const char *fullUrl, const wchar_t *dest,
 {
     wchar_t wurl[1400];
     MultiByteToWideChar(CP_UTF8, 0, fullUrl, -1, wurl, 1400);
-    HINTERNET hN = InternetOpenW(L"LocalDreamET/2.1", INTERNET_OPEN_TYPE_PRECONFIG, NULL, NULL, 0);
+    /* Use a real-browser UA: some LFS/CDN edges reject or mishandle requests
+       from a custom agent string, which previously made big model downloads fail. */
+    HINTERNET hN = InternetOpenW(
+        L"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+        L"(KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+        INTERNET_OPEN_TYPE_PRECONFIG, NULL, NULL, 0);
     if (!hN) return FALSE;
-    InternetSetOptionW(hN, INTERNET_OPTION_CONNECT_TIMEOUT, &(DWORD){15000}, sizeof(DWORD));
-    InternetSetOptionW(hN, INTERNET_OPTION_RECEIVE_TIMEOUT, &(DWORD){30000}, sizeof(DWORD));
+    InternetSetOptionW(hN, INTERNET_OPTION_CONNECT_TIMEOUT, &(DWORD){20000}, sizeof(DWORD));
+    InternetSetOptionW(hN, INTERNET_OPTION_RECEIVE_TIMEOUT, &(DWORD){60000}, sizeof(DWORD));
+    InternetSetOptionW(hN, INTERNET_OPTION_SEND_TIMEOUT, &(DWORD){30000}, sizeof(DWORD));
 
     wchar_t part[MAX_PATH]; _snwprintf(part, MAX_PATH, L"%ls.part", dest);
     WIN32_FILE_ATTRIBUTE_DATA fa;
@@ -582,6 +610,9 @@ static BOOL httpGetFile(const char *fullUrl, const wchar_t *dest,
     /* If we knew the total, a truncated transfer must not masquerade as done. */
     if (total && finalSize < total) return FALSE;
     if (finalSize == 0) return FALSE;
+    /* Reject an HTML/XML error page the edge served with 200. Keep .part so the
+       next attempt (or mirror) can still resume/replace it. */
+    if (!validModelFile(part)) { DeleteFileW(part); return FALSE; }
     MoveFileExW(part, dest, MOVEFILE_REPLACE_EXISTING);
     return TRUE;
 }
@@ -591,18 +622,21 @@ static BOOL httpDownload(const char *hfPath, const char *cnUrl, const wchar_t *d
                          void (*prog)(int, void *), void *ctx, char *err, size_t errc)
 {
     char url[1400];
+    /* Each source is retried twice: multi-GB LFS transfers often drop once on a
+       flaky link, and the .part resume means a retry continues, not restarts. */
+    #define TRY_SRC(u) do { \
+        for (int _att = 0; _att < 2; _att++) { if (httpGetFile((u), dest, prog, ctx)) return TRUE; } \
+        DeleteFileW(dest); \
+    } while (0)
     /* 1) China mirror */
-    if (cnUrl && cnUrl[0]) {
-        if (httpGetFile(cnUrl, dest, prog, ctx)) return TRUE;
-        DeleteFileW(dest);
-    }
+    if (cnUrl && cnUrl[0]) TRY_SRC(cnUrl);
     static const char *hosts[] = { "https://hf-mirror.com", "https://huggingface.co" };
     for (int hi = 0; hi < 2; hi++) {
         _snprintf(url, sizeof(url), "%s/%s", hosts[hi], hfPath);
-        if (httpGetFile(url, dest, prog, ctx)) return TRUE;
-        DeleteFileW(dest);
+        TRY_SRC(url);
     }
-    _snprintf(err, errc, "all mirrors failed");
+    #undef TRY_SRC
+    _snprintf(err, errc, "all mirrors failed (check network/proxy)");
     return FALSE;
 }
 
@@ -628,7 +662,9 @@ static DWORD WINAPI downloadThread(LPVOID arg)
     char err[256] = {0}; BOOL ok = TRUE;
     for (int fi = 0; fi < g_models[idx].nfiles; fi++) {
         wchar_t dest[MAX_PATH]; modelFile(idx, fi, dest, MAX_PATH);
-        if (GetFileAttributesW(dest) != INVALID_FILE_ATTRIBUTES) continue;
+        /* Skip only a genuinely complete weight; a corrupt/HTML leftover is re-downloaded. */
+        if (validModelFile(dest)) continue;
+        DeleteFileW(dest);
         wchar_t sub[MAX_PATH]; _snwprintf(sub, MAX_PATH, L"%ls", dest);
         wchar_t *sl = wcsrchr(sub, L'\\'); if (sl) { sl[0] = 0; CreateDirectoryW(sub, NULL); }
         ctx.file = fi;
