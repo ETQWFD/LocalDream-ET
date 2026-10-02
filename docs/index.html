@@ -102,13 +102,13 @@
       <a class="btn ghost" href="https://github.com/ETQWFD/LocalDream-ET" target="_blank" rel="noopener">GitHub 仓库</a>
     </div>
     <div class="cta" style="margin-top:12px;">
-      <a class="btn primary" href="https://github.com/ETQWFD/LocalDream-ET/releases/download/desktop-v2.0.0/LocalDream-ET-Setup-2.0.0.exe" download>💻 下载电脑版安装包 v2.0.0（Windows x64）</a>
-      <a class="btn ghost" href="https://github.com/ETQWFD/LocalDream-ET/releases/download/desktop-v2.0.0/LocalDream-ET-Windows-Portable-2.0.0.zip" download>电脑版免安装 ZIP v2.0.0</a>
+      <a class="btn primary" href="https://github.com/ETQWFD/LocalDream-ET/releases/download/desktop-v2.1.0/LocalDream-ET-Setup-2.1.0.exe" download>💻 下载电脑版安装包 v2.1.0（Windows x64）</a>
+      <a class="btn ghost" href="https://github.com/ETQWFD/LocalDream-ET/releases/download/desktop-v2.1.0/LocalDream-ET-Windows-Portable-2.1.0.zip" download>电脑版免安装 ZIP v2.1.0</a>
     </div>
-    <div class="ver">手机当前版本 <b>v3.0.0-et.8</b>（build 82）· 电脑版 <b>v2.0.0</b> · 开发者 <b>ET</b> · 支持 arm64-v8a / armeabi-v7a</div>
+    <div class="ver">手机当前版本 <b>v3.0.0-et.9</b>（build 83）· 电脑版 <b>v2.1.0</b> · 开发者 <b>ET</b> · 支持 arm64-v8a / armeabi-v7a</div>
     <div class="note" style="margin-top:14px;text-align:left;max-width:760px;margin-left:auto;margin-right:auto;">
-      <b>手机版 v3.0.0-et.8 更新：</b>① <b>修复“只调比例（如 9:16→288×512）就整屏马赛克/塑料斑块”</b>：SD1.5 宽高现在强制按 64 对齐（288 不是 64 的倍数，会被自动修正为 256/320），并自动纠正老版本历史里保存的非法尺寸，方形与竖图都正常；② <b>新增离线中文提示词</b>：SD1.5 直接输入中文即可出图（本地翻译成英文标签，不联网），Qwen 等原生中文模型保持原样；③ CPU 再增 <b>majicMIX Realistic v7、Analog Madness v7</b>（写实/无限制向，约 2.1GB，下载后本机转换一次），32/64 位均可；④ 保留 SD1.5 CFG 1–9 安全限制与搜索框。<br>
-      <b>电脑版 v2.0.0 更新：</b>界面与手机一致——左侧可搜索模型列表、逐模型下载并显示真实百分比（断点续传），右侧“提示词/生成结果/历史”；图生图整张上传不裁剪；可调 1:1/3:4/2:3/9:16/4:3/3:2/16:9 比例；深色/浅色主题、中文/English；应用内“检测更新→自动下载→调起安装”；真实采样进度条+实时预览；模型存到程序同级 <b>models</b> 文件夹；内置 7 个模型，含 <b>Qwen-Image 2.1 UC Q4_0</b>（整套约 10.6GB，建议 16GB 内存或独显，纯 CPU 较慢）。<br>
+      <b>手机版 v3.0.0-et.9 更新：</b>① <b>提升清晰度、修模糊</b>：32 位/慢 CPU 默认分辨率由 256 提升到 384（仍按 64 对齐），有效像素约 2.25 倍，更清晰且远比 512 快；64 位保持原生 512；老版本保存的 256×256 会自动升级；② <b>提示词更听话</b>：中文先整句在线翻译成英文标签（如“穿黑旗袍短发女孩站在樱花树下”能完整理解），无网时自动回退离线词典；Qwen 等原生中文模型不受影响；③ 延续 et.8：SD1.5 宽高 64 对齐（调比例不再马赛克）、CFG 1–9、CPU 新增 majicMIX Realistic v7、Analog Madness v7，32/64 位均可。<br>
+      <b>电脑版 v2.1.0 更新：</b><b>修复大模型下不动/无法使用</b>——改用浏览器 UA（避免 LFS/CDN 拦截）、每个源失败自动重试 2 次并断点续传（2GB 断线继续不重来）、ModelScope→hf-mirror→官方依次回退；下载后校验文件头与体积，自动丢弃网页错误页，杜绝“下了假模型导致无法生成”；中文提示词同样整句在线翻译。界面沿用手机版：可搜索模型列表、真实下载进度、图生图整张上传、比例设置、深浅主题/中英、应用内检测更新自动安装、真实采样进度+实时预览；模型存程序同级 <b>models</b>；内置 7 个模型含 <b>Qwen-Image 2.1 UC Q4_0</b>。<br>
       <b>说明：</b>新 SD 模型首次需下载约 2.1GB 并在本机转换一次，之后直接使用；手机端 Qwen Image 2.1 UC 为 NPU 大模型，仅骁龙 8 至尊版及以上 64 位机型可用，32 位设备请使用 SD1.5 模型；电脑版 x64 可通过 CPU 跑 Qwen。
     </div>
   </section>
@@ -174,7 +174,7 @@
     <h2>电脑版（Windows x64）</h2>
     <p>使用 <b>C 语言</b>编写的原生桌面启动器，底层为开源 stable-diffusion.cpp（leejet, MIT）CPU 引擎，Windows 10/11 64 位本地离线出图，免费、不上传图片。右键程序“属性→详细信息”显示开发者 ET。</p>
     <div class="cards">
-      <div class="card"><h3>① 下载安装</h3><p>点顶部「下载电脑版安装包 v2.0.0」（按用户安装、无需管理员），或下免安装 ZIP 解压即用；安装版自动创建桌面与开始菜单快捷方式。</p></div>
+      <div class="card"><h3>① 下载安装</h3><p>点顶部「下载电脑版安装包 v2.1.0」（按用户安装、无需管理员），或下免安装 ZIP 解压即用；安装版自动创建桌面与开始菜单快捷方式。v2.1.0 已修复大模型下载中断/下不动。</p></div>
       <div class="card"><h3>② 下载模型</h3><p>左侧手机式卡片列表+搜索框，7 个模型逐个下载、真实百分比、断点续传，默认国内镜像、失败回退官方源：Absolute Reality、Realistic Vision V5.1、majicMIX v7、Analog Madness v7、DreamShaper 8、Counterfeit V2.5、Qwen-Image 2.1 UC。</p></div>
       <div class="card"><h3>③ 本地出图</h3><p>桌面端直接读取 safetensors 无需转换；图生图整张上传不裁剪；比例 1:1/3:4/2:3/9:16/4:3/3:2/16:9（SD 按 64、Qwen 按 32 对齐）；真实采样进度条+实时预览；深浅主题、中文/English；应用内检测更新自动安装。</p></div>
     </div>
