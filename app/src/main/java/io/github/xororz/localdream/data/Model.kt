@@ -572,12 +572,16 @@ class ModelRepository private constructor(private val context: Context) {
     private fun scanCustomModels(): List<Model> {
         val modelsDir = Model.getModelsDir(context)
         val customModels = mutableListOf<Model>()
+        // Link-imported models are provided by initializeModels() (with their
+        // proper name/URL), so don't also surface the finished folder here.
+        val urlImportIds = io.github.xororz.localdream.utils.UrlModelImport.idSet(context)
 
         if (modelsDir.exists() && modelsDir.isDirectory) {
             modelsDir.listFiles()?.forEach { dir ->
                 if (!dir.isDirectory) return@forEach
 
                 val modelId = dir.name
+                if (modelId in urlImportIds) return@forEach
                 if (modelId in RESERVED_MODEL_IDS) {
                     Log.w(
                         "ModelRepository",
@@ -723,6 +727,10 @@ class ModelRepository private constructor(private val context: Context) {
             add(createCounterMixV2Cpu())
             add(createBeautifulFantasyCpu())
             add(createEtherRealLuxCpu())
+            // User "import from link" models (persisted SD1.5 convert entries).
+            io.github.xororz.localdream.utils.UrlModelImport.entries(context).forEach { e ->
+                add(createUrlImportModel(e))
+            }
         }
 
         return customModels + predefinedModels.map { applyConfigDefaults(it) }
@@ -1298,6 +1306,30 @@ class ModelRepository private constructor(private val context: Context) {
             ),
             runOnCpu = true,
             convertSourceUrl = url,
+        )
+    }
+
+    // A model the user added by pasting a link. Runs through the exact same
+    // resumable download + on-device SD1.5 conversion path, and persists in the
+    // url_models.json registry so it stays in the list across restarts.
+    private fun createUrlImportModel(
+        e: io.github.xororz.localdream.utils.UrlModelImport.Entry,
+    ): Model {
+        val isDownloaded =
+            Model.isModelDownloaded(context, e.id, false, requireFinished = true)
+        return Model(
+            id = e.id,
+            name = e.name,
+            description = context.getString(R.string.url_imported_description),
+            baseUrl = "",
+            approximateSize = "链接导入 + 转换",
+            isDownloaded = isDownloaded,
+            codeDefaults = ModelConfig(
+                prompt = "masterpiece, best quality, highly detailed, sharp focus, 8k",
+                negativePrompt = "lowres, bad anatomy, bad hands, missing fingers, extra digit, worst quality, low quality, jpeg artifacts, signature, watermark, deformed, blurry",
+            ),
+            runOnCpu = true,
+            convertSourceUrl = e.url,
         )
     }
 

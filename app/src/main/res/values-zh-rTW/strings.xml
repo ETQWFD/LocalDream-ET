@@ -257,6 +257,26 @@
 
     <!-- Custom Model -->
     <string name="add_custom_model">新增自定義模型</string>
+    <string name="import_from_link">＋ 從連結匯入模型</string>
+    <string name="url_imported_description">使用者從連結匯入的 SD1.5 模型，本機轉換，CPU/32位可用</string>
+    <string name="url_import_hint">貼上 Hugging Face / hf-mirror / 魔搭 ModelScope 的模型頁面，或 .safetensors 直連。下載前先檢查大小、剩餘空間與是否相容 SD1.5。</string>
+    <string name="url_import_link">模型連結</string>
+    <string name="url_import_link_hint">https://huggingface.co/作者/倉庫 或 .safetensors 直連</string>
+    <string name="url_import_name">顯示名稱</string>
+    <string name="url_import_name_hint">檢測後自動填寫</string>
+    <string name="url_import_check">檢測相容性</string>
+    <string name="url_import_bad_link">無法解析該連結。請貼上模型頁面或 .safetensors 直連（此處不支援 SDXL / DiT / .gguf）。</string>
+    <string name="url_import_ok">本手機支援</string>
+    <string name="url_import_unsupported">本手機不支援</string>
+    <string name="url_import_file">檔案</string>
+    <string name="url_import_size">大小</string>
+    <string name="url_import_too_big">超過 32 位 2.14GB 上限（armeabi-v7a 會崩潰）。請選 fp16/精簡版 SD1.5 單檔案。</string>
+    <string name="url_import_free">剩餘空間</string>
+    <string name="url_import_no_space">儲存空間不足（下載+轉換約需檔案大小 2 倍空間）。</string>
+    <string name="url_import_not_sd15">檔案頭不是單檔案 SD1.5 權重（疑似 SDXL/DiT/diffusers），CPU 引擎無法執行。</string>
+    <string name="url_import_footnote">32 位 CPU 僅支援單檔案 SD1.5（.safetensors）。確認後自動下載、轉換，完成後永久保留在列表可直接使用。</string>
+    <string name="url_import_confirm">確認並下載</string>
+    <string name="url_import_started">連結模型已新增並開始下載，轉換完成後會保留在列表中。</string>
     <string name="add_custom_npu_model">匯入模型 ZIP</string>
     <string name="custom_model">自定義模型</string>
     <string name="custom_model_name">模型名稱</string>

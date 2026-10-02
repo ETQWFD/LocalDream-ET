@@ -34,6 +34,10 @@ object ModelConvertEngine {
 
     class CancelledException : Exception("cancelled")
 
+    /** Ordered download URLs for a convert path, exposed for the import precheck. */
+    fun probeCandidateUrls(context: Context, path: String): List<String> =
+        candidateUrls(context, path)
+
     /** Directory holding a model's resumable download scratch. */
     fun scratchDir(context: Context, modelId: String): File =
         File(Storage.tempDir(context), "conv_${modelId.replace(" ", "")}")
@@ -154,6 +158,9 @@ object ModelConvertEngine {
 
     private fun candidateUrls(context: Context, path: String): List<String> {
         val p = path.removePrefix("/")
+        // A user-supplied absolute direct link (any host) is used verbatim; it is
+        // not something we can re-base onto the configured mirrors.
+        if (p.startsWith("http://") || p.startsWith("https://")) return listOf(p)
         val prefs = GenerationPreferences(context)
         val source = kotlinx.coroutines.runBlocking { prefs.getSelectedSource() }
         val customBase = kotlinx.coroutines.runBlocking { prefs.getBaseUrl() }.trimEnd('/')

@@ -299,6 +299,7 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
     }
     var showEmbeddingManagerDialog by remember { mutableStateOf(false) }
     var showCustomModelDialog by remember { mutableStateOf(false) }
+    var showUrlImportDialog by remember { mutableStateOf(false) }
     var showCustomNpuModelDialog by remember { mutableStateOf(false) }
     var isConverting by remember { mutableStateOf(false) }
     var conversionProgress by remember { mutableStateOf("") }
@@ -734,6 +735,28 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
         )
     }
 
+    if (showUrlImportDialog) {
+        UrlImportDialog(
+            context = context,
+            onDismiss = { showUrlImportDialog = false },
+            onConfirmed = { name, convertPath ->
+                showUrlImportDialog = false
+                scope.launch {
+                    val entry = withContext(Dispatchers.IO) {
+                        io.github.xororz.localdream.utils.UrlModelImport
+                            .addEntry(context, name, convertPath)
+                    }
+                    modelRepository.refreshAllModels()
+                    modelRepository.models.firstOrNull { it.id == entry.id }
+                        ?.startDownload(context)
+                    snackbarHostState.showSnackbar(
+                        context.getString(R.string.url_import_started),
+                    )
+                }
+            },
+        )
+    }
+
     if (showCustomNpuModelDialog) {
         CustomNpuModelDialog(
             context,
@@ -1131,6 +1154,14 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                         item {
                             AddCustomModelButton(
                                 onClick = { showCustomModelDialog = true },
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
+                        item {
+                            AddModelOutlinedCard(
+                                label = stringResource(R.string.import_from_link),
+                                accent = false,
+                                onClick = { showUrlImportDialog = true },
                                 modifier = Modifier.fillMaxWidth(),
                             )
                         }
@@ -2930,6 +2961,178 @@ fun CustomNpuModelDialog(context: Context, onDismiss: () -> Unit, onModelAdded: 
             TextButton(onClick = onDismiss) {
                 Text(stringResource(R.string.cancel))
             }
+        },
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun UrlImportDialog(
+    context: Context,
+    onDismiss: () -> Unit,
+    onConfirmed: (name: String, convertPath: String) -> Unit,
+) {
+    val scope = rememberCoroutineScope()
+    var name by remember { mutableStateOf("") }
+    var link by remember { mutableStateOf("") }
+    var checking by remember { mutableStateOf(false) }
+    var result by remember {
+        mutableStateOf<io.github.xororz.localdream.utils.UrlModelImport.Precheck?>(null)
+    }
+    var failed by remember { mutableStateOf<String?>(null) }
+
+    fun gb(b: Long): String = "%.2f GB".format(b / 1_000_000_000.0)
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.import_from_link)) },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text(
+                    text = stringResource(R.string.url_import_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                OutlinedTextField(
+                    value = link,
+                    onValueChange = { link = it; result = null; failed = null },
+                    label = { Text(stringResource(R.string.url_import_link)) },
+                    placeholder = { Text(stringResource(R.string.url_import_link_hint)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                )
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text(stringResource(R.string.url_import_name)) },
+                    placeholder = { Text(stringResource(R.string.url_import_name_hint)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                )
+
+                FilledTonalButton(
+                    onClick = {
+                        checking = true; result = null; failed = null
+                        scope.launch {
+                            val pc = withContext(Dispatchers.IO) {
+                                io.github.xororz.localdream.utils.UrlModelImport
+                                    .precheck(context, link)
+                            }
+                            checking = false
+                            if (pc == null) failed = context.getString(R.string.url_import_bad_link)
+                            else {
+                                result = pc
+                                if (name.isBlank()) {
+                                    name = pc.fileName
+                                        .substringBeforeLast('.')
+                                        .replace('_', ' ')
+                                }
+                            }
+                        }
+                    },
+                    enabled = link.isNotBlank() && !checking,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    if (checking) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                        )
+                        Spacer(Modifier.width(8.dp))
+                    }
+                    Text(stringResource(R.string.url_import_check))
+                }
+
+                failed?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+
+                result?.let { pc ->
+                    HorizontalDivider()
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = if (pc.supported) Icons.Default.CheckCircle
+                            else Icons.Default.Warning,
+                            contentDescription = null,
+                            tint = if (pc.supported) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(20.dp),
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = if (pc.supported) stringResource(R.string.url_import_ok)
+                            else stringResource(R.string.url_import_unsupported),
+                            style = MaterialTheme.typography.titleSmall,
+                            color = if (pc.supported) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.error,
+                        )
+                    }
+                    Text(
+                        "• ${context.getString(R.string.url_import_file)}: ${pc.fileName}",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    Text(
+                        "• ${context.getString(R.string.url_import_size)}: " +
+                            if (pc.sizeBytes > 0) gb(pc.sizeBytes) else "?",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (pc.sizeOk) MaterialTheme.colorScheme.onSurfaceVariant
+                        else MaterialTheme.colorScheme.error,
+                    )
+                    if (!pc.sizeOk && pc.sizeBytes > 0) {
+                        Text(
+                            stringResource(R.string.url_import_too_big),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                    Text(
+                        "• ${context.getString(R.string.url_import_free)}: ${gb(pc.freeBytes)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (pc.storageOk) MaterialTheme.colorScheme.onSurfaceVariant
+                        else MaterialTheme.colorScheme.error,
+                    )
+                    if (!pc.storageOk) {
+                        Text(
+                            stringResource(R.string.url_import_no_space),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                    if (pc.headerSd15 == false) {
+                        Text(
+                            stringResource(R.string.url_import_not_sd15),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                    Text(
+                        stringResource(R.string.url_import_footnote),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    val pc = result
+                    if (pc != null && pc.supported) {
+                        onConfirmed(name.ifBlank { pc.fileName }, pc.convertPath)
+                    }
+                },
+                enabled = result?.supported == true && name.isNotBlank(),
+            ) { Text(stringResource(R.string.url_import_confirm)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
         },
     )
 }

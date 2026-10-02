@@ -267,6 +267,26 @@
 
     <!-- Custom Model -->
     <string name="add_custom_model">Add Custom Model</string>
+    <string name="import_from_link">＋ Import Model from Link</string>
+    <string name="url_imported_description">User-imported SD1.5 model (from link), converted on device, CPU/32-bit ready</string>
+    <string name="url_import_hint">Paste a Hugging Face / hf-mirror / ModelScope model page or a direct .safetensors link. We check size, free space and SD1.5 compatibility BEFORE downloading.</string>
+    <string name="url_import_link">Model link</string>
+    <string name="url_import_link_hint">https://huggingface.co/owner/repo or a .safetensors link</string>
+    <string name="url_import_name">Display name</string>
+    <string name="url_import_name_hint">Auto-filled after the check</string>
+    <string name="url_import_check">Check compatibility</string>
+    <string name="url_import_bad_link">Cannot resolve this link. Paste a model page or a direct .safetensors link (SDXL / DiT / .gguf are not supported here).</string>
+    <string name="url_import_ok">Supported on this phone</string>
+    <string name="url_import_unsupported">Not supported on this phone</string>
+    <string name="url_import_file">File</string>
+    <string name="url_import_size">Size</string>
+    <string name="url_import_too_big">Over the 2.14 GB 32-bit limit (would crash armeabi-v7a). Pick an fp16/pruned SD1.5 file.</string>
+    <string name="url_import_free">Free space</string>
+    <string name="url_import_no_space">Not enough free storage (need ~2× file size for download + conversion).</string>
+    <string name="url_import_not_sd15">File header is not a single-file SD1.5 checkpoint (looks like SDXL/DiT/diffusers); the CPU engine cannot run it.</string>
+    <string name="url_import_footnote">Only single-file SD1.5 (.safetensors) runs on 32-bit CPU. After confirming it downloads, converts and stays in your list.</string>
+    <string name="url_import_confirm">Confirm &amp; Download</string>
+    <string name="url_import_started">Link model added; download started. It stays in the list after conversion.</string>
     <string name="add_custom_npu_model">Import Model ZIP</string>
     <string name="custom_model">Custom Model</string>
     <string name="custom_model_name">Model Name</string>
