@@ -1,7 +1,7 @@
 {
-  "versionCode": 87,
-  "versionName": "3.0.0-et.13",
+  "versionCode": 88,
+  "versionName": "3.0.0-et.14",
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
-  "size": 148499451,
-  "releaseNotes": "ET 定制版 v3.0.0-et.13\n• 设置新增应用内语言切换：简体中文 / English / 繁體中文，点选后界面立即刷新；新增完整繁体中文资源。\n• 上线官方使用文档（etqwfd.github.io/LocalDream-ET/help.html）：安装权限、下载源切换、断点续传、生成参数、图生图、清晰度说明、Qwen 机型要求、应用内更新、常见问题；“须知”里的文档链接直接打开它，官网导航也有入口。\n• 延续 et.12：32 位转换崩溃已修（全部模型经文件头校验、低于 2.14GB，32/64 位安全转换）；Qwen Image 2.1 / UC 在 NPU 标签页（骁龙8至尊版及以上 64 位）。\n• 关于“4K”：低配 32 位手机无法原生 4K（算力/内存物理限制），默认 384/512 清晰出图并用应用内高清放大提升；请勿相信任何声称在 32 位手机秒出 4K 的说法。开发者：ET。"
+  "size": 148510307,
+  "releaseNotes": "ET 定制版 v3.0.0-et.14\n• 模型库再加 9 个经严格校验的 SD1.5（写实/半写实2.5D/动漫），全部在魔搭实测真实大小与 safetensors 文件头自洽、均小于 2.14GB，32/64 位 CPU/GPU 都能安全下载+本机转换+出图：MajicMix Realistic v7、epiCPhotoGasm 2.5D 女神、ReV Animated v1.1、MeinaMix v11、AingDiffusion v9、LemonTea 笔触2.5D、CounterMix v2、Beautiful Fantasy Real Mix、EtherReal Mix LUX2。\n• 修复“AI 不按中文提示词生成”：在线整句翻译以前一旦首次网络失败就永久关闭、退回只会逐词且大量丢词的离线词典，复杂中文整句被丢成通用词导致出图跑偏；现改为失败后 60 秒自动重试恢复，网络恢复即重新整句翻译，网络不可用时才用本地词典兜底，不阻塞出图。\n• 下载/更新继续走魔搭国内 CDN 首选（Range 断点续传、通知栏后台、关机恢复）+ hf-mirror/官方自动回退；32 位转换崩溃已在 et.12 起修复。\n• Qwen Image 2.1 / UC 在「NPU Models」标签页（约10.8GB，骁龙8至尊版及以上 64 位/Android12+；32 位物理无法运行大 DiT，请用本批 SD1.5）。开发者：ET。"
 }
