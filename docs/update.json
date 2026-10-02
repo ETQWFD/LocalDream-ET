@@ -1,7 +1,7 @@
 {
-  "versionCode": 88,
-  "versionName": "3.0.0-et.14",
+  "versionCode": 89,
+  "versionName": "3.0.0-et.15",
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
-  "size": 148510307,
-  "releaseNotes": "ET 定制版 v3.0.0-et.14\n• 模型库再加 9 个经严格校验的 SD1.5（写实/半写实2.5D/动漫），全部在魔搭实测真实大小与 safetensors 文件头自洽、均小于 2.14GB，32/64 位 CPU/GPU 都能安全下载+本机转换+出图：MajicMix Realistic v7、epiCPhotoGasm 2.5D 女神、ReV Animated v1.1、MeinaMix v11、AingDiffusion v9、LemonTea 笔触2.5D、CounterMix v2、Beautiful Fantasy Real Mix、EtherReal Mix LUX2。\n• 修复“AI 不按中文提示词生成”：在线整句翻译以前一旦首次网络失败就永久关闭、退回只会逐词且大量丢词的离线词典，复杂中文整句被丢成通用词导致出图跑偏；现改为失败后 60 秒自动重试恢复，网络恢复即重新整句翻译，网络不可用时才用本地词典兜底，不阻塞出图。\n• 下载/更新继续走魔搭国内 CDN 首选（Range 断点续传、通知栏后台、关机恢复）+ hf-mirror/官方自动回退；32 位转换崩溃已在 et.12 起修复。\n• Qwen Image 2.1 / UC 在「NPU Models」标签页（约10.8GB，骁龙8至尊版及以上 64 位/Android12+；32 位物理无法运行大 DiT，请用本批 SD1.5）。开发者：ET。"
+  "size": 148572379,
+  "releaseNotes": "ET 定制版 v3.0.0-et.15\n• 新增「从链接导入模型」：CPU 模型页点“＋ 从链接导入模型”，粘贴 Hugging Face / hf-mirror / 魔搭 ModelScope 的模型页面或任意 .safetensors 直链，先做兼容性预检再下载。预检四项：是否单文件 SD1.5、真实大小是否≤2.14GB（32位红线）、剩余空间是否够（约文件2倍）、读 safetensors 文件头排除 SDXL/DiT。\n• 显示“本手机支持”后确认即走内置前台服务下载（魔搭国内CDN首选、Range断点续传、通知栏后台、关机续传），下完自动本机转换；转换成功后永久出现在列表，以后直接点用，与内置模型一致。\n• 关于千问/豆包：经核查，千问文生图最老为 Qwen-Image 20B，最小的 Qwen-Image-2.1 视觉部分也是 7B DiT，最小量化 Q2_K_M 仍约 7.07GB，还要配 8B 文本编码器、走专用管线，不存在≤2GB 能在 32 位手机运行的千问模型；豆包/字节仅有云端 API 无本地权重。故 32 位请用 SD1.5（内置 + 链接导入均可）。\n• 延续 et.14：新增 9 个 32 位安全 SD1.5；修复复杂中文提示词整句翻译熔断器一次失败即永久关闭的问题（现 60 秒自动恢复）。开发者：ET。"
 }
