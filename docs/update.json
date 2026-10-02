@@ -1,7 +1,7 @@
 {
-  "versionCode": 86,
-  "versionName": "3.0.0-et.12",
+  "versionCode": 87,
+  "versionName": "3.0.0-et.13",
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
-  "size": 148460227,
-  "releaseNotes": "ET 定制版 v3.0.0-et.12\n• 修复 32 位手机转换崩溃（退出码 134 / Cannot read tensor data: time_embed.0.weight）：根因是个别模型原始文件超过 2.14GB（越过 32 位寻址上限），已下架 FantasyTime V1.22、CoffeeMix v2、LemonPastel v1.1 这三个会崩的模型，32 位/64 位转换都不再闪退。\n• 改用 9 个全新健康模型（逐个用文件头自洽校验、均小于 2.14GB，32 位可安全转换），比下架的多 6 个：Photon、Realisian v5、CosplayMix v2、NextPhoto v3（写实/人像）；LemonCreami、MeinaPastel v3、AbyssOrangeMix2 Hard、Hassaku v1.3、Colorful v3.1（动漫/2.5D）。全部魔搭国内 CDN + hf-mirror 双源可用。\n• “须知”里的仓库与文档链接替换为我们自己的：仓库 github.com/ETQWFD/LocalDream-ET，官网/文档 etqwfd.github.io/LocalDream-ET（中英日韩四语同步）。\n• 延续：下载源可切换（默认魔搭最快）、断点续传/通知栏后台下载/关机恢复、图生图忠于原图、提示词不限长度无审查、中文整句翻译、32/64 位 CPU。开发者：ET。"
+  "size": 148499451,
+  "releaseNotes": "ET 定制版 v3.0.0-et.13\n• 设置新增应用内语言切换：简体中文 / English / 繁體中文，点选后界面立即刷新；新增完整繁体中文资源。\n• 上线官方使用文档（etqwfd.github.io/LocalDream-ET/help.html）：安装权限、下载源切换、断点续传、生成参数、图生图、清晰度说明、Qwen 机型要求、应用内更新、常见问题；“须知”里的文档链接直接打开它，官网导航也有入口。\n• 延续 et.12：32 位转换崩溃已修（全部模型经文件头校验、低于 2.14GB，32/64 位安全转换）；Qwen Image 2.1 / UC 在 NPU 标签页（骁龙8至尊版及以上 64 位）。\n• 关于“4K”：低配 32 位手机无法原生 4K（算力/内存物理限制），默认 384/512 清晰出图并用应用内高清放大提升；请勿相信任何声称在 32 位手机秒出 4K 的说法。开发者：ET。"
 }
