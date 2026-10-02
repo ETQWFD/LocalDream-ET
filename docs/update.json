@@ -1,7 +1,7 @@
 {
-  "versionCode": 83,
-  "versionName": "3.0.0-et.9",
+  "versionCode": 84,
+  "versionName": "3.0.0-et.10",
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
-  "size": 148422343,
-  "releaseNotes": "ET 定制版 v3.0.0-et.9\n• 提升清晰度：32 位/慢 CPU 默认分辨率 256→384（仍按 64 对齐），有效像素约 2.25 倍，更清晰且远快于 512；64 位保持 512；老用户 256×256 自动升级。\n• 中文提示词先整句在线翻译成英文标签（复杂描述也能完整理解），无网自动回退离线词典；Qwen 原生中文不受影响。\n• 延续 et.8：SD1.5 宽高 64 对齐（调比例不再马赛克）、CFG 1–9、新增 majicMIX v7 / Analog Madness v7、32/64 位纯 CPU。开发者：ET。"
+  "size": 148441855,
+  "releaseNotes": "ET 定制版 v3.0.0-et.10\n• 模型再也不容易坏：下载/转换改为前台服务，通知栏实时显示进度，切后台/锁屏也能继续；2GB 文件支持断点续传，断网、杀进程、关机重启后再点继续，不会从头下。\n• 修复关机/重启后半成品被当成已下载、一用就报错：只有转换成功写出标记才算安装完成，半成品自动清理并可续传重下。\n• 新增 6 个可直接使用的扩散模型（写实/人像/2.5D/动漫）：Juggernaut Final、FantasyTime V1.22、CamelliaMix NSFW v1.1、Dark Sushi 2.5D、BreakDomain Realistic R2333、HelloWorld v3，国内魔搭直链 + hf-mirror 回退。\n• 提示词不限长度、无内容审查（保留 CFG≤9 防 32 位溢出花屏）；延续 et.9 的清晰度提升与中文整句翻译。开发者：ET。"
 }

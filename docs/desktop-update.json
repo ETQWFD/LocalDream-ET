@@ -1,6 +1,6 @@
 {
-  "versionCode": 3,
-  "version": "2.1.0",
-  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/desktop-v2.1.0/LocalDream-ET-Setup-2.1.0.exe",
-  "notes": "电脑版 v2.1.0：修复大模型下载（浏览器UA、失败自动重试+断点续传、多镜像回退、下载后校验文件头防止错误页伪装）；中文提示词整句在线翻译；沿用手机式可搜索模型列表、图生图整张上传、7 模型含 Qwen-Image 2.1 UC、深浅主题/中英、应用内更新、真实进度+实时预览。开发者：ET。"
+  "versionCode": 4,
+  "version": "2.2.0",
+  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/desktop-v2.2.0/LocalDream-ET-Setup-2.2.0.exe",
+  "notes": "电脑版 v2.2.0：模型列表与手机版对齐，再增 6 个扩散模型（Juggernaut Final、FantasyTime V1.22、CamelliaMix NSFW v1.1、Dark Sushi 2.5D、BreakDomain Realistic R2333、HelloWorld v3，共 13 个含 Qwen-Image 2.1 UC）；延续魔搭国内 CDN 首选、断点续传、损坏重下、中文整句翻译、图生图整张、真实进度、主题/语言、应用内更新。开发者：ET。"
 }
