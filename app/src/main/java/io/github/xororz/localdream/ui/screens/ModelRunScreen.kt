@@ -1546,15 +1546,16 @@ fun ModelRunScreen(
                     aspectRatio = inferAspectRatioString(sw, sh)
                 }
                 // One-time clarity migration for upgraders: earlier releases
-                // defaulted SD1.5 CPU to 256x256 (soft). On a 64-bit device lift a
-                // default-looking square 256 up to the native 512. User-chosen
+                // defaulted SD1.5 CPU to 256x256 (soft). Lift a default-looking
+                // square 256 up to the native 512 on 64-bit, or to the much
+                // sharper-but-affordable 384 on 32-bit/slow devices. User-chosen
                 // non-square ratios are left untouched.
                 if (prefs.width == 256 && prefs.height == 256 &&
-                    currentWidth == 256 && currentHeight == 256 &&
-                    android.os.Build.SUPPORTED_ABIS.any { it.contains("64") }
+                    currentWidth == 256 && currentHeight == 256
                 ) {
-                    currentWidth = 512
-                    currentHeight = 512
+                    val lift = if (android.os.Build.SUPPORTED_ABIS.any { it.contains("64") }) 512 else 384
+                    currentWidth = lift
+                    currentHeight = lift
                 }
             }
 

@@ -584,11 +584,12 @@ internal fun defaultGenerationSize(
 
     usesFixedCanvas -> 1024
 
-    // 256x256 looks soft/blurry. On a 64-bit device render SD1.5 at its native
-    // 512x512 by default for crisp detail. 32-bit CPUs are far slower and some
-    // are address-space constrained, so keep them at 256 (user can still pick a
-    // ratio/larger size manually).
-    runOnCpu -> if (is64BitAbi()) 512 else 256
+    // 256x256 looks soft/blurry. SD1.5 was trained on ~512, so render at (or
+    // near) that for crisp detail. 64-bit devices default to the native 512;
+    // 32-bit/slow CPUs default to 384 (a 64-aligned, ~2.25x sharper middle
+    // ground that stays far quicker than 512). The resolution picker still lets
+    // a user drop to 256 for speed or go up to 512 for maximum detail.
+    runOnCpu -> if (is64BitAbi()) 512 else 384
 
     else -> 512
 }
