@@ -1,0 +1,6 @@
+{
+  "versionCode": 2,
+  "version": "2.0.0",
+  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/desktop-v2.0.0/LocalDream-ET-Setup-2.0.0.exe",
+  "notes": "电脑版 v2.0.0：与手机版一致的可搜索模型列表、图生图整张上传、比例设置、深浅主题/中英语言、真实采样进度与实时预览、应用内下载安装更新；模型存于程序同级 models；新增 Qwen-Image 2.1 UC Q4_0。开发者：ET。"
+}
