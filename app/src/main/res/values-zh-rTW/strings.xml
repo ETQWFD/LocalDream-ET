@@ -565,4 +565,13 @@
     <string name="colorful_description">Colorful v3.1 絢麗多彩動漫 SD1.5，首次下載後本機轉換，CPU/32位可用</string>
     <string name="cosplaymix_description">CosplayMix v2 寫實 cosplay 人像 SD1.5，首次下載後本機轉換，CPU/32位可用</string>
     <string name="nextphoto_description">NextPhoto v3 寫實抓拍攝影 SD1.5，首次下載後本機轉換，CPU/32位可用</string>
+    <string name="majicv7_description">MajicMix Realistic v7 寫實人像 SD1.5，首次下載後本機轉換，CPU/32位可用</string>
+    <string name="epigoddess_description">epiCPhotoGasm 2.5D 女神 半寫實唯美 SD1.5，首次下載後本機轉換，CPU/32位可用</string>
+    <string name="revanimated_description">ReV Animated v1.1 奇幻插畫/通用 SD1.5，首次下載後本機轉換，CPU/32位可用</string>
+    <string name="meinav11_description">MeinaMix v11 動漫 SD1.5，首次下載後本機轉換，CPU/32位可用</string>
+    <string name="aingv9_description">AingDiffusion v9 動漫 SD1.5，首次下載後本機轉換，CPU/32位可用</string>
+    <string name="lemontea_description">LemonTea 筆觸 2.5D SD1.5，首次下載後本機轉換，CPU/32位可用</string>
+    <string name="countermixv2_description">CounterMix v2 半寫實動漫 SD1.5，首次下載後本機轉換，CPU/32位可用</string>
+    <string name="beautifantasy_description">Beautiful Fantasy Real Mix 唯美奇幻半寫實 SD1.5，首次下載後本機轉換，CPU/32位可用</string>
+    <string name="ethereallux_description">EtherReal Mix LUX2 精緻半寫實 SD1.5，首次下載後本機轉換，CPU/32位可用</string>
 </resources>

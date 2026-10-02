@@ -713,6 +713,16 @@ class ModelRepository private constructor(private val context: Context) {
             add(createColorfulCpu())
             add(createCosplayMixCpu())
             add(createNextPhotoCpu())
+            // et.14 batch: nine more 32-bit-safe, header-validated checkpoints.
+            add(createMajicV7Cpu())
+            add(createEpiGoddessCpu())
+            add(createRevAnimatedCpu())
+            add(createMeinaV11Cpu())
+            add(createAingV9Cpu())
+            add(createLemonTeaCpu())
+            add(createCounterMixV2Cpu())
+            add(createBeautifulFantasyCpu())
+            add(createEtherRealLuxCpu())
         }
 
         return customModels + predefinedModels.map { applyConfigDefaults(it) }
@@ -1455,6 +1465,88 @@ class ModelRepository private constructor(private val context: Context) {
         defaultNegative = "cartoon, anime, drawing, painting, 3d render, lowres, bad anatomy, bad hands, missing fingers, extra digit, worst quality, low quality, jpeg artifacts, signature, watermark, deformed, blurry",
     )
 
+    // ---- et.14 batch: nine more 32-bit-safe (<2^31 B), header-validated SD1.5 ----
+    private fun createMajicV7Cpu(): Model = convertCpuModel(
+        id = "majicv7_cpu",
+        name = "MajicMix Realistic v7",
+        descRes = R.string.majicv7_description,
+        url = "digiplay/majicMIX_realistic_v7/resolve/main/majicmixRealistic_v7.safetensors",
+        defaultPrompt = "RAW photo, best quality, masterpiece, photorealistic, highly detailed skin, beautiful detailed eyes, 8k uhd, dslr, soft cinematic light, sharp focus",
+        defaultNegative = "cartoon, anime, drawing, painting, 3d render, lowres, bad anatomy, bad hands, missing fingers, extra digit, worst quality, low quality, jpeg artifacts, signature, watermark, deformed, blurry",
+    )
+
+    private fun createEpiGoddessCpu(): Model = convertCpuModel(
+        id = "epigoddess_cpu",
+        name = "epiCPhotoGasm 2.5D Goddess",
+        descRes = R.string.epigoddess_description,
+        url = "digiplay/epi_2.5Dphotogodess_diffusers/resolve/main/epi25dphotogodess_v3.safetensors",
+        defaultPrompt = "masterpiece, best quality, 1girl, solo, semi-realistic 2.5d, beautiful detailed face and eyes, soft cinematic lighting, sharp focus, 8k",
+        defaultNegative = "lowres, bad anatomy, bad hands, missing fingers, extra fingers, poorly drawn face, realistic photo, harsh contrast, worst quality, low quality, jpeg artifacts, signature, watermark, blurry, deformed",
+    )
+
+    private fun createRevAnimatedCpu(): Model = convertCpuModel(
+        id = "revanimated_cpu",
+        name = "ReV Animated v1.1",
+        descRes = R.string.revanimated_description,
+        url = "digiplay/revAnimated_v11/resolve/main/revAnimated_v11_fp16.safetensors",
+        defaultPrompt = "masterpiece, best quality, highly detailed illustration, vibrant color, cinematic lighting, sharp focus, 8k, fantasy concept art",
+        defaultNegative = "lowres, bad anatomy, bad hands, missing fingers, extra fingers, poorly drawn face, photorealistic, 3d render, worst quality, low quality, jpeg artifacts, signature, watermark, blurry, deformed",
+    )
+
+    private fun createMeinaV11Cpu(): Model = convertCpuModel(
+        id = "meinav11_cpu",
+        name = "MeinaMix v11",
+        descRes = R.string.meinav11_description,
+        url = "digiplay/MeinaMix_v11/resolve/main/meinamix_meinaV11.safetensors",
+        defaultPrompt = "masterpiece, best quality, 1girl, solo, beautiful anime illustration, detailed eyes, soft light, sharp focus, 8k",
+        defaultNegative = "lowres, bad anatomy, bad hands, missing fingers, extra fingers, poorly drawn face, realistic photo, worst quality, low quality, jpeg artifacts, signature, watermark, blurry, deformed",
+    )
+
+    private fun createAingV9Cpu(): Model = convertCpuModel(
+        id = "aingv9_cpu",
+        name = "AingDiffusion v9",
+        descRes = R.string.aingv9_description,
+        url = "digiplay/AingDiffusion9/resolve/main/aingdiffusion_v90.safetensors",
+        defaultPrompt = "masterpiece, best quality, 1girl, solo, detailed anime style, clean lineart, beautiful eyes, vivid color, sharp focus, 8k",
+        defaultNegative = "lowres, bad anatomy, bad hands, missing fingers, extra fingers, poorly drawn face, realistic photo, worst quality, low quality, jpeg artifacts, signature, watermark, blurry, deformed",
+    )
+
+    private fun createLemonTeaCpu(): Model = convertCpuModel(
+        id = "lemontea_cpu",
+        name = "LemonTea Painterly 2.5D",
+        descRes = R.string.lemontea_description,
+        url = "digiplay/LemonTea2.5D/resolve/main/lemonteaMixPainterly2_v1.safetensors",
+        defaultPrompt = "masterpiece, best quality, 1girl, solo, painterly 2.5d illustration, soft brush texture, detailed eyes, warm light, sharp focus, 8k",
+        defaultNegative = "lowres, bad anatomy, bad hands, missing fingers, extra fingers, poorly drawn face, photorealistic, worst quality, low quality, jpeg artifacts, signature, watermark, blurry, deformed",
+    )
+
+    private fun createCounterMixV2Cpu(): Model = convertCpuModel(
+        id = "countermixv2_cpu",
+        name = "CounterMix v2",
+        descRes = R.string.countermixv2_description,
+        url = "digiplay/CounterMix_v2/resolve/main/countermix_v20.safetensors",
+        defaultPrompt = "masterpiece, best quality, highly detailed, 2.5d semi-realistic anime, beautiful detailed eyes, cinematic lighting, sharp focus, 8k",
+        defaultNegative = "lowres, bad anatomy, bad hands, missing fingers, extra fingers, poorly drawn face, realistic photo, worst quality, low quality, jpeg artifacts, signature, watermark, blurry, deformed",
+    )
+
+    private fun createBeautifulFantasyCpu(): Model = convertCpuModel(
+        id = "beautifantasy_cpu",
+        name = "Beautiful Fantasy Real Mix",
+        descRes = R.string.beautifantasy_description,
+        url = "digiplay/BeautifulFantasyRealMix_diffusers/resolve/main/beautifulfantasyreal_v10.safetensors",
+        defaultPrompt = "masterpiece, best quality, semi-realistic fantasy portrait, beautiful detailed face and eyes, dramatic light, intricate details, sharp focus, 8k",
+        defaultNegative = "lowres, bad anatomy, bad hands, missing fingers, extra fingers, poorly drawn face, worst quality, low quality, jpeg artifacts, signature, watermark, blurry, deformed",
+    )
+
+    private fun createEtherRealLuxCpu(): Model = convertCpuModel(
+        id = "ethereallux_cpu",
+        name = "EtherReal Mix LUX2",
+        descRes = R.string.ethereallux_description,
+        url = "digiplay/EtherRealMix_LUX2/resolve/main/etherRealMix_etherRealMixLUX2.safetensors",
+        defaultPrompt = "masterpiece, best quality, highly detailed, elegant semi-realistic anime, luminous skin, beautiful eyes, soft cinematic light, sharp focus, 8k",
+        defaultNegative = "lowres, bad anatomy, bad hands, missing fingers, extra fingers, poorly drawn face, photorealistic, worst quality, low quality, jpeg artifacts, signature, watermark, blurry, deformed",
+    )
+
     suspend fun refreshModelState(modelId: String) {
         refreshMutex.withLock {
             val current = models
@@ -1520,6 +1612,10 @@ class ModelRepository private constructor(private val context: Context) {
             // et.12 batch (32-bit-safe); retired: fantasytime_cpu, coffeemix_cpu, lemonpastel_cpu
             "photon_cpu", "lemoncreami_cpu", "meinapastel_cpu", "realisianv5_cpu",
             "abyssomix_cpu", "hassaku_cpu", "colorful_cpu", "cosplaymix_cpu", "nextphoto_cpu",
+            // et.14 batch (32-bit-safe, header-validated)
+            "majicv7_cpu", "epigoddess_cpu", "revanimated_cpu", "meinav11_cpu",
+            "aingv9_cpu", "lemontea_cpu", "countermixv2_cpu",
+            "beautifantasy_cpu", "ethereallux_cpu",
             // DiT
             "z_image_turbo", "flux2_klein_4b", "qwen_image_2_1", "qwen_image_2_1_uc",
         )

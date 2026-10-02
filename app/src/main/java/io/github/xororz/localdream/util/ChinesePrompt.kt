@@ -291,18 +291,23 @@ object ChinesePrompt {
     private const val MT_ENDPOINT = "https://aidemo.youdao.com/trans"
     private const val MT_TIMEOUT_MS = 8000
 
-    @Volatile private var onlineOk: Boolean = true
+    // After a hard failure (offline / endpoint down) we don't want to pay the 8s
+    // timeout on every single generation, but a one-off network blip must not
+    // disable full-sentence translation for the whole app process (that silently
+    // degraded complex Chinese prompts to the weak offline dictionary, i.e. the
+    // "image ignores my prompt" bug). Back off briefly, then retry automatically.
+    private const val ONLINE_RETRY_AFTER_MS = 60_000L
+    @Volatile private var onlineDisabledUntilMs: Long = 0L
 
     /**
      * Best-effort Chinese -> SD English tags. English input is returned as-is.
-     * Tries online full-sentence MT first (after the first hard failure this
-     * process skips straight to offline to avoid repeated 8s waits), then the
-     * local dictionary as a guaranteed fallback.
+     * Tries online full-sentence MT first (with a short auto-recovering backoff
+     * after failures), then the local dictionary as a guaranteed fallback.
      */
     fun translatePromptBest(input: String?): String {
         if (input.isNullOrBlank()) return ""
         if (!hasChinese(input)) return input.trim()
-        if (onlineOk) {
+        if (System.currentTimeMillis() >= onlineDisabledUntilMs) {
             val online = translateOnline(input)
             if (!online.isNullOrBlank()) return toTags(online)
         }
@@ -322,14 +327,17 @@ object ChinesePrompt {
         }
         conn.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
         val code = conn.responseCode
-        if (code != 200) { onlineOk = false; return null }
+        if (code != 200) { onlineDisabledUntilMs = backoff(); return null }
         val text = conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
         val arr = JSONObject(text).optJSONArray("translation")
-        if (arr == null || arr.length() == 0) null else arr.optString(0, "").trim()
+        if (arr == null || arr.length() == 0) { onlineDisabledUntilMs = backoff(); null }
+        else arr.optString(0, "").trim().ifBlank { onlineDisabledUntilMs = backoff(); "" }
     } catch (_: Exception) {
-        onlineOk = false
+        onlineDisabledUntilMs = backoff()
         null
     }
+
+    private fun backoff(): Long = System.currentTimeMillis() + ONLINE_RETRY_AFTER_MS
 
     /** Turn a plain English sentence ("A girl in a black dress is standing") into SD tags. */
     private fun toTags(sentence: String): String {
