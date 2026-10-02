@@ -54,6 +54,8 @@
     <!-- Common -->
     <string name="settings">Settings</string>
     <string name="appearance">Appearance</string>
+    <string name="language">Language</string>
+    <string name="language_hint">Choose the interface language (简体中文 / English / 繁體中文). The screen refreshes immediately to apply it.</string>
     <string name="theme_preset">Color theme</string>
     <string name="theme_preset_hint">Used when dynamic color is off</string>
     <string name="dynamic_color">Dynamic color</string>
@@ -77,7 +79,7 @@
     <string name="got_it">Got It!</string>
     <string name="yes">Yes</string>
     <string name="about_app">Note</string>
-    <string name="must_read">This APP supports running stable diffusion image generation on CPU/GPU and some Qualcomm NPUs.\n\nSD1.5 models are supported on Snapdragon NPUs with Hexagon V68 architecture or newer.\n\nSDXL models are supported on Snapdragon 8 Gen 3 and newer devices.\n\nIf your chip is outside the above scope, you can only run on CPU/GPU.\n\nLocal Dream ET (developer: ET) is published at https://github.com/ETQWFD/LocalDream-ET where you can view the source code, download releases or submit issues\n\nOfficial site / documentation: https://etqwfd.github.io/LocalDream-ET/</string>
+    <string name="must_read">This APP supports running stable diffusion image generation on CPU/GPU and some Qualcomm NPUs.\n\nSD1.5 models are supported on Snapdragon NPUs with Hexagon V68 architecture or newer.\n\nSDXL models are supported on Snapdragon 8 Gen 3 and newer devices.\n\nIf your chip is outside the above scope, you can only run on CPU/GPU.\n\nLocal Dream ET (developer: ET) is published at https://github.com/ETQWFD/LocalDream-ET where you can view the source code, download releases or submit issues\n\nOfficial site / documentation: https://etqwfd.github.io/LocalDream-ET/help.html</string>
     <string name="help">Help</string>
     <string name="more_options">More</string>
 

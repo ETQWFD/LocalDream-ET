@@ -1,6 +1,7 @@
 package io.github.xororz.localdream
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -37,6 +38,7 @@ import io.github.xororz.localdream.ui.screens.RemoteScreen
 import io.github.xororz.localdream.ui.screens.UpscaleScreen
 import io.github.xororz.localdream.ui.theme.LocalDreamTheme
 import io.github.xororz.localdream.ui.theme.LocalThemeController
+import io.github.xororz.localdream.utils.LocaleManager
 import io.github.xororz.localdream.ui.theme.rememberThemeController
 import io.github.xororz.localdream.ui.theme.sharedAxisXEnter
 import io.github.xororz.localdream.ui.theme.sharedAxisXExit
@@ -46,6 +48,11 @@ import io.github.xororz.localdream.ui.theme.sharedAxisXPredictivePopEnter
 import io.github.xororz.localdream.ui.theme.sharedAxisXPredictivePopExit
 
 class MainActivity : ComponentActivity() {
+
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(LocaleManager.wrap(newBase))
+    }
+
     private val requestStoragePermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) { isGranted: Boolean ->

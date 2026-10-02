@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>使用文档 · Local Dream ET（开发者：ET）</title>
+<link rel="icon" href="icon.png" />
+<style>
+  :root{--bg:#0b1117;--card:#141e29;--line:#22303e;--txt:#e8eef4;--mut:#9fb0c0;--acc:#2dd4bf;--acc2:#38bdf8;--warn:#fbbf24;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Seg UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;
+    background:radial-gradient(1200px 600px at 80% -10%,rgba(45,212,191,.12),transparent 60%),var(--bg);
+    color:var(--txt);line-height:1.8;-webkit-font-smoothing:antialiased;}
+  .wrap{max-width:880px;margin:0 auto;padding:0 20px 90px}
+  header{position:sticky;top:0;z-index:10;background:rgba(11,17,23,.82);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  .navin{max-width:880px;margin:0 auto;height:60px;display:flex;align-items:center;gap:10px;padding:0 20px}
+  .navin img{width:30px;height:30px;border-radius:8px}
+  .brand{font-weight:700}
+  .navin a.ml{margin-left:auto;color:var(--mut);font-size:14px}
+  h1{font-size:30px;margin:40px 0 6px}
+  .sub{color:var(--mut);margin-bottom:26px}
+  h2{font-size:21px;margin:34px 0 12px;padding-left:12px;border-left:4px solid var(--acc)}
+  h3{font-size:16px;margin:18px 0 8px;color:var(--acc2)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin:12px 0}
+  p,li{color:#d7e1ea}
+  ul,ol{padding-left:22px;margin:8px 0}
+  li{margin:5px 0}
+  code{background:#0a131c;border:1px solid var(--line);border-radius:6px;padding:1px 7px;font-size:13px;color:var(--acc)}
+  .warn{background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.4);border-radius:12px;padding:14px 16px;margin:14px 0;color:#fde68a}
+  .ok{color:var(--acc);font-weight:700}
+  table{width:100%;border-collapse:collapse;margin:10px 0;font-size:14px}
+  th,td{border:1px solid var(--line);padding:9px 11px;text-align:left;vertical-align:top}
+  th{background:#0f1a24}
+  .top{color:var(--mut);font-size:13px;text-decoration:none}
+  a{color:var(--acc2)}
+</style>
+</head>
+<body>
+<header><div class="navin">
+  <img src="icon.png" alt="" />
+  <span class="brand">Local Dream ET · 使用文档</span>
+  <a class="ml" href="index.html">← 返回官网首页</a>
+</div></header>
+<div class="wrap">
+  <h1>Local Dream ET 官方使用文档</h1>
+  <p class="sub">安卓端本地 AI 绘画（Stable Diffusion / Qwen Image），离线出图、无云端上传。开发者：ET · 当前手机版 v3.0.0-et.13</p>
+
+  <div class="card">
+    <strong>快速开始三步：</strong>
+    <ol>
+      <li>安装并打开，授予<strong>存储权限</strong>（模型与图片存到 <code>/storage/emulated/0/LocalDreamET</code>）；首次下载/安装更新时按提示允许<strong>安装未知应用</strong>。</li>
+      <li>在「CPU Models」选一个模型（新手推荐 ChilloutMix / Photon / DreamShaper），点<strong>下载</strong>，等待下载并在本机转换完成。</li>
+      <li>点进模型，输入提示词，点<strong>生成图像</strong>，结果在「生成结果」页，可保存到相册。</li>
+    </ol>
+  </div>
+
+  <h2>一、安装与权限</h2>
+  <div class="card">
+    <ul>
+      <li>支持 Android 9（API 28）及以上，安装包同时内置 <code>arm64-v8a</code> 与 <code>armeabi-v7a</code>，<strong>32 位手机可直接用 CPU/GPU 出图</strong>。</li>
+      <li>需要的权限：网络（下载模型）、存储/所有文件访问（存模型和成品图）、通知（显示下载进度）、安装未知应用（应用内更新）。</li>
+      <li>所有模型与文件都在公共目录 <code>/storage/emulated/0/LocalDreamET</code>（<code>models/</code> 放模型，<code>temp_downloads/</code> 放下载临时文件）；无该权限时回退到应用私有目录。</li>
+    </ul>
+  </div>
+
+  <h2>二、下载模型与下载源</h2>
+  <div class="card">
+    <p>模型分两类：<strong>预置包</strong>（下完即用）与<strong>转换类 SD1.5</strong>（先下约 2GB 原始权重，再在本机转换一次，之后直接用）。</p>
+    <h3>切换下载源（下载慢时用）</h3>
+    <p>模型列表右上角菜单 → <strong>设置 → 下载地址</strong>，可选：</p>
+    <table>
+      <tr><th>下载源</th><th>说明</th></tr>
+      <tr><td>魔搭 ModelScope（默认·国内最快）</td><td>阿里国内 CDN，国内下载快，推荐</td></tr>
+      <tr><td>hf-mirror</td><td>Hugging Face 国内镜像，预置包默认走它</td></tr>
+      <tr><td>Hugging Face 官方</td><td>海外官方源，国内可能较慢</td></tr>
+      <tr><td>自定义</td><td>可填自己的镜像根地址</td></tr>
+    </table>
+    <p>所选源作为首选，<span class="ok">其它源会自动作为回退</span>：某个源慢或连不上会自动换源续传，不会卡死。</p>
+    <h3>断点续传 / 后台 / 关机恢复</h3>
+    <ul>
+      <li>下载与转换在<strong>前台服务 + 通知栏</strong>进行，切后台、锁屏仍继续，通知栏显示进度。</li>
+      <li>支持 HTTP Range 断点续传：断网、杀进程、关机重启后再次点击会接着下，不重头。</li>
+      <li>只有转换成功写出完成标记才算“已下载”，半成品不会被当成可用模型，避免“一用就报错”。</li>
+    </ul>
+  </div>
+
+  <h2>三、生成图片</h2>
+  <div class="card">
+    <ul>
+      <li><strong>提示词</strong>：可输入任意长度，应用不做内容审查。SD1.5 底层只认英文标签，输入中文会<strong>整句在线翻译成英文</strong>（无网时用内置词典兜底）；Qwen Image 原生支持中文。</li>
+      <li><strong>负面提示词</strong>：填写不希望出现的内容，默认已带常见画质/瑕疵负向词。</li>
+      <li><strong>比例/尺寸</strong>：在生成页高级设置里选宽高比例（1:1、9:16、16:9 等）。SD1.5 宽高按 64 对齐，范围 128–512，避免非对齐导致马赛克。</li>
+      <li><strong>步数 / CFG</strong>：步数越高越细但越慢（低配建议 15–20）；CFG 建议 5–9，应用上限 9 以防止 32 位 fp16 溢出花屏。</li>
+      <li><strong>种子</strong>：留空每次随机；填同一数字可复现。</li>
+    </ul>
+  </div>
+
+  <h2>四、图生图（按原图改图）</h2>
+  <div class="card">
+    <ul>
+      <li>在生成页打开「图生图」，<strong>直接上传整张图片</strong>，不做强制裁剪或分割。</li>
+      <li><strong>重绘强度</strong>默认 0.45：数值越低越忠于原图（构图/姿态更像），越高改动越大。想要更像原图就调低，想大改就调高。</li>
+    </ul>
+  </div>
+
+  <h2>五、清晰度 / 放大（关于“4K”）</h2>
+  <div class="warn">
+    原生 4K（约 3840×2160，830 万像素）在 32 位低配手机上<strong>物理不可行</strong>：扩散按像素平方增长算力与内存，4K 相对 512² 约 32 倍负载，32 位进程会内存不足崩溃或耗时数十分钟。这不是软件限制。<br>
+    实际做法：32 位默认 384、64 位默认 512（64 对齐、PNG 无损保存）保证清晰不花屏；需要更大尺寸时，用应用内的 <strong>高清放大（Upscaler）</strong>把成品放大到更高分辨率。
+  </div>
+
+  <h2>六、语言与主题</h2>
+  <div class="card">
+    <ul>
+      <li>模型列表菜单 → 设置 →「语言」：<strong>简体中文 / English / 繁體中文</strong>，点选后界面立即刷新。</li>
+      <li>「外观」可切换深色/浅色与主题色，支持安卓 12+ 动态取色。</li>
+    </ul>
+  </div>
+
+  <h2>七、Qwen Image 2.1 与机型要求</h2>
+  <div class="card">
+    <p>「NPU Models」标签页内置 <strong>Qwen Image 2.1</strong> 与 <strong>Qwen Image 2.1 UC Q4_0</strong>（各约 10.8GB，走高通 Adreno NPU）。</p>
+    <div class="warn">
+      大 DiT 模型需要 <strong>骁龙 8 至尊版（SM8750）及以上、64 位、Android 12+</strong> 的 NPU 才能运行；32 位或其它芯片请使用「CPU Models」里的 SD1.5 模型。电脑版（Windows x64）可用 CPU 运行 Qwen。
+    </div>
+  </div>
+
+  <h2>八、应用内更新</h2>
+  <div class="card">
+    <ul>
+      <li>设置 → <strong>检测更新</strong>，联网比对版本号；有新版会在应用内直接下载，完成后<strong>调起系统打包安装程序</strong>安装（首次需允许“安装未知应用”）。</li>
+      <li>也可在官网或 GitHub Releases 手动下载最新 APK。</li>
+    </ul>
+  </div>
+
+  <h2>九、常见问题</h2>
+  <div class="card">
+    <h3>下载慢 / 超时</h3><p>把下载源切到「魔搭 ModelScope」；确认网络正常；中断后直接续传即可。</p>
+    <h3>转换失败 / 退出码 134</h3><p>多为原始权重超过 32 位 2.14GB 寻址上限的旧模型；v3.0.0-et.12 起这类模型已下架，列表内现有模型均经过文件头校验、32 位可安全转换。若仍报错，把英文报错发开发者。</p>
+    <h3>生成全是马赛克/碎玻璃</h3><p>通常是尺寸未 64 对齐或 CFG 过高；用应用内置比例、CFG≤9，并确认模型已完整转换（显示“已下载”）。</p>
+    <h3>8081 连接失败</h3><p>说明本地推理引擎未启动完成或引擎包缺失；重新进入模型页等待初始化，确认模型转换成功。</p>
+    <h3>成品发糊/不听提示词</h3><p>用英文质量标签或让中文整句翻译生效；提高步数到 20–25；需要高分辨率用放大功能。</p>
+  </div>
+
+  <h2>十、链接</h2>
+  <div class="card">
+    <ul>
+      <li>官网首页：<a href="index.html">etqwfd.github.io/LocalDream-ET</a></li>
+      <li>仓库 / Release：<a href="https://github.com/ETQWFD/LocalDream-ET">github.com/ETQWFD/LocalDream-ET</a></li>
+      <li>电脑版（Windows x64）安装包与绿色包见 GitHub Releases 的 <code>desktop-v2.2.0</code>。</li>
+    </ul>
+    <p style="color:var(--mut);margin-top:10px">版权 / 开发者：ET（广东梅州）。应用外壳与安装程序版权归 ET；底层推理引擎遵循其各自开源许可（MNN / stable-diffusion.cpp 等）。</p>
+  </div>
+
+  <p style="margin-top:26px"><a class="top" href="#top">↑ 回到顶部</a></p>
+</div>
+</body>
+</html>

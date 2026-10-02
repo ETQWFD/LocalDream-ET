@@ -1,0 +1,568 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="app_name">Local Dream ET</string>
+
+    <!-- Models -->
+    <string name="anythingv5_description">動漫影象生成模型</string>
+    <string name="cyberrealistic_description">現實場景生成模型</string>
+    <string name="illustriousv16_description">WAI Illustrious SDXL v16</string>
+    <string name="dmd2_description">融合了 DMD2 LoRA</string>
+    <string name="capture_logs">收集日誌</string>
+    <string name="capture_logs_hint">執行模型時收集應用日誌，退出後展示</string>
+    <string name="listen_on_all_addresses">允許區域網訪問</string>
+    <string name="listen_on_all_addresses_hint">允許同一網路下的其他裝置訪問後端（埠 8081）。關閉則只接受本機訪問。</string>
+    <string name="tag_autocomplete">Tag 聯想</string>
+    <string name="tag_autocomplete_hint">輸入提示詞時聯想並糾正 tag</string>
+    <string name="tag_alias_label">別名</string>
+    <string name="tag_correction_label">糾錯</string>
+    <string name="tag_embedding_label">嵌入</string>
+    <string name="tag_main_dictionary">Tag 詞表</string>
+    <string name="tag_main_dictionary_hint">未匯入。匯入一個 tag 詞表（如 danbooru.csv）後聯想功能才會啟用。</string>
+    <string name="tag_translation_dictionary">翻譯詞表（可選）</string>
+    <string name="tag_translation_dictionary_hint">未匯入。匯入 2 列或 3 列格式的翻譯 csv，即可用自己的語言搜尋與顯示。</string>
+    <plurals name="tag_imported_status">
+        <item quantity="other">%1$s · %2$d 条</item>
+    </plurals>
+    <string name="tag_import">匯入 CSV</string>
+    <string name="tag_reimport">替換</string>
+    <string name="tag_clear">清除</string>
+    <plurals name="tag_import_success">
+        <item quantity="other">已导入 %1$d 条</item>
+    </plurals>
+    <string name="tag_import_failed">匯入失敗</string>
+    <string name="sdxl_lowram">SDXL 低記憶體模式</string>
+    <string name="sdxl_lowram_hint">僅 SDXL 生效：按需載入每個模型，用完即釋放。小於 16GB 記憶體的裝置建議開啟。開啟後將禁用生成過程預覽。</string>
+    <string name="anima_lowram">Anima 低記憶體模式</string>
+    <string name="anima_lowram_hint">僅 Anima 生效：按需載入每個模型，用完即釋放。小於 16GB 記憶體的裝置建議開啟。開啟後將禁用生成過程預覽。</string>
+    <string name="anima_seq_dit">Anima DiT 輪流載入</string>
+    <string name="anima_seq_dit_hint">僅在 Anima 低記憶體模式下生效：不再讓 DiT 的兩塊同時駐留記憶體。如果你有 12GB 記憶體但 Anima 低記憶體模式仍無法執行，請開啟此選項。每步速度會變慢。</string>
+    <string name="captured_logs_title">已收集的日誌</string>
+    <string name="log_saved">已儲存到 %1$s</string>
+    <string name="log_save_failed">日誌儲存失敗</string>
+    <string name="no_logs_captured">未收集到日誌</string>
+    <string name="chilloutmix_description">人物影象生成模型</string>
+    <string name="qteamix_description">動漫Q版風格模型</string>
+    <string name="cuteyukimix_description">動漫特化可愛風格</string>
+    <string name="absolutereality_description">現實場景生成模型</string>
+    <!-- Models -->
+    <string name="backend_notify">模型服務執行中</string>
+    <string name="backend_notify_title">SD模型後端</string>
+    <string name="generating_notify">影象生成中…</string>
+
+    <!-- Common -->
+    <string name="settings">設定</string>
+    <string name="appearance">外觀</string>
+    <string name="language">語言</string>
+    <string name="language_hint">選擇介面語言（简体中文 / English / 繁體中文），切換後立即重新整理介面生效。</string>
+    <string name="theme_preset">配色主題</string>
+    <string name="theme_preset_hint">關閉動態顏色後生效</string>
+    <string name="dynamic_color">動態顏色</string>
+    <string name="dynamic_color_hint">跟隨系統桌布取色 (Android 12+)</string>
+    <string name="dark_mode">深色模式</string>
+    <string name="dark_mode_system">跟隨系統</string>
+    <string name="dark_mode_light">淺色</string>
+    <string name="dark_mode_dark">深色</string>
+    <string name="theme_tangerine">暖橙</string>
+    <string name="theme_forest">森林</string>
+    <string name="theme_ocean">海洋</string>
+    <string name="theme_amber">琥珀</string>
+    <string name="confirm">確定</string>
+    <string name="cancel">取消</string>
+    <string name="save">儲存</string>
+    <string name="back">返回</string>
+    <string name="close">關閉</string>
+    <string name="delete">刪除</string>
+    <string name="delete_model">刪除模型</string>
+    <string name="delete_confirm">確定要刪除選中的 %s 個模型嗎？此操作不可恢復</string>
+    <string name="got_it">知道了!</string>
+    <string name="yes">是</string>
+    <string name="about_app">須知</string>
+    <string name="must_read">此APP支援在CPU/GPU和部分高通NPU上執行stable diffusion影象生成。\n\n支援在 Hexagon V68 架構及以上的驍龍 NPU 上執行 SD1.5 模型。\n\n支援在驍龍 8 Gen 3 及更新的裝置上執行 SDXL 模型。\n\n若您的晶片不在上述範圍內，則只能使用 CPU/GPU 執行。\n\n本應用 Local Dream ET（開發者：ET）釋出於 https://github.com/ETQWFD/LocalDream-ET ，可在此檢視原始碼、下載版本或提交問題\n\n官網 / 文件：https://etqwfd.github.io/LocalDream-ET/help.html</string>
+    <string name="help">幫助</string>
+    <string name="more_options">更多</string>
+
+    <!-- Model List Screen -->
+    <string name="available_models">可用模型</string>
+    <plurals name="selected_items">
+        <item quantity="other">已选择 %d 项</item>
+    </plurals>
+    <string name="download">下載</string>
+    <string name="download_from">下載地址</string>
+    <string name="download_settings_hint">選擇模型下載源：預設魔搭 ModelScope（國內最快，推薦）；也可切換 hf-mirror、Hugging Face 或填自定義地址。某個源慢或失敗時會自動用其它源續傳。</string>
+    <string name="source_modelscope">魔搭 ModelScope（國內最快 · 推薦）</string>
+    <string name="source_huggingface">Hugging Face</string>
+    <string name="source_hf_mirror">hf-mirror</string>
+    <string name="source_custom">自定義</string>
+    <string name="downloaded">已下載</string>
+    <string name="delete_success">刪除成功</string>
+    <string name="delete_failed">刪除過程出錯</string>
+    <string name="cannot_download">無法下載</string>
+    <string name="cannot_download_hint">當前有模型正在下載，請等待下載完成後再嘗試</string>
+    <string name="download_model">下載模型</string>
+    <string name="download_model_hint">確定要下載 %s 嗎？模型較大，建議使用WiFi網路下載。下載過程請勿退出應用程式。\n\n我們目前對所有高通晶片開放NPU模型下載，如果你的晶片較舊，可能無法執行</string>
+    <string name="download_done">模型下載完成</string>
+    <string name="unsupport_npu">您的裝置暫不支援，請使用CPU版本</string>
+    <string name="cpu_models">CPU Models</string>
+    <string name="npu_models">NPU Models</string>
+    <string name="no_cpu_models">暫無模型</string>
+    <string name="no_npu_models">暫無模型</string>
+    <string name="img2img_hint">開啟img2img功能，如果你不需要或遇到問題請關閉。關閉後SDXL寬高比和UltraFix將無法使用</string>
+    <string name="show_process">顯示生成過程</string>
+    <string name="show_process_hint">僅對NPU模型生效。開啟後將顯示擴散模型的中間生成步驟。這會降低生成速度，僅在好奇影象生成過程時開啟，正常情況下請關閉。</string>
+    <string name="preview_stride">預覽步長</string>
+    <plurals name="preview_stride_hint">
+        <item quantity="other">每 %d 步更新一次预览（1–10）。</item>
+    </plurals>
+    <!-- Crop Screen -->
+    <string name="crop_image">裁剪影象</string>
+    <string name="crop_hint">拖動調整裁剪區域</string>
+
+    <!-- Inpaint Screen -->
+    <string name="set_inpaint_area">設定重繪區域</string>
+    <string name="inpaint_hint">在影象上塗抹你想要重繪的區域</string>
+    <string name="undo">撤銷</string>
+    <string name="redo">重做</string>
+    <string name="brush_color">筆刷顏色</string>
+
+    <!-- Run Screen -->
+    <string name="prompt_settings">提示詞設定</string>
+    <string name="advanced_settings">高階設定</string>
+    <string name="advanced_settings_title">高階引數設定</string>
+    <string name="image_prompt">影象生成提示</string>
+    <string name="negative_prompt">負面提示</string>
+    <string name="generate_image">生成影象</string>
+    <string name="generating">正在生成影象</string>
+    <string name="no_results">還沒有結果哦</string>
+    <string name="no_results_hint">請先在提示詞頁面生成影象</string>
+    <string name="go_to_generate">去生成影象</string>
+    <string name="prompt_tab">提示詞</string>
+    <string name="result_tab">生成結果</string>
+    <string name="history_tab">歷史</string>
+    <string name="no_history">暫無生成歷史</string>
+    <string name="no_history_hint">開始生成圖片後會自動儲存</string>
+    <plurals name="selected_items_count">
+        <item quantity="other">已选 %d 项</item>
+    </plurals>
+    <string name="generation_params_title">生成引數</string>
+    <string name="delete_image">刪除圖片</string>
+    <string name="delete_image_confirm">確定要刪除這張圖片嗎？此操作無法撤銷。</string>
+    <string name="deleted">已刪除</string>
+    <string name="delete_failed_message">刪除失敗</string>
+    <string name="batch_delete">批次刪除</string>
+    <plurals name="batch_delete_confirm">
+        <item quantity="other">确定要删除选中的 %d 张图片吗？此操作无法撤销。</item>
+    </plurals>
+    <string name="batch_save">批次儲存</string>
+    <plurals name="batch_save_confirm">
+        <item quantity="other">将选中的 %d 张图片保存到相册？</item>
+    </plurals>
+    <string name="batch_saving_progress">正在儲存 %1$d / %2$d</string>
+    <plurals name="saved_count">
+        <item quantity="other">已保存 %d 张图片</item>
+    </plurals>
+    <string name="saved_count_with_failed" tools:ignore="PluralsCandidate">已儲存 %1$d 張，失敗 %2$d 張</string>
+    <plurals name="deleted_count">
+        <item quantity="other">已删除 %d 项</item>
+    </plurals>
+    <string name="deleted_count_with_failed" tools:ignore="PluralsCandidate">成功刪除 %1$d 項，失敗 %2$d 項</string>
+    <string name="confirm_exit">確定退出</string>
+    <string name="confirm_exit_hint">圖片正在生成中，確定要退出嗎？</string>
+    <string name="interrupt_generation">中斷生成</string>
+    <string name="interrupt_generation_hint">圖片正在生成中，確定要中斷嗎？</string>
+    <string name="generation_interrupted">已中斷生成</string>
+    <string name="reset">恢復預設引數</string>
+    <string name="reset_hint">確定要將所有引數（包括提示詞）恢復為預設值嗎？此操作不可撤銷。</string>
+    <string name="media_permission_hint">img2img功能需要媒體許可權</string>
+    <string name="backend_failed">後端啟動失敗，您的裝置可能不受支援</string>
+
+    <!-- Parameter Settings -->
+    <string name="generation_params">生成引數</string>
+    <string name="steps">生成步數: %d</string>
+    <string name="image_size">影象尺寸: %1$dx%2$d</string>
+    <string name="width">寬</string>
+    <string name="height">高</string>
+    <string name="random_seed">隨機種子 (可選)</string>
+    <string name="use_last_seed">使用上次的種子 (%s)</string>
+    <string name="batch_count">批次數量: %d</string>
+    <string name="reproduce">複製</string>
+    <string name="reproduce_params_title">複用引數</string>
+    <string name="reproduce_params_hint">選擇要應用到提示詞頁面的欄位。</string>
+    <string name="select_all">全選</string>
+    <string name="deselect_all">全不選</string>
+    <string name="result_params">步數: %1$s / CFG: %2$.1f / 種子: %3$s</string>
+    <string name="result_params_2">尺寸: %1$sx%2$s / 耗時: %3$s / %4$s</string>
+    <string name="params_detail">生成引數詳情</string>
+    <string name="basic_params">基礎引數</string>
+    <string name="basic_model">模型: %s</string>
+    <string name="basic_step">步數: %d</string>
+    <string name="basic_size">尺寸: %1$dx%2$d</string>
+    <string name="basic_seed">種子: %s</string>
+    <string name="basic_runtime">執行: %s</string>
+    <string name="basic_mode">模式: %s</string>
+    <string name="basic_denoise">降噪強度: %.2f</string>
+    <string name="basic_time">耗時: %s</string>
+    <string name="opencl_warning">GPU執行時警告：每個解析度的首次執行會比較慢，這會生成快取檔案。後續執行會快一些。</string>
+
+    <!-- Parameter Share -->
+    <string name="share">分享</string>
+    <string name="share_params_title">分享引數</string>
+    <string name="share_params_hint">勾選要分享的欄位，將以 JSON 形式寫入剪貼簿，便於透過任意方式傳送。</string>
+    <string name="share_use_base64">Base64 編碼</string>
+    <string name="share_use_base64_hint">使用 Base64 編碼。</string>
+    <string name="share_copy_to_clipboard">複製</string>
+    <string name="share_copied">引數已複製到剪貼簿</string>
+    <string name="share_field_steps">步數</string>
+    <string name="share_field_cfg">CFG</string>
+    <string name="share_field_seed">種子</string>
+    <string name="share_field_denoise">降噪強度</string>
+    <string name="share_field_mode">模式</string>
+    <string name="import_params_title">應用分享的引數</string>
+    <string name="import_params_hint">在剪貼簿中檢測到分享的引數，請選擇要應用的欄位。</string>
+    <string name="import_clear_clipboard">關閉後清除剪貼簿</string>
+    <string name="import_clear_clipboard_hint">關閉對話方塊後（無論應用還是取消）從剪貼簿中清除分享內容。</string>
+    <string name="import_apply">應用</string>
+    <string name="import_applied">引數已應用</string>
+    <string name="import_from_clipboard">從剪貼簿匯入</string>
+    <string name="import_no_params">剪貼簿中未發現分享的引數</string>
+
+    <!-- Error Messages -->
+    <string name="error_download_failed">下載失敗: %s</string>
+    <string name="error_request_failed">請求失敗: %s</string>
+    <string name="unknown_error">未知錯誤</string>
+
+    <!-- Info Messages -->
+    <string name="image_saved">圖片已儲存到相簿</string>
+    <string name="loading_model">模型載入中…</string>
+
+    <!-- File Manager -->
+    <string name="file_manager">檔案管理器</string>
+    <string name="delete_file">刪除檔案</string>
+    <string name="delete_file_confirm">確定要刪除檔案 \"%s\" 嗎？</string>
+    <string name="file_deleted">檔案刪除成功</string>
+    <string name="no_model_files">沒有找到模型檔案</string>
+    <string name="loading_files">載入檔案中…</string>
+    <string name="back_to_folders">返回資料夾</string>
+    <string name="model_folder">模型：%s</string>
+    <plurals name="file_count">
+        <item quantity="other">%d 个文件</item>
+    </plurals>
+    <string name="clear_cache">清除快取</string>
+    <string name="clear_cache_with_size">清除快取 (%s)</string>
+    <string name="clear_cache_confirm">清除該模型的快取目錄嗎？下次使用時會重新生成提示詞快取和 OpenCL 快取。</string>
+    <string name="cache_cleared">快取已清除</string>
+
+    <!-- Settings -->
+    <string name="download_source">下載源</string>
+    <string name="feature_settings">功能設定</string>
+
+    <!-- Custom Model -->
+    <string name="add_custom_model">新增自定義模型</string>
+    <string name="add_custom_npu_model">匯入模型 ZIP</string>
+    <string name="custom_model">自定義模型</string>
+    <string name="custom_model_name">模型名稱</string>
+    <string name="custom_model_name_hint">輸入模型名稱</string>
+    <string name="custom_model_id_reserved">該名稱與內建模型衝突，請使用其他名稱</string>
+    <string name="pin_to_top">置頂</string>
+    <string name="unpin_from_top">取消置頂</string>
+    <string name="rename">重新命名</string>
+    <string name="rename_model">重新命名模型</string>
+    <string name="rename_model_label">新名稱</string>
+    <string name="rename_name_exists">已存在同名模型</string>
+    <string name="rename_success">已重新命名</string>
+    <string name="rename_failed">重新命名失敗</string>
+    <string name="select_model_file">選擇模型檔案</string>
+    <string name="select_zip_file">選擇ZIP檔案</string>
+    <string name="zip_file_selected">ZIP檔案已選擇</string>
+    <string name="file_selected">檔案已選擇</string>
+    <string name="add_model">新增模型</string>
+    <string name="custom_model_hint">僅支援SD1.5架構的safetensors模型檔案</string>
+    <string name="custom_npu_model_hint">匯入 QNN 或 SDXL MNN 模型 ZIP。QNN 需要受支援的高通裝置，MNN 可在 CPU/GPU 上執行。你可以在 https://huggingface.co/xororz/sd-qnn 、https://huggingface.co/xororz/sdxl-qnn 或 Hugging Face 其他地方找到一些模型。</string>
+    <string name="converting">轉換中…</string>
+    <string name="model_conversion_success">模型轉換成功！</string>
+    <string name="model_conversion_failed">轉換失敗: %s</string>
+    <string name="npu_model_added_success">模型新增成功！</string>
+    <string name="npu_model_add_failed">模型匯入失敗：%s</string>
+    <string name="preparing_model">準備模型中…</string>
+    <string name="preparing_npu_model">正在準備模型…</string>
+    <string name="extracting_zip_file">解壓ZIP檔案中…</string>
+    <string name="copying_model_file">複製模型檔案中…</string>
+    <string name="copying_base_files">複製基礎檔案中…</string>
+    <string name="converting_model">轉換模型中…</string>
+    <string name="clip_skip_hint">設定CLIP跳躍層數 (1或2)</string>
+    <string name="lora_files_optional">LoRA 檔案 (可選)</string>
+    <string name="add_lora_file">新增 LoRA 檔案</string>
+    <string name="selected_lora_files">已選擇的 LoRA 檔案:</string>
+    <string name="copying_lora_files">複製 LoRA 檔案中…</string>
+    <string name="lora_weight">權重:</string>
+
+    <!-- Embedding Manager -->
+    <string name="embedding_manager">Embedding 管理器</string>
+    <string name="no_embeddings">沒有找到 embedding 檔案</string>
+    <string name="import_embedding">匯入 Embedding</string>
+    <string name="delete_embedding">刪除 Embedding</string>
+    <string name="delete_embedding_confirm">確定要刪除 embedding \"%s\" 嗎？</string>
+    <string name="embedding_deleted">Embedding 刪除成功</string>
+    <string name="embedding_imported">Embedding 匯入成功</string>
+    <string name="embedding_import_failed">Embedding 匯入失敗: %s</string>
+    <string name="only_safetensors_supported">僅支援 .safetensors 檔案</string>
+
+    <!-- Upscaler -->
+    <string name="select_upscaler_model">選擇超解析度模型</string>
+    <string name="upscale_scale_label">放大倍率</string>
+    <string name="upscale_factor">%d×</string>
+    <string name="upscale_scale_hint">模型始終以 4× 放大,2× 和 3× 只是將結果縮放以用於其他用途。</string>
+    <string name="upscaling_image">正在超解析度處理…</string>
+    <string name="upscale_failed">超解析度失敗: %s</string>
+
+    <!-- UltraFix -->
+    <string name="ultrafix">UltraFix</string>
+    <string name="ultrafix_confirm_hint">UltraFix 會用分塊 img2img 對整張圖片做精修。建議 denoise steps / steps 的比值不超過 0.5。建議僅在動漫模型上使用，且只對你最喜歡的影象進行修復。處理耗時較長，請勿在裝置過熱時使用。</string>
+    <string name="ultrafix_seed_random">隨機</string>
+    <string name="ultrafix_denoise_steps_label">去噪步數: %d</string>
+    <string name="ultrafix_source_info">影象: %1$dx%2$d  ·  分塊: %3$dpx</string>
+    <string name="ultrafix_restore_defaults">恢復預設值</string>
+    <string name="ultrafix_other_params_hint">提示詞、CFG、取樣器和種子取自提示詞介面，請在那裡修改。</string>
+    <string name="ultrafix_preparing">正在準備 UltraFix…</string>
+    <string name="ultrafix_failed">UltraFix 失敗: %s</string>
+    <string name="ultrafix_quality_denoise_desc">使用以下提示詞去噪：%s。關閉後將使用輸入框的提示詞。</string>
+    <string name="download_model_first">請先下載模型</string>
+    <string name="upscaler_anime">動漫</string>
+    <string name="upscaler_anime_desc">針對動漫和卡通影象最佳化</string>
+    <string name="upscaler_realistic">真實</string>
+    <string name="upscaler_realistic_desc">針對真實照片最佳化</string>
+    <string name="image_upscale">影象超解析度</string>
+    <string name="upscale">超解析度</string>
+    <string name="add_image">新增影象</string>
+    <string name="clear_image">清除影象</string>
+    <string name="save_image">儲存影象</string>
+    <string name="selected_image">選中的影象</string>
+    <string name="upscaled_image">超解析度後的影象</string>
+    <string name="click_to_add_image">點選新增需要超解析度的影象</string>
+    <string name="image_resolution_too_large">影象解析度過大 (%1$d×%2$d)，請選擇小於 2048x2048 的影象</string>
+    <string name="failed_to_load_image">載入影象失敗: %s</string>
+    <string name="model_download_channel">模型下載</string>
+    <string name="model_download_channel_desc">模型下載進度通知</string>
+    <string name="downloading_model">正在下載 %s</string>
+    <string name="download_complete">下載完成</string>
+    <string name="download_failed">下載失敗</string>
+    <string name="download_background_hint">下載將在後臺繼續進行，您可以切換到其他應用</string>
+    <string name="switch_resolution">切換解析度</string>
+    <string name="switch_resolution_hint">切換解析度將重啟後端服務，當前生成會被中斷。是否繼續？</string>
+    <string name="resolution">解析度</string>
+    <string name="aspect_ratio">影象寬高比</string>
+    <string name="aspect_ratio_custom">自定義</string>
+    <string name="aspect_ratio_custom_title">自定義寬高比</string>
+    <string name="aspect_ratio_custom_hint">輸入兩個正整數（如 21 9）</string>
+    <string name="aspect_ratio_invalid">無效的比例，必須為兩個正整數。</string>
+    <string name="scheduler">排程器</string>
+    <string name="extracting">解壓中…</string>
+
+    <!-- History migration -->
+    <string name="migration_title">正在匯入歷史記錄</string>
+    <string name="migration_subtitle">首次啟動需要匯入舊版本的歷史記錄,匯入完成後會自動進入主介面,請稍候。</string>
+    <string name="migration_progress">%1$d / %2$d</string>
+    <string name="migration_current_model">當前模型: %1$s</string>
+    <string name="migration_failed_title">匯入失敗</string>
+    <string name="migration_retry">重試</string>
+    <string name="migration_skip">跳過</string>
+    <string name="migration_skip_warning">跳過後舊的歷史記錄將無法在新的歷史瀏覽中檢視。</string>
+
+    <!-- History backup -->
+    <string name="backup_restore">資料備份與恢復</string>
+    <string name="backup_hint">將生成歷史(圖片與引數)匯出為 zip 檔案,或匯入備份與當前歷史合併,重複記錄會自動跳過。</string>
+    <string name="backup_stats_all">全部: %1$d 張圖片 (%2$s)</string>
+    <string name="backup_stats_favorites">收藏: %1$d 張圖片 (%2$s)</string>
+    <string name="backup_scope_all">全部</string>
+    <string name="backup_scope_favorites">僅收藏</string>
+    <string name="backup_export">匯出</string>
+    <string name="backup_import">匯入</string>
+    <string name="backup_preparing">正在準備…</string>
+    <string name="backup_exporting">正在匯出 %1$d / %2$d</string>
+    <string name="backup_importing">正在匯入 %1$d / %2$d</string>
+    <string name="backup_export_done">已匯出 %1$d 張圖片</string>
+    <string name="backup_import_done">已匯入 %1$d 條,跳過重複 %2$d 條,失敗 %3$d 條</string>
+    <string name="backup_import_orphan_note">備份中有 %1$d 個模型未安裝,這些記錄已匯入,可在歷史篩選中選擇全部模型檢視。</string>
+    <string name="backup_failed">操作失敗: %1$s</string>
+    <string name="backup_invalid_file">不是有效的 Local Dream 備份檔案</string>
+    <string name="delete_keep_history">保留生成歷史</string>
+    <string name="delete_keep_history_hint">刪除模型後歷史記錄仍可在歷史頁檢視</string>
+
+    <!-- History filter -->
+    <string name="history_filter_apply">應用</string>
+    <string name="history_filter_reset">重置</string>
+    <string name="history_filter_models">模型</string>
+    <string name="history_filter_current_model_only">僅當前模型</string>
+    <string name="history_filter_all_models">所有模型</string>
+    <string name="history_filter_all">全部</string>
+    <string name="history_filter_favorites">收藏</string>
+    <string name="history_filter_favorite">已收藏</string>
+    <string name="history_filter_not_favorite">未收藏</string>
+    <string name="history_filter_modes">模式</string>
+    <string name="history_filter_time_range">時間範圍</string>
+    <string name="history_filter_time_any">不限</string>
+    <string name="history_filter_size">尺寸</string>
+    <string name="history_filter_scheduler">排程器</string>
+    <string name="history_filter_device">裝置</string>
+    <string name="history_filter_prompt_search">提示詞包含…</string>
+    <string name="history_filter_sort">排序</string>
+    <string name="history_filter_sort_desc">最新優先</string>
+    <string name="history_filter_sort_asc">最舊優先</string>
+    <string name="history_view_filter">過濾</string>
+
+    <!-- Permissions -->
+    <string name="permission_storage_required">儲存生成的影象需要儲存許可權</string>
+    <string name="permission_notification_required">後臺生成影象需要通知許可權</string>
+
+    <!-- Run Screen extras -->
+    <string name="gpu_runtime_warning_title">GPU 執行時警告</string>
+    <string name="please_crop_first">請先裁剪影象</string>
+    <string name="no_image_available">沒有可用的影象</string>
+    <string name="image_load_failed">載入影象失敗</string>
+
+    <!-- Report -->
+    <string name="report">舉報</string>
+    <string name="report_image_confirm">如果你認為此影象不當，可以舉報。引數和影象將傳送到伺服器進行稽核。</string>
+    <string name="report_success">感謝你的舉報。</string>
+    <string name="report_failed">舉報失敗</string>
+
+    <!-- Error messages extras -->
+    <string name="error_title">錯誤</string>
+    <string name="ok">確定</string>
+    <string name="error_with_detail">錯誤: %s</string>
+    <string name="save_failed_detail">儲存失敗: %s</string>
+    <string name="img2img_failed_detail">img2img 失敗: %s</string>
+    <string name="failed_to_start_backend">啟動後端失敗: %s</string>
+    <string name="dit_engine_missing">DiT 引擎未安裝</string>
+    <string name="z_image_turbo_description">6B DiT，8 步。</string>
+    <string name="flux2_klein_description">4B DiT，4 步。</string>
+    <string name="qwen_image_2_1_description">Q4_0 DiT + Qwen3-VL-8B，20 步。</string>
+    <string name="qwen_image_2_1_uc_description">無審查(UC) Q4_0 DiT + Qwen3-VL-8B，20 步。</string>
+    <string name="flux_edit">編輯</string>
+    <string name="flux_base_image">底圖</string>
+    <string name="flux_reference_images">參考圖</string>
+    <string name="flux_add_reference">新增參考圖</string>
+    <string name="executable_not_found">未找到可執行檔案: %s</string>
+    <string name="cannot_open_file">無法開啟所選檔案</string>
+    <string name="only_qualcomm_npu">僅高通裝置支援自定義 NPU 模型</string>
+    <string name="conversion_need_sd15">請使用 SD1.5 的 safetensors 模型</string>
+    <string name="converting_with_line">轉換中: %s</string>
+
+    <!-- Temp file cleanup -->
+    <string name="clean_temp_files">清理臨時檔案</string>
+    <string name="clean_temp_confirm">清理 %s 臨時檔案（中斷的下載和臨時緩衝）？</string>
+    <string name="clean_temp_none">沒有可清理的臨時檔案</string>
+    <string name="clean_temp_done">已釋放 %s</string>
+
+    <!-- Device link (remote control between two devices) -->
+    <string name="remote_link">裝置互聯</string>
+    <string name="remote_host_section">受控模式（本機執行模型）</string>
+    <string name="remote_host_hint">允許同一網路中另一臺安裝 Local Dream 的裝置瀏覽本機模型並用其生成圖片。受控模式開啟期間，控制埠（8808）和生成埠（8081）會對區域網開放。</string>
+    <string name="remote_host_start">進入受控模式</string>
+    <string name="remote_host_stop">退出受控模式</string>
+    <string name="remote_host_addresses">本機地址</string>
+    <string name="remote_no_network">未找到網路地址，請先連線 Wi-Fi。</string>
+    <string name="remote_host_serving">正在執行模型：%1$s</string>
+    <string name="remote_host_no_model">未載入模型</string>
+    <string name="remote_connect_section">連線主機（本機作為遙控端）</string>
+    <string name="remote_connect_hint">輸入主機裝置上顯示的地址。連線後模型列表將顯示主機上的模型，生成在主機上進行。</string>
+    <string name="remote_host_field">主機地址</string>
+    <string name="remote_connect">連線</string>
+    <string name="remote_disconnect">斷開</string>
+    <string name="remote_refresh_models">重新整理模型列表</string>
+    <string name="remote_refresh_models_short">重新整理</string>
+    <string name="remote_connect_failed_unreachable">無法連線主機。請檢查地址並確認主機已進入受控模式。</string>
+    <string name="remote_connected_to">已連線到 %1$s</string>
+    <string name="remote_banner_connected">來自 %1$s 的模型</string>
+    <string name="remote_banner_offline">主機不可達</string>
+    <string name="remote_select_failed">在主機上啟動模型失敗</string>
+    <string name="remote_port_hint">預設控制埠：%1$d。可用 地址:埠 形式指定其他埠。</string>
+    <string name="remote_host_notify_title">受控模式執行中</string>
+    <string name="remote_host_notify">Local Dream 可被區域網內裝置控制</string>
+    <string name="remote_screen_shield">純黑螢幕（保持執行）</string>
+    <string name="remote_screen_shield_exit">輕觸退出</string>
+    <string name="ultrafix_import_action">匯入本機圖片</string>
+    <string name="ultrafix_import_title">匯入圖片進行 UltraFix</string>
+    <string name="ultrafix_import_requirement">長邊最大 %1$d。UltraFix 需要長邊大於 1024 且短邊不小於 %2$d；較小的圖片匯入後可先超分。</string>
+    <string name="ultrafix_import_output">輸出尺寸：%1$d×%2$d</string>
+    <string name="ultrafix_import_scale">縮放：%1$d%%</string>
+    <string name="ultrafix_longpress_hint">提示：長按超分或 UltraFix 按鈕可匯入本機圖片。</string>
+    <string name="draw_title">繪製</string>
+    <string name="draw_done">完成</string>
+    <string name="draw_original_background">原圖背景</string>
+    <string name="draw_clear_title">清空畫布</string>
+    <string name="draw_clear_message">確定要刪除所有繪製內容嗎？</string>
+    <string name="draw_clear_confirm">清空</string>
+    <string name="draw_size">大小: %1$d</string>
+    <string name="draw_transparency">透明度: %1$d%%</string>
+    <string name="draw_blur">模糊: %1$d</string>
+    <string name="draw_pipette">取色器</string>
+    <string name="draw_eraser">橡皮擦</string>
+    <string name="draw_new_layer">新圖層</string>
+    <string name="draw_zoom">縮放</string>
+    <string name="draw_touch_mode">觸控模式</string>
+    <string name="draw_clear_all">全部清空</string>
+    <string name="draw_select_color">選擇顏色</string>
+    <string name="draw_result">結果:</string>
+    <string name="draw_select">選擇</string>
+
+    <!-- 应用内更新 -->
+    <string name="check_for_updates">檢測更新</string>
+    <string name="update_checking">正在檢測更新</string>
+    <string name="update_checking_hint">正在連線更新伺服器…</string>
+    <string name="update_up_to_date_title">已是最新版本</string>
+    <string name="update_current_version">當前版本 %1$s（構建號 %2$d），已經是最新版本。</string>
+    <string name="update_available_title">發現新版本</string>
+    <string name="update_new_version">新版本 %1$s（構建號 %2$s）可用。</string>
+    <string name="update_size">大小：%1$s</string>
+    <string name="update_download_now">下載並安裝</string>
+    <string name="update_downloading_title">正在下載更新</string>
+    <string name="update_download_hint">更新將在應用內下載，完成前請保持應用開啟，下載結束後會自動彈出安裝介面。</string>
+    <string name="update_ready_title">正在安裝</string>
+    <string name="update_ready_hint">正在開啟系統安裝器…</string>
+    <string name="update_error">更新失敗：%1$s</string>
+    <string name="update_retry">重試</string>
+    <string name="update_permission_title">需要安裝許可權</string>
+    <string name="update_permission_hint">為完成更新，請在下一屏允許本應用安裝更新，允許後會自動開啟安裝器。</string>
+    <string name="update_grant_permission">允許並繼續</string>
+    <string name="update_permission_denied">未授予安裝許可權，無法繼續更新。</string>
+    <string name="developer_label">開發者</string>
+    <string name="cfg_scale">CFG 幅度：%1$.1f</string>
+    <string name="denoise_strength_fmt">[圖生圖] 重繪幅度：%1$.2f</string>
+    <string name="basic_cfg_fmt">CFG：%1$.1f</string>
+    <string name="img2img_short">圖生圖</string>
+    <string name="err_prompt_empty">提示詞為空，請先輸入影象生成提示。</string>
+    <string name="err_backend_connect">本地推理引擎啟動失敗（無法連線 8081）。可能是模型未下載完整、檔案損壞，或當前機型不相容該模型。</string>
+    <string name="err_model_file_missing">模型檔案缺失，請重新下載該模型。</string>
+    <string name="search_models_placeholder">搜尋模型…</string>
+    <string name="search_models_empty">沒有找到匹配的模型。</string>
+    <string name="conversion_failed_detail">轉換失敗（退出碼 %2$d）：%1$s</string>
+    <string name="runtime_label">執行方式</string>
+    <string name="output_aspect_ratio">輸出畫面比例</string>
+    <string name="realisticvision_description">寫實向 SD1.5 模型（無限制向），首次下載後在本機轉換，CPU/32位可用</string>
+    <string name="counterfeit_description">動漫向 SD1.5 模型（無限制向），首次下載後在本機轉換，CPU/32位可用</string>
+    <string name="downloading_converting">正在下載並轉換模型（首次較慢）…</string>
+    <string name="model_download_failed">模型下載失敗：%1$s</string>
+    <string name="dreamshaper_description">全能高穩定 SD1.5（寫實/插畫/動漫皆可、少報錯），首次下載後本機轉換，CPU/32位可用</string>
+    <string name="majicmix_description">高質感寫實人像 SD1.5（皮膚通透、出片高階），首次下載後本機轉換，CPU/32位可用</string>
+    <string name="analogmadness_description">復古膠片寫實風 SD1.5（膠捲顆粒、自然色彩），首次下載後本機轉換，CPU/32位可用</string>
+    <string name="juggernaut_description">Juggernaut Final 超寫實 SD1.5（無限制、細節豐富），首次下載後本機轉換，CPU/32位可用</string>
+    <string name="fantasytime_description">FantasyTime V1.22 寫實人像 SD1.5（無限制、皮膚自然），首次下載後本機轉換，CPU/32位可用</string>
+    <string name="camelliansfw_description">CamelliaMix NSFW v1.1 半寫實 2.5D SD1.5（無限制），首次下載後本機轉換，CPU/32位可用</string>
+    <string name="darksushi_description">Dark Sushi 2.5D 鮮豔動漫風 SD1.5，首次下載後本機轉換，CPU/32位可用</string>
+    <string name="breakdomain_description">BreakDomain Realistic R2333 清爽動漫風 SD1.5，首次下載後本機轉換，CPU/32位可用</string>
+    <string name="helloworld_description">HelloWorld v3 精緻插畫風 SD1.5，首次下載後本機轉換，CPU/32位可用</string>
+    <string name="anireality_description">AniReality v1 半寫實 2.5D 動漫風 SD1.5，首次下載後本機轉換，CPU/32位可用</string>
+    <string name="chillymix_description">ChillyMix v1 寫實人像 SD1.5，首次下載後本機轉換，CPU/32位可用</string>
+    <string name="twokwi_description">2-KWI v1.0 寫實韓系人像 SD1.5，首次下載後本機轉換，CPU/32位可用</string>
+    <string name="beautifulart_description">BeautifulArt v1 唯美藝術/人像 SD1.5，首次下載後本機轉換，CPU/32位可用</string>
+    <string name="coffeemix_description">CoffeeMix v2 暖色調動漫 SD1.5，首次下載後本機轉換，CPU/32位可用</string>
+    <string name="photon_description">Photon v1 寫實攝影 SD1.5，首次下載後本機轉換，CPU/32位可用</string>
+    <string name="lemoncreami_description">LemonCreami v1 奶油柔感動漫 SD1.5，首次下載後本機轉換，CPU/32位可用</string>
+    <string name="meinapastel_description">MeinaPastel v3 柔和粉彩插畫 SD1.5，首次下載後本機轉換，CPU/32位可用</string>
+    <string name="realisianv5_description">Realisian v5 寫實人像 SD1.5，首次下載後本機轉換，CPU/32位可用</string>
+    <string name="abyssomix_description">AbyssOrangeMix2 Hard 鮮豔動漫 SD1.5，首次下載後本機轉換，CPU/32位可用</string>
+    <string name="hassaku_description">Hassaku v1.3 動漫插畫 SD1.5，首次下載後本機轉換，CPU/32位可用</string>
+    <string name="colorful_description">Colorful v3.1 絢麗多彩動漫 SD1.5，首次下載後本機轉換，CPU/32位可用</string>
+    <string name="cosplaymix_description">CosplayMix v2 寫實 cosplay 人像 SD1.5，首次下載後本機轉換，CPU/32位可用</string>
+    <string name="nextphoto_description">NextPhoto v3 寫實抓拍攝影 SD1.5，首次下載後本機轉換，CPU/32位可用</string>
+</resources>

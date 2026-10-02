@@ -52,6 +52,8 @@
     <!-- Common -->
     <string name="settings">설정</string>
     <string name="appearance">화면</string>
+    <string name="language">언어</string>
+    <string name="language_hint">인터페이스 언어(简体中文 / English / 繁體中文)를 선택하세요. 전환하면 즉시 화면이 다시 그려집니다.</string>
     <string name="theme_preset">색상 테마</string>
     <string name="theme_preset_hint">동적 색상을 사용하지 않을 때 적용됩니다</string>
     <string name="dynamic_color">동적 색상</string>
@@ -75,7 +77,7 @@
     <string name="got_it">알겠습니다!</string>
     <string name="yes">예</string>
     <string name="about_app">참고</string>
-    <string name="must_read">이 앱은 CPU/GPU와 일부 Qualcomm NPU에서 Stable Diffusion 이미지 생성을 실행할 수 있습니다.\n\nSD1.5 모델은 Hexagon V68 아키텍처 이상의 Snapdragon NPU에서 지원됩니다.\n\nSDXL 모델은 Snapdragon 8 Gen 3 이상 기기에서 지원됩니다.\n\n사용 중인 칩이 위 범위에 해당하지 않으면 CPU/GPU에서만 실행할 수 있습니다.\n\n이 프로젝트는 https://github.com/ETQWFD/LocalDream-ET 에서 오픈소스로 공개되어 있으며, 소스 코드를 확인하거나 이슈를 제출할 수 있습니다.\n\n문서: https://etqwfd.github.io/LocalDream-ET/</string>
+    <string name="must_read">이 앱은 CPU/GPU와 일부 Qualcomm NPU에서 Stable Diffusion 이미지 생성을 실행할 수 있습니다.\n\nSD1.5 모델은 Hexagon V68 아키텍처 이상의 Snapdragon NPU에서 지원됩니다.\n\nSDXL 모델은 Snapdragon 8 Gen 3 이상 기기에서 지원됩니다.\n\n사용 중인 칩이 위 범위에 해당하지 않으면 CPU/GPU에서만 실행할 수 있습니다.\n\n이 프로젝트는 https://github.com/ETQWFD/LocalDream-ET 에서 오픈소스로 공개되어 있으며, 소스 코드를 확인하거나 이슈를 제출할 수 있습니다.\n\n문서: https://etqwfd.github.io/LocalDream-ET/help.html</string>
     <string name="help">도움말</string>
     <string name="more_options">더보기</string>
 

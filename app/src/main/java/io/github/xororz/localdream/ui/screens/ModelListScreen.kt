@@ -94,6 +94,7 @@ import io.github.xororz.localdream.ui.theme.Motion
 import io.github.xororz.localdream.ui.theme.ThemePreset
 import io.github.xororz.localdream.ui.theme.scheme
 import io.github.xororz.localdream.utils.LogCapture
+import io.github.xororz.localdream.utils.LocaleManager
 import io.github.xororz.localdream.utils.TempCleaner
 import java.io.BufferedOutputStream
 import java.io.File
@@ -1472,6 +1473,8 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                     }
                     // Appearance (theme) section
                     item { AppearanceSection() }
+                    // Language section
+                    item { LanguageSection() }
                     // Feature settings section
                     item {
                         Column {
@@ -4036,6 +4039,82 @@ private fun SwitchSettingRow(
             checked = checked,
             onCheckedChange = onCheckedChange,
         )
+    }
+}
+
+private data class LanguageOption(val code: String, val label: String)
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun LanguageSection() {
+    val context = LocalContext.current
+    val options = remember {
+        listOf(
+            LanguageOption(LocaleManager.ZH_CN, "简体中文"),
+            LanguageOption(LocaleManager.EN, "English"),
+            LanguageOption(LocaleManager.ZH_TW, "繁體中文"),
+        )
+    }
+    val initial = LocaleManager.getSavedLanguage(context).let { saved ->
+        if (saved == LocaleManager.SYSTEM) {
+            val lang = context.resources.configuration.locales.get(0)?.language ?: "en"
+            if (lang == "zh") LocaleManager.ZH_CN else LocaleManager.EN
+        } else {
+            saved
+        }
+    }
+    var selected by remember { mutableStateOf(initial) }
+
+    Column {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(bottom = 12.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Default.Language,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp),
+            )
+            Text(
+                stringResource(R.string.language),
+                style = MaterialTheme.typography.titleMedium,
+            )
+        }
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+            ),
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Text(
+                    stringResource(R.string.language_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    options.forEach { opt ->
+                        FilterChip(
+                            selected = selected == opt.code,
+                            onClick = {
+                                selected = opt.code
+                                (context as? android.app.Activity)?.let { activity ->
+                                    LocaleManager.applyAndRecreate(activity, opt.code)
+                                } ?: LocaleManager.setLanguage(context, opt.code)
+                            },
+                            label = { Text(opt.label) },
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 

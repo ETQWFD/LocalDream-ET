@@ -1,9 +1,11 @@
 package io.github.xororz.localdream
 
 import android.app.Application
+import android.content.Context
 import io.github.xororz.localdream.data.HistoryMigration
 import io.github.xororz.localdream.data.MigrationState
 import io.github.xororz.localdream.data.db.AppDatabase
+import io.github.xororz.localdream.utils.LocaleManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -14,6 +16,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class LocalDreamApplication : Application() {
+
+    override fun attachBaseContext(base: Context) {
+        super.attachBaseContext(LocaleManager.wrap(base))
+    }
 
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
