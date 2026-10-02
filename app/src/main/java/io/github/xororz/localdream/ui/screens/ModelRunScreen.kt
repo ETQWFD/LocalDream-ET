@@ -1066,6 +1066,7 @@ fun ModelRunScreen(
                 pendingUltrafix = true
                 val intent = Intent(context, BackgroundGenerationService::class.java).apply {
                     putExtra("prompt", ultrafixPrompt)
+                    putExtra("prompt_english_only", model?.isDit != true)
                     putExtra("negative_prompt", negativePromptField.text)
                     putExtra("steps", totalSteps)
                     putExtra(
@@ -1509,6 +1510,19 @@ fun ModelRunScreen(
                 )
 
                 else -> if (model.isDit) snapDitSize(prefs.height.toFloat()) else prefs.height
+            }
+
+            // Sanitize legacy/non-aligned sizes for SD1.5 CPU/GPU: edges that are
+            // not multiples of 64 (e.g. a stored 288x512) make the MNN graph
+            // decode mosaic garbage. Snap both edges and re-save once.
+            if (!model.usesFixedCanvas && !model.isDit && model.runOnCpu) {
+                val sw = snapSd15Edge(currentWidth)
+                val sh = snapSd15Edge(currentHeight)
+                if (sw != currentWidth || sh != currentHeight) {
+                    currentWidth = sw
+                    currentHeight = sh
+                    aspectRatio = inferAspectRatioString(sw, sh)
+                }
             }
 
             // Preferences are keyed by bare modelId and shared with a local
@@ -2444,6 +2458,13 @@ fun ModelRunScreen(
                                             BackgroundGenerationService::class.java,
                                         ).apply {
                                             putExtra("prompt", promptField.text)
+                                            // Non-DiT (SD1.5/SDXL CLIP) models only
+                                            // understand English; the service
+                                            // offline-translates Chinese for them.
+                                            putExtra(
+                                                "prompt_english_only",
+                                                model?.isDit != true,
+                                            )
                                             putExtra(
                                                 "negative_prompt",
                                                 negativePromptField.text,

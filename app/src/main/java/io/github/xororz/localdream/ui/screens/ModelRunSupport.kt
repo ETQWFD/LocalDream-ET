@@ -254,12 +254,13 @@ const val DIT_SIZE_STEPS = DitResolution.SLIDER_STEPS
 
 fun snapDitSize(value: Float): Int = DitResolution.snap(value)
 
-// SD1.5 (CPU/GPU, MNN) renders directly at width x height. Sizes must be a
-// multiple of 8 and fit 128..512. Given an aspect "W:H", keep the longest edge
-// at [longEdge] (default 512) and round the short edge to a multiple of 8.
+// SD1.5 (CPU/GPU, MNN) renders directly at width x height. The MNN SD1.5 graph
+// (UNet + VAE tiling) only behaves correctly when both edges are a multiple of
+// 64; arbitrary multiples of 8 such as 288x512 silently reshape wrong and the
+// VAE decodes mosaic/garbage. So snap every edge to 64 and fit 128..512.
 private const val SD15_MIN_SIZE = 128
 private const val SD15_MAX_SIZE = 512
-private const val SD15_SIZE_ALIGN = 8
+private const val SD15_SIZE_ALIGN = 64
 
 fun sd15SizeForRatio(ratio: String, longEdge: Int = SD15_MAX_SIZE): Pair<Int, Int> {
     val parts = ratio.split(":")
@@ -276,6 +277,13 @@ fun sd15SizeForRatio(ratio: String, longEdge: Int = SD15_MAX_SIZE): Pair<Int, In
     } else {
         Pair(align(edge * rw / rh), edge)
     }
+}
+
+/** Round an arbitrary stored/slider size to a legal SD1.5 (multiple of 64) edge. */
+fun snapSd15Edge(v: Int): Int {
+    val a = ((v.coerceIn(SD15_MIN_SIZE, SD15_MAX_SIZE) + SD15_SIZE_ALIGN / 2) /
+        SD15_SIZE_ALIGN) * SD15_SIZE_ALIGN
+    return a.coerceIn(SD15_MIN_SIZE, SD15_MAX_SIZE)
 }
 
 // Aspect presets offered for SD1.5 CPU/GPU models (portrait, square, landscape).

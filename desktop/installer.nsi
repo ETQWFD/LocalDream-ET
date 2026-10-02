@@ -3,13 +3,15 @@ SetCompressor /SOLID lzma
 
 !define APPNAME "Local Dream ET"
 !define COMPANY "ET"
-!define VERSION "1.0.0.0"
+!define VERSION "2.0.0.0"
 
 Name "${APPNAME}"
-OutFile "LocalDream-ET-Setup-1.0.0.exe"
-InstallDir "$PROGRAMFILES64\${APPNAME}"
-InstallDirRegKey HKLM "Software\${APPNAME}" "InstallDir"
-RequestExecutionLevel admin
+OutFile "LocalDream-ET-Setup-2.0.0.exe"
+; Per-user install into a writable folder -> models live in the program's own
+; "models" subfolder (the requested portable layout) and no admin / UAC is needed.
+InstallDir "$LOCALAPPDATA\Programs\${APPNAME}"
+InstallDirRegKey HKCU "Software\${APPNAME}" "InstallDir"
+RequestExecutionLevel user
 ShowInstDetails show
 ShowUnInstDetails show
 
@@ -28,19 +30,23 @@ ShowUnInstDetails show
 
 !insertmacro MUI_LANGUAGE "SimpChinese"
 
-VIProductVersion "1.0.0.0"
+VIProductVersion "2.0.0.0"
 VIAddVersionKey /LANG=2052 "CompanyName" "ET"
-VIAddVersionKey /LANG=2052 "FileDescription" "Local Dream ET Installer"
+VIAddVersionKey /LANG=2052 "FileDescription" "Local Dream ET v2.0.0 Installer"
 VIAddVersionKey /LANG=2052 "LegalCopyright" "Copyright (C) 2026 ET"
 VIAddVersionKey /LANG=2052 "ProductName" "Local Dream ET"
-VIAddVersionKey /LANG=2052 "ProductVersion" "1.0.0.0"
+VIAddVersionKey /LANG=2052 "ProductVersion" "2.0.0.0"
+VIAddVersionKey /LANG=2052 "FileVersion" "2.0.0.0"
 
 Section "Local Dream ET" SecCore
   SectionIn RO
   SetOutPath "$INSTDIR"
   File /r "pkg\LocalDreamET\*"
+  CreateDirectory "$INSTDIR\models"
+  CreateDirectory "$INSTDIR\output"
+  CreateDirectory "$INSTDIR\tmp"
+  CreateDirectory "$INSTDIR\update"
 
-  SetOutPath "$INSTDIR"
   WriteUninstaller "$INSTDIR\uninstall.exe"
 
   CreateDirectory "$SMPROGRAMS\${APPNAME}"
@@ -51,23 +57,30 @@ Section "Local Dream ET" SecCore
   CreateShortcut "$DESKTOP\Local Dream ET.lnk" \
       "$INSTDIR\LocalDream-ET.exe" "" "$INSTDIR\LocalDream-ET.exe" 0
 
-  WriteRegStr HKLM "Software\${APPNAME}" "InstallDir" "$INSTDIR"
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" \
+  WriteRegStr HKCU "Software\${APPNAME}" "InstallDir" "$INSTDIR"
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" \
       "DisplayName" "Local Dream ET"
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" \
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" \
       "UninstallString" '"$INSTDIR\uninstall.exe"'
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" \
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" \
       "DisplayIcon" '"$INSTDIR\LocalDream-ET.exe"'
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" \
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" \
       "Publisher" "ET"
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" \
-      "DisplayVersion" "${VERSION}"
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" \
+      "DisplayVersion" "2.0.0"
 SectionEnd
 
 Section "Uninstall"
   Delete "$DESKTOP\Local Dream ET.lnk"
   RMDir /r "$SMPROGRAMS\${APPNAME}"
-  RMDir /r "$INSTDIR"
-  DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}"
-  DeleteRegKey HKLM "Software\${APPNAME}"
+  ; remove program files but keep downloaded models/output unless empty
+  Delete "$INSTDIR\uninstall.exe"
+  Delete "$INSTDIR\*.exe"
+  Delete "$INSTDIR\*.dll"
+  Delete "$INSTDIR\*.txt"
+  RMDir "$INSTDIR\tmp"
+  RMDir "$INSTDIR\update"
+  RMDir "$INSTDIR"
+  DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}"
+  DeleteRegKey HKCU "Software\${APPNAME}"
 SectionEnd

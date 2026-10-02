@@ -657,6 +657,8 @@ class ModelRepository private constructor(private val context: Context) {
             add(createRealisticVisionCpu())
             add(createCounterfeitCpu())
             add(createDreamShaperCpu())
+            add(createMajicmixCpu())
+            add(createAnalogMadnessCpu())
         }
 
         return customModels + predefinedModels.map { applyConfigDefaults(it) }
@@ -1167,6 +1169,44 @@ class ModelRepository private constructor(private val context: Context) {
         )
     }
 
+    private fun createMajicmixCpu(): Model {
+        val id = "majicmix_cpu"
+        val isDownloaded = Model.isModelDownloaded(context, id, false)
+        return Model(
+            id = id,
+            name = "majicMIX Realistic v7",
+            description = context.getString(R.string.majicmix_description),
+            baseUrl = "",
+            approximateSize = "2.1GB + 转换",
+            isDownloaded = isDownloaded,
+            codeDefaults = ModelConfig(
+                prompt = "RAW photo, best quality, masterpiece, photorealistic, 8k uhd, dslr, ultra detailed skin, soft natural lighting, sharp focus, film grain",
+                negativePrompt = "cartoon, anime, drawing, painting, lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, cropped, worst quality, low quality, jpeg artifacts, signature, watermark, deformed, blurry",
+            ),
+            runOnCpu = true,
+            convertSourceUrl = "digiplay/majicMIX_realistic_v7/resolve/main/majicmixRealistic_v7.safetensors",
+        )
+    }
+
+    private fun createAnalogMadnessCpu(): Model {
+        val id = "analogmadness_cpu"
+        val isDownloaded = Model.isModelDownloaded(context, id, false)
+        return Model(
+            id = id,
+            name = "Analog Madness v7",
+            description = context.getString(R.string.analogmadness_description),
+            baseUrl = "",
+            approximateSize = "2.1GB + 转换",
+            isDownloaded = isDownloaded,
+            codeDefaults = ModelConfig(
+                prompt = "analog photo, film photography, best quality, masterpiece, realistic, 35mm film, grain, natural color, soft light, detailed, dslr",
+                negativePrompt = "cartoon, anime, 3d render, digital art, lowres, bad anatomy, bad hands, text, error, missing fingers, cropped, worst quality, low quality, jpeg artifacts, signature, watermark, deformed, blurry",
+            ),
+            runOnCpu = true,
+            convertSourceUrl = "digiplay/AnalogMadness-realistic-model-v7/resolve/main/analogMadness_v70.safetensors",
+        )
+    }
+
     suspend fun refreshModelState(modelId: String) {
         refreshMutex.withLock {
             val current = models
@@ -1218,6 +1258,7 @@ class ModelRepository private constructor(private val context: Context) {
             "absoluterealitycpu", "chilloutmixcpu",
             // SD 1.5 CPU, raw safetensors downloaded then converted on device
             "realisticvision_cpu", "counterfeit_cpu", "dreamshaper_cpu",
+            "majicmix_cpu", "analogmadness_cpu",
             // DiT
             "z_image_turbo", "flux2_klein_4b", "qwen_image_2_1", "qwen_image_2_1_uc",
         )

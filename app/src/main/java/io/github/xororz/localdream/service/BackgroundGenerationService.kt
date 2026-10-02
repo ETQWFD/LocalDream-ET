@@ -129,7 +129,7 @@ class BackgroundGenerationService : Service() {
             }
         }
 
-        val prompt = intent?.getStringExtra("prompt")
+        var prompt = intent?.getStringExtra("prompt")
         Log.d("GenerationService", "prompt: $prompt")
 
         if (prompt == null) {
@@ -137,29 +137,45 @@ class BackgroundGenerationService : Service() {
             stopSelf()
             return START_NOT_STICKY
         }
+        val data: android.content.Intent = intent!!
 
-        val negativePrompt = intent.getStringExtra("negative_prompt") ?: ""
-        val steps = intent.getIntExtra("steps", 28)
-        val cfg = intent.getFloatExtra("cfg", 7f)
-        val seed = if (intent.hasExtra("seed")) intent.getLongExtra("seed", 0) else null
-        val width = intent.getIntExtra("width", 512)
-        val height = intent.getIntExtra("height", 512)
+        var negativePrompt = data.getStringExtra("negative_prompt") ?: ""
+
+        // SD1.5's CLIP text encoder only understands English. Chinese characters
+        // map to garbage tokens (blank/ignored results), so offline-translate to
+        // English tags for these models. DiT models (e.g. Qwen) natively accept
+        // Chinese and must be passed through untouched.
+        if (data.getBooleanExtra("prompt_english_only", false)) {
+            if (io.github.xororz.localdream.util.ChinesePrompt.hasChinese(prompt)) {
+                prompt = io.github.xororz.localdream.util.ChinesePrompt.translatePrompt(prompt)
+                Log.d("GenerationService", "translated prompt: $prompt")
+            }
+            if (io.github.xororz.localdream.util.ChinesePrompt.hasChinese(negativePrompt)) {
+                negativePrompt =
+                    io.github.xororz.localdream.util.ChinesePrompt.translatePrompt(negativePrompt)
+            }
+        }
+        val steps = data.getIntExtra("steps", 28)
+        val cfg = data.getFloatExtra("cfg", 7f)
+        val seed = if (data.hasExtra("seed")) data.getLongExtra("seed", 0) else null
+        val width = data.getIntExtra("width", 512)
+        val height = data.getIntExtra("height", 512)
         // Effective dimensions = target crop size for SDXL aspect-pad mode,
         // or equal to width/height otherwise. Used for decoding progress
         // previews which the backend already crops to the visible region.
-        val effectiveWidth = intent.getIntExtra("effective_width", width)
-        val effectiveHeight = intent.getIntExtra("effective_height", height)
-        val denoiseStrength = intent.getFloatExtra("denoise_strength", 0.6f)
-        val useOpenCL = intent.getBooleanExtra("use_opencl", false)
-        val scheduler = intent.getStringExtra("scheduler") ?: "dpm"
-        val aspectRatio = intent.getStringExtra("aspect_ratio") ?: "1:1"
+        val effectiveWidth = data.getIntExtra("effective_width", width)
+        val effectiveHeight = data.getIntExtra("effective_height", height)
+        val denoiseStrength = data.getFloatExtra("denoise_strength", 0.6f)
+        val useOpenCL = data.getBooleanExtra("use_opencl", false)
+        val scheduler = data.getStringExtra("scheduler") ?: "dpm"
+        val aspectRatio = data.getStringExtra("aspect_ratio") ?: "1:1"
         // Ultrafix: tiled img2img repair over an upscaled image. Uses its own
         // base-image file so a pending img2img selection in tmp.txt survives.
-        val ultrafix = intent.getBooleanExtra("ultrafix", false)
-        val ultrafixTileSize = intent.getIntExtra("ultrafix_tile_size", 512)
+        val ultrafix = data.getBooleanExtra("ultrafix", false)
+        val ultrafixTileSize = data.getIntExtra("ultrafix_tile_size", 512)
         // Backend to talk to: the local backend by default, or a remote host's
         // generation port when running in connected-device mode.
-        val backendHost = intent.getStringExtra("backend_host") ?: LOCAL_BACKEND_HOST
+        val backendHost = data.getStringExtra("backend_host") ?: LOCAL_BACKEND_HOST
 
         val image = if (ultrafix) {
             try {
@@ -173,7 +189,7 @@ class BackgroundGenerationService : Service() {
                 Log.e("GenerationService", "Failed to read ultrafix image data", e)
                 null
             }
-        } else if (intent.getBooleanExtra("has_image", false)) {
+        } else if (data.getBooleanExtra("has_image", false)) {
             try {
                 val tmpFile = File(applicationContext.filesDir, "tmp.txt")
                 if (tmpFile.exists()) {
@@ -188,7 +204,7 @@ class BackgroundGenerationService : Service() {
         } else {
             null
         }
-        val mask = if (intent.getBooleanExtra("has_mask", false)) {
+        val mask = if (data.getBooleanExtra("has_mask", false)) {
             try {
                 val maskFile = File(applicationContext.filesDir, "mask.txt")
                 if (maskFile.exists()) {
@@ -207,7 +223,7 @@ class BackgroundGenerationService : Service() {
         } else {
             null
         }
-        val referenceImages = if (intent.getBooleanExtra("has_reference_images", false)) {
+        val referenceImages = if (data.getBooleanExtra("has_reference_images", false)) {
             try {
                 val refsFile = File(applicationContext.filesDir, "dit_references.json")
                 if (refsFile.exists()) JSONArray(refsFile.readText()) else null

@@ -550,4 +550,6 @@
     <string name="downloading_converting">Downloading &amp; converting model…</string>
     <string name="model_download_failed">Model download failed: %1$s</string>
     <string name="dreamshaper_description">Versatile, very stable general-purpose SD1.5 (realistic/art/anime), converted on device</string>
+    <string name="majicmix_description">Premium photorealistic portrait SD1.5 (natural skin, high-end look), converted on device</string>
+    <string name="analogmadness_description">Vintage analog-film realistic SD1.5 (film grain, natural colors), converted on device</string>
 </resources>

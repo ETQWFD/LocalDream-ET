@@ -540,4 +540,6 @@
     <string name="downloading_converting">正在下载并转换模型（首次较慢）…</string>
     <string name="model_download_failed">模型下载失败：%1$s</string>
     <string name="dreamshaper_description">全能高稳定 SD1.5（写实/插画/动漫皆可、少报错），首次下载后本机转换，CPU/32位可用</string>
+    <string name="majicmix_description">高质感写实人像 SD1.5（皮肤通透、出片高级），首次下载后本机转换，CPU/32位可用</string>
+    <string name="analogmadness_description">复古胶片写实风 SD1.5（胶卷颗粒、自然色彩），首次下载后本机转换，CPU/32位可用</string>
 </resources>
