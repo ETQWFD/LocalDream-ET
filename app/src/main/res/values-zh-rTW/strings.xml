@@ -47,7 +47,10 @@
     <!-- Models -->
     <string name="backend_notify">模型服務執行中</string>
     <string name="backend_notify_title">SD模型後端</string>
-    <string name="generating_notify">影象生成中…</string>
+    <string name="generating_notify">圖像生成中…</string>
+    <string name="gen_channel_name">圖像生成</string>
+    <string name="gen_channel_desc">背景產生圖片</string>
+    <string name="notify_progress">進度 %1$d%%</string>
 
     <!-- Common -->
     <string name="settings">設定</string>
@@ -98,6 +101,11 @@
     <string name="delete_failed">刪除過程出錯</string>
     <string name="cannot_download">無法下載</string>
     <string name="cannot_download_hint">當前有模型正在下載，請等待下載完成後再嘗試</string>
+    <string name="size_sd_convert">2.1GB + 轉換</string>
+    <string name="size_link_convert">連結匯入 + 轉換</string>
+    <string name="download_block_title">本手機無法執行</string>
+    <string name="download_block_unsupported">該模型需要較新的裝置（arm64-v8a + 驍龍 8 Gen3 / 8 至尊版等級 NPU、Android 12 以上）。你的手機硬體不支援，已阻擋下載以免白白佔用空間。請改用 SD1.5 模型——它們在 32 位/64 位 CPU 上都能執行。</string>
+    <string name="download_block_lowram">該模型執行約需 %s 記憶體，但本機總記憶體約 %s，執行時很可能被系統強制結束。請先清理記憶體，或改用 SD1.5 模型。</string>
     <string name="download_model">下載模型</string>
     <string name="download_model_hint">確定要下載 %s 嗎？模型較大，建議使用WiFi網路下載。下載過程請勿退出應用程式。\n\n我們目前對所有高通晶片開放NPU模型下載，如果你的晶片較舊，可能無法執行</string>
     <string name="download_done">模型下載完成</string>

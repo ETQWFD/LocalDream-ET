@@ -8,6 +8,7 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.IBinder
+import android.os.PowerManager
 import android.os.SystemClock
 import android.util.Log
 import androidx.core.app.NotificationCompat
@@ -34,6 +35,30 @@ class BackgroundGenerationService : Service() {
     private val serviceScope = CoroutineScope(Dispatchers.IO + Job())
     private val notificationManager by lazy { getSystemService(NOTIFICATION_SERVICE) as NotificationManager }
     private var lastProgressNotifyAt = 0L
+
+    // Held for the duration of one generation so the CPU keeps running the
+    // native diffusion loop even with the screen off; released on destroy.
+    private var wakeLock: PowerManager.WakeLock? = null
+
+    @Synchronized
+    private fun acquireWakeLock() {
+        if (wakeLock?.isHeld == true) return
+        val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
+        wakeLock = pm.newWakeLock(
+            PowerManager.PARTIAL_WAKE_LOCK,
+            "LocalDreamET:generation",
+        ).also {
+            // Generous ceiling; it is always released in onDestroy. Guards
+            // against a leaked lock if the process is somehow left alive.
+            runCatching { it.acquire(30 * 60 * 1000L) }
+        }
+    }
+
+    @Synchronized
+    private fun releaseWakeLock() {
+        runCatching { if (wakeLock?.isHeld == true) wakeLock?.release() }
+        wakeLock = null
+    }
 
     // In-flight /generate call; cancelled by ACTION_STOP. Cancelling closes the
     // socket, which the backend detects at the next progress event and aborts
@@ -117,6 +142,7 @@ class BackgroundGenerationService : Service() {
         Log.d("GenerationService", "service execute: ${intent?.extras}")
 
         startForeground(NOTIFICATION_ID, createNotification(0f))
+        acquireWakeLock()
 
         when (intent?.action) {
             ACTION_STOP -> {
@@ -621,8 +647,8 @@ class BackgroundGenerationService : Service() {
     }
 
     private fun createNotificationChannel() {
-        val name = "Image Generation"
-        val descriptionText = "Background image generation"
+        val name = getString(R.string.gen_channel_name)
+        val descriptionText = getString(R.string.gen_channel_desc)
         val importance = NotificationManager.IMPORTANCE_LOW
         val channel = NotificationChannel(CHANNEL_ID, name, importance).apply {
             description = descriptionText
@@ -643,7 +669,7 @@ class BackgroundGenerationService : Service() {
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(this.getString(R.string.generating_notify))
-            .setContentText("Progress: ${(progress * 100).toInt()}%")
+            .setContentText(getString(R.string.notify_progress, (progress * 100).toInt()))
             .setProgress(100, (progress * 100).toInt(), false)
             .setSmallIcon(R.drawable.ic_launcher_monochrome)
             .setContentIntent(pendingIntent)
@@ -683,6 +709,7 @@ class BackgroundGenerationService : Service() {
         super.onDestroy()
         activeCall?.cancel()
         serviceScope.cancel()
+        releaseWakeLock()
 
         if (_generationState.value is GenerationState.Error) {
             resetState()

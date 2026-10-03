@@ -136,6 +136,9 @@ data class Model(
     // their parts are pulled straight from the repositories that publish them
     // instead of being rehosted.
     val packageFiles: List<String> = emptyList(),
+    // Minimum RAM (bytes) the device should reasonably have free before we let
+    // the user download a huge package. 0 = no RAM gate (SD1.5 models).
+    val ramRequiredBytes: Long = 0L,
 ) {
     val isDit: Boolean get() = ditKind.isNotEmpty()
 
@@ -623,7 +626,15 @@ class ModelRepository private constructor(private val context: Context) {
             }
         }
 
-        return customModels.sortedBy { it.name.lowercase() }
+        return customModels
+            .filter { m ->
+                io.github.xororz.localdream.utils.DeviceCapabilities.isListable(
+                    isDit = m.isDit,
+                    runOnCpu = m.runOnCpu,
+                    isSdxlNpu = m.isSdxl && !m.runOnCpu,
+                )
+            }
+            .sortedBy { it.name.lowercase() }
     }
 
     private fun createCustomModel(
@@ -733,7 +744,18 @@ class ModelRepository private constructor(private val context: Context) {
             }
         }
 
-        return customModels + predefinedModels.map { applyConfigDefaults(it) }
+        return customModels + predefinedModels
+            .map { applyConfigDefaults(it) }
+            .filter { m ->
+                // Hide entries this device physically cannot run. SD1.5 CPU
+                // models survive on every ABI (incl. 32-bit); arm64-only NPU /
+                // DiT / SDXL entries are dropped on 32-bit or weak SoCs.
+                io.github.xororz.localdream.utils.DeviceCapabilities.isListable(
+                    isDit = m.isDit,
+                    runOnCpu = m.runOnCpu,
+                    isSdxlNpu = m.isSdxl && !m.runOnCpu,
+                )
+            }
     }
 
     // Load config.json shipped inside the model's downloaded files, keeping
@@ -771,6 +793,7 @@ class ModelRepository private constructor(private val context: Context) {
             ),
             runOnCpu = false,
             ditKind = "zimage",
+            ramRequiredBytes = 10L * 1024 * 1024 * 1024,
         )
     }
 
@@ -802,6 +825,7 @@ class ModelRepository private constructor(private val context: Context) {
             ),
             runOnCpu = false,
             ditKind = "klein",
+            ramRequiredBytes = 8L * 1024 * 1024 * 1024,
         )
     }
 
@@ -831,6 +855,7 @@ class ModelRepository private constructor(private val context: Context) {
             ),
             runOnCpu = false,
             ditKind = "qwen21",
+            ramRequiredBytes = 12L * 1024 * 1024 * 1024,
         )
     }
 
@@ -860,6 +885,7 @@ class ModelRepository private constructor(private val context: Context) {
             ),
             runOnCpu = false,
             ditKind = "qwen21",
+            ramRequiredBytes = 12L * 1024 * 1024 * 1024,
         )
     }
 
@@ -1190,7 +1216,7 @@ class ModelRepository private constructor(private val context: Context) {
             name = "Realistic Vision V5.1",
             description = context.getString(R.string.realisticvision_description),
             baseUrl = "",
-            approximateSize = "2.1GB + 转换",
+            approximateSize = context.getString(R.string.size_sd_convert),
             isDownloaded = isDownloaded,
             codeDefaults = ModelConfig(
                 prompt = "RAW photo, best quality, realistic, photo-realistic, masterpiece, detailed skin, 8k uhd, dslr, soft lighting, high quality, film grain",
@@ -1209,7 +1235,7 @@ class ModelRepository private constructor(private val context: Context) {
             name = "Counterfeit V2.5",
             description = context.getString(R.string.counterfeit_description),
             baseUrl = "",
-            approximateSize = "2.1GB + 转换",
+            approximateSize = context.getString(R.string.size_sd_convert),
             isDownloaded = isDownloaded,
             codeDefaults = ModelConfig(
                 prompt = "masterpiece, best quality, 1girl, solo, detailed eyes, anime style",
@@ -1230,7 +1256,7 @@ class ModelRepository private constructor(private val context: Context) {
             name = "DreamShaper 8",
             description = context.getString(R.string.dreamshaper_description),
             baseUrl = "",
-            approximateSize = "2.1GB + 转换",
+            approximateSize = context.getString(R.string.size_sd_convert),
             isDownloaded = isDownloaded,
             codeDefaults = ModelConfig(
                 prompt = "masterpiece, best quality, highly detailed, sharp focus, professional, 8k uhd",
@@ -1249,7 +1275,7 @@ class ModelRepository private constructor(private val context: Context) {
             name = "majicMIX Realistic v7",
             description = context.getString(R.string.majicmix_description),
             baseUrl = "",
-            approximateSize = "2.1GB + 转换",
+            approximateSize = context.getString(R.string.size_sd_convert),
             isDownloaded = isDownloaded,
             codeDefaults = ModelConfig(
                 prompt = "RAW photo, best quality, masterpiece, photorealistic, 8k uhd, dslr, ultra detailed skin, soft natural lighting, sharp focus, film grain",
@@ -1268,7 +1294,7 @@ class ModelRepository private constructor(private val context: Context) {
             name = "Analog Madness v7",
             description = context.getString(R.string.analogmadness_description),
             baseUrl = "",
-            approximateSize = "2.1GB + 转换",
+            approximateSize = context.getString(R.string.size_sd_convert),
             isDownloaded = isDownloaded,
             codeDefaults = ModelConfig(
                 prompt = "analog photo, film photography, best quality, masterpiece, realistic, 35mm film, grain, natural color, soft light, detailed, dslr",
@@ -1289,7 +1315,7 @@ class ModelRepository private constructor(private val context: Context) {
         url: String,
         defaultPrompt: String,
         defaultNegative: String,
-        size: String = "2.1GB + 转换",
+        size: String? = null,
     ): Model {
         val isDownloaded =
             Model.isModelDownloaded(context, id, false, requireFinished = true)
@@ -1298,7 +1324,7 @@ class ModelRepository private constructor(private val context: Context) {
             name = name,
             description = context.getString(descRes),
             baseUrl = "",
-            approximateSize = size,
+            approximateSize = size ?: context.getString(R.string.size_sd_convert),
             isDownloaded = isDownloaded,
             codeDefaults = ModelConfig(
                 prompt = defaultPrompt,
@@ -1322,7 +1348,7 @@ class ModelRepository private constructor(private val context: Context) {
             name = e.name,
             description = context.getString(R.string.url_imported_description),
             baseUrl = "",
-            approximateSize = "链接导入 + 转换",
+            approximateSize = context.getString(R.string.size_link_convert),
             isDownloaded = isDownloaded,
             codeDefaults = ModelConfig(
                 prompt = "masterpiece, best quality, highly detailed, sharp focus, 8k",

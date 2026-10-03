@@ -859,11 +859,43 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
     }
 
     showDownloadConfirm?.let { model ->
+        // et.16: before letting a huge NPU/DiT package download, verify the
+        // device really can run it (ABI/SoC) and has enough RAM. SD1.5 CPU
+        // models run everywhere and are never blocked here.
+        val caps = io.github.xororz.localdream.utils.DeviceCapabilities
+        val blockReason: String? = when {
+            model.runOnCpu -> null
+            model.isDit && !caps.canRunDit() ->
+                context.getString(R.string.download_block_unsupported)
+            model.isSdxl && !model.runOnCpu && !caps.canRunSdxlNpu() ->
+                context.getString(R.string.download_block_unsupported)
+            !model.runOnCpu && !model.isDit && !model.isSdxl && !caps.is64Bit() ->
+                context.getString(R.string.download_block_unsupported)
+            model.ramRequiredBytes > 0 &&
+                caps.totalRamBytes(context) < model.ramRequiredBytes ->
+                context.getString(
+                    R.string.download_block_lowram,
+                    gbSize(model.ramRequiredBytes),
+                    gbSize(caps.totalRamBytes(context)),
+                )
+            else -> null
+        }
         if (downloadingModel != null) {
             AlertDialog(
                 onDismissRequest = { showDownloadConfirm = null },
                 title = { Text(stringResource(R.string.cannot_download)) },
                 text = { Text(stringResource(R.string.cannot_download_hint)) },
+                confirmButton = {
+                    TextButton(onClick = { showDownloadConfirm = null }) {
+                        Text(stringResource(R.string.confirm))
+                    }
+                },
+            )
+        } else if (blockReason != null) {
+            AlertDialog(
+                onDismissRequest = { showDownloadConfirm = null },
+                title = { Text(stringResource(R.string.download_block_title)) },
+                text = { Text(blockReason) },
                 confirmButton = {
                     TextButton(onClick = { showDownloadConfirm = null }) {
                         Text(stringResource(R.string.confirm))
@@ -2213,6 +2245,9 @@ fun TabPageIndicator(pageCount: Int, currentPage: Int, modifier: Modifier = Modi
         }
     }
 }
+
+/** Formats a byte count as GB (decimal), shared by download gate dialogs. */
+private fun gbSize(bytes: Long): String = "%.0f GB".format(bytes / 1_000_000_000.0)
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -4251,6 +4286,7 @@ private data class LanguageOption(val code: String, val label: String)
 @Composable
 private fun LanguageSection() {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val options = remember {
         listOf(
             LanguageOption(LocaleManager.ZH_CN, "简体中文"),
@@ -4308,9 +4344,26 @@ private fun LanguageSection() {
                             selected = selected == opt.code,
                             onClick = {
                                 selected = opt.code
-                                (context as? android.app.Activity)?.let { activity ->
-                                    LocaleManager.applyAndRecreate(activity, opt.code)
-                                } ?: LocaleManager.setLanguage(context, opt.code)
+                                val activity = context as? android.app.Activity
+                                if (activity == null) {
+                                    LocaleManager.setLanguage(context, opt.code)
+                                    return@FilterChip
+                                }
+                                if (LocaleManager.getSavedLanguage(context) == opt.code) {
+                                    return@FilterChip
+                                }
+                                // Persist + repoint application Resources, then
+                                // rebuild the model list (its descriptions are
+                                // cached getString values) and finally recreate.
+                                LocaleManager.setLanguage(context, opt.code)
+                                LocaleManager.applyToApplication(context, opt.code)
+                                scope.launch {
+                                    runCatching {
+                                        io.github.xororz.localdream.data.ModelRepository
+                                            .getInstance(context).refreshAllModels()
+                                    }
+                                    activity.recreate()
+                                }
                             },
                             label = { Text(opt.label) },
                         )

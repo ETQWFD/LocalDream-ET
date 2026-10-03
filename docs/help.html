@@ -117,37 +117,60 @@
   <h2>六、语言与主题</h2>
   <div class="card">
     <ul>
-      <li>模型列表菜单 → 设置 →「语言」：<strong>简体中文 / English / 繁體中文</strong>，点选后界面立即刷新。</li>
+      <li>模型列表菜单 → 设置 →「语言」：<strong>简体中文 / English / 繁體中文</strong>，点选后整个应用（含模型列表名称、描述、通知）立即刷新；如个别文字仍是旧语言，返回列表或重进页面即可。</li>
       <li>「外观」可切换深色/浅色与主题色，支持安卓 12+ 动态取色。</li>
     </ul>
   </div>
 
-  <h2>七、Qwen Image 2.1 与机型要求</h2>
+  <h2>七、Qwen Image 2.1 与机型要求（et.16 起按机型过滤）</h2>
   <div class="card">
-    <p>「NPU Models」标签页内置 <strong>Qwen Image 2.1</strong> 与 <strong>Qwen Image 2.1 UC Q4_0</strong>（各约 10.8GB，走高通 Adreno NPU）。</p>
+    <p>「NPU Models」标签页内置 <strong>Qwen Image 2.1</strong>、<strong>Qwen Image 2.1 UC Q4_0</strong>、Z-Image Turbo、FLUX.2 Klein 等大模型（约 6.7–10.8GB，走高通 Adreno NPU）。</p>
+    <ul>
+      <li><strong>32 位手机</strong>：列表<strong>只显示能真实运行的 SD1.5 CPU/GPU 模型</strong>（几十个，含链接导入），不会出现点了才跑不动的大模型。</li>
+      <li><strong>64 位手机</strong>：列表显示全部模型；但大 DiT/SDXL 仍需对应芯片。<strong>下载前会再做一次硬件与内存预检</strong>——芯片不支持会提示“本手机无法运行”，内存不足会提示需要/现有内存并阻止下载，避免白下 10GB。</li>
+    </ul>
     <div class="warn">
-      大 DiT 模型需要 <strong>骁龙 8 至尊版（SM8750）及以上、64 位、Android 12+</strong> 的 NPU 才能运行；32 位或其它芯片请使用「CPU Models」里的 SD1.5 模型。电脑版（Windows x64）可用 CPU 运行 Qwen。
+      大 DiT 需要 <strong>骁龙 8 至尊版（SM8750）及以上、arm64、Android 12+</strong>；SDXL-NPU 需骁龙 8 Gen3（SM8650）及以上。32 位或其它芯片请使用「CPU Models」里的 SD1.5。
     </div>
   </div>
 
-  <h2>八、应用内更新</h2>
+  <h2>八、应用内更新（et.16 起多镜像加速）</h2>
   <div class="card">
     <ul>
       <li>设置 → <strong>检测更新</strong>，联网比对版本号；有新版会在应用内直接下载，完成后<strong>调起系统打包安装程序</strong>安装（首次需允许“安装未知应用”）。</li>
+      <li>下载时会<strong>并行探测 GitHub 直链与多个国内加速镜像，自动选最快的一个</strong>，并支持断点续传（中断/杀进程后继续，不重头）。</li>
       <li>也可在官网或 GitHub Releases 手动下载最新 APK。</li>
     </ul>
   </div>
 
-  <h2>九、常见问题</h2>
+  <h2>九、错误代码对照与解决方法</h2>
   <div class="card">
-    <h3>下载慢 / 超时</h3><p>把下载源切到「魔搭 ModelScope」；确认网络正常；中断后直接续传即可。</p>
-    <h3>转换失败 / 退出码 134</h3><p>多为原始权重超过 32 位 2.14GB 寻址上限的旧模型；v3.0.0-et.12 起这类模型已下架，列表内现有模型均经过文件头校验、32 位可安全转换。若仍报错，把英文报错发开发者。</p>
-    <h3>生成全是马赛克/碎玻璃</h3><p>通常是尺寸未 64 对齐或 CFG 过高；用应用内置比例、CFG≤9，并确认模型已完整转换（显示“已下载”）。</p>
-    <h3>8081 连接失败</h3><p>说明本地推理引擎未启动完成或引擎包缺失；重新进入模型页等待初始化，确认模型转换成功。</p>
+    <table>
+      <tr><th>报错 / 代码</th><th>含义</th><th>解决方法</th></tr>
+      <tr><td><code>Failed to connect to localhost/127.0.0.1:8081</code></td><td>本地推理引擎没启动好或模型未转换成功。</td><td>退出模型页重进、等“已下载”状态；确认没被安全软件禁止执行本地程序；仍不行则删除该模型重新下载转换。</td></tr>
+      <tr><td><code>ETIMEDOUT</code> / <code>failed to connect to huggingface.co ...:443</code></td><td>海外源连不上/超时。</td><td>设置里把下载源切到<strong>魔搭 ModelScope</strong> 或 hf-mirror；网络恢复会自动换源续传。</td></tr>
+      <tr><td><code>Executable not found .../lib/arm/libstable_diffusion_core.so</code></td><td>老版本 32 位缺原生引擎（et.12 起已修复）。</td><td>更新到最新版；卸载旧版后全新安装。</td></tr>
+      <tr><td><code>Cannot read tensor data: model.diffusion_model.time_embed.0.weight</code> / <strong>退出码 134</strong></td><td>原始权重超过 32 位 2.14GB 寻址上限或文件不是 SD1.5，转换崩溃。</td><td>用列表内置模型或“链接导入”预检通过的单文件 SD1.5（≤2.14GB）；SDXL/DiT 文件会被预检拒绝。</td></tr>
+      <tr><td><code>Prompt empty</code></td><td>点生成时正向提示词为空。</td><td>在“图像生成提示”框里输入内容（中文会自动翻译成英文标签）。</td></tr>
+      <tr><td>生成结果<strong>全是马赛克/碎玻璃</strong></td><td>尺寸未 64 对齐、CFG 过高导致 fp16 溢出，或模型没转完整。</td><td>用应用内置比例、CFG≤9；确认显示“已下载”；必要时删除重下。</td></tr>
+      <tr><td>成品<strong>模糊/变形/不听提示词</strong></td><td>分辨率过低、步数太少，或中文整句翻译没生效。</td><td>步数调到 20–28；使用具体英文标签或保持联网让中文整句翻译生效；需要大图用“高清放大”。</td></tr>
+      <tr><td><strong>本手机无法运行 / 内存不足</strong>（下载弹窗）</td><td>大模型需要更新的 64 位 NPU 或更大内存。</td><td>在本设备改用 SD1.5 模型；或换符合要求的手机下载该大模型。</td></tr>
+      <tr><td><strong>通知栏无下载进度 / 切后台就停</strong></td><td>未授通知权限或被系统限制后台。</td><td>授予通知权限；在系统电池设置里把本应用设为“不限制后台/允许后台活动”。</td></tr>
+      <tr><td><strong>安装时点了没反应</strong></td><td>未允许“安装未知应用”。</td><td>按弹窗跳到系统设置允许本应用安装，再点一次更新。</td></tr>
+      <tr><td><code>HTTP 4xx/5xx</code>（更新下载）</td><td>镜像临时异常。</td><td>稍后重试；应用会自动切换其它镜像，也可去官网/Release 手动下载。</td></tr>
+    </table>
+    <p style="margin-top:10px">遇到表里没有的错误，请把<strong>完整英文原文</strong>（含退出码）发给开发者 ET 以便定位。</p>
+  </div>
+
+  <h2>十、常见问题</h2>
+  <div class="card">
+    <h3>下载慢 / 超时</h3><p>把下载源切到「魔搭 ModelScope」；应用更新走多镜像自动选最快；确认网络正常；中断后直接续传即可。</p>
+    <h3>后台/锁屏不能生成、发热大</h3><p>et.16 起生成服务持有唤醒锁并使用大堆；请在系统设置允许后台活动。低配机建议步数 15–20、尺寸 384，发热与耗时会明显下降。</p>
+    <h3>转换失败 / 退出码 134</h3><p>多为原始权重超过 32 位 2.14GB 寻址上限的旧模型；列表内现有模型均经过文件头校验、32 位可安全转换。若仍报错，把英文报错发开发者。</p>
     <h3>成品发糊/不听提示词</h3><p>用英文质量标签或让中文整句翻译生效；提高步数到 20–25；需要高分辨率用放大功能。</p>
   </div>
 
-  <h2>十、链接</h2>
+  <h2>十一、链接</h2>
   <div class="card">
     <ul>
       <li>官网首页：<a href="index.html">etqwfd.github.io/LocalDream-ET</a></li>

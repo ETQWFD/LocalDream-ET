@@ -8,11 +8,15 @@ import android.provider.Settings
 import androidx.core.content.FileProvider
 import io.github.xororz.localdream.BuildConfig
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
 import java.io.File
+import java.net.HttpURLConnection
 import java.util.concurrent.TimeUnit
 
 /**
@@ -123,8 +127,69 @@ object AppUpdater {
     }
 
     /**
+     * GitHub release downloads are often slow/throttled in mainland China. We
+     * build a list of candidate URLs (the origin plus several public
+     * GitHub-acceleration proxies), probe each with a tiny ranged GET in
+     * parallel, and pick the one with the lowest connect+time-to-first-byte
+     * that actually returns 206 (resumable). The download then resumes a
+     * `.part` file so an interrupted update continues instead of restarting.
+     */
+    private fun mirrorCandidates(origin: String): List<String> {
+        // Only proxy real github release/blob URLs; Pages/other hosts direct.
+        if (!origin.contains("github.com/") && !origin.contains("githubusercontent.com/")) {
+            return listOf(origin)
+        }
+        val proxies = listOf(
+            "https://gh-proxy.com/",
+            "https://ghfast.top/",
+            "https://ghproxy.net/",
+            "https://gh.llkk.cc/",
+            "https://mirror.ghproxy.com/",
+        )
+        // Direct origin first (it is fastest on good networks), then proxies.
+        return buildList {
+            add(origin)
+            proxies.forEach { add(it + origin) }
+        }
+    }
+
+    private data class Probe(val url: String, val ms: Long, val total: Long)
+
+    private suspend fun fastestCandidate(urls: List<String>): Probe? = coroutineScope {
+        urls.map { u ->
+            async(Dispatchers.IO) {
+                val start = System.currentTimeMillis()
+                var conn: HttpURLConnection? = null
+                try {
+                    conn = (java.net.URL(u).openConnection() as HttpURLConnection).apply {
+                        connectTimeout = 6000
+                        readTimeout = 6000
+                        instanceFollowRedirects = true
+                        setRequestProperty("User-Agent", "LocalDream-ET/${BuildConfig.VERSION_NAME}")
+                        setRequestProperty("Range", "bytes=0-0")
+                    }
+                    conn.connect()
+                    val code = conn.responseCode
+                    if (code != 206 && code != 200) return@async null
+                    val total = conn.getHeaderField("Content-Range")
+                        ?.substringAfterLast('/')?.toLongOrNull()
+                        ?: conn.contentLengthLong.takeIf { it > 0 } ?: -1L
+                    // Read the single byte so TTFB is genuinely measured.
+                    conn.inputStream?.use { it.read() }
+                    Probe(u, System.currentTimeMillis() - start, total)
+                } catch (_: Exception) {
+                    null
+                } finally {
+                    conn?.disconnect()
+                }
+            }
+        }.awaitAll().filterNotNull().minByOrNull { it.ms }
+    }
+
+    /**
      * Streams the APK into the app cache, invoking [onProgress] with
-     * downloaded / total bytes. Returns the saved file.
+     * downloaded / total bytes. Returns the saved file. Uses the fastest
+     * reachable GitHub mirror and HTTP Range resume.
      */
     suspend fun download(
         context: Context,
@@ -133,35 +198,58 @@ object AppUpdater {
     ): File = withContext(Dispatchers.IO) {
         val dir = File(context.cacheDir, "updates").apply { mkdirs() }
         val target = File(dir, "localdream-update.apk")
-        if (target.exists()) target.delete()
+        val part = File(dir, "localdream-update.apk.part")
 
-        val request = Request.Builder()
-            .url(url)
-            .header("User-Agent", "LocalDream-ET/${BuildConfig.VERSION_NAME}")
-            .build()
-        client.newCall(request).execute().use { resp ->
-            if (!resp.isSuccessful) {
-                target.delete()
-                error("HTTP ${resp.code}")
+        val best = fastestCandidate(mirrorCandidates(url))
+            ?: run {
+                // Last resort: try the origin without probing/mirroring.
+                Probe(url, 0L, -1L)
             }
+
+        var from = if (part.exists()) part.length() else 0L
+        var total = best.total.takeIf { it > 0 } ?: -1L
+
+        // A stale .part longer than the announced file (or from another
+        // release) cannot be resumed — start clean.
+        if (total > 0 && from >= total) from = 0L
+        if (from == 0L && part.exists()) part.delete()
+
+        val builder = Request.Builder()
+            .url(best.url)
+            .header("User-Agent", "LocalDream-ET/${BuildConfig.VERSION_NAME}")
+        if (from > 0) builder.header("Range", "bytes=$from-")
+        val resp = client.newCall(builder.build()).execute()
+        try {
+            // 206 = resumed; 200 = server ignored Range and restarts.
+            if (resp.code != 200 && resp.code != 206) error("HTTP ${resp.code}")
+            if (resp.code == 200) { from = 0L; part.delete() }
             val body = resp.body ?: error("empty response body")
-            val total = body.contentLength().takeIf { it > 0 } ?: -1L
+            val bodyLen = body.contentLength().takeIf { it > 0 } ?: -1L
+            if (total <= 0) total = if (bodyLen > 0) bodyLen + from else -1L
+
             body.byteStream().use { input ->
-                target.outputStream().use { output ->
+                java.io.FileOutputStream(part, resp.code == 206).use { output ->
                     val buffer = ByteArray(64 * 1024)
-                    var downloaded = 0L
+                    var downloaded = from
                     while (true) {
-                        val read = input.read(buffer)
-                        if (read == -1) break
-                        output.write(buffer, 0, read)
-                        downloaded += read
+                        val r = input.read(buffer)
+                        if (r == -1) break
+                        output.write(buffer, 0, r)
+                        downloaded += r
                         onProgress(downloaded, total)
                     }
                     output.flush()
                 }
             }
+        } finally {
+            resp.close()
         }
-        if (!target.exists() || target.length() <= 0L) error("downloaded file is empty")
+
+        if (!part.exists() || part.length() <= 0L) error("downloaded file is empty")
+        if (target.exists()) target.delete()
+        if (!part.renameTo(target)) {
+            part.copyTo(target, overwrite = true); part.delete()
+        }
         target
     }
 

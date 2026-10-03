@@ -22,6 +22,10 @@ object DitEngine {
 
     fun isSupportedDevice(): Boolean {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return false
+        // The DiT runtime is compiled for arm64-v8a only. A 32-bit ROM on an
+        // otherwise elite SoC still cannot dlopen it, so require the ABI too.
+        val hasArm64 = Build.SUPPORTED_ABIS?.any { it == "arm64-v8a" } == true
+        if (!hasArm64) return false
         val soc = Build.SOC_MODEL.uppercase()
         if (!soc.startsWith("SM")) return false
         val partNumber = soc.dropWhile { !it.isDigit() }.takeWhile { it.isDigit() }.toIntOrNull()

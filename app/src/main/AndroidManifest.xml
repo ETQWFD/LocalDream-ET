@@ -24,6 +24,7 @@
     <uses-permission android:name="android.permission.EXECUTE_PRIVATE_BINARY" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <!-- In-app self update: download the APK and launch the system installer. -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
@@ -31,6 +32,7 @@
     <application
         android:name=".LocalDreamApplication"
         android:allowBackup="true"
+        android:largeHeap="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:enableOnBackInvokedCallback="true"
         android:fullBackupContent="@xml/backup_rules"
