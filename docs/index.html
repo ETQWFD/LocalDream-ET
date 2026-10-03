@@ -85,6 +85,7 @@
       <a href="#install">安装</a>
       <a href="#desktop">电脑版</a>
       <a href="#compat">兼容</a>
+      <a href="dan.html">数据后台</a>
     </nav>
     <span class="et">开发者：ET</span>
   </div>
@@ -106,8 +107,9 @@
       <a class="btn primary" href="https://github.com/ETQWFD/LocalDream-ET/releases/download/desktop-v2.2.0/LocalDream-ET-Setup-2.2.0.exe" download>💻 下载电脑版安装包 v2.2.0（Windows x64）</a>
       <a class="btn ghost" href="https://github.com/ETQWFD/LocalDream-ET/releases/download/desktop-v2.2.0/LocalDream-ET-Windows-Portable-2.2.0.zip" download>电脑版免安装 ZIP v2.2.0</a>
     </div>
-    <div class="ver">手机当前版本 <b>v3.0.0-et.16</b>（build 90）· 电脑版 <b>v2.2.0</b> · 开发者 <b>ET</b> · 支持 arm64-v8a / armeabi-v7a</div>
+    <div class="ver">手机当前版本 <b>v3.0.0-et.18</b>（build 92）· 电脑版 <b>v2.2.0</b> · 开发者 <b>ET</b> · 支持 arm64-v8a / armeabi-v7a · <a href="dan.html" style="color:var(--acc)">数据后台</a></div>
     <div class="note" style="margin-top:14px;text-align:left;max-width:760px;margin-left:auto;margin-right:auto;">
+      <b>手机版 v3.0.0-et.18 更新：</b>① <b>NPU 模型全机型可见、按真机能力加锁</b>：修复 32 位手机 NPU 页“像消失/空白”，Illustrious v16、千问、Z-Image 现在全部列出，不支持的机型显示锁标与具体原因（32位 / NPU代际 / Android版本 / 内存 / 存储空间），点击下载会明确拦截、不再白下几个 GB；② <b>Illustrious V16 已加入 NPU 列表</b>（官方 SDXL-QNN 预转换包，含 DMD2 加速版，需骁龙8 Gen3/SM8650 及以上 64 位；32 位物理不可运行，故锁定并说明）；③ <b>更新直调系统安装器</b>：下载完直接进系统“打包安装程序”确认界面，<b>不再跳转 MT 等文件管理器</b>，无权限先引导“允许安装未知应用”、返回自动续装；④ <b>大模型下载前新增存储空间预检</b>（千问约13GB/Z-Image10GB/Klein8GB，不足阻止）；⑤ 已核对上游 xororz/local-dream 最新更新（上游把千问改为更大 FP8 且需重编 NPU 引擎，本版保留能跑的<b>最小千问 UC Q4_0</b>，其余定制不变）；⑥ <b>ET 定制代码改为 MIT License</b>（第三方许可见 NOTICE）；⑦ 官网新增 <a href="dan.html">数据后台</a>。修复清单见 <a href="LocalDream-ET_更新修复说明_et18.pptx">PPT</a> / <a href="LocalDream-ET_更新修复说明_et18.docx">Word</a> 与 <a href="help.html">使用文档</a>。<br>
       <b>手机版 v3.0.0-et.16 更新：</b>① <b>按手机能力过滤模型</b>：32 位手机列表只显示能真实运行的 SD1.5（含链接导入），不再有点了跑不动的大模型；64 位手机显示全部，但大 DiT/SDXL <b>下载前再检测芯片 NPU 与运行内存</b>，不支持提示“本手机无法运行”、内存不足提示需要/现有内存并阻止下载，避免白下 10GB；② <b>修复语言切换不彻底</b>：切简/繁/英时同步刷新应用资源与模型列表，名称、描述、体积（如“2.1GB + 转换”）、通知栏全部跟随语言，修掉选简体仍显繁体；③ <b>应用自更新加速</b>：并行探测 GitHub 直链+多个国内镜像自动选最快、断点续传；④ <b>后台生成更稳</b>：唤醒锁+大堆，锁屏/切后台可继续；⑤ 文档新增<b>错误代码对照与解决方法</b>章节。详见 <a href="help.html">使用文档</a>。<br>
       <b>手机版 v3.0.0-et.15 更新：</b>① <b>新增「从链接导入模型」</b>：CPU 页点 <b>＋ 从链接导入模型</b>，粘贴 Hugging Face / hf-mirror / 魔搭模型页或任意 .safetensors 直链，<b>下载前先做兼容性预检</b>：是否单文件 SD1.5、真实大小是否 ≤2.14GB（32 位红线）、剩余空间是否够（约文件 2 倍）、读 safetensors 文件头排除 SDXL/DiT；显示“本手机支持”后确认即下载（魔搭首选、断点续传、通知栏后台、关机续传）并自动转换，<b>成功后永久留在列表</b>，下次直接点用；② <b>千问/豆包核实结论</b>：千问文生图最老为 20B，最小的 Qwen-Image-2.1 视觉部分也是 7B DiT、最小量化 Q2_K_M 仍约 7.07GB 且需配 8B 文本编码器+专用管线，<b>不存在 ≤2GB 能在 32 位手机运行的千问模型</b>；豆包只有云端 API 无本地权重——32 位请用 SD1.5（内置+链接导入）；③ 延续 et.14 的 9 个 32 位安全 SD1.5 与中文整句翻译自动恢复修复。详见 <a href="help.html">使用文档</a>。<br>
       <b>手机版 v3.0.0-et.14 更新：</b>① <b>模型库再加 9 个经严格校验的 SD1.5</b>（写实/半写实 2.5D/动漫），全部在魔搭实测真实大小 + safetensors 文件头自洽、均小于 2.14GB，<b>32/64 位 CPU/GPU 都能安全下载、本机转换并出图</b>：MajicMix Realistic v7、epiCPhotoGasm 2.5D 女神、ReV Animated v1.1、MeinaMix v11、AingDiffusion v9、LemonTea 笔触 2.5D、CounterMix v2、Beautiful Fantasy Real Mix、EtherReal Mix LUX2；② <b>修复“AI 不按中文提示词生成”</b>：在线整句翻译以前一旦首次网络失败就永久关闭、退回逐词且大量丢词的离线词典，复杂中文整句被丢成通用词导致出图跑偏；现改为失败后 60 秒自动重试恢复，网络恢复即重新整句翻译，无网才用本地词典兜底；③ 下载/更新继续魔搭国内 CDN 首选 + 镜像自动回退，Range 断点续传/通知栏后台/关机恢复，32 位转换崩溃已自 et.12 修复；④ Qwen Image 2.1 / UC 在「NPU Models」标签页（骁龙8至尊版及以上 64 位）。<a href="help.html">使用文档</a><br>
@@ -190,7 +192,26 @@
 
 <footer>
   <div class="big">Local Dream ET · 开发者：ET</div>
-  <div>本定制版基于开源项目 <a href="https://github.com/xororz/local-dream" target="_blank" rel="noopener">xororz/local-dream</a>，遵循其开源许可。版权与定制内容 © ET</div>
+  <div>本定制版基于开源项目 <a href="https://github.com/xororz/local-dream" target="_blank" rel="noopener">xororz/local-dream</a>；ET 定制代码以 <a href="https://github.com/ETQWFD/LocalDream-ET/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a> 发布，MNN / stable-diffusion.cpp / ggml 等第三方组件沿用其各自许可（见 NOTICE）。版权与定制内容 © ET</div>
 </footer>
+
+<!-- ET 真实统计：访问量（不阻塞、失败静默） -->
+<script>
+(function(){
+  "use strict";
+  function beacon(u){ try{ if(navigator.sendBeacon){ navigator.sendBeacon(u); } else { new Image().src=u+"&_="+Date.now(); } }catch(e){} }
+  try{
+    beacon("https://abacus.jasoncameron.dev/hit/etld-et/sitevisits");
+    document.addEventListener("click", function(e){
+      var a=e.target.closest && e.target.closest("a[href]");
+      if(!a) return;
+      var h=a.getAttribute("href")||"";
+      if(h.indexOf("/releases/")!==-1 && (h.indexOf(".apk")!==-1||h.indexOf(".exe")!==-1||h.indexOf(".zip")!==-1)){
+        beacon("https://abacus.jasoncameron.dev/hit/etld-et/dlclicks");
+      }
+    }, false);
+  }catch(e){}
+})();
+</script>
 </body>
 </html>

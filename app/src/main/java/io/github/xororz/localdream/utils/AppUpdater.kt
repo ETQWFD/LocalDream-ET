@@ -1,10 +1,15 @@
 package io.github.xororz.localdream.utils
 
+import android.app.PendingIntent
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
+import android.content.pm.PackageInstaller
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import io.github.xororz.localdream.BuildConfig
 import kotlinx.coroutines.Dispatchers
@@ -18,6 +23,9 @@ import org.json.JSONObject
 import java.io.File
 import java.net.HttpURLConnection
 import java.util.concurrent.TimeUnit
+
+private const val ACTION_INSTALL_COMMIT =
+    "io.github.xororz.localdream.action.INSTALL_COMMIT"
 
 /**
  * In-app self updater.
@@ -253,17 +261,108 @@ object AppUpdater {
         target
     }
 
-    /** Hands the downloaded APK to the system package installer. */
+    /**
+     * Hands the downloaded APK to the system package installer.
+     *
+     * Uses the PackageInstaller session API first: it always routes to the
+     * built-in installer confirmation screen and can never be hijacked by a
+     * third-party file manager the user set as a default "open with" target
+     * (e.g. MT Manager). Only if that path is unavailable do we fall back to
+     * ACTION_VIEW, explicitly pinned to the on-device system installer package
+     * rather than any user-installed app.
+     */
     fun install(context: Context, apk: File) {
+        if (!apk.exists() || apk.length() <= 0L) error("downloaded APK is missing or empty")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+            !context.packageManager.canRequestPackageInstalls()
+        ) {
+            context.startActivity(installPermissionSettingsIntent(context))
+            return
+        }
+        if (runCatching { installViaPackageInstaller(context, apk) }.getOrDefault(false)) return
+        installViaViewIntent(context, apk)
+    }
+
+    private fun installViaPackageInstaller(context: Context, apk: File): Boolean {
+        val app = context.applicationContext
+        val installer = app.packageManager.packageInstaller
+        val params = PackageInstaller.SessionParams(
+            PackageInstaller.SessionParams.MODE_FULL_INSTALL,
+        ).apply { setSize(apk.length()) }
+        val sessionId = installer.createSession(params)
+        installer.openSession(sessionId).use { session ->
+            apk.inputStream().use { input ->
+                session.openWrite("localdream-update", 0, apk.length()).use { out ->
+                    input.copyTo(out, 1 shl 16)
+                    out.flush()
+                    session.fsync(out)
+                }
+            }
+
+            // Local, non-exported callback so only our own app receives the
+            // commit result; the system still shows its installer UI itself.
+            var receiver: BroadcastReceiver? = null
+            val cbIntent = Intent(ACTION_INSTALL_COMMIT).setPackage(app.packageName)
+            val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            val statusReceiver = PendingIntent
+                .getBroadcast(app, sessionId, cbIntent, flags)
+                .intentSender
+            receiver = object : BroadcastReceiver() {
+                override fun onReceive(ctx: Context, data: Intent) {
+                    runCatching { ctx.unregisterReceiver(this) }
+                    val status = data.getIntExtra(
+                        PackageInstaller.EXTRA_STATUS,
+                        PackageInstaller.STATUS_FAILURE,
+                    )
+                    if (status == PackageInstaller.STATUS_PENDING_USER_ACTION) {
+                        // Some ROMs hand back a confirmation intent to launch.
+                        @Suppress("DEPRECATION")
+                        val confirm = data
+                            .getParcelableExtra<Intent>(Intent.EXTRA_INTENT)
+                        confirm?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        runCatching { confirm?.let { ctx.startActivity(it) } }
+                    }
+                }
+            }
+            ContextCompat.registerReceiver(
+                app,
+                receiver,
+                IntentFilter(ACTION_INSTALL_COMMIT),
+                ContextCompat.RECEIVER_NOT_EXPORTED,
+            )
+            session.commit(statusReceiver)
+        }
+        return true
+    }
+
+    private fun installViaViewIntent(context: Context, apk: File) {
         val authority = "${context.packageName}.fileprovider"
-        val uri: Uri = FileProvider.getUriForFile(context, authority, apk)
-        val intent = Intent(Intent.ACTION_VIEW).apply {
-            setDataAndType(uri, "application/vnd.android.package-archive")
-            addFlags(
+        val uri = FileProvider.getUriForFile(context, authority, apk)
+        val base = Intent(Intent.ACTION_VIEW)
+            .setDataAndType(uri, "application/vnd.android.package-archive")
+            .addFlags(
                 Intent.FLAG_GRANT_READ_URI_PERMISSION or
                     Intent.FLAG_ACTIVITY_NEW_TASK,
             )
+        // Pin to the system installer package so a default file manager never
+        // opens the APK. Prefer an installer-named system app; on other ROMs
+        // accept any resolved handler that ships with the system image.
+        val systemInstaller = run {
+            val pm = context.packageManager
+            val handlers = pm.queryIntentActivities(base, 0)
+            val byName = handlers.firstOrNull {
+                val pkg = it.activityInfo?.packageName.orEmpty()
+                pkg.contains("packageinstaller")
+            }
+            val sysApp = handlers.firstOrNull {
+                runCatching {
+                    val flags = pm.getApplicationInfo(it.activityInfo.packageName, 0).flags
+                    flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM != 0
+                }.getOrDefault(false)
+            }
+            (byName ?: sysApp)?.activityInfo?.packageName
         }
-        context.startActivity(intent)
+        systemInstaller?.let { base.setPackage(it) }
+        context.startActivity(base)
     }
 }

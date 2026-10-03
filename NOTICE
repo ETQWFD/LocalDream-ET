@@ -1,0 +1,19 @@
+Local Dream ET
+Copyright (c) 2026 ET (Meizhou, Guangdong, China)
+The ET-authored modifications in this project are released under the MIT
+License (see LICENSE).
+
+This software builds upon and bundles third-party open-source components,
+which remain under their own licenses:
+  - Alibaba MNN                         Apache License 2.0
+  - stable-diffusion.cpp                MIT License
+  - ggml / llama.cpp                    MIT License
+  - cpp-httplib                         MIT License
+  - tokenizers-cpp / Hugging Face       Apache License 2.0
+  - AndroidX, Kotlin, OkHttp, Coil      Apache License 2.0
+  - Original "local-dream" application  Attribution-NonCommercial 4.0
+    by xororz (original CC BY-NC text kept in LICENSE.bak_upstream_ccbync)
+
+Model weights downloaded at runtime (Stable Diffusion / Qwen / etc.) are
+provided by their respective owners under their own licenses. All third-party
+copyright and license notices are preserved and must not be removed.

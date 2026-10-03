@@ -139,6 +139,9 @@ data class Model(
     // Minimum RAM (bytes) the device should reasonably have free before we let
     // the user download a huge package. 0 = no RAM gate (SD1.5 models).
     val ramRequiredBytes: Long = 0L,
+    // Free storage (bytes) that must remain on the model volume before starting
+    // a (huge) download, so it cannot run out of disk half-way. 0 = no gate.
+    val storageRequiredBytes: Long = 0L,
 ) {
     val isDit: Boolean get() = ditKind.isNotEmpty()
 
@@ -675,18 +678,17 @@ class ModelRepository private constructor(private val context: Context) {
         val customModels = scanCustomModels()
 
         val predefinedModels = mutableListOf<Model>().apply {
-            if (DitEngine.isSupportedDevice()) {
-                add(createZImageTurboModel())
-                add(createFlux2KleinModel())
-                add(createQwenImage21Model())
-                add(createQwenImage21UcModel())
-            }
-            if (isSdxlCapableSoc(getDeviceSoc())) {
-                add(createIllustriousV16Model())
-                add(createIllustriousV16Dmd2Model())
-                add(createCyberRealisticV10Model())
-                add(createCyberRealisticV10Dmd2Model())
-            }
+            // et.18: catalog entries are always constructed so every device can
+            // see them; runnability is shown as a lock + blocked download
+            // (DeviceCapabilities.gateReason) rather than hiding the model.
+            add(createZImageTurboModel())
+            add(createFlux2KleinModel())
+            add(createQwenImage21Model())
+            add(createQwenImage21UcModel())
+            add(createIllustriousV16Model())
+            add(createIllustriousV16Dmd2Model())
+            add(createCyberRealisticV10Model())
+            add(createCyberRealisticV10Dmd2Model())
             add(createAnythingV5Model())
             add(createAnythingV5ModelCPU())
             add(createQteaMixModel())
@@ -794,6 +796,7 @@ class ModelRepository private constructor(private val context: Context) {
             runOnCpu = false,
             ditKind = "zimage",
             ramRequiredBytes = 10L * 1024 * 1024 * 1024,
+            storageRequiredBytes = 10L * 1000 * 1000 * 1000,
         )
     }
 
@@ -826,6 +829,7 @@ class ModelRepository private constructor(private val context: Context) {
             runOnCpu = false,
             ditKind = "klein",
             ramRequiredBytes = 8L * 1024 * 1024 * 1024,
+            storageRequiredBytes = 8L * 1000 * 1000 * 1000,
         )
     }
 
@@ -856,6 +860,7 @@ class ModelRepository private constructor(private val context: Context) {
             runOnCpu = false,
             ditKind = "qwen21",
             ramRequiredBytes = 12L * 1024 * 1024 * 1024,
+            storageRequiredBytes = 13L * 1000 * 1000 * 1000,
         )
     }
 
@@ -886,6 +891,7 @@ class ModelRepository private constructor(private val context: Context) {
             runOnCpu = false,
             ditKind = "qwen21",
             ramRequiredBytes = 12L * 1024 * 1024 * 1024,
+            storageRequiredBytes = 13L * 1000 * 1000 * 1000,
         )
     }
 

@@ -3,6 +3,8 @@ package io.github.xororz.localdream.utils
 import android.app.ActivityManager
 import android.content.Context
 import android.os.Build
+import android.os.Environment
+import android.os.StatFs
 import io.github.xororz.localdream.data.DitEngine
 
 /**
@@ -53,20 +55,62 @@ object DeviceCapabilities {
         0L
     }
 
+    /** Free bytes on the shared external volume where models are stored. */
+    fun freeStorageBytes(context: Context): Long = try {
+        val root = runCatching { Storage.root(context) }.getOrNull()
+        val path = root?.takeIf { it.exists() }?.absolutePath
+            ?: Environment.getExternalStorageDirectory().absolutePath
+        StatFs(path).availableBytes
+    } catch (_: Exception) {
+        0L
+    }
+
     /**
      * Whether a model entry should even be listed on this device.
-     * 32-bit devices see only the cross-ABI SD1.5 CPU/GPU models; 64-bit
-     * devices see everything their SoC can drive.
+     *
+     * et.18: every catalog model is LISTED on every device, including on
+     * 32-bit phones. Models the device cannot actually run are rendered with a
+     * lock and their download is blocked with a precise reason
+     * ([gateReason]), so users can see what exists and what a better device
+     * would unlock, instead of the tab silently looking empty/broken.
      */
     fun isListable(
         isDit: Boolean,
         runOnCpu: Boolean,
         isSdxlNpu: Boolean,
-    ): Boolean {
-        if (runOnCpu) return true
-        if (isDit) return canRunDit()
-        if (isSdxlNpu) return canRunSdxlNpu()
-        // Non-CPU, non-DiT, non-SDXL = classic SD1.5 NPU (QNN, arm64 only).
-        return is64Bit()
+    ): Boolean = true
+
+    /**
+     * Why a non-CPU model cannot run/download on this device, or null when it
+     * is usable. Order: ABI first (32-bit cannot even load the arm64 engine),
+     * then NPU/SoC generation, Android version, RAM, then free storage.
+     *
+     * Returns a machine reason string consumed by the UI's localized message.
+     */
+    fun gateReason(
+        context: Context,
+        isDit: Boolean,
+        isSdxl: Boolean,
+        ramRequiredBytes: Long,
+        storageRequiredBytes: Long,
+    ): String? {
+        if (!is64Bit()) return REASON_ABI
+        if (isDit) {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return REASON_ANDROID
+            if (!DitEngine.isSupportedDevice()) return REASON_NPU_DIT
+        }
+        if (isSdxl && !canRunSdxlNpu()) return REASON_NPU_SDXL
+        if (ramRequiredBytes > 0 && totalRamBytes(context) < ramRequiredBytes) return REASON_RAM
+        if (storageRequiredBytes > 0 &&
+            freeStorageBytes(context) < storageRequiredBytes
+        ) return REASON_STORAGE
+        return null
     }
+
+    const val REASON_ABI = "abi"
+    const val REASON_ANDROID = "android"
+    const val REASON_NPU_DIT = "npu_dit"
+    const val REASON_NPU_SDXL = "npu_sdxl"
+    const val REASON_RAM = "ram"
+    const val REASON_STORAGE = "storage"
 }

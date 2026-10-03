@@ -859,27 +859,10 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
     }
 
     showDownloadConfirm?.let { model ->
-        // et.16: before letting a huge NPU/DiT package download, verify the
-        // device really can run it (ABI/SoC) and has enough RAM. SD1.5 CPU
-        // models run everywhere and are never blocked here.
-        val caps = io.github.xororz.localdream.utils.DeviceCapabilities
-        val blockReason: String? = when {
-            model.runOnCpu -> null
-            model.isDit && !caps.canRunDit() ->
-                context.getString(R.string.download_block_unsupported)
-            model.isSdxl && !model.runOnCpu && !caps.canRunSdxlNpu() ->
-                context.getString(R.string.download_block_unsupported)
-            !model.runOnCpu && !model.isDit && !model.isSdxl && !caps.is64Bit() ->
-                context.getString(R.string.download_block_unsupported)
-            model.ramRequiredBytes > 0 &&
-                caps.totalRamBytes(context) < model.ramRequiredBytes ->
-                context.getString(
-                    R.string.download_block_lowram,
-                    gbSize(model.ramRequiredBytes),
-                    gbSize(caps.totalRamBytes(context)),
-                )
-            else -> null
-        }
+        // et.18: one gate pipeline for every non-CPU model — 32-bit ABI, NPU
+        // generation, Android version, RAM and free storage — localized.
+        val blockReason: String? =
+            gateOf(context, model)?.let { gateReasonText(it, model, context) }
         if (downloadingModel != null) {
             AlertDialog(
                 onDismissRequest = { showDownloadConfirm = null },
@@ -1240,12 +1223,10 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                                     }
                                     return@ModelCard
                                 }
-                                if (!Model.isDeviceSupported() && !model.runOnCpu && !model.isCustom) {
-                                    scope.launch {
-                                        snackbarHostState.showSnackbar(msgUnsupportNpu)
-                                    }
-                                    return@ModelCard
-                                }
+                                // et.18: a device-locked model still opens the
+                                // download dialog, which shows the exact gate
+                                // reason (32-bit / NPU generation / RAM / space)
+                                // instead of downloading.
                                 if (isSelectionMode) {
                                     if (model.isDownloaded) {
                                         selectedModels = if (selectedModels.contains(model)) {
@@ -2249,6 +2230,48 @@ fun TabPageIndicator(pageCount: Int, currentPage: Int, modifier: Modifier = Modi
 /** Formats a byte count as GB (decimal), shared by download gate dialogs. */
 private fun gbSize(bytes: Long): String = "%.0f GB".format(bytes / 1_000_000_000.0)
 
+/** Localized human-readable text for a device gate reason code. */
+@Composable
+private fun gateReasonText(
+    reason: String,
+    model: Model,
+    context: Context,
+): String = when (reason) {
+    io.github.xororz.localdream.utils.DeviceCapabilities.REASON_ABI ->
+        stringResource(R.string.gate_abi)
+    io.github.xororz.localdream.utils.DeviceCapabilities.REASON_ANDROID ->
+        stringResource(R.string.gate_android)
+    io.github.xororz.localdream.utils.DeviceCapabilities.REASON_NPU_DIT ->
+        stringResource(R.string.gate_npu_dit)
+    io.github.xororz.localdream.utils.DeviceCapabilities.REASON_NPU_SDXL ->
+        stringResource(R.string.gate_npu_sdxl)
+    io.github.xororz.localdream.utils.DeviceCapabilities.REASON_RAM ->
+        stringResource(
+            R.string.gate_ram,
+            gbSize(model.ramRequiredBytes),
+            gbSize(io.github.xororz.localdream.utils.DeviceCapabilities.totalRamBytes(context)),
+        )
+    io.github.xororz.localdream.utils.DeviceCapabilities.REASON_STORAGE ->
+        stringResource(
+            R.string.gate_storage,
+            gbSize(model.storageRequiredBytes),
+            gbSize(io.github.xororz.localdream.utils.DeviceCapabilities.freeStorageBytes(context)),
+        )
+    else -> stringResource(R.string.download_block_unsupported)
+}
+
+/** Machine gate reason for a non-CPU model on this device, or null if usable. */
+private fun gateOf(context: Context, model: Model): String? {
+    if (model.runOnCpu) return null
+    return io.github.xororz.localdream.utils.DeviceCapabilities.gateReason(
+        context = context,
+        isDit = model.isDit,
+        isSdxl = model.isSdxl && !model.runOnCpu,
+        ramRequiredBytes = model.ramRequiredBytes,
+        storageRequiredBytes = model.storageRequiredBytes,
+    )
+}
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun ModelCard(
@@ -2260,6 +2283,13 @@ fun ModelCard(
     modifier: Modifier = Modifier,
     isPinned: Boolean = false,
 ) {
+    val cardContext = LocalContext.current
+    // et.18: a model this device cannot run is still shown, but flagged with a
+    // lock and the precise requirement; tapping it opens the gate dialog.
+    val lockReason = remember(model.id, model.isDownloaded) {
+        if (model.isDownloaded) null else gateOf(cardContext, model)
+    }
+    val isLocked = lockReason != null
     val isDisabledInSelection = !model.isDownloaded && isSelectionMode
 
     val elevation by animateFloatAsState(
@@ -2320,21 +2350,29 @@ fun ModelCard(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(8.dp),
-                containerColor = if (model.runOnCpu) {
-                    MaterialTheme.colorScheme.tertiaryContainer
-                } else {
-                    MaterialTheme.colorScheme.primaryContainer
+                containerColor = when {
+                    isLocked -> MaterialTheme.colorScheme.errorContainer
+                    model.runOnCpu -> MaterialTheme.colorScheme.tertiaryContainer
+                    else -> MaterialTheme.colorScheme.primaryContainer
                 },
-                contentColor = if (model.runOnCpu) {
-                    MaterialTheme.colorScheme.onTertiaryContainer
-                } else {
-                    MaterialTheme.colorScheme.onPrimaryContainer
+                contentColor = when {
+                    isLocked -> MaterialTheme.colorScheme.onErrorContainer
+                    model.runOnCpu -> MaterialTheme.colorScheme.onTertiaryContainer
+                    else -> MaterialTheme.colorScheme.onPrimaryContainer
                 },
             ) {
-                Text(
-                    text = if (model.runOnCpu) "CPU" else "NPU",
-                    style = MaterialTheme.typography.labelSmall,
-                )
+                if (isLocked) {
+                    Icon(
+                        imageVector = Icons.Default.Lock,
+                        contentDescription = stringResource(R.string.gate_locked),
+                        modifier = Modifier.size(12.dp),
+                    )
+                } else {
+                    Text(
+                        text = if (model.runOnCpu) "CPU" else "NPU",
+                        style = MaterialTheme.typography.labelSmall,
+                    )
+                }
             }
 
             Column(
@@ -2370,6 +2408,16 @@ fun ModelCard(
                     overflow = TextOverflow.Ellipsis,
                     color = secondaryContent,
                 )
+                if (isLocked) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = gateReasonText(lockReason!!, model, cardContext),
+                        style = MaterialTheme.typography.labelSmall,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Row(
@@ -2430,11 +2478,19 @@ fun ModelCard(
                         }
 
                         else -> {
-                            InfoChip(
-                                icon = Icons.Default.CloudDownload,
-                                label = stringResource(R.string.download),
-                                color = secondaryContent,
-                            )
+                            if (isLocked) {
+                                InfoChip(
+                                    icon = Icons.Default.Lock,
+                                    label = stringResource(R.string.gate_locked),
+                                    color = MaterialTheme.colorScheme.error,
+                                )
+                            } else {
+                                InfoChip(
+                                    icon = Icons.Default.CloudDownload,
+                                    label = stringResource(R.string.download),
+                                    color = secondaryContent,
+                                )
+                            }
                         }
                     }
                 }

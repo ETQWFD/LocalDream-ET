@@ -105,7 +105,15 @@
     <string name="size_link_convert">链接导入 + 转换</string>
     <string name="download_block_title">本手机无法运行</string>
     <string name="download_block_unsupported">该模型需要更新的设备（arm64-v8a + 骁龙 8 Gen3 / 8 至尊版级别 NPU、Android 12 以上）。你的手机硬件不支持，已阻止下载以免白白占用空间。请改用 SD1.5 模型——它们在 32 位/64 位 CPU 上都能运行。</string>
-    <string name="download_block_lowram">该模型运行约需 %s 内存，但本机总内存约 %s，运行时很可能被系统强制结束。请先清理内存，或改用 SD1.5 模型。</string>
+    <string name="download_block_lowram">该模型运行约需 %1\$s 内存，但本机总内存约 %2\$s，运行时很可能被系统强制结束。请先清理内存，或改用 SD1.5 模型。</string>
+    <string name="gate_locked">受设备限制</string>
+    <string name="gate_abi">需要 64 位手机；本机为 32 位，无法加载 NPU 引擎。</string>
+    <string name="gate_android">需要 Android 12 及以上系统。</string>
+    <string name="gate_npu_dit">需要骁龙 8 至尊版（SM8750）及以上 NPU、64 位、Android 12+。</string>
+    <string name="gate_npu_sdxl">需要骁龙 8 Gen3（SM8650）及以上 NPU。</string>
+    <string name="gate_ram">运行内存不足：约需 %1$s，本机总内存 %2$s。</string>
+    <string name="gate_storage">存储空间不足：需 %1$s，仅剩 %2$s。</string>
+    <string name="download_block_lowstorage">该模型约需 %1\$s 剩余存储空间，但模型目录所在空间仅剩 %2\$s。请先清理/移出文件腾出空间再下载。</string>
     <string name="download_model">下载模型</string>
     <string name="download_model_hint">确定要下载 %s 吗？模型较大，建议使用WiFi网络下载。下载过程请勿退出应用程序。\n\n我们目前对所有高通芯片开放NPU模型下载，如果你的芯片较旧，可能无法运行</string>
     <string name="download_done">模型下载完成</string>

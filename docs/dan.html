@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Local Dream ET · 站点数据后台</title>
+<link rel="icon" href="icon.png" />
+<meta name="robots" content="noindex,nofollow" />
+<style>
+  :root{--bg:#0b1117;--card:#141e29;--line:#22303e;--txt:#e8eef4;--mut:#9fb0c0;--acc:#2dd4bf;--acc2:#38bdf8;--warn:#fbbf24;--bad:#f87171;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;
+    background:radial-gradient(1000px 500px at 80% -10%,rgba(45,212,191,.12),transparent 60%),var(--bg);
+    color:var(--txt);line-height:1.6;padding:26px 16px 60px;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:960px;margin:0 auto}
+  .top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:20px}
+  .top img{width:38px;height:38px;border-radius:10px}
+  h1{font-size:22px;font-weight:800}
+  .sub{color:var(--mut);font-size:13px}
+  .spacer{margin-left:auto}
+  a.back,.btn{color:#06281f;background:linear-gradient(90deg,var(--acc),var(--acc2));
+    padding:8px 14px;border-radius:999px;font-weight:700;font-size:13px;border:0;cursor:pointer;text-decoration:none;display:inline-block}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin:18px 0 26px}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .stat .k{color:var(--mut);font-size:13px;margin-bottom:8px}
+  .stat .v{font-size:32px;font-weight:800;letter-spacing:.5px}
+  .stat .v.acc{color:var(--acc)} .stat .v.b2{color:var(--acc2)} .stat .v.w{color:var(--warn)}
+  .stat .note{color:var(--mut);font-size:11px;margin-top:6px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:18px}
+  .card h2{font-size:16px;margin-bottom:4px}
+  .card .hint{color:var(--mut);font-size:12px;margin-bottom:12px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{text-align:left;padding:9px 8px;border-bottom:1px solid var(--line)}
+  th{color:var(--mut);font-weight:600;font-size:12px}
+  td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+  tr:last-child td{border-bottom:0}
+  .tag{color:var(--acc2);font-weight:700}
+  .pill{font-size:11px;padding:2px 8px;border-radius:999px;background:#1d2c3b;color:var(--mut)}
+  .err{color:var(--bad);font-size:13px}
+  .muted{color:var(--mut)}
+  .loading{color:var(--mut);font-size:13px}
+  .updated{font-size:12px;color:var(--mut)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <img src="icon.png" alt="" />
+    <div>
+      <h1>Local Dream ET · 站点数据后台</h1>
+      <div class="sub">官网访问量 · 下载点击 · GitHub 真实下载次数（ET）</div>
+    </div>
+    <div class="spacer"></div>
+    <a class="back" href="index.html">← 返回官网</a>
+    <button class="btn" id="refresh">刷新数据</button>
+  </div>
+
+  <div class="grid">
+    <div class="stat"><div class="k">官网累计访问量</div><div class="v acc" id="visits">—</div><div class="note">每次打开首页计数（Abacus 计数器）</div></div>
+    <div class="stat"><div class="k">下载按钮点击</div><div class="v b2" id="clicks">—</div><div class="note">点击 APK / EXE / ZIP 下载按钮次数</div></div>
+    <div class="stat"><div class="k">GitHub 真实下载总量</div><div class="v w" id="ghTotal">—</div><div class="note">Releases 各资产 download_count 合计</div></div>
+    <div class="stat"><div class="k">发布版本数</div><div class="v" id="relCount">—</div><div class="note">GitHub Releases 数量</div></div>
+  </div>
+
+  <div class="card">
+    <h2>各版本 / 各文件真实下载次数</h2>
+    <div class="hint">数据直接来自 GitHub 官方 Releases API（download_count 为 GitHub 统计，无法伪造）；浏览器匿名读取，偶发限流时稍后刷新即可。</div>
+    <div id="ghBody"><span class="loading">正在从 GitHub 读取…</span></div>
+  </div>
+
+  <p class="updated" id="updated"></p>
+  <p class="muted" style="font-size:12px;margin-top:8px">说明：访问量与下载点击由静态站埋点的第三方计数服务统计（去重能力有限，反映量级）；“GitHub 真实下载总量”为实际文件下载次数，以该值为准。</p>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var REPO = "ETQWFD/LocalDream-ET";
+  function num(id){ var el=document.getElementById(id); return function(v){ el.textContent = (v==null?"—":Number(v).toLocaleString("zh-CN")); }; }
+  var setVisits=num("visits"), setClicks=num("clicks"), setTotal=num("ghTotal"), setRels=num("relCount");
+
+  function getJSON(url){
+    return fetch(url,{cache:"no-store"}).then(function(r){ if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); });
+  }
+  function counter(key){
+    return getJSON("https://abacus.jasoncameron.dev/get/etld-et/"+key)
+      .then(function(j){ return (j && typeof j.value!=="undefined") ? j.value : null; })
+      .catch(function(){ return null; });
+  }
+  function fmtBytes(b){
+    if(b==null) return "";
+    if(b>=1073741824) return (b/1073741824).toFixed(2)+" GB";
+    if(b>=1048576) return (b/1048576).toFixed(1)+" MB";
+    return b+" B";
+  }
+  function fmtDate(s){ try{ return new Date(s).toLocaleString("zh-CN"); }catch(e){ return s||""; } }
+  function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];}); }
+
+  function load(){
+    document.getElementById("ghBody").innerHTML='<span class="loading">正在从 GitHub 读取…</span>';
+    counter("sitevisits").then(setVisits);
+    counter("dlclicks").then(setClicks);
+
+    getJSON("https://api.github.com/repos/"+REPO+"/releases?per_page=100")
+      .then(function(list){
+        var total=0, rels=0, rows=[];
+        list.forEach(function(rel){
+          if(rel.draft) return;
+          rels++;
+          (rel.assets||[]).forEach(function(a){ total += (a.download_count||0); });
+          var assets = rel.assets||[];
+          if(!assets.length){
+            rows.push('<tr><td><span class="tag">'+esc(rel.tag_name)+'</span></td>'+
+              '<td class="muted">（无附件，仅源码）</td><td class="n">—</td><td class="n muted">'+esc(fmtDate(rel.published_at))+'</td></tr>');
+          } else {
+            assets.forEach(function(a,i){
+              rows.push('<tr>'+
+                (i===0?'<td rowspan="'+assets.length+'"><span class="tag">'+esc(rel.tag_name)+'</span>'+(rel.prerelease?' <span class="pill">预览</span>':'')+'</td>':'')+
+                '<td>'+esc(a.name)+'</td>'+
+                '<td class="n"><b>'+Number(a.download_count||0).toLocaleString("zh-CN")+'</b></td>'+
+                '<td class="n muted">'+fmtBytes(a.size)+' · '+esc(fmtDate(a.updated_at))+'</td>'+
+              '</tr>');
+            });
+          }
+        });
+        setTotal(total); setRels(rels);
+        document.getElementById("ghBody").innerHTML =
+          '<table><thead><tr><th>版本</th><th>文件</th><th class="n">真实下载次数</th><th class="n">大小 / 更新时间</th></tr></thead><tbody>'+
+          rows.join("")+'</tbody></table>';
+      })
+      .catch(function(e){
+        document.getElementById("ghBody").innerHTML =
+          '<span class="err">GitHub 数据读取失败：'+esc(e.message)+'（可能触发匿名限流，稍后点“刷新数据”重试）。下载总量仍可在 GitHub Releases 页面核对。</span>';
+      });
+    document.getElementById("updated").textContent = "更新于 " + new Date().toLocaleString("zh-CN");
+  }
+  document.getElementById("refresh").addEventListener("click", load);
+  load();
+})();
+</script>
+</body>
+</html>
