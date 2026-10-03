@@ -473,6 +473,8 @@
     <string name="flux2_klein_description">4B DiT，4 步。</string>
     <string name="qwen_image_2_1_description">Q4_0 DiT + Qwen3-VL-8B，20 步。</string>
     <string name="qwen_image_2_1_uc_description">无审查(UC) Q4_0 DiT + Qwen3-VL-8B，20 步。</string>
+    <string name="qwen_image_2_1_q3_description">最小千问 Image 2.1：Q3_K DiT（整包约 9.9GB）+ Qwen3-VL-8B，需骁龙8至尊版 NPU，20 步。</string>
+    <string name="qwen_image_2_1_uc_q5_description">无审查高画质 Q5_K_M DiT（整包约 11.9GB）+ Qwen3-VL-8B，需骁龙8至尊版 NPU，20 步。</string>
     <string name="flux_edit">编辑</string>
     <string name="flux_base_image">底图</string>
     <string name="flux_reference_images">参考图</string>

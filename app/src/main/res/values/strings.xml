@@ -483,6 +483,8 @@
     <string name="flux2_klein_description">4B DiT, 4 steps.</string>
     <string name="qwen_image_2_1_description">Q4_0 DiT with Qwen3-VL-8B, 20 steps.</string>
     <string name="qwen_image_2_1_uc_description">Uncensored Q4_0 DiT with Qwen3-VL-8B, 20 steps.</string>
+    <string name="qwen_image_2_1_q3_description">Smallest Qwen Image 2.1: Q3_K DiT (~9.9GB package) with Qwen3-VL-8B, needs SD8 Elite NPU, 20 steps.</string>
+    <string name="qwen_image_2_1_uc_q5_description">Uncensored higher-quality Q5_K_M DiT (~11.9GB package) with Qwen3-VL-8B, needs SD8 Elite NPU, 20 steps.</string>
     <string name="flux_edit">Edit</string>
     <string name="flux_base_image">Base</string>
     <string name="flux_reference_images">Reference</string>

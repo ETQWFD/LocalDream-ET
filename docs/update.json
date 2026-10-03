@@ -1,7 +1,7 @@
 {
-  "versionCode": 92,
-  "versionName": "3.0.0-et.18",
+  "versionCode": 93,
+  "versionName": "3.0.0-et.19",
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
-  "size": 148607527,
-  "releaseNotes": "ET 定制版 v3.0.0-et.18（含 et.17）\n• NPU 模型全机型可见、按真机能力加锁：修复 32 位手机 NPU 页空白/像消失；Illustrious v16、千问、Z-Image 现在全部列出，不支持的机型显示锁标和具体原因（32位/NPU代际/Android版本/内存/存储空间），点击下载会明确拦截，不再白下几个 GB。\n• Illustrious V16 加入 NPU 列表：官方 SDXL-QNN 预转换包（含 DMD2 加速版），需骁龙8 Gen3(SM8650)+arm64+Android12；32 位物理不可运行，故在 32 位锁定并说明。\n• 应用更新直调系统安装器（PackageInstaller 会话）：下载完直接进系统“打包安装程序”确认界面，不再跳转 MT 等第三方文件管理器；无安装权限先引导“允许安装未知应用”，返回自动续装。\n• 大模型下载前新增存储空间预检：千问约13GB、Z-Image 10GB、Klein 8GB，空间不足直接阻止并提示，避免下到一半磁盘满。\n• 已核对上游 xororz/local-dream 最新更新：上游把千问改为更大的 FP8(整包约13.7GB)且需重编 NPU 引擎，本版保留能跑的最小千问 UC Q4_0，ET 其余定制不变。\n• ET 定制代码改为 MIT License（第三方许可保留于 NOTICE）；官网新增数据后台。\n• 千问 Qwen Image 2.1 需骁龙8至尊版(SM8750)+arm64+Android12；32 位请用内置数十个 SD1.5 或从链接导入。开发者：ET。"
+  "size": 148610879,
+  "releaseNotes": "ET 定制版 v3.0.0-et.19\n• 千问 Qwen Image 2.1 补齐为 4 个可下载模型：新增 Q3_K 最小版（DiT 3.27GB、整包约 9.9GB，千问里最省空间/最快）与 UC Q5_K_M 高画质无审查版（DiT 5.22GB、整包约 11.9GB）；连同原有标准版 Q4_0、无审查 UC Q4_0 共 4 个。四者共用 Qwen3-VL-8B 文本编码器/VAE，仅 DiT 权重不同，各自独立目录与断点续传。\n• 千问仍需骁龙8至尊版(SM8750)及以上 64 位 + Android12；32 位列表可见但按机型锁定并说明（引擎仅 arm64，属物理限制），非假按钮。\n• 沿用 et.18：NPU 模型全机型可见并按真机能力加锁、Illustrious v16 入列、应用更新直调系统打包安装器（不跳第三方文件管理器）、大模型下载前存储空间预检、MIT License、官网数据后台。\n• 32 位请用内置数十个 SD1.5 或从链接导入。开发者：ET。"
 }

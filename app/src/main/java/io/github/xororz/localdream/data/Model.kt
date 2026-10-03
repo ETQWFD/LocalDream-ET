@@ -342,6 +342,34 @@ data class Model(
                 "qwen_image_2.1_vae_bf16.safetensors|vae.safetensors",
         )
 
+        // Smallest stock Qwen Image 2.1 DiT (Q3_K, 3.27GB). Same text encoder /
+        // vision projector / tokenizer / VAE, same "qwen21" pipeline.
+        val QWEN_IMAGE_2_1_Q3_PACKAGE_FILES = listOf(
+            "leejet/Qwen-Image-2.1-GGUF/resolve/main/" +
+                "qwen_image_2.1-Q3_K.gguf|dit.gguf",
+            "bartowski/Qwen_Qwen3-VL-8B-Instruct-GGUF/resolve/main/" +
+                "Qwen_Qwen3-VL-8B-Instruct-Q4_0.gguf|llm.gguf",
+            "bartowski/Qwen_Qwen3-VL-8B-Instruct-GGUF/resolve/main/" +
+                "mmproj-Qwen_Qwen3-VL-8B-Instruct-f16.gguf|llm_vision.gguf",
+            "Qwen/Qwen3-VL-8B-Instruct/resolve/main/tokenizer.json|tokenizer.json",
+            "Comfy-Org/Qwen-Image-2.1/resolve/main/vae/" +
+                "qwen_image_2.1_vae_bf16.safetensors|vae.safetensors",
+        )
+
+        // Higher-quality uncensored DiT (UC Q5_K_M, 5.22GB); support files
+        // identical to the other Qwen 2.1 packages.
+        val QWEN_IMAGE_2_1_UC_Q5_PACKAGE_FILES = listOf(
+            "abenzerps/Qwen-Image-2.1-Uncensored-GGUF/resolve/main/" +
+                "qwen-image-2.1-UC-Q5_K_M.gguf|dit.gguf",
+            "bartowski/Qwen_Qwen3-VL-8B-Instruct-GGUF/resolve/main/" +
+                "Qwen_Qwen3-VL-8B-Instruct-Q4_0.gguf|llm.gguf",
+            "bartowski/Qwen_Qwen3-VL-8B-Instruct-GGUF/resolve/main/" +
+                "mmproj-Qwen_Qwen3-VL-8B-Instruct-f16.gguf|llm_vision.gguf",
+            "Qwen/Qwen3-VL-8B-Instruct/resolve/main/tokenizer.json|tokenizer.json",
+            "Comfy-Org/Qwen-Image-2.1/resolve/main/vae/" +
+                "qwen_image_2.1_vae_bf16.safetensors|vae.safetensors",
+        )
+
         fun isDeviceSupported(): Boolean {
             val soc = getDeviceSoc()
             return getChipsetSuffix(soc) != null
@@ -685,6 +713,8 @@ class ModelRepository private constructor(private val context: Context) {
             add(createFlux2KleinModel())
             add(createQwenImage21Model())
             add(createQwenImage21UcModel())
+            add(createQwenImage21Q3Model())
+            add(createQwenImage21UcQ5Model())
             add(createIllustriousV16Model())
             add(createIllustriousV16Dmd2Model())
             add(createCyberRealisticV10Model())
@@ -892,6 +922,68 @@ class ModelRepository private constructor(private val context: Context) {
             ditKind = "qwen21",
             ramRequiredBytes = 12L * 1024 * 1024 * 1024,
             storageRequiredBytes = 13L * 1000 * 1000 * 1000,
+        )
+    }
+
+    private fun createQwenImage21Q3Model(): Model {
+        val id = "qwen_image_2_1_q3"
+        return Model(
+            id = id,
+            name = "Qwen Image 2.1 Q3_K",
+            description = context.getString(R.string.qwen_image_2_1_q3_description),
+            baseUrl = baseUrl,
+            packageFiles = Model.QWEN_IMAGE_2_1_Q3_PACKAGE_FILES,
+            generationSize = 1024,
+            approximateSize = "9.9GB",
+            isDownloaded = Model.isDitPackageDownloaded(
+                context,
+                id,
+                "qwen21",
+                Model.QWEN_IMAGE_2_1_Q3_PACKAGE_FILES,
+            ),
+            codeDefaults = ModelConfig(
+                prompt = "a lovely cat holding a sign that says 'Qwen Image 2.1 Q3',",
+                negativePrompt = "",
+                steps = 20f,
+                cfg = 1f,
+                scheduler = "euler",
+                denoiseStrength = 1f,
+            ),
+            runOnCpu = false,
+            ditKind = "qwen21",
+            ramRequiredBytes = 12L * 1024 * 1024 * 1024,
+            storageRequiredBytes = 12L * 1000 * 1000 * 1000,
+        )
+    }
+
+    private fun createQwenImage21UcQ5Model(): Model {
+        val id = "qwen_image_2_1_uc_q5"
+        return Model(
+            id = id,
+            name = "Qwen Image 2.1 UC Q5_K_M",
+            description = context.getString(R.string.qwen_image_2_1_uc_q5_description),
+            baseUrl = baseUrl,
+            packageFiles = Model.QWEN_IMAGE_2_1_UC_Q5_PACKAGE_FILES,
+            generationSize = 1024,
+            approximateSize = "11.9GB",
+            isDownloaded = Model.isDitPackageDownloaded(
+                context,
+                id,
+                "qwen21",
+                Model.QWEN_IMAGE_2_1_UC_Q5_PACKAGE_FILES,
+            ),
+            codeDefaults = ModelConfig(
+                prompt = "a lovely cat holding a sign that says 'Qwen Image 2.1 UC Q5',",
+                negativePrompt = "",
+                steps = 20f,
+                cfg = 1f,
+                scheduler = "euler",
+                denoiseStrength = 1f,
+            ),
+            runOnCpu = false,
+            ditKind = "qwen21",
+            ramRequiredBytes = 12L * 1024 * 1024 * 1024,
+            storageRequiredBytes = 14L * 1000 * 1000 * 1000,
         )
     }
 
