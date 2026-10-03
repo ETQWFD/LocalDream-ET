@@ -24,3 +24,9 @@ app/src/main/assets/ditlibs
 # ET release signing (do not commit)
 et-release.jks
 release-keystore.properties
+
+# Large build artifacts / backups (do not commit)
+*.apk
+*.bak
+*.bak_*
+docs/*.apk

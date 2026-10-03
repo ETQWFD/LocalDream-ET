@@ -48,9 +48,11 @@ class BackgroundGenerationService : Service() {
             PowerManager.PARTIAL_WAKE_LOCK,
             "LocalDreamET:generation",
         ).also {
-            // Generous ceiling; it is always released in onDestroy. Guards
-            // against a leaked lock if the process is somehow left alive.
-            runCatching { it.acquire(30 * 60 * 1000L) }
+            // Long ceiling: low-end 32-bit phones can take 20-60 minutes for
+            // one picture, and a 30-minute lock previously expired mid-run so
+            // the CPU slept and the generation was killed. Always released in
+            // onDestroy; the OS also releases it if the process is removed.
+            runCatching { it.acquire(6 * 60 * 60 * 1000L) }
         }
     }
 

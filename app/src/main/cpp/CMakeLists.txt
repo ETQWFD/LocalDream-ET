@@ -158,6 +158,12 @@ endif()
 
 # executable
 add_executable(${PROJECT_NAME} ${SOURCES})
+# main.cpp is a very large xtensor-heavy translation unit; compiling it at -O3
+# can exceed the memory available on small build hosts (clang gets OOM-killed).
+# The hot diffusion kernels live in MNN (kept at -O3), so lowering only this
+# glue/server TU to -O1 does not affect image-generation speed.
+set_source_files_properties("${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp"
+    PROPERTIES COMPILE_OPTIONS "-O1")
 if(NOT QNN_DEBUG_ENABLE)
     target_link_options(${PROJECT_NAME} PRIVATE "-Wl,-s")
 endif()

@@ -1,7 +1,7 @@
 {
-  "versionCode": 93,
-  "versionName": "3.0.0-et.19",
+  "versionCode": 94,
+  "versionName": "3.0.0-et.20",
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
-  "size": 148610879,
-  "releaseNotes": "ET 定制版 v3.0.0-et.19\n• 千问 Qwen Image 2.1 补齐为 4 个可下载模型：新增 Q3_K 最小版（DiT 3.27GB、整包约 9.9GB，千问里最省空间/最快）与 UC Q5_K_M 高画质无审查版（DiT 5.22GB、整包约 11.9GB）；连同原有标准版 Q4_0、无审查 UC Q4_0 共 4 个。四者共用 Qwen3-VL-8B 文本编码器/VAE，仅 DiT 权重不同，各自独立目录与断点续传。\n• 千问仍需骁龙8至尊版(SM8750)及以上 64 位 + Android12；32 位列表可见但按机型锁定并说明（引擎仅 arm64，属物理限制），非假按钮。\n• 沿用 et.18：NPU 模型全机型可见并按真机能力加锁、Illustrious v16 入列、应用更新直调系统打包安装器（不跳第三方文件管理器）、大模型下载前存储空间预检、MIT License、官网数据后台。\n• 32 位请用内置数十个 SD1.5 或从链接导入。开发者：ET。"
+  "size": 148432287,
+  "releaseNotes": "ET 定制版 v3.0.0-et.20\n• 修复 32 位与 64 位手机本机转换模型时闪退/弹 libc++abi 框（std::length_error: vector / abort_message）：根因是 safetensors 文件头长度未做校验（下到错误页、文件截断或实为 .ckpt 时会把前 8 字节当成超大头部直接申请内存）以及大张量元素数用 int 累乘溢出。现改为文件头长度+文件实际大小双重校验、元素数按 64 位计算、32 位地址空间安全上限拦截、逐张量转换前释放上一块内存（峰值内存只保留一个张量），转换入口统一捕获 length_error/bad_alloc 等异常并返回可读失败原因，不再闪退。\n• 32 位（armeabi-v7a）与 64 位（arm64-v8a）原生引擎均已用上述修复重新编译并随包内置。\n• 修复锁屏/切后台生成图片中途被系统结束：生成唤醒锁由 30 分钟延长到 6 小时（老旧手机单张出图约 20–60 分钟），结束时自动释放。\n• 数据后台入口已从官网隐藏，仅管理员直链访问。\n• 沿用 et.19：千问 Qwen Image 2.1 共 4 个量化版本（Q3_K/Q4_0/UC Q4_0/UC Q5_K_M，需骁龙8至尊版 SM8750 及以上 64 位+Android12，32 位按机型锁定说明）；NPU 模型全机型可见并按真机能力加锁、Illustrious v16、更新直调系统打包安装器、大模型存储预检、MIT License。\n• 32 位请使用内置 SD1.5 模型或链接导入。开发者：ET。"
 }

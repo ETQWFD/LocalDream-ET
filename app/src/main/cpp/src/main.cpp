@@ -5,6 +5,8 @@
 #include <iostream>
 #include <memory>
 #include <mutex>
+#include <new>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -799,7 +801,24 @@ int main(int argc, char **argv) {
   ServerOptions opts = processCommandLine(argc, argv);
 
   if (opts.convert_mode) {
-    runConvertMode(opts);
+    try {
+      runConvertMode(opts);
+    } catch (const std::length_error &e) {
+      std::cerr << "CONVERT_FAILED: allocation length error: " << e.what()
+                << " (model file is likely corrupted or too large for this "
+                   "32-bit device)"
+                << std::endl;
+      return EXIT_FAILURE;
+    } catch (const std::bad_alloc &e) {
+      std::cerr << "CONVERT_FAILED: out of memory: "
+                << (e.what() ? e.what() : "bad_alloc")
+                << " (close background apps or use a smaller SD1.5 model)"
+                << std::endl;
+      return EXIT_FAILURE;
+    } catch (const std::exception &e) {
+      std::cerr << "CONVERT_FAILED: " << e.what() << std::endl;
+      return EXIT_FAILURE;
+    }
     return EXIT_SUCCESS;
   }
 
