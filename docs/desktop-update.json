@@ -1,6 +1,6 @@
 {
-  "versionCode": 5,
-  "version": "3.0.0",
-  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/desktop-v3.0.0/LocalDream-ET-Setup-3.0.0.exe",
-  "notes": "电脑版 v3.0.0：界面重构为与手机同款（窄幅竖向窗口、CPU Models / NPU Models 双标签、搜索框、模型卡片、下载后点卡片进入生成页），设置与手机一致（简体中文 / English / 繁體中文 三语、深浅主题、图片比例、步数、CFG、采样器、负向提示词、图生图、检测更新）。模型共 52 个：CPU 页 37 个标准 SD1.5 可真实下载并用内置 stable-diffusion.cpp CPU 引擎本地出图（国内镜像优先、断点续传，全部下载链接已逐一实测可达，修复旧版 4 个失效源）；NPU 页 15 个手机骁龙 NPU/QNN 专属模型在电脑 CPU 引擎上不可运行，如实加锁并说明原因（不放假按钮）。模型下载到程序当前目录 models 文件夹。全链路 UTF-8 修复中文/繁体乱码。EXE 与安装程序版权归 ET，按用户安装、无需管理员。开发者：ET，MIT License。"
+  "versionCode": 6,
+  "version": "3.0.1",
+  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/desktop-v3.0.1/LocalDream-ET-Setup-3.0.1.exe",
+  "notes": "电脑版 v3.0.1：① 与手机语义一致的“下载→校验/收尾→就绪”状态机——下满后进入独立“校验中”阶段，真实解析 safetensors 文件头与张量偏移（要求文件大小与头自洽，拒绝错误页/截断），落盘后原子写入就绪标记；只有校验通过的模型才显示“已下载/开始”并能进入生成，半成品可续传、坏文件自动清理重试，不做假完成。② 统一数据目录到程序当前目录：models/<模型>/、outputs/ 成品图、tmp/ 临时与引擎日志、config/ 设置（旧版 output 与根目录配置首次启动自动迁移），设置中可一键打开模型/成品目录。③ 界面更贴近手机：深色背景+粉色强调、圆角卡片、统一字体、CPU/NPU 标签高亮；设置页改为完整可滚动，语言/主题/比例/步数/CFG/采样器/负向提示/图生图强度/种子/数量/镜像源/目录/检测更新/关于全部可见不被裁切。④ 窗口可拖拽缩放、可最大化、支持全屏并记住尺寸，列表/生成/设置三视图自适应不错位。模型仍为 52 个：CPU 37 个标准 SD1.5 可用内置 stable-diffusion.cpp CPU 引擎本地出图，NPU 15 个按电脑真实硬件能力如实加锁并写明原因（当前为 CPU 引擎，不放假按钮）。延续全链路 UTF-8 无乱码；EXE 与安装程序版权归 ET，按用户安装、无需管理员。真实出图与 Windows 下下载校验需 Windows 真机验收。开发者：ET，MIT License。"
 }

@@ -44,7 +44,7 @@
 </div></header>
 <div class="wrap">
   <h1>Local Dream ET 官方使用文档</h1>
-  <p class="sub">安卓端本地 AI 绘画（Stable Diffusion / Qwen Image），离线出图、无云端上传。开发者：ET · 当前手机版 v3.0.0-et.22（build 96，包名 etc.github.ai）：修复 AI 不按中文提示词生成（联网翻译超时减半、失败安全回退、英文/负向提示词逐字透传不替换原文）、成品保存相册改为无损 PNG、过程预览降采样并节流以减少卡顿；电脑版已重构到 v3.0.0（与手机同款界面、三语、52 个模型、下载到当前目录 models）。et.21 起 Illustrious/千问进入 CPU 列表并按 32/64 位机型解锁、SD1.5 GPU(OpenCL) 默认开；et.20 修复 32/64 位本机转换闪退与锁屏后台中断；et.19 起千问 Qwen Image 2.1 共 4 个量化版本；NPU 按机型加锁、Illustrious v16、系统安装器、MIT。</p>
+  <p class="sub">安卓端本地 AI 绘画（Stable Diffusion / Qwen Image），离线出图、无云端上传。开发者：ET · 当前手机版 v3.0.0-et.23（build 97，包名 etc.github.ai）：修复“需本机转换模型”下载后转换假完成/卡死——成功以“转换进程退出码为 0＋6 个输出文件齐全且字节数与清单一致”为唯一标准，转换有真实张量级进度，进度到 100% 后显示“正在收尾写入”，失败保存 convert_*.log 并可重试、重启不误判；并保留 et.22 的提示词逐字透传/安全回退、相册无损 PNG、预览降采样节流、SD1.5 GPU(OpenCL) 默认。电脑版已更新到 v3.0.1（与手机同款界面、三语、52 个模型、下载→真实校验→就绪状态机、统一 models/outputs/tmp/config 目录、设置可滚动、窗口可缩放最大化）。et.21 起 Illustrious/千问进入 CPU 列表并按 32/64 位机型解锁、SD1.5 GPU(OpenCL) 默认开；et.20 修复 32/64 位本机转换闪退与锁屏后台中断；et.19 起千问 Qwen Image 2.1 共 4 个量化版本；NPU 按机型加锁、Illustrious v16、系统安装器、MIT。</p>
 
   <div class="card">
     <strong>快速开始三步：</strong>
@@ -81,7 +81,7 @@
     <ul>
       <li>下载与转换在<strong>前台服务 + 通知栏</strong>进行，切后台、锁屏仍继续，通知栏显示进度。</li>
       <li>支持 HTTP Range 断点续传：断网、杀进程、关机重启后再次点击会接着下，不重头。</li>
-      <li>只有转换成功写出完成标记才算“已下载”，半成品不会被当成可用模型，避免“一用就报错”。</li>
+      <li>et.23 起，转换成功的唯一标准是：转换进程<strong>退出码为 0</strong>、写出完成标记，且 <strong>6 个输出文件（clip/unet/vae_decoder/vae_encoder 权重与 pos_emb/token_emb）都存在、非空、字节数与清单一致</strong>。进度到 100% 后会进入“正在收尾写入”阶段（最后一个大张量落盘较慢，属正常，请勿关闭）；半成品不会被当成可用模型，失败会保存日志并允许重试，重启后也不会把残缺产物误判为已转换。</li>
     </ul>
     <h3>从链接导入任意模型（先检测兼容性，再下载）</h3>
     <p>「CPU Models」页点 <strong>＋ 从链接导入模型</strong>，可添加市面上常见的<strong>单文件 SD1.5（.safetensors）</strong>。可粘贴：Hugging Face 模型页 <code>huggingface.co/作者/仓库</code>、hf-mirror 页/直链、魔搭 ModelScope 页或 FilePath 直链、任意网站的 .safetensors 直链。</p>
@@ -167,7 +167,8 @@
     <h3>下载慢 / 超时</h3><p>把下载源切到「魔搭 ModelScope」；应用更新走多镜像自动选最快；确认网络正常；中断后直接续传即可。</p>
     <h3>后台/锁屏不能生成、发热大</h3><p>et.16 起生成服务持有唤醒锁并使用大堆；请在系统设置允许后台活动。低配机建议步数 15–20、尺寸 384，发热与耗时会明显下降。</p>
     <h3>转换失败 / 退出码 134</h3><p>多为原始权重超过 32 位 2.14GB 寻址上限的旧模型；列表内现有模型均经过文件头校验、32 位可安全转换。若仍报错，把英文报错发开发者。</p>
-    <h3>成品发糊/不听提示词/生成卡顿</h3><p>请升级到 v3.0.0-et.22：相册成品已改无损 PNG、中文翻译失败安全回退且不替换原文、过程预览降采样并节流；出图时保持步数 20 左右、需要大图用放大功能，低配机尺寸用 384 更流畅。</p>
+    <h3>转换卡在最后 / 提示完成却没转好（假完成）</h3><p>请升级到 v3.0.0-et.23：转换有真实张量级进度，进度到 100% 后显示“正在收尾写入”，最后一个大张量与 VAE 落盘本就较慢（长时间无新进度会提示“仍在转换”，不会误杀）；只有退出码为 0 且 6 个输出文件齐全、大小与清单一致才算成功。若失败，应用临时目录下会生成 <code>convert_*.log</code>，把该日志连同机型/SoC/安卓版本发开发者；已下载的源会保留，点重试不会重新下载。</p>
+    <h3>成品发糊/不听提示词/生成卡顿</h3><p>请升级到 v3.0.0-et.23：转换假完成已修，相册成品为无损 PNG、中文翻译失败安全回退且不替换原文、过程预览降采样并节流；出图时保持步数 20 左右、需要大图用放大功能，低配机尺寸用 384 更流畅。转换/出图耗时随分辨率（像素平方）上升、老旧 32 位 CPU 更久，属正常物理开销。</p>
   </div>
 
   <h2>十一、链接</h2>
@@ -175,7 +176,7 @@
     <ul>
       <li>官网首页：<a href="index.html">etqwfd.github.io/LocalDream-ET</a></li>
       <li>仓库 / Release：<a href="https://github.com/ETQWFD/LocalDream-ET">github.com/ETQWFD/LocalDream-ET</a></li>
-      <li>电脑版（Windows x64）v3.0.0 安装包与绿色包见 GitHub Releases 的 <code>desktop-v3.0.0</code>（<code>LocalDream-ET-Setup-3.0.0.exe</code> / <code>LocalDream-ET-Windows-Portable-3.0.0.zip</code>）：界面与手机同款，CPU 页 37 个 SD1.5 可下载本地出图，NPU 页 15 个手机专属模型如实加锁，模型存程序当前目录 <code>models</code>。</li>
+      <li>电脑版（Windows x64）v3.0.1 安装包与绿色包见 GitHub Releases 的 <code>desktop-v3.0.1</code>（<code>LocalDream-ET-Setup-3.0.1.exe</code> / <code>LocalDream-ET-Windows-Portable-3.0.1.zip</code>）：界面与手机同款，下载后真实校验通过才算就绪，数据统一放在程序当前目录 <code>models/ outputs/ tmp/ config/</code>，设置页完整可滚动、窗口可缩放/最大化；CPU 页 37 个 SD1.5 可用内置 stable-diffusion.cpp CPU 引擎本地出图，NPU 页 15 个手机专属模型按电脑真实硬件能力如实加锁。</li>
     </ul>
     <p style="color:var(--mut);margin-top:10px">版权 / 开发者：ET（广东梅州）。应用外壳与安装程序版权归 ET；底层推理引擎遵循其各自开源许可（MNN / stable-diffusion.cpp 等）。</p>
   </div>

@@ -1,7 +1,7 @@
 {
  "app": {
-  "version": "3.0.0",
-  "code": 5,
+  "version": "3.0.1",
+  "code": 6,
   "title": "Local Dream ET"
  },
  "lock_reason": {
@@ -269,6 +269,51 @@
    "zh": "Local Dream ET  电脑版 v3.0.0\n\n开发者 / Developer：ET\nCopyright (C) 2026 ET\n\n本地离线 Stable Diffusion 出图，免费、不上传图片。\n引擎 stable-diffusion.cpp（sd-cli / ggml）\nCopyright (c) 2023 leejet · MIT License。",
    "en": "Local Dream ET  desktop v3.0.0\n\nDeveloper: ET\nCopyright (C) 2026 ET\n\nFully offline local Stable Diffusion, free, no uploads.\nEngine: stable-diffusion.cpp (sd-cli / ggml)\nCopyright (c) 2023 leejet · MIT License.",
    "tw": "Local Dream ET  電腦版 v3.0.0\n\n開發者 / Developer：ET\nCopyright (C) 2026 ET\n\n本機離線 Stable Diffusion 出圖，免費、不上傳圖片。\n引擎 stable-diffusion.cpp（sd-cli / ggml）\nCopyright (c) 2023 leejet · MIT License。"
+  },
+  "validating": {
+   "zh": "校验中…",
+   "en": "Validating…",
+   "tw": "校驗中…"
+  },
+  "mirror_lbl": {
+   "zh": "模型下载源",
+   "en": "Download source",
+   "tw": "模型下載來源"
+  },
+  "mirror_auto": {
+   "zh": "自动(推荐)",
+   "en": "Auto (recommended)",
+   "tw": "自動(推薦)"
+  },
+  "mirror_cn": {
+   "zh": "ModelScope",
+   "en": "ModelScope",
+   "tw": "ModelScope"
+  },
+  "mirror_hf": {
+   "zh": "HuggingFace",
+   "en": "HuggingFace",
+   "tw": "HuggingFace"
+  },
+  "defaults_lbl": {
+   "zh": "生成默认参数",
+   "en": "Generation defaults",
+   "tw": "生成預設參數"
+  },
+  "open_outputs": {
+   "zh": "打开成品目录",
+   "en": "Open outputs",
+   "tw": "開啟成品目錄"
+  },
+  "models_dir_lbl": {
+   "zh": "模型目录",
+   "en": "Models folder",
+   "tw": "模型目錄"
+  },
+  "outputs_dir_lbl": {
+   "zh": "成品目录",
+   "en": "Outputs folder",
+   "tw": "成品目錄"
   }
  },
  "samplers": [

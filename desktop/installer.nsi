@@ -3,11 +3,11 @@ SetCompressor /SOLID lzma
 
 !define APPNAME "Local Dream ET"
 !define COMPANY "ET"
-!define VERSION "3.0.0.0"
-!define VERSIONSTR "3.0.0"
+!define VERSION "3.0.1.0"
+!define VERSIONSTR "3.0.1"
 
 Name "${APPNAME}"
-OutFile "LocalDream-ET-Setup-3.0.0.exe"
+OutFile "LocalDream-ET-Setup-3.0.1.exe"
 ; Per-user install into a writable folder -> models live in the program's own
 ; "models" subfolder (the requested portable layout) and no admin / UAC is needed.
 InstallDir "$LOCALAPPDATA\Programs\${APPNAME}"
@@ -31,21 +31,22 @@ ShowUnInstDetails show
 
 !insertmacro MUI_LANGUAGE "SimpChinese"
 
-VIProductVersion "3.0.0.0"
+VIProductVersion "3.0.1.0"
 VIAddVersionKey /LANG=2052 "CompanyName" "ET"
-VIAddVersionKey /LANG=2052 "FileDescription" "Local Dream ET v3.0.0 Installer"
+VIAddVersionKey /LANG=2052 "FileDescription" "Local Dream ET v3.0.1 Installer"
 VIAddVersionKey /LANG=2052 "LegalCopyright" "Copyright (C) 2026 ET"
 VIAddVersionKey /LANG=2052 "ProductName" "Local Dream ET"
-VIAddVersionKey /LANG=2052 "ProductVersion" "3.0.0.0"
-VIAddVersionKey /LANG=2052 "FileVersion" "3.0.0.0"
+VIAddVersionKey /LANG=2052 "ProductVersion" "3.0.1.0"
+VIAddVersionKey /LANG=2052 "FileVersion" "3.0.1.0"
 
 Section "Local Dream ET" SecCore
   SectionIn RO
   SetOutPath "$INSTDIR"
   File /r "pkg\LocalDreamET\*"
   CreateDirectory "$INSTDIR\models"
-  CreateDirectory "$INSTDIR\output"
+  CreateDirectory "$INSTDIR\outputs"
   CreateDirectory "$INSTDIR\tmp"
+  CreateDirectory "$INSTDIR\config"
   CreateDirectory "$INSTDIR\update"
 
   WriteUninstaller "$INSTDIR\uninstall.exe"

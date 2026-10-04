@@ -1,5 +1,5 @@
 /*
- * Local Dream ET - Windows desktop launcher  (v3.0.0)
+ * Local Dream ET - Windows desktop launcher  (v3.0.1)
  * Developer (开发者): ET   Copyright (C) 2026 ET
  *
  * Pure Win32 C front-end around the official stable-diffusion.cpp engine
@@ -362,6 +362,15 @@ static wchar_t g_livePath[MAX_PATH] = {0};
 #define IDC_OPMODELS 2039
 #define IDC_OPOUT    2040
 #define IDC_ABOUT    2041
+#define IDC_MIRROR0  2050
+#define IDC_MIRROR1  2051
+#define IDC_MIRROR2  2052
+#define IDC_DEF_NEG  2053
+#define IDC_DEF_STEPS 2054
+#define IDC_DEF_CFG  2055
+#define IDC_DEF_COUNT 2056
+#define IDC_DEF_DENOISE 2057
+#define IDC_DEF_SAMPLER 2058
 
 static HWND g_hTabCpu, g_hTabNpu, g_hSearch, g_hList, g_hGear, g_hLStatus;
 static HWND g_hPan[3];
@@ -371,6 +380,10 @@ static HWND g_hBack, g_hRTitle, g_hPrompt, g_hNeg, g_hSteps, g_hCfg, g_hAspect,
             g_hSave, g_hOpnout, g_hRegen, g_hRStatus;
 static HWND g_hSback, g_hLang[3], g_hTheme[2], g_hChkUpd, g_hCleanTmp,
             g_hOpModels, g_hAbout;
+static HWND g_hMirror[3], g_hDefNeg, g_hDefSteps, g_hDefCfg, g_hDefCount,
+            g_hDefDenoise, g_hDefSampler;
+static HWND g_hSetContent;   /* scrollable inner content window of settings */
+static int  g_setScroll = 0, g_setContentH = 0;
 static HFONT g_fNorm, g_fBold, g_fSmall;
 
 static void postStatus(const wchar_t *s)
@@ -396,44 +409,164 @@ static void joinPath(wchar_t *o, size_t c, const wchar_t *a, const wchar_t *b)
     if (l && a[l - 1] == L'\\') _snwprintf(o, c, L"%ls%ls", a, b);
     else _snwprintf(o, c, L"%ls\\%ls", a, b);
 }
+/* data dirs live in the program dir (portable-first); fall back to
+ * %LOCALAPPDATA%\LocalDreamET only when the program dir is not writable. */
 static void modelsDir(wchar_t *o, size_t c)   { joinPath(o, c, g_baseDir, L"models"); CreateDirectoryW(o, NULL); }
-static void outputDir(wchar_t *o, size_t c)   { joinPath(o, c, g_baseDir, L"output"); CreateDirectoryW(o, NULL); }
+static void outputDir(wchar_t *o, size_t c)   { joinPath(o, c, g_baseDir, L"outputs"); CreateDirectoryW(o, NULL); }
 static void tmpDir(wchar_t *o, size_t c)      { joinPath(o, c, g_baseDir, L"tmp"); CreateDirectoryW(o, NULL); }
-static void modelFile(int idx, int fi, wchar_t *o, size_t c)
+static void configDir(wchar_t *o, size_t c)   { joinPath(o, c, g_baseDir, L"config"); CreateDirectoryW(o, NULL); }
+
+/* one sub-directory per model: models/<id>/  holds <rel>, <rel>.part, ready.json */
+static void modelSubdir(int idx, wchar_t *o, size_t c)
 {
     wchar_t md[MAX_PATH]; modelsDir(md, MAX_PATH);
+    joinPath(o, c, md, g_models[idx].id);
+    CreateDirectoryW(o, NULL);
+}
+static void modelFile(int idx, int fi, wchar_t *o, size_t c)
+{
+    wchar_t md[MAX_PATH]; modelSubdir(idx, md, MAX_PATH);
     joinPath(o, c, md, g_models[idx].files[fi].rel);
 }
-
-static int validModelFile(const wchar_t *p)
+static void modelPart(int idx, int fi, wchar_t *o, size_t c)
 {
-    if (GetFileAttributesW(p) == INVALID_FILE_ATTRIBUTES) return 0;
-    WIN32_FILE_ATTRIBUTE_DATA fa;
-    if (!GetFileAttributesExW(p, GetFileExInfoStandard, &fa)) return 0;
-    ULONGLONG sz = ((ULONGLONG)fa.nFileSizeHigh << 32) | fa.nFileSizeLow;
-    if (sz < 1024ULL * 1024ULL) return 0;
-    HANDLE hf = CreateFileW(p, GENERIC_READ, FILE_SHARE_READ, NULL,
+    wchar_t p[MAX_PATH]; modelFile(idx, fi, p, MAX_PATH);
+    _snwprintf(o, c, L"%ls.part", p);
+}
+static void readyPath(int idx, wchar_t *o, size_t c)
+{
+    wchar_t md[MAX_PATH]; modelSubdir(idx, md, MAX_PATH);
+    joinPath(o, c, md, L"ready.json");
+}
+
+/* ---- strict safetensors validation (real, not a magic-byte guess) ----
+ * Reads the 8-byte little-endian header length N, parses the JSON header,
+ * requires SD1.5 tensor markers, and verifies that 8 + N + max(data_offsets[1])
+ * equals the real file size. Rejects HTML/XML error pages and truncation. */
+static int validateSafetensors(const wchar_t *path, ULONGLONG *outSize)
+{
+    HANDLE hf = CreateFileW(path, GENERIC_READ, FILE_SHARE_READ, NULL,
                             OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     if (hf == INVALID_HANDLE_VALUE) return 0;
-    unsigned char magic[4] = {0}; DWORD rd = 0;
-    ReadFile(hf, magic, 4, &rd, NULL);
+    LARGE_INTEGER sz;
+    if (!GetFileSizeEx(hf, &sz) || sz.QuadPart < 16) { CloseHandle(hf); return 0; }
+    ULONGLONG fsize = (ULONGLONG)sz.QuadPart;
+
+    unsigned char hdr8[8] = {0}; DWORD rd = 0;
+    if (!ReadFile(hf, hdr8, 8, &rd, NULL) || rd != 8) { CloseHandle(hf); return 0; }
+    if (hdr8[0] == (unsigned char)'<') { CloseHandle(hf); return 0; }  /* HTML error page */
+    ULONGLONG n = 0;
+    for (int i = 0; i < 8; i++) n |= ((ULONGLONG)hdr8[i]) << (8 * i);
+    if (n < 2 || n > 64ULL * 1024 * 1024) { CloseHandle(hf); return 0; }
+    if (8 + n + 1024 > fsize) { CloseHandle(hf); return 0; }          /* need tensor bytes */
+
+    char *buf = (char *)malloc((size_t)n + 1);
+    if (!buf) { CloseHandle(hf); return 0; }
+    if (!ReadFile(hf, buf, (DWORD)n, &rd, NULL) || rd != (DWORD)n) {
+        free(buf); CloseHandle(hf); return 0;
+    }
+    buf[n] = 0;
     CloseHandle(hf);
-    if (rd < 1) return 0;
-    if (magic[0] == '<') return 0;
+
+    if (buf[0] != '{' || !strchr(buf, '}') || !strchr(buf, '"')) { free(buf); return 0; }
+    int markers = (strstr(buf, "model.diffusion_model.") != NULL) +
+                  (strstr(buf, "cond_stage_model.") != NULL) +
+                  (strstr(buf, "first_stage_model.") != NULL);
+    if (markers == 0) { free(buf); return 0; }
+
+    ULONGLONG maxend = 0;
+    const char *p = buf;
+    while ((p = strstr(p, "\"data_offsets\"")) != NULL) {
+        p = strchr(p, '[');
+        if (!p) break;
+        p++;
+        unsigned long long a = 0, b = 0;
+        if (sscanf(p, " %llu , %llu", &a, &b) >= 1 && b > maxend) maxend = b;
+    }
+    free(buf);
+    if (maxend == 0) return 0;
+    if (8 + n + maxend != fsize) return 0;    /* truncated / padded mismatch */
+    if (outSize) *outSize = fsize;
     return 1;
 }
+
+/* ready.json: {"file":"<rel>","size":<n>,"time":<t>} written via temp+rename */
+static void writeReadyJson(int idx, const wchar_t *rel, ULONGLONG sz)
+{
+    wchar_t dir[MAX_PATH], tmp[MAX_PATH], fin[MAX_PATH];
+    modelSubdir(idx, dir, MAX_PATH);
+    int nb = WideCharToMultiByte(CP_UTF8, 0, rel, -1, NULL, 0, NULL, NULL);
+    char relu8[256] = {0};
+    WideCharToMultiByte(CP_UTF8, 0, rel, -1, relu8, nb > 255 ? 255 : nb, NULL, NULL);
+    char j[320];
+    _snprintf(j, sizeof(j), "{\"file\":\"%s\",\"size\":%llu,\"time\":%ld}\n",
+              relu8, sz, (long)time(NULL));
+    joinPath(tmp, MAX_PATH, dir, L"ready.json.tmp");
+    joinPath(fin, MAX_PATH, dir, L"ready.json");
+    HANDLE hf = CreateFileW(tmp, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (hf == INVALID_HANDLE_VALUE) return;
+    DWORD wr; WriteFile(hf, j, (DWORD)strlen(j), &wr, NULL);
+    FlushFileBuffers(hf);
+    CloseHandle(hf);
+    MoveFileExW(tmp, fin, MOVEFILE_REPLACE_EXISTING);
+}
+static int readReadyJson(int idx, ULONGLONG *szOut)
+{
+    wchar_t p[MAX_PATH]; readyPath(idx, p, MAX_PATH);
+    HANDLE hf = CreateFileW(p, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
+    if (hf == INVALID_HANDLE_VALUE) return 0;
+    char buf[400]; DWORD rd = 0;
+    ReadFile(hf, buf, sizeof(buf) - 1, &rd, NULL); CloseHandle(hf);
+    if (!rd) return 0; buf[rd] = 0;
+    char *sp = strstr(buf, "\"size\"");
+    if (!sp) return 0; sp = strchr(sp, ':'); if (!sp) return 0;
+    *szOut = _strtoui64(sp + 1, NULL, 10);
+    return *szOut > 0;
+}
+
+/* ready iff: ready.json exists, official file exists with matching size, header still valid */
 static int modelReady(int idx)
 {
     if (g_models[idx].locked) return 0;
-    for (int i = 0; i < g_models[idx].nfiles; i++) {
-        wchar_t p[MAX_PATH]; modelFile(idx, i, p, MAX_PATH);
-        if (!validModelFile(p)) return 0;
-    }
-    return 1;
+    ULONGLONG recSize = 0;
+    if (!readReadyJson(idx, &recSize)) return 0;
+    wchar_t p[MAX_PATH]; modelFile(idx, 0, p, MAX_PATH);
+    WIN32_FILE_ATTRIBUTE_DATA fa;
+    if (!GetFileAttributesExW(p, GetFileExInfoStandard, &fa)) return 0;
+    ULONGLONG sz = ((ULONGLONG)fa.nFileSizeHigh << 32) | fa.nFileSizeLow;
+    if (sz != recSize) return 0;
+    return validateSafetensors(p, NULL) ? 1 : 0;
 }
 
-/* config */
-static void configPath(wchar_t *o, size_t c) { joinPath(o, c, g_baseDir, L"config.ini"); }
+/* startup reconciliation: .part -> resumable; marker w/o file/size mismatch -> reset */
+static void reconcileModels(void)
+{
+    for (int i = 0; i < MODEL_COUNT; i++) {
+        if (g_models[i].locked) { g_mstate[i] = 0; g_mpct[i] = -1; continue; }
+        if (modelReady(i)) { g_mstate[i] = 1; g_mpct[i] = 100; continue; }
+        wchar_t rd[MAX_PATH]; readyPath(i, rd, MAX_PATH);
+        DeleteFileW(rd);                                   /* drop stale/bad marker */
+        wchar_t pf[MAX_PATH]; modelPart(i, 0, pf, MAX_PATH);
+        if (GetFileAttributesW(pf) != INVALID_FILE_ATTRIBUTES) {
+            g_mstate[i] = 2; g_mpct[i] = 0;                /* resumable .part */
+        } else {
+            g_mstate[i] = 0; g_mpct[i] = -1;
+        }
+    }
+}
+
+/* config lives in <basedir>/config/config.ini */
+static int g_mirror = 0;     /* 0=auto, 1=hf-mirror, 2=huggingface */
+static int g_defSteps = 20, g_defCfg = 7, g_defCount = 1;
+static double g_defDenoise = 0.45;
+static int g_winMax = 0;
+static int g_winX = CW_USEDEFAULT, g_winY = CW_USEDEFAULT, g_winW = 480, g_winH = 900;
+
+static void configPath(wchar_t *o, size_t c)
+{
+    wchar_t d[MAX_PATH]; configDir(d, MAX_PATH);
+    joinPath(o, c, d, L"config.ini");
+}
 static void loadConfig(void)
 {
     wchar_t p[MAX_PATH]; configPath(p, MAX_PATH);
@@ -441,15 +574,45 @@ static void loadConfig(void)
     g_dark = GetPrivateProfileIntW(L"ui", L"dark", 1, p);
     GetPrivateProfileStringW(L"ui", L"pinned", L"", g_pinned, 2048, p);
     if (g_lang < 0 || g_lang > 2) g_lang = 0;
+    g_mirror = GetPrivateProfileIntW(L"net", L"mirror", 0, p);
+    if (g_mirror < 0 || g_mirror > 2) g_mirror = 0;
+    g_defSteps = GetPrivateProfileIntW(L"defaults", L"steps", 20, p);
+    g_defCfg = GetPrivateProfileIntW(L"defaults", L"cfg", 7, p);
+    g_defCount = GetPrivateProfileIntW(L"defaults", L"count", 1, p);
+    g_defDenoise = GetPrivateProfileIntW(L"defaults", L"denoise", 45, p) / 100.0;
+    g_winX = GetPrivateProfileIntW(L"ui", L"x", CW_USEDEFAULT, p);
+    g_winY = GetPrivateProfileIntW(L"ui", L"y", CW_USEDEFAULT, p);
+    g_winW = GetPrivateProfileIntW(L"ui", L"w", 480, p);
+    g_winH = GetPrivateProfileIntW(L"ui", L"h", 900, p);
+    g_winMax = GetPrivateProfileIntW(L"ui", L"max", 0, p);
+    if (g_winW < 420) g_winW = 480;
+    if (g_winH < 700) g_winH = 900;
 }
 static void saveConfig(void)
 {
     wchar_t p[MAX_PATH]; configPath(p, MAX_PATH);
-    wchar_t b[8]; _snwprintf(b, 8, L"%d", g_lang);
-    WritePrivateProfileStringW(L"ui", L"lang", b, p);
-    _snwprintf(b, 8, L"%d", g_dark);
-    WritePrivateProfileStringW(L"ui", L"dark", b, p);
+    wchar_t b[16];
+    _snwprintf(b, 16, L"%d", g_lang);      WritePrivateProfileStringW(L"ui", L"lang", b, p);
+    _snwprintf(b, 16, L"%d", g_dark);      WritePrivateProfileStringW(L"ui", L"dark", b, p);
     WritePrivateProfileStringW(L"ui", L"pinned", g_pinned, p);
+    _snwprintf(b, 16, L"%d", g_mirror);    WritePrivateProfileStringW(L"net", L"mirror", b, p);
+    _snwprintf(b, 16, L"%d", g_defSteps);  WritePrivateProfileStringW(L"defaults", L"steps", b, p);
+    _snwprintf(b, 16, L"%d", g_defCfg);    WritePrivateProfileStringW(L"defaults", L"cfg", b, p);
+    _snwprintf(b, 16, L"%d", g_defCount);  WritePrivateProfileStringW(L"defaults", L"count", b, p);
+    _snwprintf(b, 16, L"%d", (int)(g_defDenoise * 100)); WritePrivateProfileStringW(L"defaults", L"denoise", b, p);
+    /* window rect (only if not maximized) */
+    if (!IsIconic(g_hMain) && !IsZoomed(g_hMain)) {
+        WINDOWPLACEMENT wp; wp.length = sizeof(wp);
+        if (GetWindowPlacement(g_hMain, &wp)) {
+            RECT rc = wp.rcNormalPosition;
+            _snwprintf(b, 16, L"%d", rc.left);  WritePrivateProfileStringW(L"ui", L"x", b, p);
+            _snwprintf(b, 16, L"%d", rc.top);   WritePrivateProfileStringW(L"ui", L"y", b, p);
+            _snwprintf(b, 16, L"%d", rc.right - rc.left); WritePrivateProfileStringW(L"ui", L"w", b, p);
+            _snwprintf(b, 16, L"%d", rc.bottom - rc.top); WritePrivateProfileStringW(L"ui", L"h", b, p);
+        }
+    }
+    _snwprintf(b, 16, L"%d", IsZoomed(g_hMain) ? 1 : 0);
+    WritePrivateProfileStringW(L"ui", L"max", b, p);
 }
 static int isPinned(int idx)
 {
@@ -551,8 +714,7 @@ static BOOL httpGetFile(const char *fullUrl, const wchar_t *dest,
         finalSize = ((ULONGLONG)fa.nFileSizeHigh << 32) | fa.nFileSizeLow;
     if (total && finalSize < total) return FALSE;
     if (finalSize == 0) return FALSE;
-    if (!validModelFile(part)) { DeleteFileW(part); return FALSE; }
-    MoveFileExW(part, dest, MOVEFILE_REPLACE_EXISTING);
+    /* leave <dest>.part on purpose: the caller validates + commits it. */
     return TRUE;
 }
 
@@ -562,11 +724,16 @@ static BOOL httpDownload(const char *hfPath, const char *cnUrl, const wchar_t *d
     char url[1400];
     #define TRY_SRC(u) do { \
         for (int _att = 0; _att < 2; _att++) { if (httpGetFile((u), dest, prog, ctx)) return TRUE; } \
-        DeleteFileW(dest); \
     } while (0)
+    /* mirror selection: 0=auto(hf-mirror->hf), 1=hf-mirror only, 2=huggingface only */
+    static const char *auto_hosts[] = { "https://hf-mirror.com", "https://huggingface.co" };
+    static const char *mir_hosts[]  = { "https://hf-mirror.com" };
+    static const char *hf_hosts[]   = { "https://huggingface.co" };
+    const char **hosts = auto_hosts; int nh = 2;
+    if (g_mirror == 1) { hosts = mir_hosts; nh = 1; }
+    else if (g_mirror == 2) { hosts = hf_hosts; nh = 1; }
     if (cnUrl && cnUrl[0]) TRY_SRC(cnUrl);
-    static const char *hosts[] = { "https://hf-mirror.com", "https://huggingface.co" };
-    for (int hi = 0; hi < 2; hi++) {
+    for (int hi = 0; hi < nh; hi++) {
         _snprintf(url, sizeof(url), "%s/%s", hosts[hi], hfPath);
         TRY_SRC(url);
     }
@@ -596,11 +763,8 @@ static DWORD WINAPI downloadThread(LPVOID arg)
     postStatus(st);
     char err[256] = {0}; BOOL ok = TRUE;
     for (int fi = 0; fi < g_models[idx].nfiles; fi++) {
+        wchar_t sub[MAX_PATH]; modelSubdir(idx, sub, MAX_PATH);   /* ensure per-model dir */
         wchar_t dest[MAX_PATH]; modelFile(idx, fi, dest, MAX_PATH);
-        if (validModelFile(dest)) continue;
-        DeleteFileW(dest);
-        wchar_t sub[MAX_PATH]; _snwprintf(sub, MAX_PATH, L"%ls", dest);
-        wchar_t *sl = wcsrchr(sub, L'\\'); if (sl) { sl[0] = 0; CreateDirectoryW(sub, NULL); }
         ctx.file = fi;
         const DlFile *dlf = &g_models[idx].files[fi];
         const char *us = dlf->hf;
@@ -611,10 +775,27 @@ static DWORD WINAPI downloadThread(LPVOID arg)
         if (!httpDownload(dlf->hf, dlf->cn, dest, dlProgCb, &ctx, err, sizeof(err))) {
             ok = FALSE; break;
         }
+        /* ---- strict validation / finalize phase ---- */
+        wchar_t part[MAX_PATH]; modelPart(idx, fi, part, MAX_PATH);
+        g_mstate[idx] = 3;                 /* 3 = validating / finishing */
+        postStatus(T(VALIDATING));
+        PostMessageW(g_hMain, WM_REFRESH_LIST, 0, 0);
+        Sleep(60);
+        ULONGLONG fsz = 0;
+        if (!validateSafetensors(part, &fsz)) {
+            DeleteFileW(part);
+            _snprintf(err, sizeof(err), "downloaded file is not a valid safetensors model");
+            ok = FALSE; break;
+        }
+        HANDLE hf = CreateFileW(part, GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
+        if (hf != INVALID_HANDLE_VALUE) { FlushFileBuffers(hf); CloseHandle(hf); }
+        if (!MoveFileExW(part, dest, MOVEFILE_REPLACE_EXISTING)) { ok = FALSE; break; }
+        writeReadyJson(idx, g_models[idx].files[fi].rel, fsz);
     }
     if (ok) { g_mstate[idx] = 1; g_mpct[idx] = 100; postDone(1, T(READY)); }
     else {
         g_mstate[idx] = modelReady(idx) ? 1 : 0;
+        g_mpct[idx] = (g_mstate[idx] == 1) ? 100 : -1;
         wchar_t werr[320]; MultiByteToWideChar(CP_UTF8, 0, err, -1, werr, 320);
         _snwprintf(st, 320, L"%ls: %ls", T(GEN_FAIL), werr);
         postDone(0, st);
@@ -967,6 +1148,7 @@ static void drawCard(LPDRAWITEMSTRUCT d, int ci)
     const wchar_t *pill; COLORREF pc;
     static wchar_t buf[64];
     if (g_models[ci].locked) { pill = T(LOCKED); pc = RGB(120, 120, 128); }
+    else if (g_mstate[ci] == 3) { pill = T(VALIDATING); pc = RGB(90, 170, 220); }
     else if (g_mstate[ci] == 2) { _snwprintf(buf, 64, T(DOWNLOADING), g_mpct[ci]); pill = buf; pc = RGB(230, 170, 60); }
     else if (modelReady(ci)) { pill = T(READY); pc = RGB(80, 180, 120); }
     else { pill = T(DOWNLOAD); pc = g_cAccent; }
@@ -1016,20 +1198,28 @@ static void loadModelIntoRun(int idx)
     const CatalogModel *m = &g_models[idx];
     SetWindowTextW(g_hRTitle, m->name);
     SetWindowTextW(g_hPrompt, m->defPrompt);
-    SetWindowTextW(g_hNeg, m->defNeg[0] ? m->defNeg :
-        L"lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, cropped, worst quality, low quality, jpeg artifacts, signature, watermark, blurry, deformed");
+    {
+        wchar_t dn[1000] = {0};
+        if (g_hDefNeg) GetWindowTextW(g_hDefNeg, dn, 1000);
+        if (m->defNeg[0]) SetWindowTextW(g_hNeg, m->defNeg);
+        else if (dn[0]) SetWindowTextW(g_hNeg, dn);
+        else SetWindowTextW(g_hNeg,
+            L"lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, cropped, worst quality, low quality, jpeg artifacts, signature, watermark, blurry, deformed");
+    }
     SendMessageW(g_hAspect, CB_RESETCONTENT, 0, 0);
     for (int i = 0; i < ASPECT_SD15_COUNT; i++)
         SendMessageW(g_hAspect, CB_ADDSTRING, 0, (LPARAM)g_aspects_sd15[i]);
     SendMessageW(g_hAspect, CB_SETCURSEL, 0, 0);
-    SendMessageW(g_hSampler, CB_SETCURSEL, 0, 0);   /* default dpm */
-    SetWindowTextW(g_hSteps, L"20");
-    SetWindowTextW(g_hCfg, L"7");
+    /* sampler: use persisted default selection */
+    SendMessageW(g_hSampler, CB_SETCURSEL, (int)SendMessageW(g_hDefSampler, CB_GETCURSEL, 0, 0), 0);
+    wchar_t b[16];
+    _snwprintf(b, 16, L"%d", g_defSteps); SetWindowTextW(g_hSteps, b);
+    _snwprintf(b, 16, L"%d", g_defCfg);   SetWindowTextW(g_hCfg, b);
     SetWindowTextW(g_hSeed, L"");
-    SetWindowTextW(g_hDenoise, L"0.45");
-    SetWindowTextW(g_hCount, L"1");
+    _snwprintf(b, 16, L"%.2f", g_defDenoise); SetWindowTextW(g_hDenoise, b);
+    _snwprintf(b, 16, L"%d", g_defCount); SetWindowTextW(g_hCount, b);
     int wv, hv; sizeFor(0, &wv, &hv);
-    wchar_t b[16]; _snwprintf(b, 16, L"%d", wv); SetWindowTextW(g_hW, b);
+    _snwprintf(b, 16, L"%d", wv); SetWindowTextW(g_hW, b);
     _snwprintf(b, 16, L"%d", hv); SetWindowTextW(g_hH, b);
     g_initImg[0] = 0; setImgCtl(g_hThumb, NULL);
     SetWindowTextW(g_hImgName, T(NO_REF));
@@ -1215,6 +1405,59 @@ static void clearTmp(void)
 }
 
 /* ============================== build UI ================================= */
+/* scrollable outer panel for settings: owns a tall inner content window */
+static LRESULT CALLBACK ScrollProc(HWND h, UINT m, WPARAM wp, LPARAM lp)
+{
+    switch (m) {
+    case WM_ERASEBKGND: {
+        HDC dc = (HDC)wp; RECT rc; GetClientRect(h, &rc);
+        FillRect(dc, &rc, g_brPanel); return 1;
+    }
+    case WM_SIZE: {
+        RECT rc; GetClientRect(h, &rc);
+        int viewH = rc.bottom - rc.top;
+        int maxs = g_setContentH - viewH; if (maxs < 0) maxs = 0;
+        if (g_setScroll > maxs) g_setScroll = maxs;
+        SCROLLINFO si = { sizeof(si), SIF_RANGE | SIF_PAGE | SIF_POS };
+        si.nMin = 0; si.nMax = g_setContentH > 0 ? g_setContentH - 1 : 0;
+        si.nPage = viewH; si.nPos = g_setScroll;
+        SetScrollInfo(h, SB_VERT, &si, TRUE);
+        MoveWindow(g_hSetContent, 0, -g_setScroll, rc.right, g_setContentH, TRUE);
+        return 0;
+    }
+    case WM_VSCROLL: {
+        SCROLLINFO si = { sizeof(si), SIF_ALL };
+        GetScrollInfo(h, SB_VERT, &si);
+        int dy = 0;
+        switch (LOWORD(wp)) {
+        case SB_LINEUP: dy = -24; break;
+        case SB_LINEDOWN: dy = 24; break;
+        case SB_PAGEUP: dy = -(int)(si.nPage ? si.nPage : 80); break;
+        case SB_PAGEDOWN: dy = (int)(si.nPage ? si.nPage : 80); break;
+        case SB_THUMBTRACK: dy = (int)si.nTrackPos - g_setScroll; break;
+        }
+        g_setScroll += dy;
+        RECT rc; GetClientRect(h, &rc);
+        int maxs = g_setContentH - (rc.bottom - rc.top); if (maxs < 0) maxs = 0;
+        if (g_setScroll < 0) g_setScroll = 0; if (g_setScroll > maxs) g_setScroll = maxs;
+        SetScrollPos(h, SB_VERT, g_setScroll, TRUE);
+        MoveWindow(g_hSetContent, 0, -g_setScroll, rc.right, g_setContentH, TRUE);
+        return 0;
+    }
+    case WM_MOUSEWHEEL: {
+        int d = GET_WHEEL_DELTA_WPARAM(wp) / 24;
+        g_setScroll -= d;
+        RECT rc; GetClientRect(h, &rc);
+        int maxs = g_setContentH - (rc.bottom - rc.top); if (maxs < 0) maxs = 0;
+        if (g_setScroll < 0) g_setScroll = 0; if (g_setScroll > maxs) g_setScroll = maxs;
+        SetScrollPos(h, SB_VERT, g_setScroll, TRUE);
+        MoveWindow(g_hSetContent, 0, -g_setScroll, rc.right, g_setContentH, TRUE);
+        return 0;
+    }
+    }
+    return DefWindowProcW(h, m, wp, lp);
+}
+
 static void registerClasses(void)
 {
     WNDCLASSW wc; ZeroMemory(&wc, sizeof(wc));
@@ -1222,6 +1465,10 @@ static void registerClasses(void)
     RegisterClassW(&wc);
     ZeroMemory(&wc, sizeof(wc));
     wc.lpfnWndProc = PanelProc; wc.hInstance = g_hInst; wc.lpszClassName = L"LDEPanel";
+    wc.hbrBackground = g_brPanel;
+    RegisterClassW(&wc);
+    ZeroMemory(&wc, sizeof(wc));
+    wc.lpfnWndProc = ScrollProc; wc.hInstance = g_hInst; wc.lpszClassName = L"LDEScroll";
     wc.hbrBackground = g_brPanel;
     RegisterClassW(&wc);
 }
@@ -1232,13 +1479,52 @@ static BOOL CALLBACK fontEnum(HWND cw, LPARAM lp)
     return TRUE;
 }
 
+/* reposition run-page controls on resize (result square follows width) */
+static void layoutRun(void)
+{
+    if (!g_hPan[0]) return;
+    RECT rc; GetClientRect(g_hPan[0], &rc);
+    int W = rc.right, x = 12, pw = W - 24;
+    MoveWindow(g_hRTitle, x + 98, 10, pw - 98, 26, TRUE);
+    MoveWindow(g_hPrompt, x, 60, pw, 70, TRUE);
+    MoveWindow(g_hNeg, x, 154, pw, 40, TRUE);
+    MoveWindow(g_hProgress, x + 148, 368, pw - 148, 20, TRUE);
+    MoveWindow(g_hThumb, x + pw - 56, 290, 56, 56, TRUE);
+    MoveWindow(g_hImgName, x, 324, pw, 16, TRUE);
+    int rs = pw, ry = 406;
+    MoveWindow(g_hResult, x, ry, rs, rs, TRUE);
+    int by = ry + rs + 8;
+    MoveWindow(g_hSave, x, by, 95, 30, TRUE);
+    MoveWindow(g_hOpnout, x + 100, by, 100, 30, TRUE);
+    MoveWindow(g_hRegen, x + 205, by, 90, 30, TRUE);
+    MoveWindow(g_hRStatus, x, by + 36, pw, 30, TRUE);
+}
+
+static void relayout(void)
+{
+    if (!g_hMain) return;
+    RECT rc; GetClientRect(g_hMain, &rc);
+    int W = rc.right, H = rc.bottom;
+    int half = (W - 30) / 2;
+    MoveWindow(g_hTabCpu, 12, 10, half, 34, TRUE);
+    MoveWindow(g_hTabNpu, 18 + half, 10, half, 34, TRUE);
+    MoveWindow(g_hGear, W - 42, 50, 30, 26, TRUE);
+    MoveWindow(g_hSearch, 12, 50, W - 84, 26, TRUE);
+    MoveWindow(g_hList, 12, 84, W - 24, H - 84 - 32, TRUE);
+    MoveWindow(g_hLStatus, 12, H - 28, W - 24, 26, TRUE);
+    MoveWindow(g_hPan[0], 0, 0, W, H, TRUE);
+    MoveWindow(g_hPan[1], 0, 0, W, H, TRUE);
+    MoveWindow(g_hPan[2], 0, 0, W, H, TRUE);
+    layoutRun();
+}
+
 static void buildUI(HWND h)
 {
     g_fNorm = CreateFontW(15, 0, 0, 0, FW_NORMAL, 0, 0, 0, DEFAULT_CHARSET, 0, 0, CLEARTYPE_QUALITY, 0, L"Microsoft YaHei UI");
     g_fBold = CreateFontW(15, 0, 0, 0, FW_BOLD, 0, 0, 0, DEFAULT_CHARSET, 0, 0, CLEARTYPE_QUALITY, 0, L"Microsoft YaHei UI");
     g_fSmall = CreateFontW(12, 0, 0, 0, FW_NORMAL, 0, 0, 0, DEFAULT_CHARSET, 0, 0, CLEARTYPE_QUALITY, 0, L"Microsoft YaHei UI");
 
-    int W = 440;
+    int W = 460;
     /* ---- list-view chrome (on main window) ---- */
     g_hTabCpu = mk(h, L"BUTTON", T(TAB_CPU), BS_PUSHBUTTON, 12, 10, (W - 30) / 2, 34, IDC_TABCPU);
     g_hTabNpu = mk(h, L"BUTTON", T(TAB_NPU), BS_PUSHBUTTON, 18 + (W - 30) / 2, 10, (W - 30) / 2, 34, IDC_TABNPU);
@@ -1250,10 +1536,10 @@ static void buildUI(HWND h)
         WS_CHILD | WS_VISIBLE | WS_VSCROLL | LBS_OWNERDRAWFIXED | LBS_HASSTRINGS | LBS_NOTIFY,
         12, 84, W - 24, 720, h, (HMENU)(INT_PTR)IDC_LIST, g_hInst, NULL);
     SendMessageW(g_hList, LB_SETITEMHEIGHT, 0, MAKELPARAM(78, 0));
-    g_hLStatus = mk(h, L"STATIC", T(READY_STATUS), SS_LEFT | SS_ENDELLIPSIS, 12, 810, W - 24, 30, IDC_LSTATUS);
+    g_hLStatus = mk(h, L"STATIC", T(READY_STATUS), SS_LEFT | SS_ENDELLIPSIS, 12, 872, W - 24, 26, IDC_LSTATUS);
 
     /* ---- panel 0: run page ---- */
-    g_hPan[0] = CreateWindowW(L"LDEPanel", NULL, WS_CHILD, 0, 0, W, 860, h, NULL, g_hInst, NULL);
+    g_hPan[0] = CreateWindowW(L"LDEPanel", NULL, WS_CHILD, 0, 0, W, 900, h, NULL, g_hInst, NULL);
     HWND pp = g_hPan[0];
     int x = 12, pw = W - 24;
     g_hBack = mk(pp, L"BUTTON", T(BACK), BS_PUSHBUTTON, x, 8, 90, 28, IDC_BACK);
@@ -1309,9 +1595,8 @@ static void buildUI(HWND h)
     py += 48;
 
     /* result image square */
-    int rs = pw;
-    g_hResult = CreateWindowW(L"LDEImg", NULL, WS_CHILD | WS_VISIBLE | WS_BORDER, x, py, rs, rs, pp, NULL, g_hInst, NULL);
-    py += rs + 8;
+    g_hResult = CreateWindowW(L"LDEImg", NULL, WS_CHILD | WS_VISIBLE | WS_BORDER, x, py, pw, pw, pp, NULL, g_hInst, NULL);
+    py += pw + 8;
 
     /* action buttons row */
     g_hSave = mk(pp, L"BUTTON", T(SAVE_AS), BS_PUSHBUTTON, x, py, 95, 30, IDC_SAVE);
@@ -1320,12 +1605,14 @@ static void buildUI(HWND h)
     py += 36;
     g_hRStatus = mk(pp, L"STATIC", T(READY_STATUS), SS_LEFT | SS_WORDELLIPSIS, x, py, pw, 30, IDC_RSTATUS);
 
-    /* ---- panel 1: settings ---- */
-    g_hPan[1] = CreateWindowW(L"LDEPanel", NULL, WS_CHILD, 0, 0, W, 860, h, NULL, g_hInst, NULL);
-    /* settings page */
-    HWND sp = g_hPan[1];
+    /* ---- panel 1: settings (scrollable outer + tall inner content) ---- */
+    g_hPan[1] = CreateWindowW(L"LDEScroll", NULL, WS_CHILD | WS_VSCROLL, 0, 0, W, 900, h, NULL, g_hInst, NULL);
+    g_setContentH = 1180;
+    g_hSetContent = CreateWindowW(L"LDEPanel", NULL, WS_CHILD, 0, 0, W, g_setContentH, g_hPan[1], NULL, g_hInst, NULL);
+    HWND sp = g_hSetContent;
     int sy = 10;
     g_hSback = mk(sp, L"BUTTON", T(BACK), BS_PUSHBUTTON, x, sy, 90, 28, IDC_SBACK); sy += 44;
+
     mk(sp, L"STATIC", T(LANG_LBL), SS_LEFT, x, sy, pw, 18, 0); sy += 22;
     g_hLang[0] = mk(sp, L"BUTTON", T(LANG_ZH), BS_AUTORADIOBUTTON, x, sy, 130, 24, IDC_LANG0);
     g_hLang[1] = mk(sp, L"BUTTON", T(LANG_EN), BS_AUTORADIOBUTTON, x + 140, sy, 90, 24, IDC_LANG1);
@@ -1335,16 +1622,45 @@ static void buildUI(HWND h)
     g_hTheme[0] = mk(sp, L"BUTTON", T(THEME_DARK), BS_AUTORADIOBUTTON, x, sy, 130, 24, IDC_THEME0);
     g_hTheme[1] = mk(sp, L"BUTTON", T(THEME_LIGHT), BS_AUTORADIOBUTTON, x + 140, sy, 130, 24, IDC_THEME1);
     sy += 40;
-    g_hChkUpd = mk(sp, L"BUTTON", T(CHECK_UPDATE), BS_PUSHBUTTON, x, sy, pw, 32, IDC_CHECKUPD); sy += 40;
-    g_hCleanTmp = mk(sp, L"BUTTON", T(CLEAN_TMP), BS_PUSHBUTTON, x, sy, pw, 32, IDC_CLEANTMP); sy += 40;
-    g_hOpModels = mk(sp, L"BUTTON", T(OPEN_MODELS), BS_PUSHBUTTON, x, sy, pw, 32, IDC_OPMODELS); sy += 40;
-    mk(sp, L"BUTTON", T(OPEN_OUT), BS_PUSHBUTTON, x, sy, pw, 32, IDC_OPOUT); sy += 40;
+
+    mk(sp, L"STATIC", T(MIRROR_LBL), SS_LEFT, x, sy, pw, 18, 0); sy += 22;
+    g_hMirror[0] = mk(sp, L"BUTTON", T(MIRROR_AUTO), BS_AUTORADIOBUTTON, x, sy, pw, 22, IDC_MIRROR0); sy += 26;
+    g_hMirror[1] = mk(sp, L"BUTTON", T(MIRROR_CN), BS_AUTORADIOBUTTON, x, sy, pw, 22, IDC_MIRROR1); sy += 26;
+    g_hMirror[2] = mk(sp, L"BUTTON", T(MIRROR_HF), BS_AUTORADIOBUTTON, x, sy, pw, 22, IDC_MIRROR2); sy += 34;
+
+    mk(sp, L"STATIC", T(DEFAULTS_LBL), SS_LEFT, x, sy, pw, 18, 0); sy += 22;
+    mk(sp, L"STATIC", T(STEPS_LBL), SS_LEFT, x, sy + 3, 50, 16, 0);
+    g_hDefSteps = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"20", WS_CHILD | WS_VISIBLE | ES_NUMBER, x + 52, sy, 44, 24, sp, (HMENU)(INT_PTR)IDC_DEF_STEPS, g_hInst, NULL);
+    mk(sp, L"STATIC", T(CFG_LBL), SS_LEFT, x + 104, sy + 3, 40, 16, 0);
+    g_hDefCfg = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"7", WS_CHILD | WS_VISIBLE | ES_NUMBER, x + 146, sy, 40, 24, sp, (HMENU)(INT_PTR)IDC_DEF_CFG, g_hInst, NULL);
+    mk(sp, L"STATIC", T(COUNT_LBL), SS_LEFT, x + 196, sy + 3, 40, 16, 0);
+    g_hDefCount = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"1", WS_CHILD | WS_VISIBLE | ES_NUMBER, x + 240, sy, 36, 24, sp, (HMENU)(INT_PTR)IDC_DEF_COUNT, g_hInst, NULL);
+    mk(sp, L"STATIC", T(DENOISE_LBL), SS_LEFT, x + 286, sy + 3, 60, 16, 0);
+    g_hDefDenoise = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"0.45", WS_CHILD | WS_VISIBLE | ES_NUMBER, x + 350, sy, 50, 24, sp, (HMENU)(INT_PTR)IDC_DEF_DENOISE, g_hInst, NULL);
+    sy += 32;
+    mk(sp, L"STATIC", T(SAMPLER_LBL), SS_LEFT, x, sy + 3, 60, 16, 0);
+    g_hDefSampler = CreateWindowW(L"COMBOBOX", NULL, WS_CHILD | CBS_DROPDOWNLIST, x + 62, sy - 2, 180, 200, sp, (HMENU)(INT_PTR)IDC_DEF_SAMPLER, g_hInst, NULL);
+    for (int i = 0; i < SAMPLER_COUNT; i++) SendMessageW(g_hDefSampler, CB_ADDSTRING, 0, (LPARAM)g_samplers[i]);
+    SendMessageW(g_hDefSampler, CB_SETCURSEL, 0, 0);
+    sy += 32;
+    mk(sp, L"STATIC", T(NEG_LBL), SS_LEFT, x, sy, pw, 16, 0); sy += 18;
+    g_hDefNeg = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"",
+        WS_CHILD | WS_VISIBLE | ES_MULTILINE | ES_AUTOVSCROLL | WS_VSCROLL,
+        x, sy, pw, 56, sp, (HMENU)(INT_PTR)IDC_DEF_NEG, g_hInst, NULL); sy += 66;
+
+    mk(sp, L"STATIC", T(MODELS_DIR_LBL), SS_LEFT, x, sy, pw, 16, 0); sy += 18;
+    g_hOpModels = mk(sp, L"BUTTON", T(OPEN_MODELS), BS_PUSHBUTTON, x, sy, pw, 30, IDC_OPMODELS); sy += 38;
+    mk(sp, L"STATIC", T(OUTPUTS_DIR_LBL), SS_LEFT, x, sy, pw, 16, 0); sy += 18;
+    mk(sp, L"BUTTON", T(OPEN_OUTPUTS), BS_PUSHBUTTON, x, sy, pw, 30, IDC_OPOUT); sy += 42;
+
+    g_hChkUpd = mk(sp, L"BUTTON", T(CHECK_UPDATE), BS_PUSHBUTTON, x, sy, pw, 32, IDC_CHECKUPD); sy += 38;
+    g_hCleanTmp = mk(sp, L"BUTTON", T(CLEAN_TMP), BS_PUSHBUTTON, x, sy, pw, 32, IDC_CLEANTMP); sy += 38;
     g_hAbout = mk(sp, L"BUTTON", T(ABOUT), BS_PUSHBUTTON, x, sy, pw, 32, IDC_ABOUT); sy += 44;
     mk(sp, L"STATIC", T(DL_PATH), SS_LEFT, x, sy, pw, 16, 0); sy += 18;
-    mk(sp, L"STATIC", g_baseDir, SS_LEFT | SS_WORDELLIPSIS, x, sy, pw, 30, 0);
+    mk(sp, L"STATIC", g_baseDir, SS_LEFT | SS_WORDELLIPSIS, x, sy, pw, 40, 0);
 
-    /* panel 2 unused (reserved) -- keep an empty hidden panel */
-    g_hPan[2] = CreateWindowW(L"LDEPanel", NULL, WS_CHILD, 0, 0, W, 860, h, NULL, g_hInst, NULL);
+    /* panel 2 unused (reserved) */
+    g_hPan[2] = CreateWindowW(L"LDEPanel", NULL, WS_CHILD, 0, 0, W, 900, h, NULL, g_hInst, NULL);
 
     EnumChildWindows(h, fontEnum, (LPARAM)g_fNorm);
     EnumChildWindows(pp, fontEnum, (LPARAM)g_fNorm);
@@ -1352,6 +1668,13 @@ static void buildUI(HWND h)
     SendMessageW(g_hTabCpu, WM_SETFONT, (WPARAM)g_fBold, TRUE);
     SendMessageW(g_hTabNpu, WM_SETFONT, (WPARAM)g_fBold, TRUE);
     refreshTabBtns();
+    /* reflect persisted mirror / defaults */
+    SendMessageW(g_hMirror[g_mirror], BM_SETCHECK, BST_CHECKED, 0);
+    { wchar_t b[16];
+      _snwprintf(b,16,L"%d",g_defSteps); SetWindowTextW(g_hDefSteps,b);
+      _snwprintf(b,16,L"%d",g_defCfg); SetWindowTextW(g_hDefCfg,b);
+      _snwprintf(b,16,L"%d",g_defCount); SetWindowTextW(g_hDefCount,b);
+      _snwprintf(b,16,L"%.2f",g_defDenoise); SetWindowTextW(g_hDefDenoise,b); }
     applyView();
 }
 
@@ -1392,8 +1715,12 @@ static void applyLanguage(void)
     SetWindowTextW(g_hCleanTmp, T(CLEAN_TMP));
     SetWindowTextW(g_hOpModels, T(OPEN_MODELS));
     SetWindowTextW(g_hAbout, T(ABOUT));
+    SetWindowTextW(g_hMirror[0], T(MIRROR_AUTO));
+    SetWindowTextW(g_hMirror[1], T(MIRROR_CN));
+    SetWindowTextW(g_hMirror[2], T(MIRROR_HF));
     SendMessageW(g_hLang[g_lang], BM_SETCHECK, BST_CHECKED, 0);
     SendMessageW(g_hTheme[g_dark ? 0 : 1], BM_SETCHECK, BST_CHECKED, 0);
+    SendMessageW(g_hMirror[g_mirror], BM_SETCHECK, BST_CHECKED, 0);
     buildList();
 }
 
@@ -1403,11 +1730,32 @@ static LRESULT CALLBACK MainProc(HWND h, UINT msg, WPARAM wp, LPARAM lp)
     switch (msg) {
     case WM_CREATE: {
         buildUI(h);
-        for (int i = 0; i < MODEL_COUNT; i++) { g_mpct[i] = -1; g_mstate[i] = modelReady(i); }
+        reconcileModels();
         buildList();
         applyLanguage();
+        relayout();
         return 0;
     }
+
+    case WM_SIZE:
+        relayout();
+        return 0;
+
+    case WM_GETMINMAXINFO: {
+        MINMAXINFO *mmi = (MINMAXINFO *)lp;
+        mmi->ptMinTrackSize.x = 420;
+        mmi->ptMinTrackSize.y = 700;
+        return 0;
+    }
+
+    case WM_KEYDOWN:
+        if (wp == VK_F11) {
+            ShowWindow(h, IsZoomed(h) ? SW_RESTORE : SW_MAXIMIZE);
+        }
+        return 0;
+
+    case WM_ERASEBKGND:
+        return 1;
 
     case WM_DRAWITEM: {
         DRAWITEMSTRUCT *d = (DRAWITEMSTRUCT *)lp;
@@ -1442,6 +1790,21 @@ static LRESULT CALLBACK MainProc(HWND h, UINT msg, WPARAM wp, LPARAM lp)
         }
         else if (id == IDC_THEME0 || id == IDC_THEME1) {
             g_dark = (id == IDC_THEME0); saveConfig(); switchTheme();
+        }
+        else if (id == IDC_MIRROR0 || id == IDC_MIRROR1 || id == IDC_MIRROR2) {
+            g_mirror = id - IDC_MIRROR0; saveConfig();
+        }
+        else if (id == IDC_DEF_STEPS || id == IDC_DEF_CFG || id == IDC_DEF_COUNT || id == IDC_DEF_DENOISE) {
+            wchar_t b[16];
+            GetWindowTextW(g_hDefSteps, b, 16); g_defSteps = _wtoi(b);
+            GetWindowTextW(g_hDefCfg, b, 16); g_defCfg = _wtoi(b);
+            GetWindowTextW(g_hDefCount, b, 16); g_defCount = _wtoi(b);
+            GetWindowTextW(g_hDefDenoise, b, 16); g_defDenoise = _wtof(b);
+            if (g_defSteps < 1) g_defSteps = 20; if (g_defSteps > 50) g_defSteps = 50;
+            if (g_defCfg < 1) g_defCfg = 7; if (g_defCfg > 30) g_defCfg = 30;
+            if (g_defCount < 1) g_defCount = 1; if (g_defCount > 4) g_defCount = 4;
+            if (g_defDenoise < 0.1 || g_defDenoise > 1) g_defDenoise = 0.45;
+            saveConfig();
         }
         else if (id == IDC_CHECKUPD) {
             if (InterlockedExchange(&g_busy, 1) == 1) break;
@@ -1521,7 +1884,12 @@ static LRESULT CALLBACK MainProc(HWND h, UINT msg, WPARAM wp, LPARAM lp)
     case WM_CTLCOLORMSGBOX:
         return 0;
 
+    case WM_EXITSIZEMOVE:
+        saveConfig();
+        return 0;
+
     case WM_DESTROY:
+        saveConfig();
         PostQuitMessage(0);
         return 0;
     }
@@ -1574,8 +1942,25 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrev, LPWSTR cmd, int show)
             _snwprintf(g_baseDir, MAX_PATH, L"%ls", g_exeDir);
     }
     CreateDirectoryW(g_baseDir, NULL);
-    { wchar_t d[MAX_PATH]; modelsDir(d, MAX_PATH); outputDir(d, MAX_PATH); tmpDir(d, MAX_PATH);
+    { wchar_t d[MAX_PATH];
+      modelsDir(d, MAX_PATH); outputDir(d, MAX_PATH); tmpDir(d, MAX_PATH); configDir(d, MAX_PATH);
       joinPath(d, MAX_PATH, g_baseDir, L"update"); CreateDirectoryW(d, NULL); }
+
+    /* one-time migrations from earlier layouts */
+    {
+        wchar_t oldo[MAX_PATH], newo[MAX_PATH];
+        joinPath(oldo, MAX_PATH, g_baseDir, L"output");
+        outputDir(newo, MAX_PATH);
+        if (GetFileAttributesW(oldo) != INVALID_FILE_ATTRIBUTES &&
+            GetFileAttributesW(newo) == INVALID_FILE_ATTRIBUTES)
+            MoveFileExW(oldo, newo, MOVEFILE_REPLACE_EXISTING);
+        wchar_t oldc[MAX_PATH], newc[MAX_PATH];
+        joinPath(oldc, MAX_PATH, g_baseDir, L"config.ini");
+        joinPath(newc, MAX_PATH, g_baseDir, L"config\\config.ini");
+        if (GetFileAttributesW(oldc) != INVALID_FILE_ATTRIBUTES &&
+            GetFileAttributesW(newc) == INVALID_FILE_ATTRIBUTES)
+            MoveFileExW(oldc, newc, MOVEFILE_REPLACE_EXISTING);
+    }
 
     loadConfig();
     setupColors();
@@ -1592,14 +1977,16 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrev, LPWSTR cmd, int show)
     wchar_t title[120];
     _snwprintf(title, 120, L"Local Dream ET  v%s", APP_VERSION_STR);
     g_hMain = CreateWindowW(L"LDEMain3", title,
-        WS_OVERLAPPEDWINDOW & ~WS_THICKFRAME & ~WS_MAXIMIZEBOX,
-        CW_USEDEFAULT, CW_USEDEFAULT, 480, 900, NULL, NULL, hInst, NULL);
-    ShowWindow(g_hMain, show);
+        WS_OVERLAPPEDWINDOW | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_THICKFRAME,
+        g_winX, g_winY, g_winW, g_winH, NULL, NULL, hInst, NULL);
+    ShowWindow(g_hMain, g_winMax ? SW_SHOWMAXIMIZED : show);
     UpdateWindow(g_hMain);
 
     MSG m;
     while (GetMessageW(&m, NULL, 0, 0)) {
-        if (!IsDialogMessageW(g_hMain, &m)) { TranslateMessage(&m); DispatchMessageW(&m); }
+        if (m.message == WM_MOUSEWHEEL && g_view == 2 && g_hPan[1])
+            SendMessageW(g_hPan[1], WM_MOUSEWHEEL, m.wParam, m.lParam);
+        else if (!IsDialogMessageW(g_hMain, &m)) { TranslateMessage(&m); DispatchMessageW(&m); }
     }
     OleUninitialize();
     return 0;

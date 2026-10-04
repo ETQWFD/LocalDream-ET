@@ -461,6 +461,21 @@ data class Model(
             val file = File(File(getModelsDir(context), upscalerId), UPSCALER_FILE_NAME)
             return file.exists() && file.length() > 0
         }
+
+        // Produced weight/bin files that prove an on-device SD1.5 conversion
+        // actually completed. The *.mnn graph templates are copied from the
+        // cvtbase assets and are always present, so these are the real check.
+        private val CONVERTED_SD15_OUTPUTS = listOf(
+            "clip_v2.mnn.weight", "unet.mnn.weight", "vae_decoder.mnn.weight",
+            "vae_encoder.mnn.weight", "pos_emb.bin", "token_emb.bin",
+        )
+
+        fun hasConvertedSd15Outputs(modelDir: File): Boolean {
+            if (!modelDir.isDirectory) return false
+            return CONVERTED_SD15_OUTPUTS.all { name ->
+                File(modelDir, name).let { it.isFile && it.length() > 0L }
+            }
+        }
     }
 }
 
@@ -654,7 +669,13 @@ class ModelRepository private constructor(private val context: Context) {
                     sdxlFile.exists() ->
                         customModels.add(createCustomModel(dir, isNpu = !File(dir, "unet.mnn").exists(), isSdxl = true))
 
-                    finishedFile.exists() ->
+                    // On-device converted SD1.5 checkpoint: the atomic "finished"
+                    // marker is only written after every produced output is fsync'd
+                    // (see native finalizeConversion). Still, re-check the produced
+                    // weight files here so a stray/corrupt marker left by a crash or
+                    // power-loss can never be listed as a usable model; the user
+                    // can then clean it and re-convert.
+                    finishedFile.exists() && Model.hasConvertedSd15Outputs(dir) ->
                         customModels.add(createCustomModel(dir, isNpu = false))
 
                     npuCustomFile.exists() ->

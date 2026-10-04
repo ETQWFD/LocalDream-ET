@@ -112,7 +112,7 @@ def main() -> int:
     for lang in ("zh", "en", "tw"):
         A("    { /* %s */" % lang)
         for k in keys:
-            A("        " + L(ui[k][lang]) + ",")
+            A("        " + L(ui[k][lang].replace("{version}", app["version"])) + ",")
         A("    },")
     A("};")
     A("")

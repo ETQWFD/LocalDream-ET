@@ -1,10 +1,13 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <fcntl.h>
 #include <fstream>
 #include <iostream>
 #include <memory>
+#include <stdexcept>
 #include <string>
+#include <unistd.h>
 #include <unordered_map>
 #include <vector>
 #include <xtensor-blas/xlinalg.hpp>
@@ -16,6 +19,27 @@
 #include "LoraMapping.hpp"
 #include "SDStructure.hpp"
 #include "SafeTensorReader.hpp"
+
+// Durably flush a finished output file's bytes to storage. Without this the
+// data lives only in the page cache and a crash/power-loss can leave a truncated
+// weight file even though the process appeared to finish.
+static void fsyncFile(const std::string &path) {
+  int fd = ::open(path.c_str(), O_RDONLY);
+  if (fd >= 0) {
+    ::fsync(fd);
+    ::close(fd);
+  }
+}
+
+// Durably persist a directory entry (rename) so the "finished" marker itself
+// survives a crash instead of vanishing on reboot.
+static void fsyncDir(const std::string &dir) {
+  int fd = ::open(dir.c_str(), O_RDONLY | O_DIRECTORY);
+  if (fd >= 0) {
+    ::fsync(fd);
+    ::close(fd);
+  }
+}
 
 struct Shape {
   std::vector<int> dims;
@@ -240,7 +264,8 @@ void generateModel(const std::string &dir, const std::string &safetensor_file,
                    const std::string &model_name,
                    const std::vector<std::vector<std::string>> &structure,
                    const std::vector<std::string> &loras = {},
-                   const std::vector<float> &lora_weights = {}) {
+                   const std::vector<float> &lora_weights = {},
+                   const std::string &progress_tag = "") {
   SafeTensorReader reader(dir + "/" + safetensor_file);
   std::ofstream weight_file(dir + "/model.mnn.weight", std::ios::binary);
 
@@ -251,6 +276,16 @@ void generateModel(const std::string &dir, const std::string &safetensor_file,
         std::make_unique<SafeTensorReader>(dir + "/" + lora_file);
     lora_readers.push_back(lora_reader.get());
     lora_reader_holders.push_back(std::move(lora_reader));
+  }
+
+  // Real per-tensor progress so the UI animates through the whole conversion
+  // instead of freezing on the last coarse stage line. Throttled to one line
+  // every few tensors (and the final) to avoid flooding the pipe.
+  const size_t total = structure.size();
+  size_t done = 0;
+  if (!progress_tag.empty()) {
+    std::cout << "CONVERT_PROGRESS:" << progress_tag << ":0:" << total
+              << std::endl;
   }
 
   for (const auto &weight_info : structure) {
@@ -289,6 +324,12 @@ void generateModel(const std::string &dir, const std::string &safetensor_file,
       auto quantized = quantizeWeights(final_weights, shape);
       weight_file.write(reinterpret_cast<const char *>(quantized.data()),
                         quantized.size());
+    }
+
+    ++done;
+    if (!progress_tag.empty() && (done % 4 == 0 || done == total)) {
+      std::cout << "CONVERT_PROGRESS:" << progress_tag << ":" << done << ":"
+                << total << std::endl;
     }
   }
   weight_file.close();
@@ -346,13 +387,14 @@ void generateClipModel(const std::string &dir,
                        const std::string &safetensor_file,
                        bool clip_skip_2 = false,
                        const std::vector<std::string> &loras = {},
-                       const std::vector<float> &lora_weights = {}) {
+                       const std::vector<float> &lora_weights = {},
+                       const std::string &progress_tag = "CLIP") {
   if (clip_skip_2) {
     generateModel(dir, safetensor_file, "clip_v2", clip_skip_2_structure, loras,
-                  lora_weights);
+                  lora_weights, progress_tag);
   } else {
     generateModel(dir, safetensor_file, "clip_v2", clip_structure, loras,
-                  lora_weights);
+                  lora_weights, progress_tag);
   }
 
   SafeTensorReader reader(dir + "/" + safetensor_file);
@@ -376,31 +418,92 @@ void generateClipModel(const std::string &dir,
   token_emb_file.close();
 }
 
+// Finalize conversion: verify every produced output exists and is non-empty,
+// flush each to storage, then publish the "finished" marker ATOMICALLY as a
+// manifest. The marker is only created after all real outputs are durable, so
+// a crash/power-loss can never leave a stray "finished" that a restart would
+// mistake for a complete model. Throws (-> non-zero exit) if any output is
+// missing or empty; in that case no marker is written.
+static void finalizeConversion(const std::string &dir) {
+  // Outputs the converter itself produces. The *.mnn graph templates and
+  // tokenizer.json are copied from the cvtbase assets by the Kotlin side and are
+  // always present; these weight/bin files are the actual conversion result.
+  const std::vector<std::string> produced = {
+      "clip_v2.mnn.weight", "unet.mnn.weight", "vae_decoder.mnn.weight",
+      "vae_encoder.mnn.weight", "pos_emb.bin", "token_emb.bin",
+  };
+
+  std::string manifest = "LocalDreamET convert manifest v1\n";
+  for (const auto &name : produced) {
+    const std::string path = dir + "/" + name;
+    std::ifstream f(path, std::ios::binary | std::ios::ate);
+    if (!f) {
+      throw std::runtime_error("conversion output missing: " + name);
+    }
+    std::streamoff sz = f.tellg();
+    if (sz <= 0) {
+      throw std::runtime_error("conversion output empty: " + name);
+    }
+    f.close();
+    fsyncFile(path);
+    manifest += name + " " + std::to_string(static_cast<long long>(sz)) + "\n";
+  }
+
+  // Write manifest to finished.tmp, fsync it, then rename -> finished.
+  const std::string tmp_path = dir + "/finished.tmp";
+  {
+    std::ofstream out(tmp_path, std::ios::binary | std::ios::trunc);
+    out << manifest;
+    out.flush();
+    if (!out) {
+      throw std::runtime_error("failed to write finished.tmp");
+    }
+  }
+  fsyncFile(tmp_path);
+
+  const std::string final_path = dir + "/finished";
+  // Remove any pre-existing non-atomic marker before the rename so a stale
+  // "finished" can never shadow a freshly verified one.
+  std::remove(final_path.c_str());
+  if (std::rename(tmp_path.c_str(), final_path.c_str()) != 0) {
+    throw std::runtime_error("failed to publish finished marker");
+  }
+  fsyncDir(dir);
+}
+
 void generateMNNModels(const std::string &dir,
                        const std::string &safetensor_file,
                        bool clip_skip_2 = false,
                        const std::vector<std::string> &loras = {},
                        const std::vector<float> &lora_weights = {}) {
   std::cout << "Generating CLIP model..." << std::endl;
-  generateClipModel(dir, safetensor_file, clip_skip_2, loras, lora_weights);
+  generateClipModel(dir, safetensor_file, clip_skip_2, loras, lora_weights,
+                    "CLIP");
 
   std::cout << "Generating UNet model..." << std::endl;
   generateModel(dir, safetensor_file, "unet", unet_structure, loras,
-                lora_weights);
+                lora_weights, "UNET");
   patchModel(dir, safetensor_file, "unet", unet_small_weights);
 
   std::cout << "Generating VAE Decoder model..." << std::endl;
-  generateModel(dir, safetensor_file, "vae_decoder", vae_decoder_structure);
+  generateModel(dir, safetensor_file, "vae_decoder", vae_decoder_structure,
+                {}, {}, "VAE_DEC");
   patchModel(dir, safetensor_file, "vae_decoder", vae_decoder_small_weights,
              true);
 
   std::cout << "Generating VAE Encoder model..." << std::endl;
-  generateModel(dir, safetensor_file, "vae_encoder", vae_encoder_structure);
+  generateModel(dir, safetensor_file, "vae_encoder", vae_encoder_structure,
+                {}, {}, "VAE_ENC");
   patchModel(dir, safetensor_file, "vae_encoder", vae_encoder_small_weights,
              true);
 
-  std::ofstream finished_file(dir + "/finished");
-  finished_file.close();
+  // Last big tensors + VAE close/flushing can take a while with no new stdout;
+  // tell the UI we are now in the durable finalize phase before the slow
+  // fsync/rename work, so it shows "writing final files" instead of looking
+  // frozen.
+  std::cout << "CONVERT_FINALIZING" << std::endl;
+  finalizeConversion(dir);
 
+  std::cout << "CONVERT_OK" << std::endl;
   std::cout << "All models generated successfully!" << std::endl;
 }

@@ -4078,25 +4078,128 @@ suspend fun convertCustomModel(
         val process = processBuilder.start()
 
         val convertTail = java.util.concurrent.ConcurrentLinkedDeque<String>()
-        process.inputStream.bufferedReader().use { reader ->
-            var line: String?
-            while (reader.readLine().also { line = it } != null) {
-                Log.i("ModelConvert", "Convert: $line")
-                line?.let {
-                    convertTail.addLast(it)
-                    while (convertTail.size > 15) convertTail.pollFirst()
-                }
-                withContext(Dispatchers.Main) {
-                    onProgress(context.getString(R.string.converting_with_line, line.orEmpty()))
+        // Real success requires exitCode==0 AND the atomic "finished" marker AND
+        // every produced output present with the size recorded in the marker
+        // manifest. A stale/early "finished" or a crashed half-convert must NOT
+        // be reported as success (the old code only checked finished.exists()).
+        val producedOutputs = listOf(
+            "clip_v2.mnn.weight", "unet.mnn.weight", "vae_decoder.mnn.weight",
+            "vae_encoder.mnn.weight", "pos_emb.bin", "token_emb.bin",
+        )
+
+        fun conversionIsValid(): Pair<Boolean, String?> {
+            val finished = File(modelDir, "finished")
+            if (!finished.isFile) return false to "missing finished marker"
+            val manifestSizes = HashMap<String, Long>()
+            runCatching {
+                finished.forEachLine { line ->
+                    val p = line.trim().split(Regex("\\s+"))
+                    if (p.size == 2) {
+                        p[1].toLongOrNull()?.let { manifestSizes[p[0]] = it }
+                    }
                 }
             }
+            for (name in producedOutputs) {
+                val f = File(modelDir, name)
+                if (!f.isFile) return false to "missing $name"
+                val actual = f.length()
+                if (actual <= 0L) return false to "empty $name"
+                val recorded = manifestSizes[name]
+                if (recorded != null && recorded > 0L && actual != recorded) {
+                    return false to "$name size mismatch (disk=$actual manifest=$recorded)"
+                }
+            }
+            return true to null
         }
+
+        // Heartbeat state. We never KILL a legitimately slow conversion; if the
+        // native stdout goes quiet for 20s we just relabel the UI so it doesn't
+        // look frozen while the last big tensor flushes.
+        var lastLineMs = System.currentTimeMillis()
+        var processAlive = true
+        var sawFinalizing = false
+
+        coroutineScope {
+            val watchdog = launch {
+                while (isActive && processAlive) {
+                    delay(5000)
+                    if (processAlive && System.currentTimeMillis() - lastLineMs > 20_000L) {
+                        withContext(Dispatchers.Main) {
+                            onProgress(context.getString(R.string.convert_still_working))
+                        }
+                    }
+                }
+            }
+
+            process.inputStream.bufferedReader().use { reader ->
+                var line: String?
+                while (reader.readLine().also { line = it } != null) {
+                    Log.i("ModelConvert", "Convert: $line")
+                    lastLineMs = System.currentTimeMillis()
+                    line?.let {
+                        convertTail.addLast(it)
+                        while (convertTail.size > 40) convertTail.pollFirst()
+                    }
+                    val l = line.orEmpty()
+                    when {
+                        l.startsWith("CONVERT_PROGRESS:") -> {
+                            // CONVERT_PROGRESS:<stage>:<done>:<total> -> percent
+                            val parts = l.split(":")
+                            val done = parts.getOrNull(2)?.toIntOrNull()
+                            val total = parts.getOrNull(3)?.toIntOrNull()
+                            val pct = if (done != null && total != null && total > 0) {
+                                (done.toFloat() / total * 100).toInt().coerceIn(0, 99)
+                            } else -1
+                            withContext(Dispatchers.Main) {
+                                onProgress(
+                                    if (pct >= 0) "Converting ${parts.getOrNull(1)}… $pct%"
+                                    else context.getString(R.string.converting_model),
+                                )
+                            }
+                        }
+                        l == "CONVERT_FINALIZING" -> {
+                            sawFinalizing = true
+                            withContext(Dispatchers.Main) {
+                                onProgress(context.getString(R.string.convert_finalizing))
+                            }
+                        }
+                        l.startsWith("Generating") -> {
+                            withContext(Dispatchers.Main) {
+                                onProgress(context.getString(R.string.converting_with_line, l))
+                            }
+                        }
+                        else -> {
+                            withContext(Dispatchers.Main) {
+                                onProgress(context.getString(R.string.converting_with_line, l))
+                            }
+                        }
+                    }
+                }
+            }
+            watchdog.cancel()
+        }
+        processAlive = false
 
         val exitCode = process.waitFor()
         Log.i("ModelConvert", "Conversion process exited with code: $exitCode")
 
-        val finishedFile = File(modelDir, "finished")
-        if (finishedFile.exists()) {
+        // Persist a readable log of the native tail BEFORE deleting anything, so
+        // a failed conversion is diagnosable instead of vanishing.
+        fun saveConvertLog(reason: String) {
+            runCatching {
+                val logDir = io.github.xororz.localdream.utils.Storage.tempDir(context)
+                val logFile = File(logDir, "convert_${modelId}_${System.currentTimeMillis()}.log")
+                logFile.printWriter().use { w ->
+                    w.println("exitCode=$exitCode reason=$reason")
+                    convertTail.forEach { w.println(it) }
+                }
+                Log.i("ModelConvert", "Convert log: ${logFile.absolutePath}")
+            }
+        }
+
+        val (valid, invalidReason) = conversionIsValid()
+        if (exitCode == 0 && valid) {
+            val finishedFile = File(modelDir, "finished")
             modelFile.delete()
             val clipSkip1File = File(modelDir, "clip_skip_1.mnn")
             if (clipSkip1File.exists()) {
@@ -4122,17 +4225,23 @@ suspend fun convertCustomModel(
                 onSuccess()
             }
         } else {
+            // Failure: non-zero exit, invalid/missing outputs, or no marker.
+            saveConvertLog(invalidReason ?: "exitCode=$exitCode")
             modelDir.deleteRecursively()
             withContext(Dispatchers.Main) {
                 // Surface the real native reason (unsupported format / missing
                 // op / driver) so "convert failed" is actionable, not a blanket
                 // "must be SD1.5" message.
-                val detail = convertTail.joinToString(" / ").takeLast(400)
+                val detail = buildString {
+                    if (invalidReason != null && invalidReason != "missing finished marker") {
+                        append(invalidReason).append("; ")
+                    }
+                    append(convertTail.joinToString(" / ").takeLast(400))
+                }.trim(' ', ';')
                 onError(
-                    if (detail.isBlank()) {
-                        context.getString(R.string.conversion_need_sd15)
-                    } else {
-                        context.getString(R.string.conversion_failed_detail, detail, exitCode)
+                    when {
+                        detail.isBlank() -> context.getString(R.string.conversion_need_sd15)
+                        else -> context.getString(R.string.conversion_failed_detail, detail, exitCode)
                     },
                 )
             }

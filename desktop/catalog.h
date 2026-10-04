@@ -3,9 +3,9 @@
  * All non-ASCII is \uXXXX escaped so the C source stays pure ASCII. */
 #pragma once
 
-#define APP_VERSION_STR "3.0.0"
-#define APP_VERSION_W  L"3.0.0"
-#define APP_CODE       5
+#define APP_VERSION_STR "3.0.1"
+#define APP_VERSION_W  L"3.0.1"
+#define APP_CODE       6
 
 static const wchar_t *g_samplers[9] = {
     L"dpm",
@@ -78,6 +78,15 @@ enum UiKey {
     UIDX_EMPTY_PROMPT = 49,
     UIDX_ENGINE_MISS = 50,
     UIDX_ABOUT_BODY = 51,
+    UIDX_VALIDATING = 52,
+    UIDX_MIRROR_LBL = 53,
+    UIDX_MIRROR_AUTO = 54,
+    UIDX_MIRROR_CN = 55,
+    UIDX_MIRROR_HF = 56,
+    UIDX_DEFAULTS_LBL = 57,
+    UIDX_OPEN_OUTPUTS = 58,
+    UIDX_MODELS_DIR_LBL = 59,
+    UIDX_OUTPUTS_DIR_LBL = 60,
     UIDX_COUNT
 };
 
@@ -136,6 +145,15 @@ static const wchar_t *g_ui[3][UIDX_COUNT] = {
         L"\u63d0\u793a\u8bcd\u4e0d\u80fd\u4e3a\u7a7a\u3002",
         L"\u672a\u627e\u5230\u5f15\u64ce sd-cli.exe\uff0c\u8bf7\u91cd\u65b0\u5b89\u88c5\u3002",
         L"Local Dream ET  \u7535\u8111\u7248 v3.0.0\n\n\u5f00\u53d1\u8005 / Developer\uff1aET\nCopyright (C) 2026 ET\n\n\u672c\u5730\u79bb\u7ebf Stable Diffusion \u51fa\u56fe\uff0c\u514d\u8d39\u3001\u4e0d\u4e0a\u4f20\u56fe\u7247\u3002\n\u5f15\u64ce stable-diffusion.cpp\uff08sd-cli / ggml\uff09\nCopyright (c) 2023 leejet \u00b7 MIT License\u3002",
+        L"\u6821\u9a8c\u4e2d\u2026",
+        L"\u6a21\u578b\u4e0b\u8f7d\u6e90",
+        L"\u81ea\u52a8(\u63a8\u8350)",
+        L"ModelScope",
+        L"HuggingFace",
+        L"\u751f\u6210\u9ed8\u8ba4\u53c2\u6570",
+        L"\u6253\u5f00\u6210\u54c1\u76ee\u5f55",
+        L"\u6a21\u578b\u76ee\u5f55",
+        L"\u6210\u54c1\u76ee\u5f55",
     },
     { /* en */
         L"CPU Models",
@@ -190,6 +208,15 @@ static const wchar_t *g_ui[3][UIDX_COUNT] = {
         L"Prompt is empty.",
         L"sd-cli.exe missing, reinstall.",
         L"Local Dream ET  desktop v3.0.0\n\nDeveloper: ET\nCopyright (C) 2026 ET\n\nFully offline local Stable Diffusion, free, no uploads.\nEngine: stable-diffusion.cpp (sd-cli / ggml)\nCopyright (c) 2023 leejet \u00b7 MIT License.",
+        L"Validating\u2026",
+        L"Download source",
+        L"Auto (recommended)",
+        L"ModelScope",
+        L"HuggingFace",
+        L"Generation defaults",
+        L"Open outputs",
+        L"Models folder",
+        L"Outputs folder",
     },
     { /* tw */
         L"CPU Models",
@@ -244,6 +271,15 @@ static const wchar_t *g_ui[3][UIDX_COUNT] = {
         L"\u63d0\u793a\u8a5e\u4e0d\u80fd\u70ba\u7a7a\u3002",
         L"\u672a\u627e\u5230\u5f15\u64ce sd-cli.exe\uff0c\u8acb\u91cd\u65b0\u5b89\u88dd\u3002",
         L"Local Dream ET  \u96fb\u8166\u7248 v3.0.0\n\n\u958b\u767c\u8005 / Developer\uff1aET\nCopyright (C) 2026 ET\n\n\u672c\u6a5f\u96e2\u7dda Stable Diffusion \u51fa\u5716\uff0c\u514d\u8cbb\u3001\u4e0d\u4e0a\u50b3\u5716\u7247\u3002\n\u5f15\u64ce stable-diffusion.cpp\uff08sd-cli / ggml\uff09\nCopyright (c) 2023 leejet \u00b7 MIT License\u3002",
+        L"\u6821\u9a57\u4e2d\u2026",
+        L"\u6a21\u578b\u4e0b\u8f09\u4f86\u6e90",
+        L"\u81ea\u52d5(\u63a8\u85a6)",
+        L"ModelScope",
+        L"HuggingFace",
+        L"\u751f\u6210\u9810\u8a2d\u53c3\u6578",
+        L"\u958b\u555f\u6210\u54c1\u76ee\u9304",
+        L"\u6a21\u578b\u76ee\u9304",
+        L"\u6210\u54c1\u76ee\u9304",
     },
 };
 

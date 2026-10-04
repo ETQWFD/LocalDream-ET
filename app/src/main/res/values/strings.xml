@@ -585,6 +585,10 @@
     <string name="search_models_placeholder">搜索模型…</string>
     <string name="search_models_empty">No matching models.</string>
     <string name="conversion_failed_detail">Conversion failed (code %2$d): %1$s</string>
+    <string name="convert_finalizing">Finalizing write (last stage is slow, please keep the app open)…</string>
+    <string name="convert_still_working">Still converting (the last large tensor is just slow)…</string>
+    <string name="convert_invalid_output">Conversion result incomplete (%1$s); half-built model removed</string>
+    <string name="convert_log_saved">Conversion log saved: %1$s</string>
     <string name="runtime_label">Runtime</string>
     <string name="output_aspect_ratio">Output aspect ratio</string>
     <string name="realisticvision_description">Realistic photorealistic SD1.5 model (uncensored-friendly), converted on device</string>
