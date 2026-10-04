@@ -94,7 +94,7 @@ internal suspend fun checkBackendHealth(
     servingModelId: StateFlow<String?>,
     expectedModelId: String,
     onHealthy: () -> Unit,
-    onUnhealthy: () -> Unit,
+    onUnhealthy: (detail: String?) -> Unit,
 ) = withContext(Dispatchers.IO) {
     try {
         val startTime = System.currentTimeMillis()
@@ -104,6 +104,7 @@ internal suspend fun checkBackendHealth(
         // for the whole window is pointless.
         var pollDelayMs = 100L
         var ownErrorStreak = 0
+        var lastErrorDetail: String? = null
 
         while (currentCoroutineContext().isActive) {
             val state = backendState.value
@@ -114,6 +115,9 @@ internal suspend fun checkBackendHealth(
                 (state.modelId == null || state.modelId == expectedModelId)
 
             if (ownError) {
+                if (state is BackendService.BackendState.Error) {
+                    lastErrorDetail = state.message
+                }
                 // Require it to persist across a poll interval before failing: a
                 // stale error from a previous run is superseded within ms by the
                 // start this screen just issued (Starting/Running) and won't
@@ -121,7 +125,7 @@ internal suspend fun checkBackendHealth(
                 ownErrorStreak++
                 if (ownErrorStreak >= 2) {
                     withContext(Dispatchers.Main) {
-                        onUnhealthy()
+                        onUnhealthy(lastErrorDetail)
                     }
                     break
                 }
@@ -130,7 +134,7 @@ internal suspend fun checkBackendHealth(
 
                 if (System.currentTimeMillis() - startTime > timeoutDuration) {
                     withContext(Dispatchers.Main) {
-                        onUnhealthy()
+                        onUnhealthy(lastErrorDetail)
                     }
                     break
                 }
@@ -162,7 +166,7 @@ internal suspend fun checkBackendHealth(
         }
     } catch (e: Exception) {
         withContext(Dispatchers.Main) {
-            onUnhealthy()
+            onUnhealthy(null)
         }
     }
 }

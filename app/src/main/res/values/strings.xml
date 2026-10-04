@@ -285,6 +285,10 @@
     <!-- Custom Model -->
     <string name="add_custom_model">Add Custom Model</string>
     <string name="import_from_link">＋ Import Model from Link</string>
+    <string name="add_or_import_model">Add / Import Model</string>
+    <string name="export_diagnostics">Export Diagnostic Report</string>
+    <string name="export_diagnostics_done">Diagnostics saved to: %1$s</string>
+    <string name="export_diagnostics_failed">Export failed: %1$s</string>
     <string name="url_imported_description">User-imported SD1.5 model (from link), converted on device, CPU/32-bit ready</string>
     <string name="url_import_hint">Paste a Hugging Face / hf-mirror / ModelScope model page or a direct .safetensors link. We check size, free space and SD1.5 compatibility BEFORE downloading.</string>
     <string name="url_import_link">Model link</string>
@@ -566,8 +570,11 @@
     <string name="update_download_now">Download &amp; install</string>
     <string name="update_downloading_title">Downloading update</string>
     <string name="update_download_hint">The update downloads inside the app. Keep it open until it finishes; the installer will open automatically.</string>
+    <string name="update_running_in_notification">Downloading in background — see the ongoing notification for progress and speed. Tap the completed notification to install.</string>
     <string name="update_ready_title">Installing</string>
     <string name="update_ready_hint">Opening the system installer…</string>
+    <string name="update_channel_name">Update download</string>
+    <string name="update_failed_title">Update download failed</string>
     <string name="update_error">Update failed: %1$s</string>
     <string name="update_retry">Retry</string>
     <string name="update_permission_title">Install permission needed</string>
@@ -582,6 +589,10 @@
     <string name="err_prompt_empty">Prompt is empty. Please enter a prompt.</string>
     <string name="err_backend_connect">Local generation engine failed to start (127.0.0.1:8081). The model may be incomplete or this device is incompatible.</string>
     <string name="err_model_file_missing">Model file missing. Please download the model again.</string>
+    <string name="err_engine_crash">Engine crashed (%1$s). The model files may be corrupt; please re-download and retry.</string>
+    <string name="err_engine_killed">Engine was killed by the system (low memory). Close other apps and retry.</string>
+    <string name="err_oom">Out of memory during generation. Use a smaller resolution / fewer steps and retry.</string>
+    <string name="err_native_load">Native engine library failed to load (ABI mismatch or corrupted install). Please reinstall the app.</string>
     <string name="search_models_placeholder">搜索模型…</string>
     <string name="search_models_empty">No matching models.</string>
     <string name="conversion_failed_detail">Conversion failed (code %2$d): %1$s</string>

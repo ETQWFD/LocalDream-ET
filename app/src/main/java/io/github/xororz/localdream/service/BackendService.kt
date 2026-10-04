@@ -477,6 +477,23 @@ class BackendService : Service() {
             val nativeDir = applicationInfo.nativeLibraryDir
             val modelsDir = File(Model.getModelsDir(this), modelId)
 
+            // Pre-flight self-check: for on-device converted SD1.5 checkpoints,
+            // verify the real conversion products before exec'ing the engine.
+            // A half-downloaded/corrupt zip used to reach native startup and
+            // crash there, surfacing only as a generic "cannot connect 8081".
+            // Failing fast here gives an actionable "model incomplete, re-download"
+            // instead of letting the engine die.
+            if (backendType == "sd15cpu" && !Model.hasConvertedSd15Outputs(modelsDir)) {
+                Log.e(TAG, "pre-flight failed: SD1.5 products missing in $modelsDir")
+                updateState(
+                    BackendState.Error(
+                        "Model incomplete: missing converted weight files in $modelId",
+                        modelId,
+                    ),
+                )
+                return false
+            }
+
             val executableFile = File(nativeDir, EXECUTABLE_NAME)
 
             if (!executableFile.exists()) {
@@ -671,7 +688,7 @@ class BackendService : Service() {
             val proc = processBuilder.start()
             process = proc
 
-            startMonitorThread(proc)
+            startMonitorThread(proc, config.modelId, command, systemLibPathsStr)
 
             return true
         } catch (e: Exception) {
@@ -681,30 +698,62 @@ class BackendService : Service() {
         }
     }
 
-    private fun startMonitorThread(proc: Process) {
+    private fun startMonitorThread(
+        proc: Process,
+        modelId: String,
+        command: List<String>,
+        ldLibraryPath: String,
+    ) {
         Thread {
             // Keep the last native log lines so a startup crash (e.g. a missing
             // model file or a failed driver dlopen) reports the real reason
             // instead of a bare "connection refused / exit code".
             val tail = java.util.concurrent.ConcurrentLinkedDeque<String>()
+
+            // Persist the engine run to filesDir so the diagnostic exporter can
+            // attach it later. Every line + exit code are flushed; failures here
+            // must never crash the monitor.
+            val engineLog = runCatching {
+                val ts = java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.US)
+                    .format(java.util.Date())
+                File(filesDir, "engine_${modelId}_$ts.log").apply {
+                    printWriter().use { w ->
+                        w.println("== engine run: $modelId ==")
+                        w.println("command: ${command.joinToString(" ")}")
+                        w.println("abi: ${java.util.Arrays.toString(android.os.Build.SUPPORTED_ABIS)}")
+                        w.println("ld_library_path: $ldLibraryPath")
+                        w.println("---- native output ----")
+                    }
+                }
+            }.getOrNull()
+
+            fun appendEngine(line: String) = runCatching {
+                engineLog?.appendText(line + "\n")
+            }
+
             val exitCode = try {
                 proc.inputStream.bufferedReader().use { reader ->
                     var line: String?
                     while (reader.readLine().also { line = it } != null) {
                         Log.i(TAG, "Backend: $line")
                         line?.let {
+                            appendEngine(it)
                             tail.addLast(it)
-                            while (tail.size > 12) tail.pollFirst()
+                            while (tail.size > 40) tail.pollFirst()
                         }
                     }
                 }
                 proc.waitFor()
             } catch (e: Exception) {
                 Log.e(TAG, "monitor error", e)
+                appendEngine("monitor error: ${e.message}")
                 if (isLiveCrash(proc)) {
                     updateState(BackendState.Error("monitor error: ${e.message}", servingModelId.value))
                 }
                 return@Thread
+            }
+            runCatching {
+                engineLog?.appendText("---- engine exited, code=$exitCode ----\n")
             }
             Log.i(TAG, "Backend process exited with code: $exitCode")
             // Only surface as an error when this is still the active process and

@@ -300,6 +300,7 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
     var showEmbeddingManagerDialog by remember { mutableStateOf(false) }
     var showCustomModelDialog by remember { mutableStateOf(false) }
     var showUrlImportDialog by remember { mutableStateOf(false) }
+    var showAddMenu by remember { mutableStateOf(false) }
     var showCustomNpuModelDialog by remember { mutableStateOf(false) }
     var isConverting by remember { mutableStateOf(false) }
     var conversionProgress by remember { mutableStateOf("") }
@@ -526,6 +527,39 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                         style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.padding(bottom = 12.dp),
                     )
+
+                    val diagDoneFmt = stringResource(R.string.export_diagnostics_done)
+                    val diagFailedFmt = stringResource(R.string.export_diagnostics_failed)
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                val res = withContext(Dispatchers.IO) {
+                                    io.github.xororz.localdream.utils.DiagnosticsExporter.build(context)
+                                }
+                                if (res.file.exists()) {
+                                    Toast.makeText(
+                                        context,
+                                        diagDoneFmt.format(res.file.absolutePath),
+                                        Toast.LENGTH_LONG,
+                                    ).show()
+                                    runCatching {
+                                        context.startActivity(
+                                            io.github.xororz.localdream.utils.DiagnosticsExporter.shareIntent(context, res.file),
+                                        )
+                                    }
+                                } else {
+                                    Toast.makeText(
+                                        context,
+                                        diagFailedFmt.format(res.error ?: "?"),
+                                        Toast.LENGTH_LONG,
+                                    ).show()
+                                }
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(stringResource(R.string.export_diagnostics))
+                    }
                 }
             },
             confirmButton = {
@@ -1174,18 +1208,38 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                     }
                     if (page == 0 && !remoteActive) {
                         item {
-                            AddCustomModelButton(
-                                onClick = { showCustomModelDialog = true },
-                                modifier = Modifier.fillMaxWidth(),
-                            )
-                        }
-                        item {
-                            AddModelOutlinedCard(
-                                label = stringResource(R.string.import_from_link),
-                                accent = false,
-                                onClick = { showUrlImportDialog = true },
-                                modifier = Modifier.fillMaxWidth(),
-                            )
+                            // Single "+" entry: tapping chooses between adding a
+                            // local custom model and importing from a URL. Keeps one
+                            // add affordance on the CPU list (was two cards).
+                            Box(modifier = Modifier.fillMaxWidth()) {
+                                AddModelOutlinedCard(
+                                    label = stringResource(R.string.add_or_import_model),
+                                    onClick = { showAddMenu = true },
+                                    accent = false,
+                                    modifier = Modifier.fillMaxWidth(),
+                                )
+                                DropdownMenu(
+                                    expanded = showAddMenu,
+                                    onDismissRequest = { showAddMenu = false },
+                                ) {
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.add_custom_model)) },
+                                        leadingIcon = { Icon(Icons.Default.Add, null) },
+                                        onClick = {
+                                            showAddMenu = false
+                                            showCustomModelDialog = true
+                                        },
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.import_from_link)) },
+                                        leadingIcon = { Icon(Icons.Default.Link, null) },
+                                        onClick = {
+                                            showAddMenu = false
+                                            showUrlImportDialog = true
+                                        },
+                                    )
+                                }
+                            }
                         }
                     }
 

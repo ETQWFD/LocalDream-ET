@@ -83,30 +83,38 @@ internal fun UpdateDialog(
     fun startDownload(target: AppUpdater.UpdateInfo) {
         phase = UpdatePhase.DOWNLOADING
         progress = 0f
-        statusText = ""
+        // et.24: delegate the download to a foreground service so it survives
+        // backgrounding / Doze. The service shows a progress/speed
+        // notification and launches the installer on tap; it retries with Range
+        // resume on failure. We keep a light reader so the dialog shows live
+        // bytes while open, but the service is the source of truth.
+        io.github.xororz.localdream.service.UpdateDownloadService.start(context, target.apkUrl)
+        statusText = context.getString(R.string.update_running_in_notification)
         scope.launch {
-            val result = runCatching {
-                AppUpdater.download(context, target.apkUrl) { done, total ->
-                    progress = if (total > 0) done.toFloat() / total else 0f
-                    statusText = if (total > 0) {
-                        "${formatBytes(done)} / ${formatBytes(total)}"
-                    } else {
-                        formatBytes(done)
-                    }
+            // Poll the .part / final apk so the dialog progress stays live while open.
+            val dir = io.github.xororz.localdream.utils.Storage.tempDir(context)
+            val part = java.io.File(dir, "localdream-update.apk.part")
+            val finalApk = java.io.File(dir, "localdream-update.apk")
+            val expected = target.sizeBytes
+            while (true) {
+                kotlinx.coroutines.delay(800)
+                val done = when {
+                    finalApk.exists() -> finalApk.length()
+                    part.exists() -> part.length()
+                    else -> 0L
+                }
+                if (expected > 0) progress = (done.toFloat() / expected).coerceIn(0f, 1f)
+                statusText = "${formatBytes(done)} / ${formatBytes(if (expected > 0) expected else done)}"
+                if (finalApk.exists() && (expected <= 0 || finalApk.length() >= expected)) {
+                    downloadedFile = finalApk
+                    break
                 }
             }
-            result.onSuccess { apk ->
-                downloadedFile = apk
-                if (AppUpdater.canInstall(context)) {
-                    phase = UpdatePhase.READY
-                    AppUpdater.install(context, apk)
-                    onDismiss()
-                } else {
-                    phase = UpdatePhase.NEED_PERMISSION
-                }
-            }.onFailure { e ->
-                errorText = e.message ?: e.toString()
-                phase = UpdatePhase.ERROR
+            if (AppUpdater.canInstall(context)) {
+                phase = UpdatePhase.READY
+                onDismiss()
+            } else {
+                phase = UpdatePhase.NEED_PERMISSION
             }
         }
     }

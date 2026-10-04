@@ -275,6 +275,10 @@
     <!-- Custom Model -->
     <string name="add_custom_model">新增自定義模型</string>
     <string name="import_from_link">＋ 從連結匯入模型</string>
+    <string name="add_or_import_model">新增 / 匯入模型</string>
+    <string name="export_diagnostics">匯出診斷日誌</string>
+    <string name="export_diagnostics_done">診斷日誌已儲存至：%1$s</string>
+    <string name="export_diagnostics_failed">匯出失敗：%1$s</string>
     <string name="url_imported_description">使用者從連結匯入的 SD1.5 模型，本機轉換，CPU/32位可用</string>
     <string name="url_import_hint">貼上 Hugging Face / hf-mirror / 魔搭 ModelScope 的模型頁面，或 .safetensors 直連。下載前先檢查大小、剩餘空間與是否相容 SD1.5。</string>
     <string name="url_import_link">模型連結</string>
@@ -556,8 +560,11 @@
     <string name="update_download_now">下載並安裝</string>
     <string name="update_downloading_title">正在下載更新</string>
     <string name="update_download_hint">更新將在應用內下載，完成前請保持應用開啟，下載結束後會自動彈出安裝介面。</string>
+    <string name="update_running_in_notification">正在背景下載，進度與速度見通知列常駐通知。完成後點擊通知即可安裝。</string>
     <string name="update_ready_title">正在安裝</string>
     <string name="update_ready_hint">正在開啟系統安裝器…</string>
+    <string name="update_channel_name">更新下載</string>
+    <string name="update_failed_title">更新下載失敗</string>
     <string name="update_error">更新失敗：%1$s</string>
     <string name="update_retry">重試</string>
     <string name="update_permission_title">需要安裝許可權</string>

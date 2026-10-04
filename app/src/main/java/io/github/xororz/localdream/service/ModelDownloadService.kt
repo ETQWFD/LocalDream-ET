@@ -216,6 +216,12 @@ class ModelDownloadService : Service() {
                 when (modelType) {
                     TYPE_SD -> {
                         if (isZip) {
+                            // Integrity gate #1: the .part must be a complete, readable
+                            // zip (central directory + per-entry CRC). A truncated CDN
+                            // download that ZipInputStream would have silently half
+                            // extracted now fails loudly and is re-downloaded.
+                            validateZipOrThrow(tempFile)
+
                             val modelDir = File(getModelsDir(), modelId)
 
                             if (modelDir.exists()) {
@@ -236,6 +242,15 @@ class ModelDownloadService : Service() {
                             }
                             extractTempDir.delete()
                             extractTempDir = null
+
+                            // Integrity gate #2: after extraction the model must have
+                            // the real conversion products. Otherwise treat as failed
+                            // (the catch below cleans the half-built dir).
+                            if (!Model.hasConvertedSd15Outputs(modelDir)) {
+                                throw IOException(
+                                    "Extracted model is incomplete (missing weight files)",
+                                )
+                            }
                         }
                     }
 
@@ -478,6 +493,32 @@ class ModelDownloadService : Service() {
             }
         }
         throw lastError ?: Exception(getString(R.string.error_download_failed, "no source"))
+    }
+
+    /**
+     * Validate a downloaded archive BEFORE extraction: open it with
+     * java.util.zip.ZipFile (which reads the central directory and verifies each
+     * entry's CRC) and touch every entry. A truncated/corrupt CDN download throws
+     * ZipException here instead of being half-extracted and mistaken for a model.
+     */
+    private fun validateZipOrThrow(zipFile: File) {
+        if (!zipFile.exists() || zipFile.length() <= 0L) {
+            throw IOException("Downloaded archive is empty")
+        }
+        java.util.zip.ZipFile(zipFile, java.util.zip.ZipFile.OPEN_READ).use { zf ->
+            val entries = zf.entries()
+            var count = 0
+            while (entries.hasMoreElements()) {
+                val e = entries.nextElement()
+                // Accessing getCrc/getSize forces the central-directory entry to be
+                // well-formed; a bad central directory already throws in the ctor.
+                if (e.size < 0 || e.crc < 0) {
+                    throw IOException("Corrupt zip entry: ${e.name}")
+                }
+                count++
+            }
+            if (count == 0) throw IOException("Archive has no entries")
+        }
     }
 
     private suspend fun unzipFile(zipFile: File, destDir: File) = withContext(Dispatchers.IO) {

@@ -82,6 +82,9 @@ object LogCapture {
         lastCapturedLogs.value = null
     }
 
+    /** Non-destructive copy of the in-memory logcat buffer for diagnostics. */
+    fun snapshot(): String = synchronized(lock) { buffer.toString() }
+
     private fun stopInternalLocked() {
         try {
             captureProcess?.destroy()

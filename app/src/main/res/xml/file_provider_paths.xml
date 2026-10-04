@@ -6,6 +6,10 @@
     <external-storage-path
         name="public_updates"
         path="LocalDreamET/temp_downloads/" />
+    <!-- et.24: exported diagnostic reports live at LocalDreamET/diagnostics_*.txt. -->
+    <external-path
+        name="public_diagnostics"
+        path="LocalDreamET/" />
     <!-- Internal-storage fallback when All-files-access is not granted:
          filesDir/LocalDreamET/temp_downloads (covered by files_root). -->
     <files-path

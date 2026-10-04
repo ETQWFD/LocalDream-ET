@@ -82,6 +82,18 @@
             android:exported="false"
             android:foregroundServiceType="dataSync" />
 
+        <!-- et.24: foreground service carrying the in-app APK update download. -->
+        <service
+            android:name=".service.UpdateDownloadService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
+        <receiver
+            android:name=".service.UpdateInstallReceiver"
+            android:enabled="true"
+            android:exported="false" />
+
         <!-- Shares downloaded update APKs with the system package installer. -->
         <provider
             android:name="androidx.core.content.FileProvider"

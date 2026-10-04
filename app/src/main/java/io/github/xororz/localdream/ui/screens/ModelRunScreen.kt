@@ -2063,9 +2063,14 @@ fun ModelRunScreen(
                     isCheckingBackend = false
                     backendReady = true
                 },
-                onUnhealthy = {
+                onUnhealthy = { detail ->
                     isCheckingBackend = false
-                    errorMessage = msgBackendFailed
+                    // Show the REAL native detail (exit code / signal / missing
+                    // file / crash tail) localized, instead of a blanket
+                    // "cannot connect 8081". Falls back to the generic message
+                    // only when there is no detail at all.
+                    errorMessage = localizeEngineError(context, detail)
+                        ?: msgBackendFailed
                 },
             )
         }
@@ -2560,6 +2565,16 @@ fun ModelRunScreen(
                                             rawNegative
                                         }
 
+                                        // Guard: only treat this batch as img2img when a
+                                        // real, non-empty init image was actually encoded
+                                        // to tmp.txt. A sticky use_img2img preference must
+                                        // never make us send an empty/missing init image to
+                                        // the native engine (that crashes it = 8081 down).
+                                        val tmpInitFile = File(context.filesDir, "tmp.txt")
+                                        val hasValidInitImage = selectedImageUri != null &&
+                                            base64EncodeDone &&
+                                            tmpInitFile.exists() && tmpInitFile.length() > 0L
+
                                         val batchIntent = Intent(
                                             context,
                                             BackgroundGenerationService::class.java,
@@ -2607,7 +2622,7 @@ fun ModelRunScreen(
                                             if (editReferencePayloads.isNotEmpty()) {
                                                 putExtra("has_reference_images", true)
                                             }
-                                            if (selectedImageUri != null && base64EncodeDone) {
+                                            if (hasValidInitImage) {
                                                 putExtra("has_image", true)
                                                 if (isInpaintMode && maskBitmap != null) {
                                                     putExtra("has_mask", true)
@@ -4337,15 +4352,28 @@ private fun PromptCountLabel(label: String, count: Int, max: Int, showCount: Boo
 
 // Maps raw native/backend error strings to localized, user-facing messages.
 private fun localizeEngineError(context: android.content.Context, raw: String?): String? {
-    if (raw == null) return null
+    if (raw.isNullOrBlank()) return null
     val l = raw.lowercase()
     return when {
+        // Process crashed with a fatal signal (native segfault / abort).
+        l.contains("sigsegv") || l.contains("signal 11") || l.contains("seggault") ->
+            context.getString(io.github.xororz.localdream.R.string.err_engine_crash, "SIGSEGV(11)")
+        l.contains("sigabrt") || l.contains("signal 6") ->
+            context.getString(io.github.xororz.localdream.R.string.err_engine_crash, "SIGABRT(6)")
+        l.contains("sigkill") || l.contains("signal 9") ->
+            context.getString(io.github.xororz.localdream.R.string.err_engine_killed)
+        l.contains("out of memory") || l.contains("oom") || l.contains("enomem") ->
+            context.getString(io.github.xororz.localdream.R.string.err_oom)
+        l.contains("unsatisfiedlinkerror") || l.contains("dlopen") ||
+            l.contains("cannot locate") || l.contains("wrong abi") ->
+            context.getString(io.github.xororz.localdream.R.string.err_native_load)
+        l.contains("model file missing") || l.contains("file not found") ||
+            l.contains("no such file") || l.contains("missing") ->
+            context.getString(io.github.xororz.localdream.R.string.err_model_file_missing)
         l.contains("prompt empty") ->
             context.getString(io.github.xororz.localdream.R.string.err_prompt_empty)
         l.contains("failed to connect to") && l.contains("8081") ->
             context.getString(io.github.xororz.localdream.R.string.err_backend_connect)
-        l.contains("file not found") ->
-            context.getString(io.github.xororz.localdream.R.string.err_model_file_missing)
         else -> raw
     }
 }
