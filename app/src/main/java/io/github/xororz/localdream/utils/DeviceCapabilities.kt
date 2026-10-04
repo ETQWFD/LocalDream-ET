@@ -26,19 +26,179 @@ object DeviceCapabilities {
     fun is64Bit(): Boolean =
         Build.SUPPORTED_ABIS?.any { it.equals("arm64-v8a", ignoreCase = true) } == true
 
+    // ---- Robust SoC / GPU identification ---------------------------------
+    // Build.SOC_MODEL alone is unreliable: some ROMs (incl. certain Huawei /
+    // custom Android 16 builds) leave it blank, and users then see a generic
+    // "unsupported" message. We combine Build fields, hidden system properties
+    // and /proc/cpuinfo, and read the GL renderer through a tiny EGL context.
+    enum class SocVendor { QUALCOMM, KIRIN, MEDIATEK, SAMSUNG, GOOGLE, UNKNOWN }
+
+    data class SocInfo(
+        val vendor: SocVendor,
+        /** Snapdragon SM part number, e.g. 8750 for SM8750, or null. */
+        val snapdragonPart: Int?,
+        val raw: String,
+    )
+
+    @Volatile
+    private var socCache: SocInfo? = null
+    val socInfo: SocInfo
+        get() = socCache ?: detectSoc().also { socCache = it }
+
+    private fun sysprop(name: String): String = try {
+        val clz = Class.forName("android.os.SystemProperties")
+        val m = clz.getMethod("get", String::class.java)
+        (m.invoke(null, name) as? String).orEmpty()
+    } catch (_: Throwable) {
+        ""
+    }
+
+    private fun cpuInfoField(key: String): String = try {
+        java.io.File("/proc/cpuinfo").bufferedReader().useLines { seq ->
+            seq.mapNotNull { line ->
+                val p = line.split(":", limit = 2)
+                if (p.size == 2 && p[0].trim().equals(key, ignoreCase = true)) {
+                    p[1].trim().takeIf { it.isNotBlank() }
+                } else null
+            }.firstOrNull()
+        }.orEmpty()
+    } catch (_: Throwable) {
+        ""
+    }
+
+    private fun detectSoc(): SocInfo {
+        val hay = listOf(
+            Build.SOC_MODEL,
+            Build.SOC_MANUFACTURER,
+            Build.HARDWARE,
+            Build.BOARD,
+            sysprop("ro.soc.model"),
+            sysprop("ro.soc.manufacturer"),
+            sysprop("ro.hardware"),
+            cpuInfoField("Hardware"),
+        ).joinToString(" ") { it.orEmpty() }.lowercase()
+
+        // SM8750 / SM8750-AB / qcom sm8650 ...
+        val part = Regex("sm\\D{0,2}(\\d{4})").find(hay)?.groupValues?.get(1)?.toIntOrNull()
+
+        val vendor = when {
+            hay.contains("kirin") || hay.contains("hisilicon") ||
+                hay.contains("hisi") || hay.contains("麒麟") -> SocVendor.KIRIN
+            part != null || hay.contains("qualcomm") || hay.contains("qcom") ||
+                hay.contains("snapdragon") || hay.contains("adreno") -> SocVendor.QUALCOMM
+            hay.contains("mediatek") || hay.contains("dimensity") ||
+                hay.contains("helio") || hay.contains("mt6") || hay.contains("mt8") ->
+                SocVendor.MEDIATEK
+            hay.contains("exynos") || hay.contains("s5e") -> SocVendor.SAMSUNG
+            hay.contains("tensor") || hay.contains("zuma") ||
+                hay.contains("gs101") || hay.contains("gs201") -> SocVendor.GOOGLE
+            else -> SocVendor.UNKNOWN
+        }
+        return SocInfo(vendor, part, hay.ifBlank { "unknown" })
+    }
+
+    fun snapdragonPart(): Int? = socInfo.snapdragonPart
+
+    /** Localized short label of the detected chip vendor. */
+    fun vendorLabel(): String = when (socInfo.vendor) {
+        SocVendor.QUALCOMM -> "高通骁龙"
+        SocVendor.KIRIN -> "华为麒麟 (Hisilicon)"
+        SocVendor.MEDIATEK -> "联发科 (MediaTek)"
+        SocVendor.SAMSUNG -> "三星 Exynos"
+        SocVendor.GOOGLE -> "Google Tensor"
+        SocVendor.UNKNOWN -> "本机"
+    }
+
+    /**
+     * Whether the device very likely exposes a usable OpenCL implementation for
+     * the MNN GPU backend. Read from the GL renderer; the major mobile GPUs
+     * (Adreno / Mali / Xclipse / PowerVR) all ship vendor OpenCL. MNN safely
+     * falls back to CPU if dlopen(libOpenCL) fails at runtime.
+     */
+    @Volatile
+    private var rendererCache: String? = null
+    @Volatile
+    private var rendererProbed = false
+
+    @Suppress("DEPRECATION")
+    fun glRenderer(): String? {
+        if (rendererProbed) return rendererCache
+        rendererProbed = true
+        rendererCache = try {
+            val dpy = (android.opengl.EGL14.eglGetDisplay(android.opengl.EGL14.EGL_DEFAULT_DISPLAY))
+                ?: return null
+            val versions = IntArray(2)
+            if (!android.opengl.EGL14.eglInitialize(dpy, versions, 0, versions, 1)) return null
+            val attr = intArrayOf(
+                android.opengl.EGL14.EGL_SURFACE_TYPE, android.opengl.EGL14.EGL_PBUFFER_BIT,
+                android.opengl.EGL14.EGL_RENDERABLE_TYPE, 0x0004, // EGL_OPENGL_ES2_BIT
+                android.opengl.EGL14.EGL_NONE,
+            )
+            val configs: Array<android.opengl.EGLConfig?> = arrayOfNulls(1)
+            val num = IntArray(1)
+            if (!android.opengl.EGL14.eglChooseConfig(dpy, attr, 0, configs, 0, 1, num, 0) ||
+                num[0] == 0
+            ) {
+                android.opengl.EGL14.eglTerminate(dpy); return null
+            }
+            val pbuffer = android.opengl.EGL14.eglCreatePbufferSurface(
+                dpy, configs[0], intArrayOf(
+                    android.opengl.EGL14.EGL_WIDTH, 1,
+                    android.opengl.EGL14.EGL_HEIGHT, 1,
+                    android.opengl.EGL14.EGL_NONE,
+                ), 0,
+            )
+            val cattr = intArrayOf(0x3098, 2, android.opengl.EGL14.EGL_NONE) // EGL_CONTEXT_CLIENT_VERSION
+            val ctx = android.opengl.EGL14.eglCreateContext(
+                dpy, configs[0], android.opengl.EGL14.EGL_NO_CONTEXT, cattr, 0,
+            )
+            if (ctx == android.opengl.EGL14.EGL_NO_CONTEXT) {
+                android.opengl.EGL14.eglDestroySurface(dpy, pbuffer)
+                android.opengl.EGL14.eglTerminate(dpy); return null
+            }
+            android.opengl.EGL14.eglMakeCurrent(dpy, pbuffer, pbuffer, ctx)
+            val r = android.opengl.GLES20.glGetString(android.opengl.GLES20.GL_RENDERER)
+            android.opengl.EGL14.eglMakeCurrent(
+                dpy, android.opengl.EGL14.EGL_NO_SURFACE,
+                android.opengl.EGL14.EGL_NO_SURFACE, android.opengl.EGL14.EGL_NO_CONTEXT,
+            )
+            android.opengl.EGL14.eglDestroyContext(dpy, ctx)
+            android.opengl.EGL14.eglDestroySurface(dpy, pbuffer)
+            android.opengl.EGL14.eglTerminate(dpy)
+            r
+        } catch (_: Throwable) {
+            null
+        }
+        return rendererCache
+    }
+
+    /** Default the SD1.5 GPU (OpenCL) toggle on for phones with a known mobile GPU. */
+    fun openclRecommended(): Boolean {
+        val r = glRenderer()?.lowercase().orEmpty()
+        return r.contains("adreno") || r.contains("mali") ||
+            r.contains("xclipse") || r.contains("powervr") ||
+            // Fallback when the renderer can't be read: trust known ARM vendors.
+            (r.isBlank() && socInfo.vendor in setOf(
+                SocVendor.QUALCOMM, SocVendor.KIRIN,
+                SocVendor.MEDIATEK, SocVendor.SAMSUNG,
+            ))
+    }
+
     /** Big DiT (Z-Image / FLUX.2 Klein / Qwen Image 2.1): arm64 + elite NPU. */
-    fun canRunDit(): Boolean = is64Bit() && DitEngine.isSupportedDevice()
+    fun canRunDit(): Boolean {
+        if (!is64Bit()) return false
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return false
+        if (socInfo.vendor != SocVendor.QUALCOMM) return false
+        return (snapdragonPart() ?: 0) >= 8750
+    }
 
     /** SDXL over QNN NPU: arm64 and an allowlisted recent Snapdragon. */
     fun canRunSdxlNpu(): Boolean {
         if (!is64Bit()) return false
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return false
-        val soc = Build.SOC_MODEL.uppercase()
-        if (!soc.startsWith("SM")) return false
-        val part = soc.dropWhile { !it.isDigit() }.takeWhile { it.isDigit() }.toIntOrNull()
-            ?: return false
+        if (socInfo.vendor != SocVendor.QUALCOMM) return false
         // SDXL QNN path validated on 8 Gen 3 (SM8650) and newer.
-        return part >= 8650
+        return (snapdragonPart() ?: 0) >= 8650
     }
 
     fun totalRamBytes(context: Context): Long = try {
@@ -95,11 +255,15 @@ object DeviceCapabilities {
         storageRequiredBytes: Long,
     ): String? {
         if (!is64Bit()) return REASON_ABI
-        if (isDit) {
+        if (isDit || isSdxl) {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return REASON_ANDROID
-            if (!DitEngine.isSupportedDevice()) return REASON_NPU_DIT
+            // The flagship NPU/DiT/SDXL stack is built only on Qualcomm Adreno
+            // (QNN). Give Kirin/MediaTek/Exynos users a precise vendor message
+            // instead of a generic "model too new" one.
+            if (socInfo.vendor != SocVendor.QUALCOMM) return REASON_NPU_VENDOR
+            if (isDit && !canRunDit()) return REASON_NPU_DIT
+            if (isSdxl && !canRunSdxlNpu()) return REASON_NPU_SDXL
         }
-        if (isSdxl && !canRunSdxlNpu()) return REASON_NPU_SDXL
         if (ramRequiredBytes > 0 && totalRamBytes(context) < ramRequiredBytes) return REASON_RAM
         if (storageRequiredBytes > 0 &&
             freeStorageBytes(context) < storageRequiredBytes
@@ -111,6 +275,7 @@ object DeviceCapabilities {
     const val REASON_ANDROID = "android"
     const val REASON_NPU_DIT = "npu_dit"
     const val REASON_NPU_SDXL = "npu_sdxl"
+    const val REASON_NPU_VENDOR = "npu_vendor"
     const val REASON_RAM = "ram"
     const val REASON_STORAGE = "storage"
 }

@@ -1,6 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths>
-    <!-- Downloaded APKs are written to cacheDir/updates. -->
+    <!-- et.21: downloaded update APKs land in the shared public folder
+         /storage/emulated/0/LocalDreamET/temp_downloads so they survive cache
+         clears and the system package installer can read them directly. -->
+    <external-storage-path
+        name="public_updates"
+        path="LocalDreamET/temp_downloads/" />
+    <!-- Internal-storage fallback when All-files-access is not granted:
+         filesDir/LocalDreamET/temp_downloads (covered by files_root). -->
+    <files-path
+        name="files_root"
+        path="." />
+    <!-- Legacy cache locations kept for any in-flight older download. -->
     <cache-path
         name="update_apks"
         path="updates/" />
@@ -10,7 +21,4 @@
     <external-cache-path
         name="external_update_apks"
         path="updates/" />
-    <files-path
-        name="files_root"
-        path="." />
 </paths>

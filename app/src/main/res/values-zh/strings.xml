@@ -107,10 +107,11 @@
     <string name="download_block_unsupported">该模型需要更新的设备（arm64-v8a + 骁龙 8 Gen3 / 8 至尊版级别 NPU、Android 12 以上）。你的手机硬件不支持，已阻止下载以免白白占用空间。请改用 SD1.5 模型——它们在 32 位/64 位 CPU 上都能运行。</string>
     <string name="download_block_lowram">该模型运行约需 %1\$s 内存，但本机总内存约 %2\$s，运行时很可能被系统强制结束。请先清理内存，或改用 SD1.5 模型。</string>
     <string name="gate_locked">受设备限制</string>
-    <string name="gate_abi">需要 64 位手机；本机为 32 位，无法加载 NPU 引擎。</string>
+    <string name="gate_abi">未解锁：这是 64 位高性能模型，32 位手机无法加载其引擎。请到 64 位手机上使用即可解锁下载；本 32 位手机仍可正常使用列表里的 SD1.5 模型。</string>
     <string name="gate_android">需要 Android 12 及以上系统。</string>
     <string name="gate_npu_dit">需要骁龙 8 至尊版（SM8750）及以上 NPU、64 位、Android 12+。</string>
     <string name="gate_npu_sdxl">需要骁龙 8 Gen3（SM8650）及以上 NPU。</string>
+    <string name="gate_npu_vendor">该模型的 NPU 加速仅支持高通骁龙 NPU；本机检测到 %1$s 芯片，无法调用其 NPU（即使是高配/Android 16 也是如此，属硬件差异，非软件问题）。请改用 SD1.5 模型，并可在“高级设置”里开启 GPU(OpenCL) 或用 CPU 出图。</string>
     <string name="gate_ram">运行内存不足：约需 %1$s，本机总内存 %2$s。</string>
     <string name="gate_storage">存储空间不足：需 %1$s，仅剩 %2$s。</string>
     <string name="download_block_lowstorage">该模型约需 %1\$s 剩余存储空间，但模型目录所在空间仅剩 %2\$s。请先清理/移出文件腾出空间再下载。</string>

@@ -179,6 +179,7 @@ class GenerationPreferences(private val context: Context) {
                 height = preferences[getHeightKey(modelId)] ?: -1,
                 denoiseStrength = preferences[getDenoiseStrengthKey(modelId)] ?: global.denoiseStrength,
                 useOpenCL = preferences[getUseOpenCLKey(modelId)] ?: false,
+                useOpenCLManuallySet = preferences.contains(getUseOpenCLKey(modelId)),
                 batchCounts = preferences[getBatchCountsKey(modelId)] ?: global.batchCounts,
                 scheduler = preferences[getSchedulerKey(modelId)] ?: global.scheduler,
                 aspectRatio = preferences[getAspectRatioKey(modelId)] ?: global.aspectRatio,
@@ -254,6 +255,9 @@ data class GenerationPrefs(
     val height: Int = -1,
     val denoiseStrength: Float = GenerationDefaults.GLOBAL.denoiseStrength,
     val useOpenCL: Boolean = false,
+    // et.21: distinguishes "user never touched the GPU toggle" from an explicit
+    // off, so the app can auto-default GPU on only on first use.
+    val useOpenCLManuallySet: Boolean = false,
     val batchCounts: Int = GenerationDefaults.GLOBAL.batchCounts,
     val scheduler: String = GenerationDefaults.GLOBAL.scheduler,
     val aspectRatio: String = GenerationDefaults.GLOBAL.aspectRatio,

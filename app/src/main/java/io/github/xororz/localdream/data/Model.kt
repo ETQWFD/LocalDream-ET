@@ -126,6 +126,12 @@ data class Model(
     val configDefaults: ModelConfig = ModelConfig(),
     val runOnCpu: Boolean = false,
     val isCustom: Boolean = false,
+    // et.21: when true this NPU/DiT/SDXL-native model is ALSO surfaced in the
+    // CPU tab (same id / files / backend / download state). On a 32-bit device
+    // it renders locked ("unlock on a 64-bit phone") and blocks download; on a
+    // capable 64-bit device the normal capability gate passes and tapping it
+    // runs the model on its real backend. It is a display-row flag only.
+    val showInCpuTab: Boolean = false,
     val isSdxl: Boolean = false,
     val isAnima: Boolean = false,
     // DiT packages run by libdit_engine.so: "zimage", "klein" or "qwen21".
@@ -775,6 +781,25 @@ class ModelRepository private constructor(private val context: Context) {
                 add(createUrlImportModel(e))
             }
         }
+
+        // et.21: also list the flagship arm64-only models (Illustrious SDXL and
+        // the four Qwen Image 2.1 packages) inside the CPU tab, so users on a
+        // 32-bit phone can see them there with an explicit lock ("unlock on a
+        // 64-bit phone") instead of an empty-looking list. These are the SAME
+        // models (identical id / files / backend / download state) — only an
+        // extra CPU-tab display row. On a capable 64-bit device the gate passes
+        // and the row runs the model on its real NPU/DiT backend.
+        val cpuMirrorIds = setOf(
+            "illustrious_v16",
+            "illustrious_v16_dmd2",
+            "qwen_image_2_1",
+            "qwen_image_2_1_uc",
+            "qwen_image_2_1_q3",
+            "qwen_image_2_1_uc_q5",
+        )
+        predefinedModels
+            .filter { it.id in cpuMirrorIds }
+            .forEach { predefinedModels.add(it.copy(showInCpuTab = true)) }
 
         return customModels + predefinedModels
             .map { applyConfigDefaults(it) }

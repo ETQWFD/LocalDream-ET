@@ -420,10 +420,17 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
 
     val listedModels = if (remoteActive) remoteRepository.models else modelRepository.models
     val cpuModels = remember(listedModels, pinnedIds) {
-        PinnedModels.sort(listedModels.filter { it.runOnCpu }, pinnedIds)
+        // et.21: showInCpuTab rows are arm64 NPU/DiT models mirrored into the
+        // CPU tab (locked on 32-bit); the original row stays in the NPU tab.
+        PinnedModels.sort(listedModels.filter { it.runOnCpu || it.showInCpuTab }, pinnedIds)
     }
     val npuModels = remember(listedModels, pinnedIds) {
-        PinnedModels.sort(listedModels.filter { !it.runOnCpu }, pinnedIds)
+        // Exclude the CPU-tab mirror copies so each flagship model appears only
+        // once in the NPU tab (its original row has showInCpuTab = false).
+        PinnedModels.sort(
+            listedModels.filter { !it.runOnCpu && !it.showInCpuTab },
+            pinnedIds,
+        )
     }
     val searchQ = modelSearchQuery.trim().lowercase()
     val filteredCpuModels = remember(cpuModels, searchQ) {
@@ -2245,6 +2252,11 @@ private fun gateReasonText(
         stringResource(R.string.gate_npu_dit)
     io.github.xororz.localdream.utils.DeviceCapabilities.REASON_NPU_SDXL ->
         stringResource(R.string.gate_npu_sdxl)
+    io.github.xororz.localdream.utils.DeviceCapabilities.REASON_NPU_VENDOR ->
+        stringResource(
+            R.string.gate_npu_vendor,
+            io.github.xororz.localdream.utils.DeviceCapabilities.vendorLabel(),
+        )
     io.github.xororz.localdream.utils.DeviceCapabilities.REASON_RAM ->
         stringResource(
             R.string.gate_ram,

@@ -43,12 +43,14 @@ android {
     defaultConfig {
         // ET fork uses its own application id so it installs and updates
         // independently of the upstream "Local Dream" package.
-        applicationId = "io.github.etqwfd.localdreamet"
+        // et.21: renamed to the requested etc.github.ai (new, independent app;
+        // models live in the shared public folder and are unaffected).
+        applicationId = "etc.github.ai"
         minSdk = 28
 //        minSdk = 31
         targetSdk = 36
-        versionCode = 94
-        versionName = "3.0.0-et.20"
+        versionCode = 95
+        versionName = "3.0.0-et.21"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

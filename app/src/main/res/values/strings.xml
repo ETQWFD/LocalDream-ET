@@ -110,10 +110,11 @@
     <string name="download_block_unsupported">This model needs a newer device (arm64-v8a with a Snapdragon 8 Gen 3 / 8 Elite-class NPU, Android 12+). Your phone cannot run it, so the download is blocked to avoid wasting space. Use an SD1.5 model instead — those run on 32-bit/64-bit CPU.</string>
     <string name="download_block_lowram">This model needs about %1\$s RAM, but this phone reports %2\$s total memory. It will likely be killed by the system. Free memory or choose an SD1.5 model.</string>
     <string name="gate_locked">Device-locked</string>
-    <string name="gate_abi">Requires a 64-bit phone; this device is 32-bit and cannot load the NPU engine.</string>
+    <string name="gate_abi">Locked: this is a 64-bit high-performance model that a 32-bit phone cannot load. Use it on a 64-bit phone to unlock the download; the SD1.5 models on this list still work on the current 32-bit phone.</string>
     <string name="gate_android">Requires Android 12 or newer.</string>
     <string name="gate_npu_dit">Requires a Snapdragon 8 Elite (SM8750) or newer NPU, arm64, Android 12+.</string>
     <string name="gate_npu_sdxl">Requires a Snapdragon 8 Gen 3 (SM8650) or newer NPU.</string>
+    <string name="gate_npu_vendor">This model\'s NPU acceleration only supports Qualcomm Snapdragon NPUs; a %1$s chip was detected and cannot expose that NPU (true even on high-end/Android 16 devices — a hardware difference, not a software bug). Use an SD1.5 model instead, and enable GPU(OpenCL) or CPU in Advanced settings.</string>
     <string name="gate_ram">Not enough RAM: needs about %1$s, this phone has %2$s.</string>
     <string name="gate_storage">Not enough free storage: needs %1$s, only %2$s free.</string>
     <string name="download_block_lowstorage">This package needs about %1\$s free storage, but the model volume only has %2\$s left. Free space (or move files out) before downloading.</string>

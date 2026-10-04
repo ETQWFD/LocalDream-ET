@@ -204,7 +204,11 @@ object AppUpdater {
         url: String,
         onProgress: (downloaded: Long, total: Long) -> Unit = { _, _ -> },
     ): File = withContext(Dispatchers.IO) {
-        val dir = File(context.cacheDir, "updates").apply { mkdirs() }
+        // et.21: write the update APK into the user-visible shared folder
+        // /storage/emulated/0/LocalDreamET/temp_downloads (survives cache
+        // clears and is directly readable by the system package installer),
+        // transparently falling back to filesDir before storage permission.
+        val dir = io.github.xororz.localdream.utils.Storage.tempDir(context)
         val target = File(dir, "localdream-update.apk")
         val part = File(dir, "localdream-update.apk.part")
 

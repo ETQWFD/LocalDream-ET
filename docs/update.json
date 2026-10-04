@@ -1,7 +1,7 @@
 {
-  "versionCode": 94,
-  "versionName": "3.0.0-et.20",
+  "versionCode": 95,
+  "versionName": "3.0.0-et.21",
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
-  "size": 148432287,
-  "releaseNotes": "ET 定制版 v3.0.0-et.20\n• 修复 32 位与 64 位手机本机转换模型时闪退/弹 libc++abi 框（std::length_error: vector / abort_message）：根因是 safetensors 文件头长度未做校验（下到错误页、文件截断或实为 .ckpt 时会把前 8 字节当成超大头部直接申请内存）以及大张量元素数用 int 累乘溢出。现改为文件头长度+文件实际大小双重校验、元素数按 64 位计算、32 位地址空间安全上限拦截、逐张量转换前释放上一块内存（峰值内存只保留一个张量），转换入口统一捕获 length_error/bad_alloc 等异常并返回可读失败原因，不再闪退。\n• 32 位（armeabi-v7a）与 64 位（arm64-v8a）原生引擎均已用上述修复重新编译并随包内置。\n• 修复锁屏/切后台生成图片中途被系统结束：生成唤醒锁由 30 分钟延长到 6 小时（老旧手机单张出图约 20–60 分钟），结束时自动释放。\n• 数据后台入口已从官网隐藏，仅管理员直链访问。\n• 沿用 et.19：千问 Qwen Image 2.1 共 4 个量化版本（Q3_K/Q4_0/UC Q4_0/UC Q5_K_M，需骁龙8至尊版 SM8750 及以上 64 位+Android12，32 位按机型锁定说明）；NPU 模型全机型可见并按真机能力加锁、Illustrious v16、更新直调系统打包安装器、大模型存储预检、MIT License。\n• 32 位请使用内置 SD1.5 模型或链接导入。开发者：ET。"
+  "size": 148445047,
+  "releaseNotes": "ET 定制版 v3.0.0-et.21（新包名 etc.github.ai，全新独立应用，旧版需卸载新装；模型在公共目录 LocalDreamET 不受影响）\n• 旗舰模型进入 CPU 列表并按机型解锁：Illustrious v16 / Illustrious v16 DMD2 与千问 Qwen Image 2.1 四个版本，现在在 32 位手机的 CPU 页也能看到，但显示锁定并提示“未解锁，请到 64 位手机使用”，禁止下载；在满足条件的 64 位真机上自动解锁并运行其真实 NPU/DiT 后端（非假按钮）。32 位原有的全部 SD1.5 模型照常可用。\n• 修复切换图片比例不生效：自定义比例此前只改比例文字、不重算输出宽高，现按模型类型（SD1.5 对齐 64、DiT 步进、固定画布）实时重算宽高，9:16 等任意比例可正确出图。\n• SD1.5 GPU(OpenCL) 在检测到 Adreno/Mali/Xclipse/PowerVR GPU 时首次使用默认开启，显著加快出图；无 GPU 时自动回退 CPU；用户手动切换后以用户选择为准。\n• 更健壮的机型识别：综合 SoC/Hardware/系统属性/proc/cpuinfo/GL 渲染器识别高通、华为麒麟、联发科、三星 Exynos、Google Tensor；华为麒麟等非高通平台对 NPU 模型给出明确说明（QNN 仅支持高通 Hexagon，属硬件差异），引导使用 SD1.5 GPU/CPU。\n• 应用内更新下载的 APK 改存 /storage/emulated/0/LocalDreamET/temp_downloads/，FileProvider 已放行该目录；仍直接调用系统打包安装器，无权限时回退缓存目录。\n• 32 位锁定文案更新为“未解锁，请到 64 位手机使用”，简中/繁中/英文三语同步。\n• 沿用 et.20：32/64 位本机转换崩溃修复、文件头与大小双校验、6 小时生成唤醒锁、更新直调系统安装器、大模型存储预检、MIT License。开发者：ET。"
 }

@@ -1504,7 +1504,20 @@ fun ModelRunScreen(
             )
             seed = prefs.seed
             denoiseStrength = if (isFirstRun) defaults.denoiseStrength else prefs.denoiseStrength
-            useOpenCL = prefs.useOpenCL
+            // et.21: on a phone with a usable GPU (Adreno/Mali/Xclipse/PowerVR)
+            // default the SD1.5 GPU(OpenCL) toggle ON for the first run; MNN
+            // safely falls back to CPU if OpenCL is unavailable. Once the user
+            // toggles it manually their choice is respected.
+            useOpenCL = if (
+                prefs.useOpenCLManuallySet
+            ) {
+                prefs.useOpenCL
+            } else {
+                model?.runOnCpu == true &&
+                    model.isDit != true &&
+                    model.usesFixedCanvas != true &&
+                    io.github.xororz.localdream.utils.DeviceCapabilities.openclRecommended()
+            }
             batchCounts = prefs.batchCounts
             scheduler = if (isFirstRun) defaults.scheduler else prefs.scheduler
             // Without img2img the backend has no VAE encoder, so a stored
@@ -1836,7 +1849,44 @@ fun ModelRunScreen(
         CustomAspectRatioDialog(
             onConfirm = { newRatio ->
                 if (newRatio != aspectRatio) {
-                    aspectRatio = newRatio
+                    // et.21 FIX: a custom ratio must recompute the output
+                    // width/height exactly like the preset buttons do; before
+                    // this only the aspect string changed so the image kept the
+                    // old size (the "ratio switch has no effect" bug).
+                    when {
+                        model?.isDit == true -> {
+                            val parts = newRatio.split(":")
+                            val rw = parts.getOrNull(0)?.toIntOrNull() ?: 1
+                            val rh = parts.getOrNull(1)?.toIntOrNull() ?: 1
+                            if (rw > 0 && rh > 0) {
+                                val base = minOf(currentWidth, currentHeight)
+                                    .coerceIn(DIT_MIN_SIZE, DIT_MAX_SIZE)
+                                val longer =
+                                    (base * maxOf(rw, rh) / minOf(rw, rh))
+                                        .coerceIn(DIT_MIN_SIZE, DIT_MAX_SIZE)
+                                currentWidth = snapDitSize(
+                                    (if (rw >= rh) longer.toFloat() else base.toFloat()),
+                                )
+                                currentHeight = snapDitSize(
+                                    (if (rh >= rw) longer.toFloat() else base.toFloat()),
+                                )
+                            }
+                            aspectRatio =
+                                inferAspectRatioString(currentWidth, currentHeight)
+                        }
+                        model?.runOnCpu == true &&
+                            model.isDit != true &&
+                            model.usesFixedCanvas != true -> {
+                            val (w, h) = sd15SizeForRatio(newRatio)
+                            currentWidth = w
+                            currentHeight = h
+                            aspectRatio = inferAspectRatioString(w, h)
+                        }
+                        else -> {
+                            // Fixed-canvas SDXL / NPU: only the ratio is sent.
+                            aspectRatio = newRatio
+                        }
+                    }
                     clearImg2imgState()
                     saveAllFields()
                 }
