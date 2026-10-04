@@ -1,6 +1,6 @@
 {
-  "versionCode": 4,
-  "version": "2.2.0",
-  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/desktop-v2.2.0/LocalDream-ET-Setup-2.2.0.exe",
-  "notes": "电脑版 v2.2.0：模型列表与手机版对齐，再增 6 个扩散模型（Juggernaut Final、FantasyTime V1.22、CamelliaMix NSFW v1.1、Dark Sushi 2.5D、BreakDomain Realistic R2333、HelloWorld v3，共 13 个含 Qwen-Image 2.1 UC）；延续魔搭国内 CDN 首选、断点续传、损坏重下、中文整句翻译、图生图整张、真实进度、主题/语言、应用内更新。开发者：ET。"
+  "versionCode": 5,
+  "version": "3.0.0",
+  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/desktop-v3.0.0/LocalDream-ET-Setup-3.0.0.exe",
+  "notes": "电脑版 v3.0.0：界面重构为与手机同款（窄幅竖向窗口、CPU Models / NPU Models 双标签、搜索框、模型卡片、下载后点卡片进入生成页），设置与手机一致（简体中文 / English / 繁體中文 三语、深浅主题、图片比例、步数、CFG、采样器、负向提示词、图生图、检测更新）。模型共 52 个：CPU 页 37 个标准 SD1.5 可真实下载并用内置 stable-diffusion.cpp CPU 引擎本地出图（国内镜像优先、断点续传，全部下载链接已逐一实测可达，修复旧版 4 个失效源）；NPU 页 15 个手机骁龙 NPU/QNN 专属模型在电脑 CPU 引擎上不可运行，如实加锁并说明原因（不放假按钮）。模型下载到程序当前目录 models 文件夹。全链路 UTF-8 修复中文/繁体乱码。EXE 与安装程序版权归 ET，按用户安装、无需管理员。开发者：ET，MIT License。"
 }

@@ -1,0 +1,1460 @@
+{
+ "app": {
+  "version": "3.0.0",
+  "code": 5,
+  "title": "Local Dream ET"
+ },
+ "lock_reason": {
+  "zh": "电脑版当前为 CPU 引擎，该手机 NPU/QNN 专属模型暂不支持在电脑运行。",
+  "en": "The desktop build ships a CPU engine only; this phone NPU/QNN model is not supported on PC yet.",
+  "tw": "電腦版目前為 CPU 引擎，該手機 NPU/QNN 專屬模型暫不支援在電腦執行。"
+ },
+ "ui": {
+  "tab_cpu": {
+   "zh": "CPU Models",
+   "en": "CPU Models",
+   "tw": "CPU Models"
+  },
+  "tab_npu": {
+   "zh": "NPU Models",
+   "en": "NPU Models",
+   "tw": "NPU Models"
+  },
+  "search": {
+   "zh": "搜索模型（中文 / 英文 / 型号）…",
+   "en": "Search models…",
+   "tw": "搜尋模型（中文 / 英文 / 型號）…"
+  },
+  "download": {
+   "zh": "下载",
+   "en": "Download",
+   "tw": "下載"
+  },
+  "downloading": {
+   "zh": "下载中 %d%%",
+   "en": "%d%%",
+   "tw": "下載中 %d%%"
+  },
+  "ready": {
+   "zh": "✓ 已下载",
+   "en": "✓ Ready",
+   "tw": "✓ 已下載"
+  },
+  "locked": {
+   "zh": "🔒 锁定",
+   "en": "🔒 Locked",
+   "tw": "🔒 鎖定"
+  },
+  "pin": {
+   "zh": "置顶",
+   "en": "Pinned",
+   "tw": "置頂"
+  },
+  "back": {
+   "zh": "← 返回列表",
+   "en": "← Back",
+   "tw": "← 回到列表"
+  },
+  "prompt_lbl": {
+   "zh": "正向提示词（可直接输中文，自动转英文标签）",
+   "en": "Prompt (Chinese auto-translated to tags)",
+   "tw": "正向提示詞（可直接輸中文，自動轉英文標籤）"
+  },
+  "neg_lbl": {
+   "zh": "负向提示词",
+   "en": "Negative prompt",
+   "tw": "負向提示詞"
+  },
+  "aspect_lbl": {
+   "zh": "图片比例",
+   "en": "Aspect ratio",
+   "tw": "圖片比例"
+  },
+  "steps_lbl": {
+   "zh": "步数 (1-50)",
+   "en": "Steps (1-50)",
+   "tw": "步數 (1-50)"
+  },
+  "cfg_lbl": {
+   "zh": "CFG (1-30)",
+   "en": "CFG (1-30)",
+   "tw": "CFG (1-30)"
+  },
+  "sampler_lbl": {
+   "zh": "采样器",
+   "en": "Sampler",
+   "tw": "採樣器"
+  },
+  "seed_lbl": {
+   "zh": "种子（留空=随机）",
+   "en": "Seed (blank=random)",
+   "tw": "種子（留空=隨機）"
+  },
+  "denoise_lbl": {
+   "zh": "重绘幅度 (0.1-1.0)",
+   "en": "Denoise (0.1-1.0)",
+   "tw": "重繪幅度 (0.1-1.0)"
+  },
+  "count_lbl": {
+   "zh": "生成数量",
+   "en": "Batch count",
+   "tw": "生成數量"
+  },
+  "upload_lbl": {
+   "zh": "📷 选择参考图（图生图）",
+   "en": "📷 Pick image (img2img)",
+   "tw": "📷 選擇參考圖（圖生圖）"
+  },
+  "remove_img": {
+   "zh": "移除参考图",
+   "en": "Remove image",
+   "tw": "移除參考圖"
+  },
+  "no_ref": {
+   "zh": "未选择参考图（纯文生图）",
+   "en": "No reference (text-to-image)",
+   "tw": "未選擇參考圖（純文生圖）"
+  },
+  "generate": {
+   "zh": "✨ 生成图像",
+   "en": "✨ Generate",
+   "tw": "✨ 生成圖像"
+  },
+  "generating": {
+   "zh": "正在本地生成（实时预览）…",
+   "en": "Generating locally (live preview)…",
+   "tw": "正在本機生成（即時預覽）…"
+  },
+  "done": {
+   "zh": "完成",
+   "en": "Done",
+   "tw": "完成"
+  },
+  "gen_fail": {
+   "zh": "生成失败",
+   "en": "Generate failed",
+   "tw": "生成失敗"
+  },
+  "save_as": {
+   "zh": "💾 另存为…",
+   "en": "💾 Save as…",
+   "tw": "💾 另存為…"
+  },
+  "open_out": {
+   "zh": "📂 输出文件夹",
+   "en": "📂 Output folder",
+   "tw": "📂 輸出資料夾"
+  },
+  "regenerate": {
+   "zh": "🔁 同参重生成",
+   "en": "🔁 Regenerate",
+   "tw": "🔁 同參重生成"
+  },
+  "history": {
+   "zh": "历史",
+   "en": "History",
+   "tw": "歷史"
+  },
+  "result_hint": {
+   "zh": "生成结果显示在这里",
+   "en": "Result appears here",
+   "tw": "生成結果顯示在這裡"
+  },
+  "ready_status": {
+   "zh": "就绪：选择一个模型，下载后输入提示词生成。",
+   "en": "Ready: pick a model, download, then generate.",
+   "tw": "就緒：選擇一個模型，下載後輸入提示詞生成。"
+  },
+  "set_title": {
+   "zh": "设置",
+   "en": "Settings",
+   "tw": "設定"
+  },
+  "lang_lbl": {
+   "zh": "语言 Language",
+   "en": "语言 Language",
+   "tw": "語言 Language"
+  },
+  "lang_zh": {
+   "zh": "简体中文",
+   "en": "简体中文",
+   "tw": "简体中文"
+  },
+  "lang_en": {
+   "zh": "English",
+   "en": "English",
+   "tw": "English"
+  },
+  "lang_tw": {
+   "zh": "繁體中文",
+   "en": "繁體中文",
+   "tw": "繁體中文"
+  },
+  "theme_lbl": {
+   "zh": "主题 Theme",
+   "en": "主题 Theme",
+   "tw": "主題 Theme"
+  },
+  "theme_dark": {
+   "zh": "深色",
+   "en": "Dark",
+   "tw": "深色"
+  },
+  "theme_light": {
+   "zh": "浅色",
+   "en": "Light",
+   "tw": "淺色"
+  },
+  "check_update": {
+   "zh": "检测更新",
+   "en": "Check for updates",
+   "tw": "檢測更新"
+  },
+  "checking": {
+   "zh": "正在检查更新…",
+   "en": "Checking for updates…",
+   "tw": "正在檢查更新…"
+  },
+  "up_to_date": {
+   "zh": "已是最新版本。",
+   "en": "Already up to date.",
+   "tw": "已是最新版本。"
+  },
+  "clean_tmp": {
+   "zh": "清理临时文件",
+   "en": "Clear temp files",
+   "tw": "清理暫存檔"
+  },
+  "cleaned": {
+   "zh": "临时文件已清理。",
+   "en": "Temp files cleared.",
+   "tw": "暫存檔已清理。"
+  },
+  "open_models": {
+   "zh": "打开模型文件夹",
+   "en": "Open models folder",
+   "tw": "開啟模型資料夾"
+  },
+  "about": {
+   "zh": "关于 Local Dream ET",
+   "en": "About Local Dream ET",
+   "tw": "關於 Local Dream ET"
+  },
+  "dl_path": {
+   "zh": "模型保存位置",
+   "en": "Models saved at",
+   "tw": "模型儲存位置"
+  },
+  "locked_tap": {
+   "zh": "该模型已锁定：",
+   "en": "This model is locked: ",
+   "tw": "此模型已鎖定："
+  },
+  "not_dl": {
+   "zh": "模型未下载，请先下载。",
+   "en": "Model not downloaded yet.",
+   "tw": "模型未下載，請先下載。"
+  },
+  "empty_prompt": {
+   "zh": "提示词不能为空。",
+   "en": "Prompt is empty.",
+   "tw": "提示詞不能為空。"
+  },
+  "engine_miss": {
+   "zh": "未找到引擎 sd-cli.exe，请重新安装。",
+   "en": "sd-cli.exe missing, reinstall.",
+   "tw": "未找到引擎 sd-cli.exe，請重新安裝。"
+  },
+  "about_body": {
+   "zh": "Local Dream ET  电脑版 v3.0.0\n\n开发者 / Developer：ET\nCopyright (C) 2026 ET\n\n本地离线 Stable Diffusion 出图，免费、不上传图片。\n引擎 stable-diffusion.cpp（sd-cli / ggml）\nCopyright (c) 2023 leejet · MIT License。",
+   "en": "Local Dream ET  desktop v3.0.0\n\nDeveloper: ET\nCopyright (C) 2026 ET\n\nFully offline local Stable Diffusion, free, no uploads.\nEngine: stable-diffusion.cpp (sd-cli / ggml)\nCopyright (c) 2023 leejet · MIT License.",
+   "tw": "Local Dream ET  電腦版 v3.0.0\n\n開發者 / Developer：ET\nCopyright (C) 2026 ET\n\n本機離線 Stable Diffusion 出圖，免費、不上傳圖片。\n引擎 stable-diffusion.cpp（sd-cli / ggml）\nCopyright (c) 2023 leejet · MIT License。"
+  }
+ },
+ "samplers": [
+  "dpm",
+  "dpm_karras",
+  "dpm_sde",
+  "dpm_sde_karras",
+  "euler",
+  "euler_karras",
+  "euler_a",
+  "euler_a_karras",
+  "lcm"
+ ],
+ "models": [
+  {
+   "id": "anythingv5cpu",
+   "name": "Anything V5.0",
+   "tab": "cpu",
+   "badge": "CPU",
+   "desc": {
+    "zh": "动漫图像生成模型",
+    "en": "Anime image generation",
+    "tw": "動漫影像生成模型"
+   },
+   "size": {
+    "zh": "约 2.1GB",
+    "en": "~2.1GB"
+   },
+   "prompt": "masterpiece, best quality, 1girl, solo, cute, white hair",
+   "negative": "lowres, bad anatomy, bad hands, missing fingers, extra fingers, worst quality, low quality, jpeg artifacts, signature, watermark, blurry, deformed",
+   "files": [
+    {
+     "hf": "swl-models/Anything-v5.0-PRT/resolve/main/Anything-v5.0-PRT-RE.safetensors",
+     "cn": null,
+     "rel": "Anything-v5.0-PRT-RE.safetensors"
+    }
+   ]
+  },
+  {
+   "id": "qteamixcpu",
+   "name": "QteaMix",
+   "tab": "cpu",
+   "badge": "CPU",
+   "desc": {
+    "zh": "动漫Q版风格模型",
+    "en": "Chibi style anime",
+    "tw": "動漫Q版風格模型"
+   },
+   "size": {
+    "zh": "约 2.5GB",
+    "en": "~2.5GB"
+   },
+   "prompt": "chibi, best quality, 1girl, solo, cute, pink hair",
+   "negative": "lowres, bad anatomy, bad hands, worst quality, low quality, jpeg artifacts, signature, watermark, blurry, deformed",
+   "files": [
+    {
+     "hf": "swl-models/QteaMix/resolve/main/QteaMix-fp16.safetensors",
+     "cn": null,
+     "rel": "QteaMix-fp16.safetensors"
+    }
+   ]
+  },
+  {
+   "id": "cuteyukimixcpu",
+   "name": "CuteYukiMix",
+   "tab": "cpu",
+   "badge": "CPU",
+   "desc": {
+    "zh": "动漫特化可爱风格",
+    "en": "Cute style anime",
+    "tw": "動漫特化可愛風格"
+   },
+   "size": {
+    "zh": "约 2.1GB",
+    "en": "~2.1GB"
+   },
+   "prompt": "masterpiece, best quality, 1girl, solo, cute, white hair",
+   "negative": "lowres, bad anatomy, bad hands, worst quality, low quality, jpeg artifacts, signature, watermark, blurry, deformed",
+   "files": [
+    {
+     "hf": "spr-20/cuteyukimix/resolve/main/cuteyukimix_v30.safetensors",
+     "cn": null,
+     "rel": "cuteyukimix_v30.safetensors"
+    }
+   ]
+  },
+  {
+   "id": "absoluterealitycpu",
+   "name": "Absolute Reality",
+   "tab": "cpu",
+   "badge": "CPU",
+   "desc": {
+    "zh": "现实场景生成模型",
+    "en": "Realistic image generation",
+    "tw": "現實場景生成模型"
+   },
+   "size": {
+    "zh": "约 2.1GB",
+    "en": "~2.1GB"
+   },
+   "prompt": "masterpiece, best quality, ultra-detailed, realistic, 8k, a cat on grass",
+   "negative": "worst quality, low quality, cartoon, anime, 3d, signature, watermark, blurry, deformed",
+   "files": [
+    {
+     "hf": "digiplay/AbsoluteReality_v1.8.1/resolve/main/absolutereality_v181.safetensors",
+     "cn": "https://modelscope.cn/api/v1/models/digiplay/AbsoluteReality_v1.8.1/repo?Revision=master&FilePath=absolutereality_v181.safetensors",
+     "rel": "absolutereality_v181.safetensors"
+    }
+   ]
+  },
+  {
+   "id": "chilloutmixcpu",
+   "name": "ChilloutMix",
+   "tab": "cpu",
+   "badge": "CPU",
+   "desc": {
+    "zh": "人物图像生成模型",
+    "en": "ChilloutMix portrait",
+    "tw": "人物影像生成模型"
+   },
+   "size": {
+    "zh": "约 2.5GB",
+    "en": "~2.5GB"
+   },
+   "prompt": "RAW photo, best quality, realistic, photo-realistic, masterpiece, 1girl, upper body, facing front, portrait, white shirt",
+   "negative": "paintings, cartoon, anime, lowres, bad anatomy, worst quality, low quality, jpeg artifacts, signature, watermark, blurry",
+   "files": [
+    {
+     "hf": "swl-models/chilloutmix/resolve/main/Chilloutmix-non-ema-fp16.safetensors",
+     "cn": null,
+     "rel": "Chilloutmix-non-ema-fp16.safetensors"
+    }
+   ]
+  },
+  {
+   "id": "realisticvision_cpu",
+   "name": "Realistic Vision V5.1",
+   "tab": "cpu",
+   "badge": "CPU",
+   "desc": {
+    "zh": "写实向 SD1.5（无限制向）",
+    "en": "Photorealistic SD1.5 (uncensored-friendly)",
+    "tw": "寫實向 SD1.5（無限制向）"
+   },
+   "size": {
+    "zh": "约 2.1GB",
+    "en": "~2.1GB"
+   },
+   "prompt": "RAW photo, best quality, realistic, photo-realistic, masterpiece, detailed skin, 8k uhd, dslr, soft lighting, film grain",
+   "negative": "cartoon, anime, lowres, bad anatomy, worst quality, low quality, jpeg artifacts, signature, watermark, deformed, blurry",
+   "files": [
+    {
+     "hf": "SG161222/Realistic_Vision_V5.1_noVAE/resolve/main/Realistic_Vision_V5.1_fp16-no-ema.safetensors",
+     "cn": "https://modelscope.cn/api/v1/models/AI-ModelScope/Realistic_Vision_V5.1_noVAE/repo?Revision=master&FilePath=Realistic_Vision_V5.1_fp16-no-ema.safetensors",
+     "rel": "Realistic_Vision_V5.1_fp16-no-ema.safetensors"
+    }
+   ]
+  },
+  {
+   "id": "counterfeit_cpu",
+   "name": "Counterfeit V2.5",
+   "tab": "cpu",
+   "badge": "CPU",
+   "desc": {
+    "zh": "动漫向 SD1.5（无限制向）",
+    "en": "Anime SD1.5 (uncensored-friendly)",
+    "tw": "動漫向 SD1.5（無限制向）"
+   },
+   "size": {
+    "zh": "约 2.1GB",
+    "en": "~2.1GB"
+   },
+   "prompt": "masterpiece, best quality, 1girl, solo, detailed eyes, anime style",
+   "negative": "lowres, bad anatomy, bad hands, worst quality, realistic photo, blurry, deformed",
+   "files": [
+    {
+     "hf": "gsdf/Counterfeit-V2.5/resolve/main/Counterfeit-V2.5_fp16.safetensors",
+     "cn": "https://modelscope.cn/api/v1/models/AI-ModelScope/Counterfeit-V2.5/repo?Revision=master&FilePath=Counterfeit-V2.5_fp16.safetensors",
+     "rel": "Counterfeit-V2.5_fp16.safetensors"
+    }
+   ]
+  },
+  {
+   "id": "dreamshaper_cpu",
+   "name": "DreamShaper 8",
+   "tab": "cpu",
+   "badge": "CPU",
+   "desc": {
+    "zh": "全能高稳定 SD1.5（写实/插画/动漫皆可）",
+    "en": "Versatile, very stable general-purpose SD1.5",
+    "tw": "全能高穩定 SD1.5（寫實/插畫/動漫皆可）"
+   },
+   "size": {
+    "zh": "约 2.1GB",
+    "en": "~2.1GB"
+   },
+   "prompt": "masterpiece, best quality, highly detailed, sharp focus, professional, 8k uhd",
+   "negative": "lowres, bad anatomy, worst quality, low quality, jpeg artifacts, signature, watermark, blurry, deformed",
+   "files": [
+    {
+     "hf": "digiplay/DreamShaper_8/resolve/main/dreamshaper_8.safetensors",
+     "cn": "https://modelscope.cn/api/v1/models/digiplay/DreamShaper_8/repo?Revision=master&FilePath=dreamshaper_8.safetensors",
+     "rel": "dreamshaper_8.safetensors"
+    }
+   ]
+  },
+  {
+   "id": "majicmix_cpu",
+   "name": "majicMIX Realistic v7",
+   "tab": "cpu",
+   "badge": "CPU",
+   "desc": {
+    "zh": "高质感写实人像 SD1.5",
+    "en": "Premium photorealistic portrait SD1.5",
+    "tw": "高質感寫實人像 SD1.5"
+   },
+   "size": {
+    "zh": "约 2.1GB",
+    "en": "~2.1GB"
+   },
+   "prompt": "RAW photo, best quality, masterpiece, photorealistic, 8k uhd, dslr, ultra detailed skin, soft natural lighting, sharp focus, film grain",
+   "negative": "cartoon, anime, lowres, bad anatomy, worst quality, low quality, jpeg artifacts, signature, watermark, deformed, blurry",
+   "files": [
+    {
+     "hf": "digiplay/majicMIX_realistic_v7/resolve/main/majicmixRealistic_v7.safetensors",
+     "cn": "https://modelscope.cn/api/v1/models/digiplay/majicMIX_realistic_v7/repo?Revision=master&FilePath=majicmixRealistic_v7.safetensors",
+     "rel": "majicmixRealistic_v7.safetensors"
+    }
+   ]
+  },
+  {
+   "id": "analogmadness_cpu",
+   "name": "Analog Madness v7",
+   "tab": "cpu",
+   "badge": "CPU",
+   "desc": {
+    "zh": "复古胶片写实风 SD1.5",
+    "en": "Vintage analog-film realistic SD1.5",
+    "tw": "復古膠片寫實風 SD1.5"
+   },
+   "size": {
+    "zh": "约 2.1GB",
+    "en": "~2.1GB"
+   },
+   "prompt": "analog photo, film photography, best quality, masterpiece, realistic, 35mm film, grain, natural color, soft light, dslr",
+   "negative": "cartoon, anime, 3d render, lowres, bad anatomy, worst quality, jpeg artifacts, signature, watermark, deformed, blurry",
+   "files": [
+    {
+     "hf": "digiplay/AnalogMadness-realistic-model-v7/resolve/main/analogMadness_v70.safetensors",
+     "cn": "https://modelscope.cn/api/v1/models/digiplay/AnalogMadness-realistic-model-v7/repo?Revision=master&FilePath=analogMadness_v70.safetensors",
+     "rel": "analogMadness_v70.safetensors"
+    }
+   ]
+  },
+  {
+   "id": "juggernaut_cpu",
+   "name": "Juggernaut Final",
+   "tab": "cpu",
+   "badge": "CPU",
+   "desc": {
+    "zh": "超写实 SD1.5（无限制、细节丰富）",
+    "en": "Photorealistic SD1.5 (uncensored, detailed)",
+    "tw": "超寫實 SD1.5（無限制、細節豐富）"
+   },
+   "size": {
+    "zh": "约 2.1GB",
+    "en": "~2.1GB"
+   },
+   "prompt": "RAW photo, best quality, masterpiece, photorealistic, ultra detailed, 8k uhd, dslr, sharp focus, natural skin texture, soft lighting",
+   "negative": "cartoon, anime, 3d render, lowres, bad anatomy, worst quality, low quality, jpeg artifacts, signature, watermark, deformed, blurry",
+   "files": [
+    {
+     "hf": "digiplay/Juggernaut_final/resolve/main/juggernaut_final.safetensors",
+     "cn": "https://modelscope.cn/api/v1/models/digiplay/Juggernaut_final/repo?Revision=master&FilePath=juggernaut_final.safetensors",
+     "rel": "juggernaut_final.safetensors"
+    }
+   ]
+  },
+  {
+   "id": "camelliansfw_cpu",
+   "name": "CamelliaMix NSFW v1.1",
+   "tab": "cpu",
+   "badge": "CPU",
+   "desc": {
+    "zh": "半写实 2.5D SD1.5（无限制）",
+    "en": "Semi-realistic 2.5D SD1.5 (uncensored)",
+    "tw": "半寫實 2.5D SD1.5（無限制）"
+   },
+   "size": {
+    "zh": "约 2.1GB",
+    "en": "~2.1GB"
+   },
+   "prompt": "masterpiece, best quality, highly detailed, 2.5d, semi-realistic, sharp focus, cinematic lighting, 8k",
+   "negative": "lowres, bad anatomy, worst quality, low quality, jpeg artifacts, signature, watermark, blurry, deformed",
+   "files": [
+    {
+     "hf": "digiplay/CamelliaMix_NSFW_diffusers_v1.1/resolve/main/camelliamixNSFW_v11.safetensors",
+     "cn": "https://modelscope.cn/api/v1/models/digiplay/CamelliaMix_NSFW_diffusers_v1.1/repo?Revision=master&FilePath=camelliamixNSFW_v11.safetensors",
+     "rel": "camelliamixNSFW_v11.safetensors"
+    }
+   ]
+  },
+  {
+   "id": "darksushi_cpu",
+   "name": "Dark Sushi 2.5D",
+   "tab": "cpu",
+   "badge": "CPU",
+   "desc": {
+    "zh": "鲜艳动漫风 SD1.5",
+    "en": "Vivid 2.5D anime SD1.5",
+    "tw": "鮮豔動漫風 SD1.5"
+   },
+   "size": {
+    "zh": "约 2.1GB",
+    "en": "~2.1GB"
+   },
+   "prompt": "masterpiece, best quality, 1girl, solo, highly detailed, 2.5d anime, vivid color, detailed eyes, sharp focus",
+   "negative": "lowres, bad anatomy, realistic photo, worst quality, jpeg artifacts, signature, watermark, blurry, deformed",
+   "files": [
+    {
+     "hf": "digiplay/DarkSushi2.5D_v1/resolve/main/darkSushi25D25D_v10.safetensors",
+     "cn": "https://modelscope.cn/api/v1/models/digiplay/DarkSushi2.5D_v1/repo?Revision=master&FilePath=darkSushi25D25D_v10.safetensors",
+     "rel": "darkSushi25D25D_v10.safetensors"
+    }
+   ]
+  },
+  {
+   "id": "breakdomain_cpu",
+   "name": "BreakDomain Realistic R2333",
+   "tab": "cpu",
+   "badge": "CPU",
+   "desc": {
+    "zh": "清爽动漫风 SD1.5",
+    "en": "Clean anime SD1.5",
+    "tw": "清爽動漫風 SD1.5"
+   },
+   "size": {
+    "zh": "约 2.1GB",
+    "en": "~2.1GB"
+   },
+   "prompt": "masterpiece, best quality, 1girl, solo, detailed anime style, detailed eyes, clean lineart, vibrant, sharp focus",
+   "negative": "lowres, bad anatomy, realistic photo, 3d render, worst quality, jpeg artifacts, signature, watermark, blurry, deformed",
+   "files": [
+    {
+     "hf": "digiplay/breakdomainrealistic_R2333/resolve/main/breakdomainrealistic_R2333.safetensors",
+     "cn": "https://modelscope.cn/api/v1/models/digiplay/breakdomainrealistic_R2333/repo?Revision=master&FilePath=breakdomainrealistic_R2333.safetensors",
+     "rel": "breakdomainrealistic_R2333.safetensors"
+    }
+   ]
+  },
+  {
+   "id": "helloworld_cpu",
+   "name": "HelloWorld v3",
+   "tab": "cpu",
+   "badge": "CPU",
+   "desc": {
+    "zh": "精致插画风 SD1.5",
+    "en": "Detailed illustration SD1.5",
+    "tw": "精緻插畫風 SD1.5"
+   },
+   "size": {
+    "zh": "约 2.1GB",
+    "en": "~2.1GB"
+   },
+   "prompt": "masterpiece, best quality, highly detailed illustration, beautiful detailed eyes, soft color, detailed background, sharp focus, 8k",
+   "negative": "lowres, bad anatomy, realistic photo, worst quality, jpeg artifacts, signature, watermark, blurry, deformed",
+   "files": [
+    {
+     "hf": "digiplay/helloworld_v3/resolve/main/helloWorld_v3.safetensors",
+     "cn": "https://modelscope.cn/api/v1/models/digiplay/helloworld_v3/repo?Revision=master&FilePath=helloWorld_v3.safetensors",
+     "rel": "helloWorld_v3.safetensors"
+    }
+   ]
+  },
+  {
+   "id": "anireality_cpu",
+   "name": "AniReality Mix v1",
+   "tab": "cpu",
+   "badge": "CPU",
+   "desc": {
+    "zh": "半写实 2.5D 动漫风 SD1.5",
+    "en": "Semi-realistic 2.5D anime SD1.5",
+    "tw": "半寫實 2.5D 動漫風 SD1.5"
+   },
+   "size": {
+    "zh": "约 2.1GB",
+    "en": "~2.1GB"
+   },
+   "prompt": "masterpiece, best quality, 1girl, solo, 2.5d semi-realistic anime, detailed eyes, smooth skin, cinematic light, sharp focus, 8k",
+   "negative": "lowres, bad anatomy, worst quality, jpeg artifacts, signature, watermark, blurry, deformed",
+   "files": [
+    {
+     "hf": "digiplay/AniRealityMix_v1/resolve/main/anirealityMix_v1.safetensors",
+     "cn": null,
+     "rel": "anirealityMix_v1.safetensors"
+    }
+   ]
+  },
+  {
+   "id": "chillymix_cpu",
+   "name": "ChillyMix v1",
+   "tab": "cpu",
+   "badge": "CPU",
+   "desc": {
+    "zh": "写实人像 SD1.5",
+    "en": "Photorealistic portrait SD1.5",
+    "tw": "寫實人像 SD1.5"
+   },
+   "size": {
+    "zh": "约 2.1GB",
+    "en": "~2.1GB"
+   },
+   "prompt": "RAW photo, best quality, masterpiece, photorealistic portrait, ultra detailed skin, beautiful detailed eyes, 8k uhd, dslr, soft cinematic light, sharp focus",
+   "negative": "cartoon, anime, lowres, bad anatomy, worst quality, jpeg artifacts, signature, watermark, deformed, blurry",
+   "files": [
+    {
+     "hf": "digiplay/ChillyMix_v1/resolve/main/chillymix_V1Fp16.safetensors",
+     "cn": null,
+     "rel": "chillymix_V1Fp16.safetensors"
+    }
+   ]
+  },
+  {
+   "id": "twokwi_cpu",
+   "name": "2-KWI v1.0",
+   "tab": "cpu",
+   "badge": "CPU",
+   "desc": {
+    "zh": "写实韩系人像 SD1.5",
+    "en": "Realistic K-style portrait SD1.5",
+    "tw": "寫實韓系人像 SD1.5"
+   },
+   "size": {
+    "zh": "约 2.1GB",
+    "en": "~2.1GB"
+   },
+   "prompt": "RAW photo, best quality, masterpiece, photorealistic, natural portrait, natural skin texture, detailed eyes, 8k uhd, dslr, soft lighting, sharp focus, film grain",
+   "negative": "cartoon, anime, 3d render, lowres, bad anatomy, worst quality, jpeg artifacts, signature, watermark, deformed, blurry",
+   "files": [
+    {
+     "hf": "digiplay/2-KWI/resolve/main/2KWI_v10.safetensors",
+     "cn": null,
+     "rel": "2KWI_v10.safetensors"
+    }
+   ]
+  },
+  {
+   "id": "beautifulart_cpu",
+   "name": "BeautifulArt v1",
+   "tab": "cpu",
+   "badge": "CPU",
+   "desc": {
+    "zh": "唯美艺术/人像 SD1.5",
+    "en": "Fine-art / portrait SD1.5",
+    "tw": "唯美藝術/人像 SD1.5"
+   },
+   "size": {
+    "zh": "约 2.1GB",
+    "en": "~2.1GB"
+   },
+   "prompt": "masterpiece, best quality, fine art, highly detailed, elegant, dramatic lighting, professional photography, painterly, sharp focus, 8k",
+   "negative": "lowres, bad anatomy, worst quality, jpeg artifacts, signature, watermark, blurry, deformed",
+   "files": [
+    {
+     "hf": "digiplay/BeautifulArt_v1/resolve/main/beautifulArt_v10.safetensors",
+     "cn": null,
+     "rel": "beautifulArt_v10.safetensors"
+    }
+   ]
+  },
+  {
+   "id": "photon_cpu",
+   "name": "Photon v1",
+   "tab": "cpu",
+   "badge": "CPU",
+   "desc": {
+    "zh": "写实摄影 SD1.5",
+    "en": "Photorealistic SD1.5",
+    "tw": "寫實攝影 SD1.5"
+   },
+   "size": {
+    "zh": "约 2.1GB",
+    "en": "~2.1GB"
+   },
+   "prompt": "RAW photo, best quality, masterpiece, photorealistic, ultra detailed skin texture, natural light, 8k uhd, dslr, sharp focus",
+   "negative": "cartoon, anime, 3d render, lowres, bad anatomy, worst quality, jpeg artifacts, signature, watermark, deformed, blurry",
+   "files": [
+    {
+     "hf": "digiplay/Photon_v1/resolve/main/photon_v1.safetensors",
+     "cn": null,
+     "rel": "photon_v1.safetensors"
+    }
+   ]
+  },
+  {
+   "id": "lemoncreami_cpu",
+   "name": "LemonCreami v1",
+   "tab": "cpu",
+   "badge": "CPU",
+   "desc": {
+    "zh": "奶油柔感动漫 SD1.5",
+    "en": "Creamy soft anime SD1.5",
+    "tw": "奶油柔感動漫 SD1.5"
+   },
+   "size": {
+    "zh": "约 2.1GB",
+    "en": "~2.1GB"
+   },
+   "prompt": "masterpiece, best quality, 1girl, solo, creamy soft anime, detailed eyes, smooth shading, warm pastel color, sharp focus, 8k",
+   "negative": "lowres, bad anatomy, realistic photo, worst quality, jpeg artifacts, signature, watermark, blurry, deformed",
+   "files": [
+    {
+     "hf": "digiplay/LemonCreami/resolve/main/lemoncreami_v10.safetensors",
+     "cn": null,
+     "rel": "lemoncreami_v10.safetensors"
+    }
+   ]
+  },
+  {
+   "id": "meinapastel_cpu",
+   "name": "MeinaPastel v3",
+   "tab": "cpu",
+   "badge": "CPU",
+   "desc": {
+    "zh": "柔和粉彩插画 SD1.5",
+    "en": "Soft pastel illustration SD1.5",
+    "tw": "柔和粉彩插畫 SD1.5"
+   },
+   "size": {
+    "zh": "约 2.1GB",
+    "en": "~2.1GB"
+   },
+   "prompt": "masterpiece, best quality, 1girl, solo, soft pastel illustration, delicate lineart, detailed eyes, dreamy light, sharp focus, 8k",
+   "negative": "lowres, bad anatomy, realistic photo, worst quality, jpeg artifacts, signature, watermark, blurry, deformed",
+   "files": [
+    {
+     "hf": "digiplay/MeinaPastel_v3/resolve/main/meinapastel_v3.safetensors",
+     "cn": null,
+     "rel": "meinapastel_v3.safetensors"
+    }
+   ]
+  },
+  {
+   "id": "realisianv5_cpu",
+   "name": "Realisian v5",
+   "tab": "cpu",
+   "badge": "CPU",
+   "desc": {
+    "zh": "写实人像 SD1.5",
+    "en": "Realistic portrait SD1.5",
+    "tw": "寫實人像 SD1.5"
+   },
+   "size": {
+    "zh": "约 2.1GB",
+    "en": "~2.1GB"
+   },
+   "prompt": "RAW photo, best quality, masterpiece, photorealistic portrait, highly detailed skin, beautiful detailed eyes, 8k uhd, dslr, soft cinematic light, sharp focus",
+   "negative": "cartoon, anime, 3d render, lowres, bad anatomy, worst quality, jpeg artifacts, signature, watermark, deformed, blurry",
+   "files": [
+    {
+     "hf": "digiplay/Realisian_v5/resolve/main/realisian_v50.safetensors",
+     "cn": null,
+     "rel": "realisian_v50.safetensors"
+    }
+   ]
+  },
+  {
+   "id": "abyssomix_cpu",
+   "name": "AbyssOrangeMix2 Hard",
+   "tab": "cpu",
+   "badge": "CPU",
+   "desc": {
+    "zh": "鲜艳动漫 SD1.5",
+    "en": "Vibrant anime SD1.5",
+    "tw": "鮮豔動漫 SD1.5"
+   },
+   "size": {
+    "zh": "约 2.1GB",
+    "en": "~2.1GB"
+   },
+   "prompt": "masterpiece, best quality, 1girl, solo, anime style, highly detailed, vibrant color, detailed eyes, sharp focus, 8k",
+   "negative": "lowres, bad anatomy, realistic photo, worst quality, jpeg artifacts, signature, watermark, blurry, deformed",
+   "files": [
+    {
+     "hf": "digiplay/abyssorangemix2_Hard/resolve/main/abyssorangemix2_Hard.safetensors",
+     "cn": null,
+     "rel": "abyssorangemix2_Hard.safetensors"
+    }
+   ]
+  },
+  {
+   "id": "hassaku_cpu",
+   "name": "Hassaku v1.3",
+   "tab": "cpu",
+   "badge": "CPU",
+   "desc": {
+    "zh": "动漫插画 SD1.5",
+    "en": "Anime illustration SD1.5",
+    "tw": "動漫插畫 SD1.5"
+   },
+   "size": {
+    "zh": "约 2.1GB",
+    "en": "~2.1GB"
+   },
+   "prompt": "masterpiece, best quality, 1girl, solo, anime illustration, detailed eyes and face, soft shading, cinematic light, sharp focus, 8k",
+   "negative": "lowres, bad anatomy, realistic photo, worst quality, jpeg artifacts, signature, watermark, blurry, deformed",
+   "files": [
+    {
+     "hf": "digiplay/Hassaku_1.3/resolve/main/hassakuHentaiModel_v13.safetensors",
+     "cn": null,
+     "rel": "hassakuHentaiModel_v13.safetensors"
+    }
+   ]
+  },
+  {
+   "id": "colorful_cpu",
+   "name": "Colorful v3.1",
+   "tab": "cpu",
+   "badge": "CPU",
+   "desc": {
+    "zh": "绚丽多彩动漫 SD1.5",
+    "en": "Vivid colorful anime SD1.5",
+    "tw": "絢麗多彩動漫 SD1.5"
+   },
+   "size": {
+    "zh": "约 2.1GB",
+    "en": "~2.1GB"
+   },
+   "prompt": "masterpiece, best quality, 1girl, solo, vivid colorful anime, rich color, detailed eyes, clean lineart, sharp focus, 8k",
+   "negative": "lowres, bad anatomy, realistic photo, dull color, worst quality, jpeg artifacts, signature, watermark, blurry, deformed",
+   "files": [
+    {
+     "hf": "digiplay/Colorful_v3.1/resolve/main/colorful_v31.safetensors",
+     "cn": null,
+     "rel": "colorful_v31.safetensors"
+    }
+   ]
+  },
+  {
+   "id": "cosplaymix_cpu",
+   "name": "CosplayMix v2",
+   "tab": "cpu",
+   "badge": "CPU",
+   "desc": {
+    "zh": "写实 cosplay 人像 SD1.5",
+    "en": "Photoreal cosplay portrait SD1.5",
+    "tw": "寫實 cosplay 人像 SD1.5"
+   },
+   "size": {
+    "zh": "约 2.1GB",
+    "en": "~2.1GB"
+   },
+   "prompt": "RAW photo, best quality, masterpiece, photorealistic cosplay portrait, detailed fabric and skin, natural light, 8k uhd, dslr, sharp focus",
+   "negative": "cartoon, anime, 3d render, lowres, bad anatomy, worst quality, jpeg artifacts, signature, watermark, deformed, blurry",
+   "files": [
+    {
+     "hf": "digiplay/CosplayMix_v2/resolve/main/cosplaymix_v20.safetensors",
+     "cn": null,
+     "rel": "cosplaymix_v20.safetensors"
+    }
+   ]
+  },
+  {
+   "id": "nextphoto_cpu",
+   "name": "NextPhoto v3",
+   "tab": "cpu",
+   "badge": "CPU",
+   "desc": {
+    "zh": "写实抓拍摄影 SD1.5",
+    "en": "Candid photorealistic SD1.5",
+    "tw": "寫實抓拍攝影 SD1.5"
+   },
+   "size": {
+    "zh": "约 2.1GB",
+    "en": "~2.1GB"
+   },
+   "prompt": "RAW photo, best quality, masterpiece, photorealistic, natural skin texture, detailed eyes, candid photography, 8k uhd, dslr, soft daylight, sharp focus, film grain",
+   "negative": "cartoon, anime, 3d render, lowres, bad anatomy, worst quality, jpeg artifacts, signature, watermark, deformed, blurry",
+   "files": [
+    {
+     "hf": "digiplay/NextPhoto_v3/resolve/main/nextphoto_v30.safetensors",
+     "cn": null,
+     "rel": "nextphoto_v30.safetensors"
+    }
+   ]
+  },
+  {
+   "id": "majicv7_cpu",
+   "name": "MajicMix Realistic v7",
+   "tab": "cpu",
+   "badge": "CPU",
+   "desc": {
+    "zh": "写实人像 SD1.5",
+    "en": "Photorealistic SD1.5",
+    "tw": "寫實人像 SD1.5"
+   },
+   "size": {
+    "zh": "约 2.1GB",
+    "en": "~2.1GB"
+   },
+   "prompt": "RAW photo, best quality, masterpiece, photorealistic, highly detailed skin, beautiful detailed eyes, 8k uhd, dslr, soft cinematic light, sharp focus",
+   "negative": "cartoon, anime, lowres, bad anatomy, worst quality, low quality, jpeg artifacts, signature, watermark, deformed, blurry",
+   "files": [
+    {
+     "hf": "digiplay/majicMIX_realistic_v7/resolve/main/majicmixRealistic_v7.safetensors",
+     "cn": "https://modelscope.cn/api/v1/models/digiplay/majicMIX_realistic_v7/repo?Revision=master&FilePath=majicmixRealistic_v7.safetensors",
+     "rel": "majicmixRealistic_v7.safetensors"
+    }
+   ]
+  },
+  {
+   "id": "epigoddess_cpu",
+   "name": "epiCPhotoGasm 2.5D Goddess",
+   "tab": "cpu",
+   "badge": "CPU",
+   "desc": {
+    "zh": "2.5D 女神 半写实唯美 SD1.5",
+    "en": "Semi-real 2.5D goddess SD1.5",
+    "tw": "2.5D 女神 半寫實唯美 SD1.5"
+   },
+   "size": {
+    "zh": "约 2.1GB",
+    "en": "~2.1GB"
+   },
+   "prompt": "masterpiece, best quality, 1girl, solo, semi-realistic 2.5d, beautiful detailed face and eyes, soft cinematic lighting, sharp focus, 8k",
+   "negative": "lowres, bad anatomy, realistic photo, harsh contrast, worst quality, jpeg artifacts, signature, watermark, blurry, deformed",
+   "files": [
+    {
+     "hf": "digiplay/epi_2.5Dphotogodess_diffusers/resolve/main/epi25dphotogodess_v3.safetensors",
+     "cn": null,
+     "rel": "epi25dphotogodess_v3.safetensors"
+    }
+   ]
+  },
+  {
+   "id": "revanimated_cpu",
+   "name": "ReV Animated v1.1",
+   "tab": "cpu",
+   "badge": "CPU",
+   "desc": {
+    "zh": "奇幻插画/通用 SD1.5",
+    "en": "Fantasy illustration SD1.5",
+    "tw": "奇幻插畫/通用 SD1.5"
+   },
+   "size": {
+    "zh": "约 2.1GB",
+    "en": "~2.1GB"
+   },
+   "prompt": "masterpiece, best quality, highly detailed illustration, vibrant color, cinematic lighting, sharp focus, 8k, fantasy concept art",
+   "negative": "lowres, bad anatomy, photorealistic, 3d render, worst quality, jpeg artifacts, signature, watermark, blurry, deformed",
+   "files": [
+    {
+     "hf": "digiplay/revAnimated_v11/resolve/main/revAnimated_v11_fp16.safetensors",
+     "cn": null,
+     "rel": "revAnimated_v11_fp16.safetensors"
+    }
+   ]
+  },
+  {
+   "id": "meinav11_cpu",
+   "name": "MeinaMix v11",
+   "tab": "cpu",
+   "badge": "CPU",
+   "desc": {
+    "zh": "动漫 SD1.5",
+    "en": "Anime SD1.5",
+    "tw": "動漫 SD1.5"
+   },
+   "size": {
+    "zh": "约 2.1GB",
+    "en": "~2.1GB"
+   },
+   "prompt": "masterpiece, best quality, 1girl, solo, beautiful anime illustration, detailed eyes, soft light, sharp focus, 8k",
+   "negative": "lowres, bad anatomy, realistic photo, worst quality, jpeg artifacts, signature, watermark, blurry, deformed",
+   "files": [
+    {
+     "hf": "digiplay/MeinaMix_v11/resolve/main/meinamix_meinaV11.safetensors",
+     "cn": null,
+     "rel": "meinamix_meinaV11.safetensors"
+    }
+   ]
+  },
+  {
+   "id": "aingv9_cpu",
+   "name": "AingDiffusion v9",
+   "tab": "cpu",
+   "badge": "CPU",
+   "desc": {
+    "zh": "动漫 SD1.5",
+    "en": "Anime SD1.5",
+    "tw": "動漫 SD1.5"
+   },
+   "size": {
+    "zh": "约 2.1GB",
+    "en": "~2.1GB"
+   },
+   "prompt": "masterpiece, best quality, 1girl, solo, detailed anime style, clean lineart, beautiful eyes, vivid color, sharp focus, 8k",
+   "negative": "lowres, bad anatomy, realistic photo, worst quality, jpeg artifacts, signature, watermark, blurry, deformed",
+   "files": [
+    {
+     "hf": "digiplay/AingDiffusion9/resolve/main/aingdiffusion_v90.safetensors",
+     "cn": null,
+     "rel": "aingdiffusion_v90.safetensors"
+    }
+   ]
+  },
+  {
+   "id": "lemontea_cpu",
+   "name": "LemonTea Painterly 2.5D",
+   "tab": "cpu",
+   "badge": "CPU",
+   "desc": {
+    "zh": "笔触 2.5D SD1.5",
+    "en": "Painterly 2.5D SD1.5",
+    "tw": "筆觸 2.5D SD1.5"
+   },
+   "size": {
+    "zh": "约 2.1GB",
+    "en": "~2.1GB"
+   },
+   "prompt": "masterpiece, best quality, 1girl, solo, painterly 2.5d illustration, soft brush texture, detailed eyes, warm light, sharp focus, 8k",
+   "negative": "lowres, bad anatomy, photorealistic, worst quality, jpeg artifacts, signature, watermark, blurry, deformed",
+   "files": [
+    {
+     "hf": "digiplay/LemonTea2.5D/resolve/main/lemonteaMixPainterly2_v1.safetensors",
+     "cn": null,
+     "rel": "lemonteaMixPainterly2_v1.safetensors"
+    }
+   ]
+  },
+  {
+   "id": "countermixv2_cpu",
+   "name": "CounterMix v2",
+   "tab": "cpu",
+   "badge": "CPU",
+   "desc": {
+    "zh": "半写实动漫 SD1.5",
+    "en": "Semi-real anime SD1.5",
+    "tw": "半寫實動漫 SD1.5"
+   },
+   "size": {
+    "zh": "约 2.1GB",
+    "en": "~2.1GB"
+   },
+   "prompt": "masterpiece, best quality, highly detailed, 2.5d semi-realistic anime, beautiful detailed eyes, cinematic lighting, sharp focus, 8k",
+   "negative": "lowres, bad anatomy, realistic photo, worst quality, jpeg artifacts, signature, watermark, blurry, deformed",
+   "files": [
+    {
+     "hf": "digiplay/CounterMix_v2/resolve/main/countermix_v20.safetensors",
+     "cn": null,
+     "rel": "countermix_v20.safetensors"
+    }
+   ]
+  },
+  {
+   "id": "beautifantasy_cpu",
+   "name": "Beautiful Fantasy Real Mix",
+   "tab": "cpu",
+   "badge": "CPU",
+   "desc": {
+    "zh": "唯美奇幻半写实 SD1.5",
+    "en": "Semi-real fantasy SD1.5",
+    "tw": "唯美奇幻半寫實 SD1.5"
+   },
+   "size": {
+    "zh": "约 2.1GB",
+    "en": "~2.1GB"
+   },
+   "prompt": "masterpiece, best quality, semi-realistic fantasy portrait, beautiful detailed face and eyes, dramatic light, intricate details, sharp focus, 8k",
+   "negative": "lowres, bad anatomy, worst quality, jpeg artifacts, signature, watermark, blurry, deformed",
+   "files": [
+    {
+     "hf": "digiplay/BeautifulFantasyRealMix_diffusers/resolve/main/beautifulfantasyreal_v10.safetensors",
+     "cn": null,
+     "rel": "beautifulfantasyreal_v10.safetensors"
+    }
+   ]
+  },
+  {
+   "id": "ethereallux_cpu",
+   "name": "EtherReal Mix LUX2",
+   "tab": "cpu",
+   "badge": "CPU",
+   "desc": {
+    "zh": "精致半写实 SD1.5",
+    "en": "Elegant semi-real SD1.5",
+    "tw": "精緻半寫實 SD1.5"
+   },
+   "size": {
+    "zh": "约 2.1GB",
+    "en": "~2.1GB"
+   },
+   "prompt": "masterpiece, best quality, highly detailed, elegant semi-realistic anime, luminous skin, beautiful eyes, soft cinematic light, sharp focus, 8k",
+   "negative": "lowres, bad anatomy, photorealistic, worst quality, jpeg artifacts, signature, watermark, blurry, deformed",
+   "files": [
+    {
+     "hf": "digiplay/EtherRealMix_LUX2/resolve/main/etherRealMix_etherRealMixLUX2.safetensors",
+     "cn": null,
+     "rel": "etherRealMix_etherRealMixLUX2.safetensors"
+    }
+   ]
+  },
+  {
+   "id": "z_image_turbo",
+   "name": "Z-Image Turbo",
+   "tab": "npu",
+   "badge": "NPU",
+   "locked": true,
+   "desc": {
+    "zh": "6B DiT，8 步。",
+    "en": "6B DiT, 8 steps.",
+    "tw": "6B DiT，8 步。"
+   },
+   "size": {
+    "zh": "约 8.8GB",
+    "en": "~8.8GB"
+   },
+   "prompt": "a lovely cat wearing black sunglasses, studio photo",
+   "negative": "",
+   "files": []
+  },
+  {
+   "id": "flux2_klein_4b",
+   "name": "FLUX.2 Klein 4B",
+   "tab": "npu",
+   "badge": "NPU",
+   "locked": true,
+   "desc": {
+    "zh": "4B DiT，4 步。",
+    "en": "4B DiT, 4 steps.",
+    "tw": "4B DiT，4 步。"
+   },
+   "size": {
+    "zh": "约 6.7GB",
+    "en": "~6.7GB"
+   },
+   "prompt": "a lovely cat wearing black sunglasses, studio photo",
+   "negative": "",
+   "files": []
+  },
+  {
+   "id": "qwen_image_2_1",
+   "name": "Qwen Image 2.1",
+   "tab": "npu",
+   "badge": "NPU",
+   "locked": true,
+   "desc": {
+    "zh": "Q4_0 DiT + Qwen3-VL-8B，20 步。",
+    "en": "Q4_0 DiT + Qwen3-VL-8B, 20 steps.",
+    "tw": "Q4_0 DiT + Qwen3-VL-8B，20 步。"
+   },
+   "size": {
+    "zh": "约 10.8GB",
+    "en": "~10.8GB"
+   },
+   "prompt": "a lovely cat holding a sign",
+   "negative": "",
+   "files": []
+  },
+  {
+   "id": "qwen_image_2_1_uc",
+   "name": "Qwen Image 2.1 UC Q4_0",
+   "tab": "npu",
+   "badge": "NPU",
+   "locked": true,
+   "desc": {
+    "zh": "无审查(UC) Q4_0 DiT + Qwen3-VL-8B，20 步。",
+    "en": "Uncensored Q4_0 DiT + Qwen3-VL-8B, 20 steps.",
+    "tw": "無審查(UC) Q4_0 DiT + Qwen3-VL-8B，20 步。"
+   },
+   "size": {
+    "zh": "约 10.8GB",
+    "en": "~10.8GB"
+   },
+   "prompt": "a lovely cat holding a sign",
+   "negative": "",
+   "files": []
+  },
+  {
+   "id": "qwen_image_2_1_q3",
+   "name": "Qwen Image 2.1 Q3_K",
+   "tab": "npu",
+   "badge": "NPU",
+   "locked": true,
+   "desc": {
+    "zh": "最小千问 Image 2.1：Q3_K DiT（整包约 9.9GB），需手机 NPU。",
+    "en": "Smallest Qwen Image 2.1: Q3_K DiT (~9.9GB), needs phone NPU.",
+    "tw": "最小千問 Image 2.1：Q3_K DiT（整包約 9.9GB），需手機 NPU。"
+   },
+   "size": {
+    "zh": "约 9.9GB",
+    "en": "~9.9GB"
+   },
+   "prompt": "a lovely cat holding a sign",
+   "negative": "",
+   "files": []
+  },
+  {
+   "id": "qwen_image_2_1_uc_q5",
+   "name": "Qwen Image 2.1 UC Q5_K_M",
+   "tab": "npu",
+   "badge": "NPU",
+   "locked": true,
+   "desc": {
+    "zh": "无审查高画质 Q5_K_M DiT（整包约 11.9GB），需手机 NPU。",
+    "en": "Uncensored Q5_K_M DiT (~11.9GB), needs phone NPU.",
+    "tw": "無審查高畫質 Q5_K_M DiT（整包約 11.9GB），需手機 NPU。"
+   },
+   "size": {
+    "zh": "约 11.9GB",
+    "en": "~11.9GB"
+   },
+   "prompt": "a lovely cat holding a sign",
+   "negative": "",
+   "files": []
+  },
+  {
+   "id": "illustrious_v16",
+   "name": "Illustrious v16",
+   "tab": "npu",
+   "badge": "NPU",
+   "locked": true,
+   "desc": {
+    "zh": "WAI Illustrious SDXL v16",
+    "en": "WAI Illustrious SDXL v16",
+    "tw": "WAI Illustrious SDXL v16"
+   },
+   "size": {
+    "zh": "约 4.2GB",
+    "en": "~4.2GB"
+   },
+   "prompt": "1girl, solo, masterpiece, best quality",
+   "negative": "lowres, bad anatomy, worst quality, blurry",
+   "files": []
+  },
+  {
+   "id": "illustrious_v16_dmd2",
+   "name": "Illustrious v16 DMD2",
+   "tab": "npu",
+   "badge": "NPU",
+   "locked": true,
+   "desc": {
+    "zh": "融合了 DMD2 LoRA",
+    "en": "Merged with DMD2 LoRA",
+    "tw": "融合了 DMD2 LoRA"
+   },
+   "size": {
+    "zh": "约 4.2GB",
+    "en": "~4.2GB"
+   },
+   "prompt": "1girl, solo, masterpiece, best quality",
+   "negative": "lowres, bad anatomy, worst quality, blurry",
+   "files": []
+  },
+  {
+   "id": "cyber_realistic_v10",
+   "name": "CyberRealistic v10",
+   "tab": "npu",
+   "badge": "NPU",
+   "locked": true,
+   "desc": {
+    "zh": "现实场景生成模型（SDXL）",
+    "en": "Realistic image generation (SDXL)",
+    "tw": "現實場景生成模型（SDXL）"
+   },
+   "size": {
+    "zh": "约 4.2GB",
+    "en": "~4.2GB"
+   },
+   "prompt": "masterpiece, best quality, a majestic cat sitting on a windowsill at sunset",
+   "negative": "lowres, bad anatomy, worst quality, blurry",
+   "files": []
+  },
+  {
+   "id": "cyber_realistic_v10_dmd2",
+   "name": "CyberRealistic v10 DMD2",
+   "tab": "npu",
+   "badge": "NPU",
+   "locked": true,
+   "desc": {
+    "zh": "融合了 DMD2 LoRA",
+    "en": "Merged with DMD2 LoRA",
+    "tw": "融合了 DMD2 LoRA"
+   },
+   "size": {
+    "zh": "约 4.2GB",
+    "en": "~4.2GB"
+   },
+   "prompt": "masterpiece, best quality, a majestic cat sitting on a windowsill at sunset",
+   "negative": "lowres, bad anatomy, worst quality, blurry",
+   "files": []
+  },
+  {
+   "id": "anythingv5_npu",
+   "name": "Anything V5.0 (NPU)",
+   "tab": "npu",
+   "badge": "NPU",
+   "locked": true,
+   "desc": {
+    "zh": "动漫图像生成模型（手机 QNN 版）",
+    "en": "Anime image gen (phone QNN build)",
+    "tw": "動漫影像生成模型（手機 QNN 版）"
+   },
+   "size": {
+    "zh": "约 1.1GB",
+    "en": "~1.1GB"
+   },
+   "prompt": "masterpiece, best quality, 1girl, solo, cute, white hair",
+   "negative": "lowres, bad anatomy, worst quality, blurry",
+   "files": []
+  },
+  {
+   "id": "qteamix_npu",
+   "name": "QteaMix (NPU)",
+   "tab": "npu",
+   "badge": "NPU",
+   "locked": true,
+   "desc": {
+    "zh": "动漫Q版风格模型（手机 QNN 版）",
+    "en": "Chibi anime (phone QNN build)",
+    "tw": "動漫Q版風格模型（手機 QNN 版）"
+   },
+   "size": {
+    "zh": "约 1.1GB",
+    "en": "~1.1GB"
+   },
+   "prompt": "chibi, best quality, 1girl, solo, cute, pink hair",
+   "negative": "lowres, bad anatomy, worst quality, blurry",
+   "files": []
+  },
+  {
+   "id": "cuteyukimix_npu",
+   "name": "CuteYukiMix (NPU)",
+   "tab": "npu",
+   "badge": "NPU",
+   "locked": true,
+   "desc": {
+    "zh": "动漫特化可爱风格（手机 QNN 版）",
+    "en": "Cute anime (phone QNN build)",
+    "tw": "動漫特化可愛風格（手機 QNN 版）"
+   },
+   "size": {
+    "zh": "约 1.1GB",
+    "en": "~1.1GB"
+   },
+   "prompt": "masterpiece, best quality, 1girl, solo, cute, white hair",
+   "negative": "lowres, bad anatomy, worst quality, blurry",
+   "files": []
+  },
+  {
+   "id": "absolutereality_npu",
+   "name": "Absolute Reality (NPU)",
+   "tab": "npu",
+   "badge": "NPU",
+   "locked": true,
+   "desc": {
+    "zh": "现实场景生成模型（手机 QNN 版）",
+    "en": "Realistic image gen (phone QNN build)",
+    "tw": "現實場景生成模型（手機 QNN 版）"
+   },
+   "size": {
+    "zh": "约 1.1GB",
+    "en": "~1.1GB"
+   },
+   "prompt": "masterpiece, best quality, ultra-detailed, realistic, 8k",
+   "negative": "worst quality, low quality, cartoon, anime, blurry",
+   "files": []
+  },
+  {
+   "id": "chilloutmix_npu",
+   "name": "ChilloutMix (NPU)",
+   "tab": "npu",
+   "badge": "NPU",
+   "locked": true,
+   "desc": {
+    "zh": "人物图像生成模型（手机 QNN 版）",
+    "en": "Portrait image gen (phone QNN build)",
+    "tw": "人物影像生成模型（手機 QNN 版）"
+   },
+   "size": {
+    "zh": "约 1.1GB",
+    "en": "~1.1GB"
+   },
+   "prompt": "RAW photo, best quality, realistic, portrait",
+   "negative": "paintings, cartoon, worst quality, blurry",
+   "files": []
+  }
+ ]
+}

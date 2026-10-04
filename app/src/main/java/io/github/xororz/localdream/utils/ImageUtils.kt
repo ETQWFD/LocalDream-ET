@@ -310,16 +310,18 @@ suspend fun saveImage(context: Context, bitmap: Bitmap, onSuccess: () -> Unit, o
                 "Start saving image - size: ${bitmap.width}x${bitmap.height}",
             )
 
-            // Transparent output (notably Qwen Image 2.1) must stay PNG. Opaque
-            // large images retain the existing JPEG space optimization.
-            val isLargeImage = bitmap.width > 1024 || bitmap.height > 1024
-            val usePng = bitmap.hasAlpha() || !isLargeImage
-            val format = if (usePng) Bitmap.CompressFormat.PNG else Bitmap.CompressFormat.JPEG
-            val extension = if (usePng) "png" else "jpg"
-            val mimeType = if (usePng) "image/png" else "image/jpeg"
-            val quality = if (usePng) 100 else 95
+            // The gallery receives the *final* product image. It must never be
+            // lossy-compressed: the previous rule stored any image larger than
+            // 1024px as JPEG q95, which visibly softened DiT 1024-2048px
+            // results ("image quality too poor"). JPEG is only ever used for
+            // temporary progress previews, not for the saved product. PNG is
+            // lossless; transparent (Qwen) results were already PNG.
+            val format = Bitmap.CompressFormat.PNG
+            val extension = "png"
+            val mimeType = "image/png"
+            val quality = 100
 
-            Log.d("SaveImage", "Save format: ${if (usePng) "PNG" else "JPEG"}")
+            Log.d("SaveImage", "Save format: PNG (lossless)")
 
             val filename = nextSaveFilename(extension)
 

@@ -103,11 +103,13 @@
       <a class="btn ghost" href="https://github.com/ETQWFD/LocalDream-ET" target="_blank" rel="noopener">GitHub 仓库</a>
     </div>
     <div class="cta" style="margin-top:12px;">
-      <a class="btn primary" href="https://github.com/ETQWFD/LocalDream-ET/releases/download/desktop-v2.2.0/LocalDream-ET-Setup-2.2.0.exe" download>💻 下载电脑版安装包 v2.2.0（Windows x64）</a>
-      <a class="btn ghost" href="https://github.com/ETQWFD/LocalDream-ET/releases/download/desktop-v2.2.0/LocalDream-ET-Windows-Portable-2.2.0.zip" download>电脑版免安装 ZIP v2.2.0</a>
+      <a class="btn primary" href="https://github.com/ETQWFD/LocalDream-ET/releases/download/desktop-v3.0.0/LocalDream-ET-Setup-3.0.0.exe" download>💻 下载电脑版安装包 v3.0.0（Windows x64）</a>
+      <a class="btn ghost" href="https://github.com/ETQWFD/LocalDream-ET/releases/download/desktop-v3.0.0/LocalDream-ET-Windows-Portable-3.0.0.zip" download>电脑版免安装 ZIP v3.0.0</a>
     </div>
-    <div class="ver">手机当前版本 <b>v3.0.0-et.21</b>（build 95，新包名 etc.github.ai）· 电脑版 <b>v2.2.0</b> · 开发者 <b>ET</b> · 支持 arm64-v8a / armeabi-v7a</div>
+    <div class="ver">手机当前版本 <b>v3.0.0-et.22</b>（build 96，包名 etc.github.ai）· 电脑版 <b>v3.0.0</b> · 开发者 <b>ET</b> · 支持 arm64-v8a / armeabi-v7a</div>
     <div class="note" style="margin-top:14px;text-align:left;max-width:760px;margin-left:auto;margin-right:auto;">
+      <b>手机版 v3.0.0-et.22 更新：</b>本轮专注修复出图体验（可从 et.21 直接覆盖安装）。① <b>修复 AI 不按中文提示词生成</b>：根因是中文提示词在英文模型上被整句机器翻译替换，联网翻译失败后回退的离线词典又丢弃未登录中文词，复杂句子塌缩成通用质量词；现把联网翻译超时由 8 秒缩短到 4 秒、失败更快安全回退，<b>英文与负向提示词逐字透传、不再替换你写的原文</b>。② <b>修复保存图片画质差</b>：成品保存到相册由 JPEG(95) 有损改为<b>无损 PNG</b>，输出宽高保持 64 对齐、不静默降分辨率，步数 20 / CFG 7 / dpm 默认值不变。③ <b>修复生成卡顿</b>：生成前联网翻译等待减半；“过程预览”改为降采样预览并节流到约 7fps，不再每步全尺寸解码掉帧，进度百分比仍逐步实时更新；后台生成、唤醒锁、SD1.5 GPU(OpenCL) 默认开启均保留。仅最小改动，et.21 的模型/门控/更新器/32&64 位转换能力不回退。<br>
+      <b>电脑版 v3.0.0 更新（重磅重构）：</b>用 <b>C（Win32）＋ Python</b> 把界面重构成<b>与手机同款</b>：窄幅竖向窗口、<b>CPU Models / NPU Models</b> 双标签、搜索框、圆角模型卡片，点模型下载、下载后点卡片直接进入生成页；设置与手机一致——<b>简体中文 / English / 繁體中文</b> 三语、深浅主题、图片比例、步数、CFG、采样器、负向提示词、图生图、检测更新。<b>模型共 52 个</b>：CPU 页 <b>37 个标准 SD1.5</b> 可真实下载并用内置 stable-diffusion.cpp CPU 引擎本地出图（国内镜像优先、断点续传，所有下载链接已逐一实测可达，并修复旧版 4 个失效源）；NPU 页 15 个手机骁龙 NPU/QNN 专属模型在电脑 CPU 引擎上无法运行，<b>如实加锁并写明原因（不放假按钮）</b>。模型下载到<b>程序当前目录 <code>models</code></b>。全链路 UTF-8 修复中文/繁体乱码。提供安装包（按用户安装、免管理员）与免安装 ZIP。真实出图需 Windows 真机验收。<br>
       <b>手机版 v3.0.0-et.21 更新：</b>① <b>旗舰模型进入 CPU 列表并按机型解锁</b>：Illustrious v16、Illustrious v16 DMD2 与千问 Qwen Image 2.1 四个版本，32 位手机的 <b>CPU 页现在也能看到</b>，但显示锁定并提示“<b>未解锁，请到 64 位手机使用</b>”、禁止下载；满足条件的 64 位真机自动解锁并运行其<b>真实 NPU/DiT 后端</b>（不是假按钮）；32 位原有全部 SD1.5 模型照常可用。② <b>修复切换图片比例不生效</b>：自定义比例此前只改文字、不重算宽高，现按模型类型实时重算（SD1.5 对齐 64、DiT 步进、固定画布），9:16 等任意比例正确出图。③ <b>SD1.5 GPU(OpenCL) 默认开启</b>：检测到 Adreno/Mali/Xclipse/PowerVR 首次使用自动开 GPU 加速出图，无 GPU 自动回退 CPU，手动切换后以你为准。④ <b>更健壮的机型识别</b>：综合 SoC/系统属性/proc/cpuinfo/GL 渲染器识别高通、华为麒麟、联发科、三星 Exynos、Google Tensor；华为麒麟等非高通平台对 NPU 模型给出明确说明（QNN 仅支持高通 Hexagon，属硬件差异），引导用 SD1.5 GPU/CPU。⑤ <b>更新包改存</b> <code>/storage/emulated/0/LocalDreamET/temp_downloads/</code>，FileProvider 已放行，仍直调系统打包安装器。⑥ <b>包名改为 etc.github.ai</b>（全新独立应用，旧版需卸载新装；模型在公共目录不受影响）。简中/繁中/英文三语同步。修复清单见 <a href="help.html">使用文档</a>。<br>
       <b>手机版 v3.0.0-et.20 更新：</b>① <b>修复 32/64 位本机转换模型崩溃</b>（截图里的 <code>std::length_error: vector</code> / libc++abi abort）：根因是 safetensors 文件头长度未校验（下到错误页/截断/非 safetensors 的 .ckpt 时把前 8 字节当成超大头部直接分配）与大张量元素数用 int 累乘溢出；现改为头部长度+文件实际大小合法性校验、元素数 64 位计算、32 位地址空间安全上限拦截、逐张量转换前释放上一块内存（峰值内存只留一个张量），且转换入口统一捕获 length_error/bad_alloc/异常并返回可读“转换失败原因”，<b>不再闪退弹 libc++ 框</b>；32 位与 64 位原生引擎均已用此修复重新编译。② <b>修复锁屏/切后台出图中途被结束</b>：生成唤醒锁原 30 分钟上限在老旧机 20–60 分钟出图时会提前失效导致 CPU 休眠中断，现延长到 6 小时并在结束时释放。③ 数据后台入口已从官网隐藏（仅管理员直链访问）。转换类模型请务必等下载完整（应用已做文件头/大小校验与断点续传）。修复清单见 PPT/Word 与 <a href="help.html">使用文档</a>。<br>
       <b>手机版 v3.0.0-et.19 更新：</b><b>千问 Qwen Image 2.1 补齐为 4 个可下载模型</b>：在原有标准版 Q4_0、无审查 UC Q4_0 基础上，新增 <b>Q3_K 最小版</b>（DiT 3.27GB、整包约 9.9GB，千问系列里最省空间/最快）与 <b>UC Q5_K_M 高画质无审查版</b>（DiT 5.22GB、整包约 11.9GB）；四者共用 Qwen3-VL-8B 文本编码器/VAE，走同一千问管线，仅 DiT 权重不同，各自独立目录与断点续传。<b>仍需骁龙8至尊版（SM8750）及以上 64 位 + Android12</b>，32 位列表可见但按机型锁定并说明（引擎仅 arm64，属物理限制）。引擎二进制已内置 Q2_K/Q3_K/Q4_0/Q5_K/Q6_K/Q8_0 量化与 CPU 路径。沿用 et.18：NPU 全可见加锁、Illustrious v16、更新直调系统安装器、下载存储预检、MIT。<br>
@@ -181,14 +183,16 @@
     </div>
   </section>
   <section id="desktop">
-    <h2>电脑版（Windows x64）</h2>
-    <p>使用 <b>C 语言</b>编写的原生桌面启动器，底层为开源 stable-diffusion.cpp（leejet, MIT）CPU 引擎，Windows 10/11 64 位本地离线出图，免费、不上传图片。右键程序“属性→详细信息”显示开发者 ET。</p>
+    <h2>电脑版 v3.0.0（Windows x64）</h2>
+    <p>使用 <b>C（Win32）＋ Python</b> 编写的原生桌面程序，界面与手机版同款；底层为开源 stable-diffusion.cpp（leejet, MIT）CPU 引擎，Windows 10/11 64 位本地离线出图，免费、不上传图片。右键程序“属性→详细信息”显示开发者 ET / Copyright (C) 2026 ET。</p>
     <div class="cards">
-      <div class="card"><h3>① 下载安装</h3><p>点顶部「下载电脑版安装包 v2.2.0」（按用户安装、无需管理员），或下免安装 ZIP 解压即用；安装版自动创建桌面与开始菜单快捷方式。v2.2.0 模型增至 13 个，延续大模型断点续传/防损坏下载。</p></div>
-      <div class="card"><h3>② 下载模型</h3><p>左侧手机式卡片列表+搜索框，7 个模型逐个下载、真实百分比、断点续传，默认国内镜像、失败回退官方源：Absolute Reality、Realistic Vision V5.1、majicMIX v7、Analog Madness v7、DreamShaper 8、Counterfeit V2.5、Qwen-Image 2.1 UC。</p></div>
-      <div class="card"><h3>③ 本地出图</h3><p>桌面端直接读取 safetensors 无需转换；图生图整张上传不裁剪；比例 1:1/3:4/2:3/9:16/4:3/3:2/16:9（SD 按 64、Qwen 按 32 对齐）；真实采样进度条+实时预览；深浅主题、中文/English；应用内检测更新自动安装。</p></div>
+      <div class="card"><h3>① 下载安装</h3><p>点顶部「下载电脑版安装包 v3.0.0」（按用户安装、无需管理员/UAC），或下免安装 ZIP 解压即用；安装版自动创建桌面与开始菜单快捷方式，可在设置里检测更新。</p></div>
+      <div class="card"><h3>② 手机同款界面与设置</h3><p>窄幅竖向窗口、<b>CPU Models / NPU Models</b> 双标签、搜索框、圆角模型卡片、置顶；设置含简体中文 / English / 繁體中文 三语即时切换、深浅主题、图片比例、步数(默认20)、CFG(默认7)、9 种采样器(默认 dpm)、负向提示词、图生图(默认重绘 0.45)、清理临时、检测更新。</p></div>
+      <div class="card"><h3>③ 下载模型到当前目录</h3><p>CPU 页 <b>37 个标准 SD1.5</b> 逐个下载，真实百分比/速度/断点续传，国内镜像（hf-mirror / 魔搭）优先、失败回退官方源，全部链接已实测可达；模型存程序当前目录 <code>models</code>。下载后点卡片即进入生成页。</p></div>
+      <div class="card"><h3>④ 本地出图</h3><p>桌面端直接读取 safetensors 无需转换；正/负提示词、比例 1:1/3:4/4:3、步数、CFG、采样器、随机/指定种子、图生图、生成数量；真实采样进度 + 预览 + 历史，成品存 <code>output</code>。</p></div>
+      <div class="card"><h3>⑤ NPU 页如实加锁</h3><p>NPU 页列出 Z-Image Turbo、FLUX.2 Klein、千问 Qwen Image 2.1×4、Illustrious v16/dmd2、CyberRealistic v10/dmd2 与 SD1.5 QNN 变体共 15 个；它们依赖手机骁龙 NPU/QNN/MNN，<b>电脑 CPU 引擎不能运行，一律加锁并三语说明</b>，不提供会失败的假下载/假生成。</p></div>
     </div>
-    <div class="note">模型下载到<b>程序同级 <code>models</code> 文件夹</b>（安装目录或绿色包目录内），图片存于同级 <code>output</code>；仅当装在 Program Files 等受保护目录时才回退到 <code>%LOCALAPPDATA%\LocalDreamET</code>。SD 模型每个约 2.1GB，Qwen 整套约 10.6GB（建议 16GB 内存或独显），下载后离线可用。</div>
+    <div class="note">模型下载到<b>程序当前目录的 <code>models</code> 文件夹</b>（安装目录或绿色包目录内），图片存于 <code>output</code>；仅当装在 Program Files 等受保护目录时才回退到 <code>%LOCALAPPDATA%\LocalDreamET</code> 并在界面明示。SD1.5 每个约 2.1–2.5GB，老旧 CPU 出图较慢属正常。<b>说明：</b>电脑版当前为 CPU 引擎，能否使用 NPU 取决于电脑实际硬件与后端；本安装包的真实出图/下载效果请在 Windows 真机验收，如遇问题请回传程序目录 <code>tmp</code> 内的 sd-cli 日志与“设置→关于”版本号。</div>
   </section>
 </div>
 

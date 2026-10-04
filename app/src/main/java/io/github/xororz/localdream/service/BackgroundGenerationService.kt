@@ -396,6 +396,14 @@ class BackgroundGenerationService : Service() {
                     // process shown every step would otherwise allocate a
                     // fresh width*height IntArray (4 MB at 1024x1024).
                     var previewPixels: IntArray? = null
+                    // Throttle for the *preview image* (not the percent): when
+                    // the user enables the step-by-step preview, a full bitmap
+                    // arrived every diffusion step and was pushed straight into
+                    // Compose, churning bitmaps and recomposing the overlay each
+                    // step ("generation laggy"). The percent bar still updates
+                    // every step; we only rate-limit attaching a new preview
+                    // bitmap to ~7 fps. The final result image is unaffected.
+                    var lastPreviewEmitMs = 0L
 
                     // Read line by line for efficiency
                     readLoop@ while (isActive) {
@@ -439,11 +447,28 @@ class BackgroundGenerationService : Service() {
                                                     it.setPixels(pixels, 0, pw, 0, 0, pw, ph)
                                                 }
                                             } else {
-                                                // jpeg/png: native decode.
+                                                // jpeg/png preview: decode downsampled. These are
+                                                // throwaway previews (the final image comes back raw),
+                                                // so decode at most ~512px on the long edge instead of
+                                                // allocating a full-size bitmap every step.
+                                                val bounds = BitmapFactory.Options().apply {
+                                                    inJustDecodeBounds = true
+                                                }
                                                 BitmapFactory.decodeByteArray(
-                                                    imageBytes,
-                                                    0,
-                                                    imageBytes.size,
+                                                    imageBytes, 0, imageBytes.size, bounds,
+                                                )
+                                                var sample = 1
+                                                val maxEdge = 512
+                                                while (bounds.outWidth / sample > maxEdge ||
+                                                    bounds.outHeight / sample > maxEdge
+                                                ) {
+                                                    sample *= 2
+                                                }
+                                                val opts = BitmapFactory.Options().apply {
+                                                    inSampleSize = sample
+                                                }
+                                                BitmapFactory.decodeByteArray(
+                                                    imageBytes, 0, imageBytes.size, opts,
                                                 )
                                             }
                                         } catch (e: Exception) {
@@ -452,6 +477,21 @@ class BackgroundGenerationService : Service() {
                                                 "Failed to decode intermediate image",
                                                 e,
                                             )
+                                        }
+                                    }
+
+                                    // Rate-limit the preview *bitmap* only. The progress
+                                    // percent always flows through; a new preview image is
+                                    // attached at most ~7x per second to avoid per-step
+                                    // Compose churn. The very first preview is always shown.
+                                    if (bitmap != null) {
+                                        val nowMs = System.currentTimeMillis()
+                                        if (lastPreviewEmitMs != 0L &&
+                                            nowMs - lastPreviewEmitMs < 150L
+                                        ) {
+                                            bitmap = null
+                                        } else {
+                                            lastPreviewEmitMs = nowMs
                                         }
                                     }
 

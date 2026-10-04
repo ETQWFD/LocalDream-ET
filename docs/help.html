@@ -44,7 +44,7 @@
 </div></header>
 <div class="wrap">
   <h1>Local Dream ET 官方使用文档</h1>
-  <p class="sub">安卓端本地 AI 绘画（Stable Diffusion / Qwen Image），离线出图、无云端上传。开发者：ET · 当前手机版 v3.0.0-et.21（build 95，包名 etc.github.ai）：Illustrious/千问进入 CPU 列表并按 32/64 位机型解锁、修复自定义比例不生效、SD1.5 GPU(OpenCL) 默认开、健壮识别华为麒麟等非高通平台、更新包存 LocalDreamET/temp_downloads。et.20 修复 32/64 位本机转换 std::length_error 闪退与锁屏后台出图中断；et.19 起千问 Qwen Image 2.1 共 4 个量化版本 Q3_K/Q4_0/UC Q4_0/UC Q5_K_M；NPU 按机型加锁、Illustrious v16、系统安装器、MIT。</p>
+  <p class="sub">安卓端本地 AI 绘画（Stable Diffusion / Qwen Image），离线出图、无云端上传。开发者：ET · 当前手机版 v3.0.0-et.22（build 96，包名 etc.github.ai）：修复 AI 不按中文提示词生成（联网翻译超时减半、失败安全回退、英文/负向提示词逐字透传不替换原文）、成品保存相册改为无损 PNG、过程预览降采样并节流以减少卡顿；电脑版已重构到 v3.0.0（与手机同款界面、三语、52 个模型、下载到当前目录 models）。et.21 起 Illustrious/千问进入 CPU 列表并按 32/64 位机型解锁、SD1.5 GPU(OpenCL) 默认开；et.20 修复 32/64 位本机转换闪退与锁屏后台中断；et.19 起千问 Qwen Image 2.1 共 4 个量化版本；NPU 按机型加锁、Illustrious v16、系统安装器、MIT。</p>
 
   <div class="card">
     <strong>快速开始三步：</strong>
@@ -92,7 +92,7 @@
   <h2>三、生成图片</h2>
   <div class="card">
     <ul>
-      <li><strong>提示词</strong>：可输入任意长度，应用不做内容审查。SD1.5 底层只认英文标签，输入中文会<strong>整句在线翻译成英文</strong>（无网时用内置词典兜底）；Qwen Image 原生支持中文。</li>
+      <li><strong>提示词</strong>：可输入任意长度，应用不做内容审查。SD1.5 底层只认英文标签，输入中文会<strong>整句在线翻译成英文</strong>（et.22 起联网翻译超时缩短到 4 秒，失败更快安全回退；任何翻译只用于英文模型、<strong>不会替换你写的英文/负向提示词原文</strong>，无网时用内置词典兜底）；Qwen Image 原生支持中文，中文提示词逐字生效。</li>
       <li><strong>负面提示词</strong>：填写不希望出现的内容，默认已带常见画质/瑕疵负向词。</li>
       <li><strong>比例/尺寸</strong>：在生成页高级设置里选宽高比例（1:1、9:16、16:9 等）。SD1.5 宽高按 64 对齐，范围 128–512，避免非对齐导致马赛克。</li>
       <li><strong>步数 / CFG</strong>：步数越高越细但越慢（低配建议 15–20）；CFG 建议 5–9，应用上限 9 以防止 32 位 fp16 溢出花屏。</li>
@@ -153,7 +153,7 @@
       <tr><td><code>Cannot read tensor data: model.diffusion_model.time_embed.0.weight</code> / <strong>退出码 134</strong></td><td>原始权重超过 32 位 2.14GB 寻址上限或文件不是 SD1.5，转换崩溃。</td><td>用列表内置模型或“链接导入”预检通过的单文件 SD1.5（≤2.14GB）；SDXL/DiT 文件会被预检拒绝。</td></tr>
       <tr><td><code>Prompt empty</code></td><td>点生成时正向提示词为空。</td><td>在“图像生成提示”框里输入内容（中文会自动翻译成英文标签）。</td></tr>
       <tr><td>生成结果<strong>全是马赛克/碎玻璃</strong></td><td>尺寸未 64 对齐、CFG 过高导致 fp16 溢出，或模型没转完整。</td><td>用应用内置比例、CFG≤9；确认显示“已下载”；必要时删除重下。</td></tr>
-      <tr><td>成品<strong>模糊/变形/不听提示词</strong></td><td>分辨率过低、步数太少，或中文整句翻译没生效。</td><td>步数调到 20–28；使用具体英文标签或保持联网让中文整句翻译生效；需要大图用“高清放大”。</td></tr>
+      <tr><td>成品<strong>模糊/变形/不听提示词</strong></td><td>分辨率过低、步数太少，或中文整句翻译没生效；旧版本保存相册用 JPEG 有损。</td><td>升级到 et.22：成品保存相册已改<strong>无损 PNG</strong>、中文翻译失败安全回退不替换原文；步数保持 20 左右；可保持联网让中文整句翻译生效；需要大图用“高清放大”。</td></tr>
       <tr><td><strong>本手机无法运行 / 内存不足</strong>（下载弹窗）</td><td>大模型需要更新的 64 位 NPU 或更大内存。</td><td>在本设备改用 SD1.5 模型；或换符合要求的手机下载该大模型。</td></tr>
       <tr><td><strong>通知栏无下载进度 / 切后台就停</strong></td><td>未授通知权限或被系统限制后台。</td><td>授予通知权限；在系统电池设置里把本应用设为“不限制后台/允许后台活动”。</td></tr>
       <tr><td><strong>安装时点了没反应</strong></td><td>未允许“安装未知应用”。</td><td>按弹窗跳到系统设置允许本应用安装，再点一次更新。</td></tr>
@@ -167,7 +167,7 @@
     <h3>下载慢 / 超时</h3><p>把下载源切到「魔搭 ModelScope」；应用更新走多镜像自动选最快；确认网络正常；中断后直接续传即可。</p>
     <h3>后台/锁屏不能生成、发热大</h3><p>et.16 起生成服务持有唤醒锁并使用大堆；请在系统设置允许后台活动。低配机建议步数 15–20、尺寸 384，发热与耗时会明显下降。</p>
     <h3>转换失败 / 退出码 134</h3><p>多为原始权重超过 32 位 2.14GB 寻址上限的旧模型；列表内现有模型均经过文件头校验、32 位可安全转换。若仍报错，把英文报错发开发者。</p>
-    <h3>成品发糊/不听提示词</h3><p>用英文质量标签或让中文整句翻译生效；提高步数到 20–25；需要高分辨率用放大功能。</p>
+    <h3>成品发糊/不听提示词/生成卡顿</h3><p>请升级到 v3.0.0-et.22：相册成品已改无损 PNG、中文翻译失败安全回退且不替换原文、过程预览降采样并节流；出图时保持步数 20 左右、需要大图用放大功能，低配机尺寸用 384 更流畅。</p>
   </div>
 
   <h2>十一、链接</h2>
@@ -175,7 +175,7 @@
     <ul>
       <li>官网首页：<a href="index.html">etqwfd.github.io/LocalDream-ET</a></li>
       <li>仓库 / Release：<a href="https://github.com/ETQWFD/LocalDream-ET">github.com/ETQWFD/LocalDream-ET</a></li>
-      <li>电脑版（Windows x64）安装包与绿色包见 GitHub Releases 的 <code>desktop-v2.2.0</code>。</li>
+      <li>电脑版（Windows x64）v3.0.0 安装包与绿色包见 GitHub Releases 的 <code>desktop-v3.0.0</code>（<code>LocalDream-ET-Setup-3.0.0.exe</code> / <code>LocalDream-ET-Windows-Portable-3.0.0.zip</code>）：界面与手机同款，CPU 页 37 个 SD1.5 可下载本地出图，NPU 页 15 个手机专属模型如实加锁，模型存程序当前目录 <code>models</code>。</li>
     </ul>
     <p style="color:var(--mut);margin-top:10px">版权 / 开发者：ET（广东梅州）。应用外壳与安装程序版权归 ET；底层推理引擎遵循其各自开源许可（MNN / stable-diffusion.cpp 等）。</p>
   </div>

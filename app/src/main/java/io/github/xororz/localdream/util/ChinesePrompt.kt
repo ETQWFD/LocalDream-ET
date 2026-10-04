@@ -289,7 +289,14 @@ object ChinesePrompt {
      * ------------------------------------------------------------------ */
 
     private const val MT_ENDPOINT = "https://aidemo.youdao.com/trans"
-    private const val MT_TIMEOUT_MS = 8000
+    // Kept short on purpose: this synchronous HTTP call runs on the generation
+    // IO dispatcher *before* native inference starts, so on a slow/blocked
+    // network an 8s timeout made "generate" appear to freeze (reported as
+    // "generation laggy") and a long stall also delayed the safe offline
+    // fallback. 4s is still plenty for a tiny JSON POST to a China-reachable
+    // endpoint; on failure we fall through to the offline dictionary, which
+    // never touches the network. English prompts never call this at all.
+    private const val MT_TIMEOUT_MS = 4000
 
     // After a hard failure (offline / endpoint down) we don't want to pay the 8s
     // timeout on every single generation, but a one-off network blip must not

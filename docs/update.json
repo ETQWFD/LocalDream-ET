@@ -1,7 +1,7 @@
 {
-  "versionCode": 95,
-  "versionName": "3.0.0-et.21",
+  "versionCode": 96,
+  "versionName": "3.0.0-et.22",
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
-  "size": 148445047,
-  "releaseNotes": "ET 定制版 v3.0.0-et.21（新包名 etc.github.ai，全新独立应用，旧版需卸载新装；模型在公共目录 LocalDreamET 不受影响）\n• 旗舰模型进入 CPU 列表并按机型解锁：Illustrious v16 / Illustrious v16 DMD2 与千问 Qwen Image 2.1 四个版本，现在在 32 位手机的 CPU 页也能看到，但显示锁定并提示“未解锁，请到 64 位手机使用”，禁止下载；在满足条件的 64 位真机上自动解锁并运行其真实 NPU/DiT 后端（非假按钮）。32 位原有的全部 SD1.5 模型照常可用。\n• 修复切换图片比例不生效：自定义比例此前只改比例文字、不重算输出宽高，现按模型类型（SD1.5 对齐 64、DiT 步进、固定画布）实时重算宽高，9:16 等任意比例可正确出图。\n• SD1.5 GPU(OpenCL) 在检测到 Adreno/Mali/Xclipse/PowerVR GPU 时首次使用默认开启，显著加快出图；无 GPU 时自动回退 CPU；用户手动切换后以用户选择为准。\n• 更健壮的机型识别：综合 SoC/Hardware/系统属性/proc/cpuinfo/GL 渲染器识别高通、华为麒麟、联发科、三星 Exynos、Google Tensor；华为麒麟等非高通平台对 NPU 模型给出明确说明（QNN 仅支持高通 Hexagon，属硬件差异），引导使用 SD1.5 GPU/CPU。\n• 应用内更新下载的 APK 改存 /storage/emulated/0/LocalDreamET/temp_downloads/，FileProvider 已放行该目录；仍直接调用系统打包安装器，无权限时回退缓存目录。\n• 32 位锁定文案更新为“未解锁，请到 64 位手机使用”，简中/繁中/英文三语同步。\n• 沿用 et.20：32/64 位本机转换崩溃修复、文件头与大小双校验、6 小时生成唤醒锁、更新直调系统安装器、大模型存储预检、MIT License。开发者：ET。"
+  "size": 148308267,
+  "releaseNotes": "ET 定制版 v3.0.0-et.22（包名仍为 etc.github.ai，可从 et.21 直接覆盖安装；模型在公共目录 LocalDreamET 不受影响）。本次重点修复出图体验：\n• 修复 AI 不按中文提示词生成：根因是中文提示词在英文模型上被整句机器翻译替换，联网翻译失败后回退的离线词典又丢弃未登录中文词，复杂句子塌缩成通用质量词，导致出图跑偏。现把联网翻译超时从 8 秒缩短到 4 秒，失败更快安全回退，英文与负向提示词保持逐字透传、不再替换你写的原文。\n• 修复保存图片画质差：成品图保存到相册由 JPEG(95) 有损压缩改为无损 PNG；输出宽高保持 64 对齐、不静默降分辨率；步数 20 / CFG 7 / dpm 采样器等高质量默认值不变。\n• 修复生成卡顿：生成前的联网翻译等待减半；“过程预览”改为降采样预览（长边≤512）并把预览刷新节流到约 7fps，不再每步全尺寸解码导致掉帧；生成进度百分比仍逐步实时更新，后台生成、唤醒锁与 SD1.5 GPU(OpenCL) 默认开启保持不变。\n• 仅 Kotlin 最小改动，未触碰模型目录/下载/机型门控/权限/签名/包名；et.21 的 GPU 默认、千问与 Illustrious 模型、多镜像更新器、32/64 位 safetensors 转换等能力均保留。双 ABI（arm64-v8a + armeabi-v7a）。开发者：ET，MIT License。"
 }
