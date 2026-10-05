@@ -2625,6 +2625,24 @@ fun ModelRunScreen(
                                         val needEnglish = model?.isDit != true
                                         val rawPrompt = promptField.text
                                         val rawNegative = negativePromptField.text
+                                        // et.31: content restriction check (ON only).
+                                        val restrictedOn = context.getSharedPreferences("app_prefs", android.content.Context.MODE_PRIVATE)
+                                            .getBoolean("content_restricted", true)
+                                        if (restrictedOn) {
+                                            val hit = io.github.xororz.localdream.utils.ContentFilter
+                                                .containsBlocked(rawPrompt)
+                                                ?: io.github.xororz.localdream.utils.ContentFilter
+                                                    .containsBlocked(rawNegative)
+                                            if (hit != null) {
+                                                Toast.makeText(
+                                                    context,
+                                                    context.getString(R.string.content_blocked_warning),
+                                                    Toast.LENGTH_LONG,
+                                                ).show()
+                                                isRunning = false
+                                                return@launch
+                                            }
+                                        }
                                         // Full-sentence Chinese->English tags (online
                                         // MT with offline fallback) done on this IO
                                         // dispatcher; DiT models take Chinese natively.

@@ -23,6 +23,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -675,7 +676,61 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
             title = { Text(stringResource(R.string.restore_title)) },
             text = {
                 androidx.compose.foundation.layout.Column {
-                    androidx.compose.material3.Text(stringResource(R.string.restore_pick_model))
+                    androidx.compose.runtime.LaunchedEffect(showRestoreModelPicker) {
+                        modelRepository.refreshAllModels()
+                    }
+                    val usable = modelRepository.models.filter { it.isDownloaded }
+                    if (usable.isEmpty()) {
+                        androidx.compose.material3.Text(stringResource(R.string.restore_no_models))
+                    } else {
+                        androidx.compose.foundation.layout.Column(
+                            modifier = androidx.compose.ui.Modifier.sizeIn(maxHeight = 360.dp)
+                        ) {
+                            usable.forEach { m ->
+                                val supportsImg2img = when (m.backendType) {
+                                    "sd15cpu", "sd15gpu", "sd15npu", "local", "cpu", "gpu" -> true
+                                    else -> false
+                                }
+                                val selected = restoreModelId == m.id
+                                androidx.compose.foundation.layout.Row(
+                                    modifier = androidx.compose.ui.Modifier
+                                        .fillMaxWidth()
+                                        .clickable(enabled = supportsImg2img) {
+                                            restoreModelId = m.id
+                                            restoreBackendType = m.backendType
+                                            restoreUseOpenCL = m.runOnCpu &&
+                                                io.github.xororz.localdream.utils.DeviceCapabilities.openclRecommended()
+                                        }
+                                ) {
+                                    androidx.compose.material3.RadioButton(
+                                        selected = selected,
+                                        enabled = supportsImg2img,
+                                        onClick = {
+                                            restoreModelId = m.id
+                                            restoreBackendType = m.backendType
+                                            restoreUseOpenCL = m.runOnCpu &&
+                                                io.github.xororz.localdream.utils.DeviceCapabilities.openclRecommended()
+                                        }
+                                    )
+                                    androidx.compose.foundation.layout.Column(
+                                        modifier = androidx.compose.ui.Modifier.weight(1f)
+                                    ) {
+                                        androidx.compose.material3.Text(
+                                            m.name,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                        )
+                                        if (!supportsImg2img) {
+                                            androidx.compose.material3.Text(
+                                                stringResource(R.string.restore_not_supported),
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             },
             confirmButton = {
@@ -1711,6 +1766,49 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                     }
                     // Appearance (theme) section
                     item { AppearanceSection() }
+                    // et.31: content restriction switch (default ON, persisted).
+                    item {
+                        val prefs = context.getSharedPreferences("app_prefs", android.content.Context.MODE_PRIVATE)
+                        var contentRestricted by remember {
+                            mutableStateOf(prefs.getBoolean("content_restricted", true))
+                        }
+                        var showConfirmDisable by remember { mutableStateOf(false) }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(stringResource(R.string.content_restriction))
+                                Text(
+                                    stringResource(R.string.content_restriction_desc),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            Switch(checked = contentRestricted, onCheckedChange = { on ->
+                                if (!on) { showConfirmDisable = true } else {
+                                    prefs.edit().putBoolean("content_restricted", true).apply()
+                                    contentRestricted = true
+                                }
+                            })
+                        }
+                        if (showConfirmDisable) {
+                            androidx.compose.material3.AlertDialog(
+                                onDismissRequest = { showConfirmDisable = false },
+                                title = { Text(stringResource(R.string.content_restriction)) },
+                                text = { Text(stringResource(R.string.content_restriction_confirm_off)) },
+                                confirmButton = {
+                                    TextButton(onClick = {
+                                        showConfirmDisable = false
+                                        contentRestricted = false
+                                        prefs.edit().putBoolean("content_restricted", false).apply()
+                                    }) { Text(stringResource(R.string.confirm)) }
+                                },
+                                dismissButton = {
+                                    TextButton(onClick = { showConfirmDisable = false }) {
+                                        Text(stringResource(R.string.cancel))
+                                    }
+                                },
+                            )
+                        }
+                    }
                     // Language section
                     item { LanguageSection() }
                     // Feature settings section

@@ -155,6 +155,20 @@ fun RestoreScreen(
                     memWarnBypass = false
                     busy = true
                     msg = null
+                    // et.31: content restriction check (ON only).
+                    val restrictedOn = context.getSharedPreferences("app_prefs", android.content.Context.MODE_PRIVATE)
+                        .getBoolean("content_restricted", true)
+                    if (restrictedOn) {
+                        val hit = io.github.xororz.localdream.utils.ContentFilter
+                            .containsBlocked(prompt)
+                            ?: io.github.xororz.localdream.utils.ContentFilter
+                                .containsBlocked(negative)
+                        if (hit != null) {
+                            msg = context.getString(R.string.content_blocked_warning)
+                            busy = false
+                            return@Button
+                        }
+                    }
                     io.github.xororz.localdream.utils.BatteryOptimization.ensureIgnoring(context)
                     scope.launch {
                         runCatching {

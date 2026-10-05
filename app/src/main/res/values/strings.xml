@@ -693,4 +693,11 @@
     <string name="countermixv2_description">CounterMix v2 semi-real anime SD1.5, converted on device</string>
     <string name="beautifantasy_description">Beautiful Fantasy Real Mix SD1.5, converted on device</string>
     <string name="ethereallux_description">EtherReal Mix LUX2 semi-real SD1.5, converted on device</string>
+    <string name="restore_no_models">No usable model yet. Download an SD1.5 model first.</string>
+    <string name="restore_go_download">Go to download</string>
+    <string name="restore_not_supported">This model does not support image editing yet.</string>
+    <string name="content_restriction">Content restriction</string>
+    <string name="content_restriction_desc">ON: block generation when prompt contains blocked words. OFF: pass-through, no extra words injected.</string>
+    <string name="content_restriction_confirm_off">Disabling removes local blocked-word filtering. You are responsible for the content you generate; please comply with local law.</string>
+    <string name="content_blocked_warning">Your description contains blocked content. While content restriction is ON this cannot be generated. Please modify your prompt or turn off restriction.</string>
 </resources>

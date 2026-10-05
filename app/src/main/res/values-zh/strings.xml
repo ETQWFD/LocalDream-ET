@@ -683,4 +683,11 @@
     <string name="countermixv2_description">CounterMix v2 半写实动漫 SD1.5，首次下载后本机转换，CPU/32位可用</string>
     <string name="beautifantasy_description">Beautiful Fantasy Real Mix 唯美奇幻半写实 SD1.5，首次下载后本机转换，CPU/32位可用</string>
     <string name="ethereallux_description">EtherReal Mix LUX2 精致半写实 SD1.5，首次下载后本机转换，CPU/32位可用</string>
+    <string name="restore_no_models">还没有可用模型，请先下载一个 SD1.5 模型。</string>
+    <string name="restore_go_download">去下载</string>
+    <string name="restore_not_supported">该模型暂不支持修图。</string>
+    <string name="content_restriction">内容限制</string>
+    <string name="content_restriction_desc">开启时拦截包含违禁词的提示词；关闭则直通，不追加任何词。</string>
+    <string name="content_restriction_confirm_off">关闭后将不再做本地违禁词过滤，生成内容由你自行负责，请遵守当地法律。</string>
+    <string name="content_blocked_warning">你的描述包含敏感内容，开启内容限制时无法生成，请修改描述或关闭限制。</string>
 </resources>

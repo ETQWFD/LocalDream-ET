@@ -711,6 +711,14 @@ class ModelRepository private constructor(private val context: Context) {
                 )
             }
             .sortedBy { it.name.lowercase() }
+            .also { list ->
+                runCatching {
+                    io.github.xororz.localdream.cloud.LogHub.log(
+                        io.github.xororz.localdream.cloud.LogHub.Category.APP,
+                        "Public model scan: ${list.size} ready/imported models",
+                    )
+                }
+            }
     }
 
     private fun createCustomModel(
