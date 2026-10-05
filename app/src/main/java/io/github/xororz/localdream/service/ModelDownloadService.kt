@@ -128,6 +128,28 @@ class ModelDownloadService : Service() {
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
+        acquireLocks()
+    }
+
+    private var wakeLock: android.os.PowerManager.WakeLock? = null
+    private var wifiLock: android.net.wifi.WifiManager.WifiLock? = null
+
+    private fun acquireLocks() {
+        runCatching {
+            val pm = getSystemService(POWER_SERVICE) as android.os.PowerManager
+            wakeLock = pm.newWakeLock(android.os.PowerManager.PARTIAL_WAKE_LOCK, "ldet:dl").apply {
+                setReferenceCounted(false); acquire(30 * 60 * 1000L)
+            }
+            val wm = getSystemService(WIFI_SERVICE) as android.net.wifi.WifiManager
+            wifiLock = wm.createWifiLock(
+                android.net.wifi.WifiManager.WIFI_MODE_FULL_HIGH_PERF, "ldet:dl",
+            ).apply { setReferenceCounted(false); acquire() }
+        }
+    }
+
+    private fun releaseLocks() {
+        runCatching { if (wakeLock?.isHeld == true) wakeLock?.release() }
+        runCatching { if (wifiLock?.isHeld == true) wifiLock?.release() }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -185,6 +207,10 @@ class ModelDownloadService : Service() {
             var extractTempDir: File? = null
             try {
                 _downloadState.value = DownloadState.Downloading(modelId, 0f, 0, 0)
+                io.github.xororz.localdream.cloud.LogHub.log(
+                    io.github.xororz.localdream.cloud.LogHub.Category.DOWNLOAD,
+                    "Start download: $modelName ($modelId) from $fileUrl",
+                )
 
                 val tempDir =
                     io.github.xororz.localdream.utils.Storage.tempDir(applicationContext)
@@ -294,6 +320,10 @@ class ModelDownloadService : Service() {
                 throw e
             } catch (e: Exception) {
                 Log.e(TAG, "Download failed", e)
+                io.github.xororz.localdream.cloud.LogHub.log(
+                    io.github.xororz.localdream.cloud.LogHub.Category.DOWNLOAD,
+                    "Download FAILED: $modelName — ${e.message}",
+                )
 
                 // Keep tempFile: downloadFile resumes its bytes on the next tap.
                 // Only drop the half-extracted tree.
@@ -746,5 +776,6 @@ class ModelDownloadService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         serviceScope.cancel()
+        releaseLocks()
     }
 }

@@ -215,6 +215,21 @@ object DeviceCapabilities {
         0L
     }
 
+    /**
+     * SD1.5 long-edge ceiling adapts to total RAM (64-aligned):
+     * ≤6 GB → 512; ≤10 GB → 640; >10 GB → 768. Kept conservative so the
+     * MNN fp16 UNet does not OOM on mid-range phones.
+     */
+    fun sd15LongEdgeForRam(context: Context): Int {
+        val total = totalRamBytes(context)
+        val gb = total / (1024.0 * 1024.0 * 1024.0)
+        return when {
+            gb <= 6.0 -> 512
+            gb <= 10.0 -> 640
+            else -> 768
+        }
+    }
+
     /** Free bytes on the shared external volume where models are stored. */
     fun freeStorageBytes(context: Context): Long = try {
         val root = runCatching { Storage.root(context) }.getOrNull()

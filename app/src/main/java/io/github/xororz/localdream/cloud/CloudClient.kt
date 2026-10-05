@@ -6,6 +6,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
+import java.io.IOException
 import java.util.concurrent.TimeUnit
 
 /**
@@ -143,6 +144,7 @@ object CloudClient {
     ): String {
         val b64 = Base64.encodeToString(bytes, Base64.NO_WRAP)
         var candidate = path
+        var lastCode = 0
         repeat(6) { attempt ->
             val body = JSONObject()
                 .put("message", message)
@@ -158,14 +160,31 @@ object CloudClient {
                     .url("https://gitee.com/api/v5/repos/$owner/$repo/contents/$candidate?access_token=$token")
                     .put(body.toRequestBody(JSON_MEDIA))
             }
-            client.newCall(req.build()).execute().use { resp ->
-                val text = resp.body?.string().orEmpty()
-                if (resp.isSuccessful) return "$owner/$repo/$candidate"
-                // Conflict: try a suffixed filename.
-                candidate = withExt(path, attempt + 1)
+            runCatching {
+                client.newCall(req.build()).execute().use { resp ->
+                    lastCode = resp.code
+                    val text = resp.body?.string().orEmpty()
+                    if (resp.isSuccessful) {
+                        LogHub.log(
+                            LogHub.Category.UPLOAD,
+                            "OK ${provider.name} $owner/$repo/$candidate (HTTP $lastCode)",
+                        )
+                        return "$owner/$repo/$candidate"
+                    }
+                    // Conflict: try a suffixed filename.
+                    candidate = withExt(path, attempt + 1)
+                }
+            }.onFailure { e ->
+                // Network / timeout / unknown host — surface the real cause.
+                LogHub.log(
+                    LogHub.Category.UPLOAD,
+                    "NETERR ${provider.name} $path: ${e.message}",
+                )
+                throw IOException("Network error uploading to $provider: ${e.message}")
             }
         }
-        error("upload failed after retries")
+        LogHub.log(LogHub.Category.UPLOAD, "FAIL ${provider.name} $path HTTP $lastCode")
+        throw IOException("Upload failed: $provider HTTP $lastCode (path=$path)")
     }
 
     private fun withExt(path: String, idx: Int): String {

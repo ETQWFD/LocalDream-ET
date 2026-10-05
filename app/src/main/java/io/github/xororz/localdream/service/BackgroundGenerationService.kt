@@ -39,6 +39,7 @@ class BackgroundGenerationService : Service() {
     // Held for the duration of one generation so the CPU keeps running the
     // native diffusion loop even with the screen off; released on destroy.
     private var wakeLock: PowerManager.WakeLock? = null
+    private var wifiLock: android.net.wifi.WifiManager.WifiLock? = null
 
     @Synchronized
     private fun acquireWakeLock() {
@@ -48,11 +49,14 @@ class BackgroundGenerationService : Service() {
             PowerManager.PARTIAL_WAKE_LOCK,
             "LocalDreamET:generation",
         ).also {
-            // Long ceiling: low-end 32-bit phones can take 20-60 minutes for
-            // one picture, and a 30-minute lock previously expired mid-run so
-            // the CPU slept and the generation was killed. Always released in
-            // onDestroy; the OS also releases it if the process is removed.
             runCatching { it.acquire(6 * 60 * 60 * 1000L) }
+        }
+        runCatching {
+            val wm = getSystemService(Context.WIFI_SERVICE) as android.net.wifi.WifiManager
+            wifiLock = wm.createWifiLock(
+                android.net.wifi.WifiManager.WIFI_MODE_FULL_HIGH_PERF,
+                "LocalDreamET:generation",
+            ).apply { setReferenceCounted(false); acquire() }
         }
     }
 
@@ -60,6 +64,8 @@ class BackgroundGenerationService : Service() {
     private fun releaseWakeLock() {
         runCatching { if (wakeLock?.isHeld == true) wakeLock?.release() }
         wakeLock = null
+        runCatching { if (wifiLock?.isHeld == true) wifiLock?.release() }
+        wifiLock = null
     }
 
     // In-flight /generate call; cancelled by ACTION_STOP. Cancelling closes the

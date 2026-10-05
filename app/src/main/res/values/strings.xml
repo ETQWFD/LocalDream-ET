@@ -321,6 +321,17 @@
     <string name="cloud_backup_device_disabled">Coming soon: requires configuring the GitHub OAuth App client ID.</string>
     <string name="cloud_backup_state_ready">Repository: READY (writable)</string>
     <string name="cloud_backup_state_pending">Repository: PENDING (bind an existing repo or retry creating it)</string>
+    <string name="restore_title">Edit Image</string>
+    <string name="restore_tagger_hint">Describe in Chinese what you want to change (auto-tagging coming later).</string>
+    <string name="restore_pick_image">Pick image</string>
+    <string name="restore_repick">Choose another</string>
+    <string name="restore_prompt">What to change</string>
+    <string name="restore_negative">Negative prompt</string>
+    <string name="restore_strength">Denoise: %1$s</string>
+    <string name="restore_pick_first">Please pick an image first.</string>
+    <string name="restore_run">Edit Image</string>
+    <string name="restore_started">Started; see history for the result.</string>
+    <string name="restore_pick_model">Pick a downloaded model from the list to start.</string>
     <string name="close">Close</string>
     <string name="error_result_abnormal_model">Generation result abnormal, likely corrupted or incomplete model files. Please re-verify / re-download the model.</string>
     <string name="url_imported_description">User-imported SD1.5 model (from link), converted on device, CPU/32-bit ready</string>

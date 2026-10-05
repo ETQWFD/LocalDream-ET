@@ -702,12 +702,20 @@ class BackendService : Service() {
 
             val proc = processBuilder.start()
             process = proc
+            io.github.xororz.localdream.cloud.LogHub.log(
+                io.github.xororz.localdream.cloud.LogHub.Category.ENGINE,
+                "Engine start: $modelId pid=${proc.hashCode()}",
+            )
 
             startMonitorThread(proc, config.modelId, command, systemLibPathsStr)
 
             return true
         } catch (e: Exception) {
             Log.e(TAG, "backend start failed", e)
+            io.github.xororz.localdream.cloud.LogHub.log(
+                io.github.xororz.localdream.cloud.LogHub.Category.ENGINE,
+                "Engine start FAILED: ${e.message}",
+            )
             updateState(BackendState.Error("backend start failed: ${e.message}", config.modelId))
             return false
         }
@@ -771,6 +779,10 @@ class BackendService : Service() {
                 engineLog?.appendText("---- engine exited, code=$exitCode ----\n")
             }
             Log.i(TAG, "Backend process exited with code: $exitCode")
+            io.github.xororz.localdream.cloud.LogHub.log(
+                io.github.xororz.localdream.cloud.LogHub.Category.ENGINE,
+                "Engine exit: $modelId code=$exitCode",
+            )
             // Only surface as an error when this is still the active process and
             // we didn't intentionally stop it; a torn-down or superseded process
             // exiting is expected and must not poison the shared backendState.

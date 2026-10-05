@@ -1112,6 +1112,7 @@ fun ModelRunScreen(
                         negativePromptField.text
                     }
                 }
+                io.github.xororz.localdream.utils.BatteryOptimization.ensureIgnoring(context)
                 val intent = Intent(context, BackgroundGenerationService::class.java).apply {
                     putExtra("prompt", ufPrompt)
                     putExtra("prompt_pretranslated", ufNeedEnglish)
@@ -4456,7 +4457,8 @@ private fun localizeEngineError(context: android.content.Context, raw: String?):
             context.getString(io.github.xororz.localdream.R.string.err_engine_crash, "SIGABRT(6)")
         l.contains("sigkill") || l.contains("signal 9") ->
             context.getString(io.github.xororz.localdream.R.string.err_engine_killed)
-        l.contains("out of memory") || l.contains("oom") || l.contains("enomem") ->
+        l.contains("out of memory") || l.contains("oom") || l.contains("enomem") ||
+            l.contains("bad_alloc") || l.contains("engine_oom") ->
             context.getString(io.github.xororz.localdream.R.string.err_oom)
         l.contains("unsatisfiedlinkerror") || l.contains("dlopen") ||
             l.contains("cannot locate") || l.contains("wrong abi") ->

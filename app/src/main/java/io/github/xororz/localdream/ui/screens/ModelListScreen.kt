@@ -302,6 +302,11 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
     var showUrlImportDialog by remember { mutableStateOf(false) }
     var showAddMenu by remember { mutableStateOf(false) }
     var showLogsPage by remember { mutableStateOf(false) }
+    var showRestoreScreen by remember { mutableStateOf(false) }
+    var restoreModelId by remember { mutableStateOf<String?>(null) }
+    var restoreBackendType by remember { mutableStateOf("local") }
+    var restoreUseOpenCL by remember { mutableStateOf(false) }
+    var showRestoreModelPicker by remember { mutableStateOf(false) }
     var showCloudBackupDialog by remember { mutableStateOf(false) }
     var showCustomNpuModelDialog by remember { mutableStateOf(false) }
     var isConverting by remember { mutableStateOf(false) }
@@ -590,6 +595,47 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
         }
     }
 
+    if (showRestoreScreen && restoreModelId != null) {
+        androidx.compose.ui.window.Dialog(
+            onDismissRequest = { showRestoreScreen = false },
+            properties = androidx.compose.ui.window.DialogProperties(
+                usePlatformDefaultWidth = false,
+            ),
+        ) {
+            androidx.compose.material3.Surface(modifier = Modifier.fillMaxSize()) {
+                RestoreScreen(
+                    modelId = restoreModelId!!,
+                    backendType = restoreBackendType,
+                    useOpenCL = restoreUseOpenCL,
+                    onBack = { showRestoreScreen = false },
+                )
+            }
+        }
+    }
+
+    if (showRestoreModelPicker) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showRestoreModelPicker = false },
+            title = { Text(stringResource(R.string.restore_title)) },
+            text = {
+                androidx.compose.foundation.layout.Column {
+                    androidx.compose.material3.Text(stringResource(R.string.restore_pick_model))
+                }
+            },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = {
+                    showRestoreModelPicker = false
+                    if (restoreModelId != null) showRestoreScreen = true
+                }) { Text(stringResource(R.string.confirm)) }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { showRestoreModelPicker = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
+        )
+    }
+
     if (showCloudBackupDialog) {
         CloudBackupDialog(onDismiss = { showCloudBackupDialog = false })
     }
@@ -766,6 +812,7 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
             onDismiss = { showCustomModelDialog = false },
             onModelAdded = { modelName, fileUri, clipSkip, loraFiles ->
                 showCustomModelDialog = false
+                io.github.xororz.localdream.utils.BatteryOptimization.ensureIgnoring(context)
                 scope.launch {
                     convertCustomModel(
                         context = context,
@@ -812,6 +859,7 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                             .addEntry(context, name, convertPath)
                     }
                     modelRepository.refreshAllModels()
+                    io.github.xororz.localdream.utils.BatteryOptimization.ensureIgnoring(context)
                     modelRepository.models.firstOrNull { it.id == entry.id }
                         ?.startDownload(context)
                     snackbarHostState.showSnackbar(
@@ -1132,6 +1180,16 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                                 onClick = {
                                     menuExpanded = false
                                     navController.navigate(Screen.RemoteLink.route)
+                                },
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.restore_title)) },
+                                leadingIcon = {
+                                    Icon(Icons.Default.Image, contentDescription = null)
+                                },
+                                onClick = {
+                                    menuExpanded = false
+                                    showRestoreModelPicker = true
                                 },
                             )
                             DropdownMenuItem(
@@ -4173,6 +4231,10 @@ suspend fun convertCustomModel(
             environment().putAll(env)
         }
 
+        // et.27: keep the whole app process foregrounded during conversion so
+        // the child converter survives screen-off / background reclaim.
+        io.github.xororz.localdream.service.ConvertService.start(context.applicationContext)
+
         val process = processBuilder.start()
 
         val convertTail = java.util.concurrent.ConcurrentLinkedDeque<String>()
@@ -4233,6 +4295,10 @@ suspend fun convertCustomModel(
                 var line: String?
                 while (reader.readLine().also { line = it } != null) {
                     Log.i("ModelConvert", "Convert: $line")
+                    io.github.xororz.localdream.cloud.LogHub.log(
+                        io.github.xororz.localdream.cloud.LogHub.Category.CONVERT,
+                        line.orEmpty(),
+                    )
                     lastLineMs = System.currentTimeMillis()
                     line?.let {
                         convertTail.addLast(it)
@@ -4356,6 +4422,8 @@ suspend fun convertCustomModel(
         withContext(Dispatchers.Main) {
             onError(e.message ?: context.getString(R.string.unknown_error))
         }
+    } finally {
+        io.github.xororz.localdream.service.ConvertService.stop(context.applicationContext)
     }
 }
 

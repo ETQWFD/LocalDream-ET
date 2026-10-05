@@ -67,6 +67,10 @@ class UpdateDownloadService : Service() {
             stopSelf(); return START_NOT_STICKY
         }
         startForeground(NOTIF_ID, buildNotification(0, -1L, -1L, false))
+        io.github.xororz.localdream.cloud.LogHub.log(
+            io.github.xororz.localdream.cloud.LogHub.Category.UPDATE,
+            "Update download start: $url",
+        )
         scope.launch {
             var lastTs = System.currentTimeMillis()
             var lastBytes = 0L
@@ -81,11 +85,19 @@ class UpdateDownloadService : Service() {
                     }
                 }
                 // Success: notification that opens the installer.
+                io.github.xororz.localdream.cloud.LogHub.log(
+                    io.github.xororz.localdream.cloud.LogHub.Category.UPDATE,
+                    "Update download OK",
+                )
                 installOnTap(apk)
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
             } catch (e: Exception) {
                 Log.e(TAG, "update download failed", e)
+                io.github.xororz.localdream.cloud.LogHub.log(
+                    io.github.xororz.localdream.cloud.LogHub.Category.UPDATE,
+                    "Update download FAILED: ${e.message}",
+                )
                 failNotification(e.message ?: "unknown", url)
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()

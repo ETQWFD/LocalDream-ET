@@ -311,6 +311,17 @@
     <string name="cloud_backup_device_disabled">即將開放：需先設定 GitHub OAuth App 的用戶端 ID。</string>
     <string name="cloud_backup_state_ready">儲存庫：就緒（可寫）</string>
     <string name="cloud_backup_state_pending">儲存庫：待綁定（請使用現有儲存庫或重試建立）</string>
+    <string name="restore_title">修圖</string>
+    <string name="restore_tagger_hint">直接用中文描述你想把圖改成什麼樣子（自動識別打標將在後續版本支援）。</string>
+    <string name="restore_pick_image">選擇圖片</string>
+    <string name="restore_repick">重新選擇</string>
+    <string name="restore_prompt">想改成什麼</string>
+    <string name="restore_negative">負向提示</string>
+    <string name="restore_strength">重繪強度：%1$s</string>
+    <string name="restore_pick_first">請先選擇圖片。</string>
+    <string name="restore_run">修改圖片</string>
+    <string name="restore_started">已開始生成，結果見歷史。</string>
+    <string name="restore_pick_model">請從列表中選擇一個已下載模型開始。</string>
     <string name="close">關閉</string>
     <string name="error_result_abnormal_model">生成結果異常，疑似模型檔案損壞或不完整。請重新驗證或重新下載模型。</string>
     <string name="url_imported_description">使用者從連結匯入的 SD1.5 模型，本機轉換，CPU/32位可用</string>

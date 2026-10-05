@@ -21,6 +21,8 @@
 
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
     <uses-permission android:name="android.permission.EXECUTE_PRIVATE_BINARY" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -85,6 +87,13 @@
         <!-- et.24: foreground service carrying the in-app APK update download. -->
         <service
             android:name=".service.UpdateDownloadService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
+        <!-- et.27: foreground service carrying safetensors→MNN conversion. -->
+        <service
+            android:name=".service.ConvertService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="dataSync" />

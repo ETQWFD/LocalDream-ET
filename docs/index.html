@@ -1,228 +1,162 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Local Dream ET · 安卓本地 AI 绘画（开发者：ET）</title>
-<meta name="description" content="Local Dream ET：安卓端本地 Stable Diffusion，支持骁龙 NPU / CPU / GPU 推理，内置应用内检测更新与一键安装，兼容 32 位设备。开发者：ET。" />
-<link rel="icon" href="icon.png" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Local Dream ET — 在手机与电脑本地运行 Stable Diffusion 的离线推理 App。">
+<title>Local Dream ET — 本地 Stable Diffusion 推理</title>
 <style>
   :root{
-    --bg:#0b1117; --bg2:#0f1720; --card:#141e29; --line:#22303e;
-    --txt:#e8eef4; --mut:#9fb0c0; --acc:#2dd4bf; --acc2:#38bdf8; --warn:#fbbf24;
+    --bg:#0f1115; --panel:#171a21; --line:#262b36; --text:#e6e9ef;
+    --muted:#9aa3b2; --accent:#4f8cff;
   }
-  *{box-sizing:border-box;margin:0;padding:0}
-  html{scroll-behavior:smooth}
-  body{
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;
-    background:radial-gradient(1200px 600px at 80% -10%,rgba(45,212,191,.12),transparent 60%),
-               radial-gradient(900px 500px at 0% 0%,rgba(56,189,248,.10),transparent 55%),
-               var(--bg);
-    color:var(--txt);line-height:1.7;-webkit-font-smoothing:antialiased;
-  }
-  .wrap{max-width:1080px;margin:0 auto;padding:0 22px}
-  a{color:var(--acc2);text-decoration:none}
-  /* nav */
-  header.nav{position:sticky;top:0;z-index:20;backdrop-filter:blur(10px);
-    background:rgba(11,17,23,.72);border-bottom:1px solid var(--line)}
-  .navin{display:flex;align-items:center;gap:12px;height:62px}
-  .navin img{width:34px;height:34px;border-radius:9px}
-  .brand{font-weight:700;font-size:18px;letter-spacing:.3px}
-  .brand small{display:block;font-size:11px;color:var(--mut);font-weight:500;letter-spacing:1px}
-  .et{margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#06281f;
-    background:linear-gradient(90deg,var(--acc),var(--acc2));padding:5px 12px;border-radius:999px;font-weight:700}
-  nav.links{margin-left:14px;display:flex;gap:18px;font-size:14px}
-  nav.links a{color:var(--mut)}
-  nav.links a:hover{color:var(--txt)}
-  /* hero */
-  .hero{padding:84px 0 56px;text-align:center}
-  .hero img.logo{width:92px;height:92px;border-radius:22px;box-shadow:0 18px 50px rgba(0,0,0,.5)}
-  .hero h1{font-size:clamp(30px,6vw,52px);margin:22px 0 12px;font-weight:800;letter-spacing:.5px;
-    background:linear-gradient(90deg,#fff,#9fe9e0 60%,var(--acc2));-webkit-background-clip:text;background-clip:text;color:transparent}
-  .hero p.sub{color:var(--mut);font-size:clamp(15px,2.4vw,19px);max-width:720px;margin:0 auto 30px}
-  .cta{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
-  .btn{display:inline-flex;align-items:center;gap:8px;padding:13px 26px;border-radius:13px;font-weight:700;font-size:15px;transition:.18s;border:1px solid transparent}
-  .btn.primary{background:linear-gradient(90deg,var(--acc),var(--acc2));color:#05232a}
-  .btn.primary:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(45,212,191,.28)}
-  .btn.ghost{border-color:var(--line);color:var(--txt);background:rgba(255,255,255,.02)}
-  .btn.ghost:hover{border-color:var(--acc)}
-  .ver{margin-top:18px;font-size:13px;color:var(--mut)}
-  .ver b{color:var(--acc)}
-  /* sections */
-  section{padding:54px 0}
-  h2{font-size:clamp(22px,4vw,30px);margin-bottom:8px;font-weight:800}
-  .lead{color:var(--mut);margin-bottom:30px;max-width:760px}
-  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:24px;transition:.18s}
-  .card:hover{border-color:rgba(45,212,191,.5);transform:translateY(-3px)}
-  .card .ic{font-size:26px;margin-bottom:12px}
-  .card h3{font-size:17px;margin-bottom:7px}
-  .card p{color:var(--mut);font-size:14px}
-  .tag{display:inline-block;font-size:12px;padding:2px 10px;border-radius:999px;margin:2px 6px 2px 0;
-    border:1px solid var(--line);color:var(--mut)}
-  .tag.ok{color:#7ef0dd;border-color:rgba(45,212,191,.4);background:rgba(45,212,191,.08)}
-  .tag.warn{color:#f8cf7a;border-color:rgba(251,191,36,.4);background:rgba(251,191,36,.08)}
-  /* steps */
-  ol.steps{list-style:none;counter-reset:s;display:grid;gap:14px}
-  ol.steps li{counter-increment:s;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 18px 18px 58px;position:relative}
-  ol.steps li::before{content:counter(s);position:absolute;left:18px;top:18px;width:28px;height:28px;border-radius:50%;
-    background:linear-gradient(90deg,var(--acc),var(--acc2));color:#05232a;font-weight:800;display:grid;place-items:center}
-  .note{background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.32);color:#f5d896;border-radius:14px;padding:18px 20px;font-size:14px;margin-top:22px}
-  code{background:#0a1016;border:1px solid var(--line);padding:2px 7px;border-radius:7px;font-size:13px;color:#9fe9e0}
-  footer{border-top:1px solid var(--line);padding:34px 0;color:var(--mut);font-size:13px;text-align:center}
-  footer .big{color:var(--txt);font-weight:700;font-size:15px;margin-bottom:6px}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font:15px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif}
+  .wrap{max-width:860px;margin:0 auto;padding:0 20px}
+  header{padding:48px 0 24px;border-bottom:1px solid var(--line)}
+  h1{margin:0 0 6px;font-size:26px;font-weight:650}
+  .tagline{color:var(--muted);margin:0 0 16px}
+  .badges{display:flex;flex-wrap:wrap;gap:8px}
+  .badge{font-size:12px;color:var(--muted);border:1px solid var(--line);
+    border-radius:999px;padding:3px 10px}
+  .badge.b{color:var(--accent);border-color:var(--accent)}
+  nav{position:sticky;top:0;background:var(--bg);border-bottom:1px solid var(--line);
+    padding:10px 0;margin-top:24px}
+  nav a{color:var(--muted);text-decoration:none;margin-right:16px;font-size:13px}
+  nav a:hover{color:var(--text)}
+  section{padding:28px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:18px;margin:0 0 14px;font-weight:600}
+  p{margin:8px 0}
+  .muted{color:var(--muted);font-size:13px}
+  .btns{display:flex;flex-wrap:wrap;gap:12px;margin:16px 0}
+  .btn{display:inline-block;padding:11px 18px;border-radius:8px;text-decoration:none;
+    font-weight:600;font-size:14px;border:1px solid var(--line)}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .btn.ghost{background:transparent;color:var(--text)}
+  table{width:100%;border-collapse:collapse;margin:12px 0;font-size:14px}
+  th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+  th{background:var(--panel);color:var(--muted);font-weight:500}
+  ul{margin:8px 0;padding-left:20px}
+  li{margin:4px 0}
+  code{background:var(--panel);padding:2px 6px;border-radius:4px;font-size:13px}
+  footer{padding:28px 0 48px;color:var(--muted);font-size:13px}
+  footer a{color:var(--muted)}
 </style>
 </head>
 <body>
-<header class="nav">
-  <div class="wrap navin">
-    <img src="icon.png" alt="logo" />
-    <div class="brand">Local Dream ET<small>ANDROID · LOCAL AI IMAGING</small></div>
-    <nav class="links">
-      <a href="help.html">使用文档</a>
-      <a href="#features">特性</a>
-      <a href="#update">检测更新</a>
-      <a href="#install">安装</a>
-      <a href="#desktop">电脑版</a>
-      <a href="#compat">兼容</a>
-    </nav>
-    <span class="et">开发者：ET</span>
+<div class="wrap">
+
+<!-- 产品定位与版本徽标 -->
+<header>
+  <h1>Local Dream ET</h1>
+  <p class="tagline">在手机与电脑本地运行 Stable Diffusion 的离线推理 App，无需联网、不上传图片。</p>
+  <div class="badges">
+    <span class="badge b">v3.0.0-et.27 / build 101</span>
+    <span class="badge">三 ABI：arm64-v8a · armeabi-v7a · x86_64</span>
+    <span class="badge">包名 etc.github.ai</span>
+    <span class="badge">签名 CN=ET</span>
   </div>
 </header>
 
-<div class="wrap">
-  <section class="hero">
-    <img class="logo" src="icon.png" alt="Local Dream ET" />
-    <h1>手机本地跑 Stable Diffusion</h1>
-    <p class="sub">
-      Local Dream ET 是基于开源项目 Local Dream 的 ET 定制版，在安卓端本地完成 AI 绘画，
-      支持骁龙 NPU 加速与 CPU/GPU 推理；内置应用内检测更新，下载完成直接调起系统安装器，无需任何应用商店或文件管理器。
-    </p>
-    <div class="cta">
-      <a class="btn primary" href="https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk" download>⬇ 下载最新 APK</a>
-      <a class="btn ghost" href="https://github.com/ETQWFD/LocalDream-ET" target="_blank" rel="noopener">GitHub 仓库</a>
-    </div>
-    <div class="cta" style="margin-top:12px;">
-      <a class="btn primary" href="https://github.com/ETQWFD/LocalDream-ET/releases/download/desktop-v3.0.1/LocalDream-ET-Setup-3.0.1.exe" download>💻 下载电脑版安装包 v3.0.1（Windows x64）</a>
-      <a class="btn ghost" href="https://github.com/ETQWFD/LocalDream-ET/releases/download/desktop-v3.0.1/LocalDream-ET-Windows-Portable-3.0.1.zip" download>电脑版免安装 ZIP v3.0.1</a>
-    </div>
-    <div class="ver">手机当前版本 <b>v3.0.0-et.26</b>（build 100，包名 etc.github.ai）· 电脑版 <b>v3.0.1</b> · 开发者 <b>ET</b> · 支持 arm64-v8a / armeabi-v7a / x86_64</div>
-    <div class="note" style="margin-top:14px;text-align:left;max-width:760px;margin-left:auto;margin-right:auto;">
-      <b>手机版 v3.0.0-et.26 更新（三 ABI · x86_64 模拟器原生 · 云备份修复）：</b>① <b>新增 x86_64 原生引擎</b>：纯 x86_64 模拟器/虚拟机现在可<b>原生跑 SD1.5 CPU 出图</b>，不再需要 ARM 转译层；APK 内含 arm64-v8a、armeabi-v7a、x86_64 三套 native。② <b>云备份修复与完善</b>：真实圆形头像（远程加载）；GitHub/Gitee <b>双平台各自独立登录/显示/退出、互不顶号</b>；403（fine-grained 令牌无建仓权限）给出中文指引并支持“使用已有仓库”手动绑定；设备码授权入口在未配置 client_id 时禁用；关注/Star 默认可取消。③ <b>修复日志页打不开</b>：三点菜单“日志”改为全屏窗口浮在最上层。④ <b>比例统一回调</b>：高级设置里改比例也会按新尺寸重启引擎。⑤ 保留 et.25 全部能力：碎玻璃 GPU→CPU 自动回退、img2img 强度 0.45、CFG≤9、512/64 对齐、断点续传、完全离线。电脑版仍为 desktop-v3.0.1。<br>
-      <b>手机版 v3.0.0-et.25 更新（碎玻璃修复 · 日志页 · 云备份 · 比例修复）：</b>① <b>修复“满屏碎玻璃/马赛克”</b>：部分 Adreno/Mali 的 SD1.5 GPU(fp16) 会算错使画面发散。现对每张出图做<b>健康检测</b>（纯色/裁切/纯随机噪声），坏图不保存；若本次开了 GPU 出图异常，<b>自动关闭 GPU、用 CPU 安全参数（CFG7 / dpm++2m / 20 步 / 512）重画一次</b>，成功后记住“本机 GPU 不稳定”、以后默认 CPU；若 CPU 也异常则提示模型损坏并可一键<b>重新校验/重转/重新下载</b>。图生图强度默认 0.45 并限制 0.3–0.7。② <b>修复图片比例无法调整</b>：GPU/QNN 版同名 SD1.5 此前点比例只改文字不重算尺寸，现 1:1 / 3:4 / 4:3 与自定义比例都真实重算像素（64 对齐）并按新尺寸重启引擎，参数区显示真实 W×H。③ 右上角新增<b>“日志”页</b>：聚合引擎/下载/转换/生成/更新/上传日志，落 <code>LocalDreamET/logs/app.log</code>（2MB×3 自动滚动），可查看/过滤/复制/分享（不提供删除）。④ 设置新增<b>“账号/云备份”</b>：用官方支持的<b>个人访问令牌 PAT</b>（不在网页里收账号密码）登录 GitHub/Gitee，校验账号后自动建私有仓库 <code>LocalDreamET-Backup</code>，成品 PNG 传 <code>png/</code>、日志传 <code>log/</code>；令牌仅存系统密钥库、可退出登录，未登录/无网络不影响本地出图。⑤ 模型下载整包大小+zip CRC 校验、断点续传、坏包重下、半成品不显示就绪。⑥ 更新安装包<b>断点续传</b>（206/大小一致才续，不盲目清空进度）、前台服务切后台不中断、完成直调系统安装器；更新源 <b>GitHub 优先、Gitee 兜底</b>。⑦ 完全离线可生成；纯 x86 模拟器友好提示用真机/arm64 镜像。真实出图/云上传请真机验收，若仍异常请用“日志/导出诊断日志”回传。<br>
-      <b>手机版 v3.0.0-et.24 更新（真机问题系统修复）：</b>针对 Anything V5.0 等 SD1.5 点生成即“未知错误 / 无法连接 8081”的问题做了根因级修复。① <b>错误说真话</b>：不再只给统一文案，而是按真实原因分类提示——引擎崩溃信号(SIGSEGV/SIGABRT)、被系统杀死/内存不足、.so 加载失败/ABI 不符、模型文件缺失/损坏、连接超时。② <b>修复“图生图”高亮却没选图导致的崩溃</b>：没有有效图片时自动按文生图处理，绝不把空图片路径发给引擎。③ <b>启动前自检</b> 6 个模型产物，缺件/损坏直接提示重新下载，不再强行拉起引擎。④ <b>模型下载完整性闸门</b>：预构建包（如 AnythingV5.zip 约 1.19GB）下完后校验 zip 中央目录/CRC 与全部产物，支持断点续传、截断/坏包自动重下，杜绝半成品被当成就绪（部分镜像会 302 到境外 CDN，移动网络下易截断，已保留可续传的国内可达镜像）。⑤ <b>完全离线可用</b>：英文/负向提示词不联网逐字透传，中文无网或超时立即本地继续，飞行模式也能出图。⑥ <b>检测更新改前台服务</b>＋进度通知，切后台/息屏不中断、断点续传。⑦ 模型列表“两个加号”合并为一个“添加 / 导入模型”。⑧ <b>新增「关于 → 导出诊断日志」</b>：升级后若再失败，请直接导出该文件回传，内含引擎/转换/logcat/机型/下载源状态，可一次性定位。画质默认 512、64 对齐、CFG 7、dpm、20 步；真实出图/下载请真机验收。<br>
-      <b>手机版 v3.0.0-et.23 更新（修复转换“假完成/卡死”）：</b>部分“下载后需本机转换”的 SD1.5 模型此前会出现进度到最后很久不停、界面已提示完成但实际没转好、一直显示转换中的问题。<b>根因</b>是旧逻辑成功判定只看一个 <code>finished</code> 标记文件是否存在——既不检查转换进程退出码，也不校验输出模型；而最后一个大张量与 VAE 文件落盘耗时长、期间没有进度，界面就像卡住。<b>修复</b>：① 成功的唯一标准改为<b>转换进程退出码为 0 ＋ 完成标记存在 ＋ 6 个输出文件（clip/unet/vae_decoder/vae_encoder 权重与两个 embedding）都存在、非空且字节数与清单一致</b>，任一不满足都判定失败、绝不提前显示成功；② 转换过程输出<b>真实张量级进度</b>，进度到 100% 后进入明确的“<b>正在收尾写入（最后阶段较慢，请勿关闭）</b>”阶段（逐文件落盘 fsync 后原子写入完成标记），不再假完成；③ 长时间无输出时仅提示“仍在转换”、<b>不会误杀本就合法的慢转换</b>；④ 失败给出可读错误并在临时目录保存 <code>convert_*.log</code> 日志、自动删除损坏半成品（保留已下载源以便重试）；⑤ 重启后若发现“有完成标记但文件缺失”不会再误判为已转换。两个原生引擎（arm64-v8a / armeabi-v7a）均已重新编译；et.22 的提示词逐字透传、相册无损 PNG、GPU 默认、模型门控与多镜像更新全部保留。说明：转换/出图耗时随分辨率（像素平方）与老旧 32 位 CPU 上升属正常物理开销，不承诺“秒出/4K”。<br>
-      <b>电脑版 v3.0.1 更新：</b>① <b>下载→校验/收尾→就绪</b> 状态机与手机语义一致：下满后进入独立“校验中”阶段，<b>真实解析 safetensors 文件头与张量偏移</b>（要求文件大小与头自洽，拒绝错误页/截断），落盘后原子写入就绪标记，<b>只有校验通过的模型才显示“已下载/开始”并能进入生成</b>，半成品可续传、坏文件会被清理重试，不做假完成。② <b>统一数据目录到程序当前目录</b>：<code>models/&lt;模型&gt;/</code>、<code>outputs/</code> 成品图、<code>tmp/</code> 临时与引擎日志、<code>config/</code> 设置（旧版 output 与根目录配置首次启动自动迁移），设置中可一键打开模型/成品目录。③ <b>界面更贴近手机</b>：深色背景＋粉色强调、圆角卡片、统一字体、Tab 高亮；<b>设置页改为完整可滚动</b>，语言/主题/比例/步数/CFG/采样器/负向提示/图生图强度/种子/数量/镜像源/目录/检测更新/关于全部可见不被裁切。④ 窗口<b>可拖拽缩放、可最大化、支持全屏</b>并记住尺寸，三视图自适应不错位。⑤ 延续全链路 UTF-8 无乱码；NPU 页仍按电脑真实硬件能力加锁并写明原因（当前为 CPU 引擎，不放假按钮）。安装包按用户安装、免管理员。真实出图与 Windows 下下载校验需 Windows 真机验收。<br>
-      <b>手机版 v3.0.0-et.22 更新：</b>本轮专注修复出图体验（可从 et.21 直接覆盖安装）。① <b>修复 AI 不按中文提示词生成</b>：根因是中文提示词在英文模型上被整句机器翻译替换，联网翻译失败后回退的离线词典又丢弃未登录中文词，复杂句子塌缩成通用质量词；现把联网翻译超时由 8 秒缩短到 4 秒、失败更快安全回退，<b>英文与负向提示词逐字透传、不再替换你写的原文</b>。② <b>修复保存图片画质差</b>：成品保存到相册由 JPEG(95) 有损改为<b>无损 PNG</b>，输出宽高保持 64 对齐、不静默降分辨率，步数 20 / CFG 7 / dpm 默认值不变。③ <b>修复生成卡顿</b>：生成前联网翻译等待减半；“过程预览”改为降采样预览并节流到约 7fps，不再每步全尺寸解码掉帧，进度百分比仍逐步实时更新；后台生成、唤醒锁、SD1.5 GPU(OpenCL) 默认开启均保留。仅最小改动，et.21 的模型/门控/更新器/32&64 位转换能力不回退。<br>
-      <b>电脑版 v3.0.0 更新（重磅重构）：</b>用 <b>C（Win32）＋ Python</b> 把界面重构成<b>与手机同款</b>：窄幅竖向窗口、<b>CPU Models / NPU Models</b> 双标签、搜索框、圆角模型卡片，点模型下载、下载后点卡片直接进入生成页；设置与手机一致——<b>简体中文 / English / 繁體中文</b> 三语、深浅主题、图片比例、步数、CFG、采样器、负向提示词、图生图、检测更新。<b>模型共 52 个</b>：CPU 页 <b>37 个标准 SD1.5</b> 可真实下载并用内置 stable-diffusion.cpp CPU 引擎本地出图（国内镜像优先、断点续传，所有下载链接已逐一实测可达，并修复旧版 4 个失效源）；NPU 页 15 个手机骁龙 NPU/QNN 专属模型在电脑 CPU 引擎上无法运行，<b>如实加锁并写明原因（不放假按钮）</b>。模型下载到<b>程序当前目录 <code>models</code></b>。全链路 UTF-8 修复中文/繁体乱码。提供安装包（按用户安装、免管理员）与免安装 ZIP。真实出图需 Windows 真机验收。<br>
-      <b>手机版 v3.0.0-et.21 更新：</b>① <b>旗舰模型进入 CPU 列表并按机型解锁</b>：Illustrious v16、Illustrious v16 DMD2 与千问 Qwen Image 2.1 四个版本，32 位手机的 <b>CPU 页现在也能看到</b>，但显示锁定并提示“<b>未解锁，请到 64 位手机使用</b>”、禁止下载；满足条件的 64 位真机自动解锁并运行其<b>真实 NPU/DiT 后端</b>（不是假按钮）；32 位原有全部 SD1.5 模型照常可用。② <b>修复切换图片比例不生效</b>：自定义比例此前只改文字、不重算宽高，现按模型类型实时重算（SD1.5 对齐 64、DiT 步进、固定画布），9:16 等任意比例正确出图。③ <b>SD1.5 GPU(OpenCL) 默认开启</b>：检测到 Adreno/Mali/Xclipse/PowerVR 首次使用自动开 GPU 加速出图，无 GPU 自动回退 CPU，手动切换后以你为准。④ <b>更健壮的机型识别</b>：综合 SoC/系统属性/proc/cpuinfo/GL 渲染器识别高通、华为麒麟、联发科、三星 Exynos、Google Tensor；华为麒麟等非高通平台对 NPU 模型给出明确说明（QNN 仅支持高通 Hexagon，属硬件差异），引导用 SD1.5 GPU/CPU。⑤ <b>更新包改存</b> <code>/storage/emulated/0/LocalDreamET/temp_downloads/</code>，FileProvider 已放行，仍直调系统打包安装器。⑥ <b>包名改为 etc.github.ai</b>（全新独立应用，旧版需卸载新装；模型在公共目录不受影响）。简中/繁中/英文三语同步。修复清单见 <a href="help.html">使用文档</a>。<br>
-      <b>手机版 v3.0.0-et.20 更新：</b>① <b>修复 32/64 位本机转换模型崩溃</b>（截图里的 <code>std::length_error: vector</code> / libc++abi abort）：根因是 safetensors 文件头长度未校验（下到错误页/截断/非 safetensors 的 .ckpt 时把前 8 字节当成超大头部直接分配）与大张量元素数用 int 累乘溢出；现改为头部长度+文件实际大小合法性校验、元素数 64 位计算、32 位地址空间安全上限拦截、逐张量转换前释放上一块内存（峰值内存只留一个张量），且转换入口统一捕获 length_error/bad_alloc/异常并返回可读“转换失败原因”，<b>不再闪退弹 libc++ 框</b>；32 位与 64 位原生引擎均已用此修复重新编译。② <b>修复锁屏/切后台出图中途被结束</b>：生成唤醒锁原 30 分钟上限在老旧机 20–60 分钟出图时会提前失效导致 CPU 休眠中断，现延长到 6 小时并在结束时释放。③ 数据后台入口已从官网隐藏（仅管理员直链访问）。转换类模型请务必等下载完整（应用已做文件头/大小校验与断点续传）。修复清单见 PPT/Word 与 <a href="help.html">使用文档</a>。<br>
-      <b>手机版 v3.0.0-et.19 更新：</b><b>千问 Qwen Image 2.1 补齐为 4 个可下载模型</b>：在原有标准版 Q4_0、无审查 UC Q4_0 基础上，新增 <b>Q3_K 最小版</b>（DiT 3.27GB、整包约 9.9GB，千问系列里最省空间/最快）与 <b>UC Q5_K_M 高画质无审查版</b>（DiT 5.22GB、整包约 11.9GB）；四者共用 Qwen3-VL-8B 文本编码器/VAE，走同一千问管线，仅 DiT 权重不同，各自独立目录与断点续传。<b>仍需骁龙8至尊版（SM8750）及以上 64 位 + Android12</b>，32 位列表可见但按机型锁定并说明（引擎仅 arm64，属物理限制）。引擎二进制已内置 Q2_K/Q3_K/Q4_0/Q5_K/Q6_K/Q8_0 量化与 CPU 路径。沿用 et.18：NPU 全可见加锁、Illustrious v16、更新直调系统安装器、下载存储预检、MIT。<br>
-      <b>手机版 v3.0.0-et.18 更新：</b>① <b>NPU 模型全机型可见、按真机能力加锁</b>：修复 32 位手机 NPU 页“像消失/空白”，Illustrious v16、千问、Z-Image 现在全部列出，不支持的机型显示锁标与具体原因（32位 / NPU代际 / Android版本 / 内存 / 存储空间），点击下载会明确拦截、不再白下几个 GB；② <b>Illustrious V16 已加入 NPU 列表</b>（官方 SDXL-QNN 预转换包，含 DMD2 加速版，需骁龙8 Gen3/SM8650 及以上 64 位；32 位物理不可运行，故锁定并说明）；③ <b>更新直调系统安装器</b>：下载完直接进系统“打包安装程序”确认界面，<b>不再跳转 MT 等文件管理器</b>，无权限先引导“允许安装未知应用”、返回自动续装；④ <b>大模型下载前新增存储空间预检</b>（千问约13GB/Z-Image10GB/Klein8GB，不足阻止）；⑤ 已核对上游 xororz/local-dream 最新更新（上游把千问改为更大 FP8 且需重编 NPU 引擎，本版保留能跑的<b>最小千问 UC Q4_0</b>，其余定制不变）；⑥ <b>ET 定制代码改为 MIT License</b>（第三方许可见 NOTICE）；⑦ 官网另设仅管理员知晓直链的访问统计页（不在前台展示）。修复清单见 <a href="LocalDream-ET_更新修复说明_et18.pptx">PPT</a> / <a href="LocalDream-ET_更新修复说明_et18.docx">Word</a> 与 <a href="help.html">使用文档</a>。<br>
-      <b>手机版 v3.0.0-et.16 更新：</b>① <b>按手机能力过滤模型</b>：32 位手机列表只显示能真实运行的 SD1.5（含链接导入），不再有点了跑不动的大模型；64 位手机显示全部，但大 DiT/SDXL <b>下载前再检测芯片 NPU 与运行内存</b>，不支持提示“本手机无法运行”、内存不足提示需要/现有内存并阻止下载，避免白下 10GB；② <b>修复语言切换不彻底</b>：切简/繁/英时同步刷新应用资源与模型列表，名称、描述、体积（如“2.1GB + 转换”）、通知栏全部跟随语言，修掉选简体仍显繁体；③ <b>应用自更新加速</b>：并行探测 GitHub 直链+多个国内镜像自动选最快、断点续传；④ <b>后台生成更稳</b>：唤醒锁+大堆，锁屏/切后台可继续；⑤ 文档新增<b>错误代码对照与解决方法</b>章节。详见 <a href="help.html">使用文档</a>。<br>
-      <b>手机版 v3.0.0-et.15 更新：</b>① <b>新增「从链接导入模型」</b>：CPU 页点 <b>＋ 从链接导入模型</b>，粘贴 Hugging Face / hf-mirror / 魔搭模型页或任意 .safetensors 直链，<b>下载前先做兼容性预检</b>：是否单文件 SD1.5、真实大小是否 ≤2.14GB（32 位红线）、剩余空间是否够（约文件 2 倍）、读 safetensors 文件头排除 SDXL/DiT；显示“本手机支持”后确认即下载（魔搭首选、断点续传、通知栏后台、关机续传）并自动转换，<b>成功后永久留在列表</b>，下次直接点用；② <b>千问/豆包核实结论</b>：千问文生图最老为 20B，最小的 Qwen-Image-2.1 视觉部分也是 7B DiT、最小量化 Q2_K_M 仍约 7.07GB 且需配 8B 文本编码器+专用管线，<b>不存在 ≤2GB 能在 32 位手机运行的千问模型</b>；豆包只有云端 API 无本地权重——32 位请用 SD1.5（内置+链接导入）；③ 延续 et.14 的 9 个 32 位安全 SD1.5 与中文整句翻译自动恢复修复。详见 <a href="help.html">使用文档</a>。<br>
-      <b>手机版 v3.0.0-et.14 更新：</b>① <b>模型库再加 9 个经严格校验的 SD1.5</b>（写实/半写实 2.5D/动漫），全部在魔搭实测真实大小 + safetensors 文件头自洽、均小于 2.14GB，<b>32/64 位 CPU/GPU 都能安全下载、本机转换并出图</b>：MajicMix Realistic v7、epiCPhotoGasm 2.5D 女神、ReV Animated v1.1、MeinaMix v11、AingDiffusion v9、LemonTea 笔触 2.5D、CounterMix v2、Beautiful Fantasy Real Mix、EtherReal Mix LUX2；② <b>修复“AI 不按中文提示词生成”</b>：在线整句翻译以前一旦首次网络失败就永久关闭、退回逐词且大量丢词的离线词典，复杂中文整句被丢成通用词导致出图跑偏；现改为失败后 60 秒自动重试恢复，网络恢复即重新整句翻译，无网才用本地词典兜底；③ 下载/更新继续魔搭国内 CDN 首选 + 镜像自动回退，Range 断点续传/通知栏后台/关机恢复，32 位转换崩溃已自 et.12 修复；④ Qwen Image 2.1 / UC 在「NPU Models」标签页（骁龙8至尊版及以上 64 位）。<a href="help.html">使用文档</a><br>
-      <b>手机版 v3.0.0-et.13 更新：</b>① <b>设置内语言可切换</b>：<b>简体中文 / English / 繁體中文</b>，点选立即刷新，内置完整繁体资源；② <b>官方使用文档上线</b>：<a href="help.html"><b>点此查看使用文档</b></a>（安装权限、下载源/断点续传、生成参数、图生图、清晰度、Qwen 机型要求、应用内更新、常见问题），App“须知”里的文档链接也直达此页；③ 延续 et.12：32 位转换崩溃已修（模型均经文件头校验、低于 2.14GB），Qwen Image 2.1 / UC 在 NPU 标签页（骁龙8至尊版及以上 64 位）；④ 关于 4K：低配 32 位手机无法原生 4K（算力/内存物理限制），默认 384/512 清晰出图 + 应用内高清放大。<br>
-      <b>手机版 v3.0.0-et.12 更新：</b>① <b>修复 32 位转换崩溃</b>（退出码 134 / Cannot read tensor data: time_embed.0.weight）：根因是 FantasyTime V1.22、CoffeeMix v2、LemonPastel v1.1 原始文件超过 2.14GB，越过 32 位寻址上限，armeabi-v7a 转换必崩；已下架这 3 个模型，32/64 位转换都不再闪退；② <b>改用 9 个全新健康模型</b>（逐个做 safetensors 文件头自洽校验、均小于 2.14GB，32 位可安全转换），净增 6 个：写实/人像——Photon、Realisian v5、CosplayMix v2、NextPhoto v3；动漫/2.5D——LemonCreami、MeinaPastel v3、AbyssOrangeMix2 Hard、Hassaku v1.3、Colorful v3.1；全部魔搭国内 CDN + hf-mirror 双源；③ “须知”里的仓库/文档链接换成我们自己的：<b>github.com/ETQWFD/LocalDream-ET</b> 与 <b>etqwfd.github.io/LocalDream-ET</b>（中英日韩同步）；④ 延续下载源可切换（默认魔搭最快）、断点续传/通知栏后台下载/关机恢复、图生图忠于原图、提示词不限长度无审查、中文整句翻译、32/64 位 CPU。<br>
-      <b>手机版 v3.0.0-et.11 更新：</b>设置「下载地址」新增 <b>魔搭 ModelScope（国内最快·推荐）/ hf-mirror / Hugging Face 官方 / 自定义</b>，默认魔搭、所选源优先其余自动回退，慢/连不上自动换源续传；读取缓冲加大；新增 AniReality Mix、ChillyMix、2-KWI、BeautifulArt 等写实/动漫模型；图生图默认重绘强度降到 0.45，更忠于原图。<br>
-      <b>电脑版 v2.2.0 更新：</b>模型列表与手机版对齐、<b>再增 6 个模型</b>（共 13 个，含 <b>Qwen-Image 2.1 UC Q4_0</b>）；延续魔搭国内 CDN 首选、Range 断点续传、文件头/体积校验、损坏自动重下、中文整句在线翻译、图生图整张上传、真实进度+实时预览、深浅主题/中英、应用内检测更新自动安装；模型存程序同级 <b>models</b>。EXE 与安装程序版权归 ET。<br>
-      <b>说明：</b>新 SD 模型首次需下载约 2.1GB 并在本机转换一次，之后直接使用；手机端 Qwen Image 2.1 UC 为 NPU 大模型，仅骁龙 8 至尊版及以上 64 位机型可用，32 位设备请使用 SD1.5 模型；电脑版 x64 可通过 CPU 跑 Qwen。
-    </div>
-  </section>
+<nav>
+  <a href="#download">下载</a>
+  <a href="#features">功能</a>
+  <a href="#models">模型与机型</a>
+  <a href="#restore">修图模式</a>
+  <a href="#update">更新机制</a>
+  <a href="#cloud">云备份</a>
+  <a href="#help">帮助与日志</a>
+  <a href="https://github.com/ETQWFD/LocalDream-ET" target="_blank" rel="noopener">GitHub</a>
+</nav>
 
-  <section id="features">
-    <h2>核心特性</h2>
-    <p class="lead">把大模型装进手机，数据不出本机，离线也能出图。</p>
-    <div class="grid">
-      <div class="card"><div class="ic">⚡</div><h3>NPU / CPU / GPU</h3>
-        <p>SD1.5 支持 Hexagon V68 及以上骁龙 NPU；SDXL 支持骁龙 8 Gen 3 及以上；其它机型可用 CPU/GPU（OpenCL）推理。</p></div>
-      <div class="card"><div class="ic">🔄</div><h3>应用内检测更新</h3>
-        <p>设置里点「检测更新」，新版本在应用内直接下载并显示进度，完成后自动调起系统打包安装器，一步到位。</p></div>
-      <div class="card"><div class="ic">🔐</div><h3>自动申请安装权限</h3>
-        <p>首次更新自动跳转「允许安装未知应用」授权页，授权后立即继续安装，不经过任何第三方软件。</p></div>
-      <div class="card"><div class="ic">📱</div><h3>32 位设备支持</h3>
-        <p>已加入 <code>armeabi-v7a</code> ABI 配置，32 位老设备走 CPU/GPU 引擎（NPU 加速仅 arm64）。</p></div>
-      <div class="card"><div class="ic">🎨</div><h3>SD1.5 / SDXL</h3>
-        <p>文生图、图生图、局部重绘、超分放大，支持导入自定义 SD1.5 / SDXL MNN 模型包。</p></div>
-      <div class="card"><div class="ic">🛰️</div><h3>设备联动</h3>
-        <p>局域网内可让一台高性能设备跑模型，其它设备远程控制生成。</p></div>
-    </div>
-  </section>
+<!-- 下载入口 -->
+<section id="download">
+  <h2>下载</h2>
+  <div class="btns">
+    <a class="btn primary" href="https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk">手机 APK（Android）</a>
+    <a class="btn ghost" href="https://github.com/ETQWFD/LocalDream-ET/releases/latest">电脑版 Windows</a>
+  </div>
+  <p class="muted">手机版 v3.0.0-et.27，约 153 MB，含 arm64-v8a / armeabi-v7a / x86_64 三套原生引擎，包名 <code>etc.github.ai</code>，签名 <code>CN=ET</code>。电脑版为 desktop-v3.0.1（本版未更新）。</p>
+</section>
 
-  <section id="update">
-    <h2>检测更新如何工作</h2>
-    <p class="lead">更新清单由本官网（GitHub Pages）提供，应用启动检测时读取 <code>update.json</code>，版本号更高则提示更新。</p>
-    <ol class="steps">
-      <li>打开 App → 右上角菜单 → <b>设置</b>。</li>
-      <li>点击最下方的 <b>检测更新</b>，应用联网比对 <code>versionCode</code>。</li>
-      <li>有新版本时点「下载并安装」，安装包在应用内下载并实时显示百分比与已下载大小。</li>
-      <li>首次使用会跳到系统设置，允许本应用「安装未知应用」，返回后自动继续。</li>
-      <li>下载完成立即调起安卓系统打包安装程序（Package Installer），确认即可覆盖安装，全程不经过文件管理器或应用商店。</li>
-    </ol>
-    <div class="note">更新清单地址：<code>https://etqwfd.github.io/LocalDream-ET/update.json</code>　|　安装包地址：GitHub Release 最新版 <code>LocalDream-ET.apk</code>。</div>
-  </section>
+<!-- 功能列表 -->
+<section id="features">
+  <h2>功能</h2>
+  <ul>
+    <li>完全离线的文生图与图生图：英文提示逐字透传，中文提示本地或可选联网增强，不强制上传。</li>
+    <li>SD1.5 支持 CPU 与 GPU（OpenCL），GPU 初始化失败自动回退 CPU。</li>
+    <li>出图健康检测：识别碎玻璃/NaN 时自动关闭 OpenCL、用 CPU 安全参数重试一次，并记住本机 GPU 不稳定。</li>
+    <li>应用内检测更新：GitHub 优先、Gitee 兜底（Gitee 镜像需配置后开通），支持断点续传。</li>
+    <li>本地日志与导出诊断：右上角“日志”查看引擎/下载/转换/生成/更新/云上传。</li>
+    <li>可选 GitHub/Gitee 私有云备份（PAT），图片与日志备份到你自己的私有仓库。</li>
+  </ul>
+</section>
 
-  <section id="install">
-    <h2>安装说明</h2>
-    <div class="grid">
-      <div class="card"><h3>① 下载 APK</h3><p>点击顶部「下载最新 APK」，或到 GitHub Releases 下载 <code>LocalDream-ET.apk</code>。</p></div>
-      <div class="card"><h3>② 允许安装</h3><p>安装时若系统提示，请允许当前浏览器/应用「安装未知应用」。</p></div>
-      <div class="card"><h3>③ 下载模型</h3><p>首次进入在模型列表选择 SD1.5 / SDXL 模型下载；CPU/GPU 模型适配更多机型。</p></div>
-      <div class="card"><h3>④ 开始生成</h3><p>输入提示词即可本地出图，无需联网上传图片。</p></div>
-    </div>
-  </section>
+<!-- 模型与机型兼容表：QNN 大模型仅骁龙 -->
+<section id="models">
+  <h2>模型与机型兼容</h2>
+  <table>
+    <tr><th>模型</th><th>架构</th><th>支持范围</th></tr>
+    <tr>
+      <td>SD1.5（含 Anything 系列）</td>
+      <td>arm64-v8a / armeabi-v7a / x86_64</td>
+      <td>全部 64 位安卓机（华为麒麟、联发科、Exynos、Tensor 等）CPU/GPU 可跑，无 OpenCL 回退 CPU；32 位设备支持 CPU/GPU；x86_64 模拟器可原生跑 CPU。</td>
+    </tr>
+    <tr>
+      <td>SDXL / DiT / 千问等大模型</td>
+      <td>QNN NPU（libdit_engine）</td>
+      <td>当前仅骁龙 Hexagon NPU（SM8650/8750 级别）。华为等无 Hexagon 的机型不支持，App 会如实锁定、不假标。</td>
+    </tr>
+  </table>
+  <p class="muted">性能取决于设备，生成耗时随分辨率平方与步数增加，不承诺秒出或 4K。图片尺寸长边按内存自适应：≤6GB 512、≤10GB 640、&gt;10GB 768（均 64 对齐），比例支持 1:1 / 2:3 / 3:4 / 4:3 / 3:2 / 9:16 / 16:9 与自定义。</p>
+</section>
 
-  <section id="compat">
-    <h2>架构与机型兼容</h2>
-    <p class="lead">安装包包含两种 ABI，系统会自动匹配。</p>
-    <p>
-      <span class="tag ok">arm64-v8a · 64 位</span>
-      <span class="tag ok">NPU 加速（骁龙）</span>
-      <span class="tag ok">CPU / GPU</span>
-      <span class="tag warn">armeabi-v7a · 32 位</span>
-      <span class="tag warn">仅 CPU / GPU</span>
-    </p>
-    <div class="note">
-      ✅ 32 位：v3.0.0-et.2 起安装包已内置 armeabi-v7a 原生 CPU/GPU（MNN/OpenCL）引擎，32 位手机可直接转换模型与出图，无需自行编译。NPU 所用的高通 QNN 库仅有 64 位版本，因此 32 位设备走 CPU/GPU 引擎；
-      大模型（尤其 SDXL）对内存要求较高，32 位设备建议使用 SD1.5。
-    </div>
-  </section>
-  <section id="desktop">
-    <h2>电脑版 v3.0.0（Windows x64）</h2>
-    <p>使用 <b>C（Win32）＋ Python</b> 编写的原生桌面程序，界面与手机版同款；底层为开源 stable-diffusion.cpp（leejet, MIT）CPU 引擎，Windows 10/11 64 位本地离线出图，免费、不上传图片。右键程序“属性→详细信息”显示开发者 ET / Copyright (C) 2026 ET。</p>
-    <div class="cards">
-      <div class="card"><h3>① 下载安装</h3><p>点顶部「下载电脑版安装包 v3.0.0」（按用户安装、无需管理员/UAC），或下免安装 ZIP 解压即用；安装版自动创建桌面与开始菜单快捷方式，可在设置里检测更新。</p></div>
-      <div class="card"><h3>② 手机同款界面与设置</h3><p>窄幅竖向窗口、<b>CPU Models / NPU Models</b> 双标签、搜索框、圆角模型卡片、置顶；设置含简体中文 / English / 繁體中文 三语即时切换、深浅主题、图片比例、步数(默认20)、CFG(默认7)、9 种采样器(默认 dpm)、负向提示词、图生图(默认重绘 0.45)、清理临时、检测更新。</p></div>
-      <div class="card"><h3>③ 下载模型到当前目录</h3><p>CPU 页 <b>37 个标准 SD1.5</b> 逐个下载，真实百分比/速度/断点续传，国内镜像（hf-mirror / 魔搭）优先、失败回退官方源，全部链接已实测可达；模型存程序当前目录 <code>models</code>。下载后点卡片即进入生成页。</p></div>
-      <div class="card"><h3>④ 本地出图</h3><p>桌面端直接读取 safetensors 无需转换；正/负提示词、比例 1:1/3:4/4:3、步数、CFG、采样器、随机/指定种子、图生图、生成数量；真实采样进度 + 预览 + 历史，成品存 <code>output</code>。</p></div>
-      <div class="card"><h3>⑤ NPU 页如实加锁</h3><p>NPU 页列出 Z-Image Turbo、FLUX.2 Klein、千问 Qwen Image 2.1×4、Illustrious v16/dmd2、CyberRealistic v10/dmd2 与 SD1.5 QNN 变体共 15 个；它们依赖手机骁龙 NPU/QNN/MNN，<b>电脑 CPU 引擎不能运行，一律加锁并三语说明</b>，不提供会失败的假下载/假生成。</p></div>
-    </div>
-    <div class="note">模型下载到<b>程序当前目录的 <code>models</code> 文件夹</b>（安装目录或绿色包目录内），图片存于 <code>output</code>；仅当装在 Program Files 等受保护目录时才回退到 <code>%LOCALAPPDATA%\LocalDreamET</code> 并在界面明示。SD1.5 每个约 2.1–2.5GB，老旧 CPU 出图较慢属正常。<b>说明：</b>电脑版当前为 CPU 引擎，能否使用 NPU 取决于电脑实际硬件与后端；本安装包的真实出图/下载效果请在 Windows 真机验收，如遇问题请回传程序目录 <code>tmp</code> 内的 sd-cli 日志与“设置→关于”版本号。</div>
-  </section>
-</div>
+<!-- 修图模式 -->
+<section id="restore">
+  <h2>修图模式</h2>
+  <p>新增整图 img2img 工作台：选择已下载且本机可用的模型 → 上传整张图片（不裁剪、不分割）→ 输入中文正向/负向提示 → 调整重绘强度（0.3–0.7，默认 0.45）→ 结果写入历史，可保存到相册或云备份。</p>
+  <p class="muted">自动反推提示词（tagger）暂未内置，目前请用中文直接描述想把图改成什么样子。</p>
+</section>
+
+<!-- 更新机制 -->
+<section id="update">
+  <h2>更新机制与安装</h2>
+  <ul>
+    <li>检测更新读取 update.json，GitHub 主通道优先，失败自动回退镜像通道。</li>
+    <li>下载走前台服务并显示进度通知；断点续传校验 206/Content-Range，不盲目删 .part。</li>
+    <li>安装优先 PackageInstaller，失败回退系统安装器并引导“未知来源”。</li>
+  </ul>
+</section>
+
+<!-- 云备份与令牌 -->
+<section id="cloud">
+  <h2>云备份与令牌</h2>
+  <ul>
+    <li>登录使用个人访问令牌（PAT），不内嵌网页收账号密码。GitHub classic 令牌勾选 <code>repo</code>；fine-grained 令牌需 Administration + Contents 权限。</li>
+    <li>建仓遇 403（fine-grained 无建仓权限）时，可用“使用已有仓库”手动绑定你已建好的私有仓库。</li>
+    <li>Gitee 使用私人令牌（设置 → 私人令牌，勾选 user_info / projects）。</li>
+    <li>GitHub 设备码登录需开发者自行注册 OAuth App 并填入 client_id；未配置时入口暂不可用。</li>
+    <li>“关注开发者 / 点 Star”默认勾选、可取消，失败不影响登录与上传。</li>
+    <li>令牌仅存 Android 系统密钥库，不写入日志或导出文件。</li>
+  </ul>
+</section>
+
+<!-- 帮助与日志 -->
+<section id="help">
+  <h2>帮助与日志</h2>
+  <p>常见问题与错误说明见 <a href="help.html" style="color:var(--accent)">帮助页</a>。日志位置：App 内右上角“日志”、导出诊断；公共目录 <code>LocalDreamET/logs/app.log</code>，以及 <code>engine_*.log</code>、<code>convert_*.log</code>。</p>
+  <ul>
+    <li>内存不足（std::bad_alloc）：降低图片尺寸或步数后重试。</li>
+    <li>8081 启动失败：模型未下载完成、转换未完成或 ABI 不匹配。</li>
+    <li>x86 模拟器提示：使用已内置 x86_64 引擎的版本，或换 arm64 真机。</li>
+  </ul>
+</section>
 
 <footer>
-  <div class="big">Local Dream ET · 开发者：ET</div>
-  <div>本定制版基于开源项目 <a href="https://github.com/xororz/local-dream" target="_blank" rel="noopener">xororz/local-dream</a>；ET 定制代码以 <a href="https://github.com/ETQWFD/LocalDream-ET/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a> 发布，MNN / stable-diffusion.cpp / ggml 等第三方组件沿用其各自许可（见 NOTICE）。版权与定制内容 © ET</div>
+  <p>源码：<a href="https://github.com/ETQWFD/LocalDream-ET" target="_blank" rel="noopener">github.com/ETQWFD/LocalDream-ET</a> · License MIT · Copyright © 2026 ET</p>
 </footer>
 
-<!-- ET 真实统计：访问量（不阻塞、失败静默） -->
-<script>
-(function(){
-  "use strict";
-  function beacon(u){ try{ if(navigator.sendBeacon){ navigator.sendBeacon(u); } else { new Image().src=u+"&_="+Date.now(); } }catch(e){} }
-  try{
-    beacon("https://abacus.jasoncameron.dev/hit/etld-et/sitevisits");
-    document.addEventListener("click", function(e){
-      var a=e.target.closest && e.target.closest("a[href]");
-      if(!a) return;
-      var h=a.getAttribute("href")||"";
-      if(h.indexOf("/releases/")!==-1 && (h.indexOf(".apk")!==-1||h.indexOf(".exe")!==-1||h.indexOf(".zip")!==-1)){
-        beacon("https://abacus.jasoncameron.dev/hit/etld-et/dlclicks");
-      }
-    }, false);
-  }catch(e){}
-})();
-</script>
+</div>
 </body>
 </html>

@@ -31,6 +31,15 @@ class LocalDreamApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         io.github.xororz.localdream.cloud.RollingLogger.init(this)
+        // et.27: RAM-adaptive SD1.5 long edge.
+        runCatching {
+            io.github.xororz.localdream.ui.screens.sd15LongEdge =
+                io.github.xororz.localdream.utils.DeviceCapabilities.sd15LongEdgeForRam(this)
+        }
+        io.github.xororz.localdream.cloud.LogHub.log(
+            io.github.xororz.localdream.cloud.LogHub.Category.APP,
+            "App start; sd15LongEdge=${io.github.xororz.localdream.ui.screens.sd15LongEdge}",
+        )
         startMigration()
     }
 
