@@ -70,6 +70,9 @@ fun LogsPage(onBack: () -> Unit) {
             appendLine("---- In-app events ----")
             append(LogHub.formatted(filter))
             appendLine()
+            appendLine("---- Public rolling log (${io.github.xororz.localdream.cloud.RollingLogger.currentDir()?.absolutePath ?: "filesDir fallback"}) ----")
+            append(io.github.xororz.localdream.cloud.RollingLogger.readAll())
+            appendLine()
             appendEngineAndConvertFiles(context, filter)
         }
     }
@@ -140,22 +143,22 @@ private fun copyAndShare(context: Context, clipboard: ClipboardManager, text: St
 
 private fun uploadLogs(context: Context, scope: CoroutineScope) {
     val store = SecureTokenStore(context)
-    val provider = store.provider
-    if (!store.isLoggedIn || provider == null) {
+    val auth = store.loggedInProviders().firstOrNull()
+    if (auth == null) {
         Toast.makeText(context, R.string.logs_upload_need_login, Toast.LENGTH_LONG).show()
         return
     }
-    val token = store.accessToken() ?: run {
+    val provider = auth.provider
+    val token = store.accessToken(provider) ?: run {
         Toast.makeText(context, R.string.logs_upload_need_login, Toast.LENGTH_LONG).show(); return
     }
     Toast.makeText(context, R.string.logs_uploading, Toast.LENGTH_SHORT).show()
     scope.launch {
         val res = runCatching {
-            val user = CloudClient.fetchUser(provider, token)
-            CloudClient.ensurePrivateRepo(provider, token, user.login)
+            CloudClient.ensurePrivateRepo(provider, token, auth.login)
             val ts = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
             CloudClient.uploadContent(
-                provider, token, user.login, CloudConfig.BACKUP_REPO,
+                provider, token, auth.owner ?: auth.login, auth.repo ?: CloudConfig.BACKUP_REPO,
                 "log/logs_$ts.txt",
                 LogHub.formatted(null).toByteArray(),
                 "logs $ts",

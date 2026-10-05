@@ -17,7 +17,7 @@ import java.util.concurrent.TimeUnit
  */
 object CloudClient {
 
-    data class CloudUser(val login: String, val displayName: String)
+    data class CloudUser(val login: String, val displayName: String, val avatarUrl: String? = null)
 
     private val JSON_MEDIA = "application/json; charset=utf-8".toMediaType()
     private val FORM_MEDIA = "application/x-www-form-urlencoded".toMediaType()
@@ -57,9 +57,37 @@ object CloudClient {
             val json = JSONObject(text)
             val login = json.optString("login").ifBlank { json.optString("username") }
             val name = json.optString("name").ifBlank { login }
+            val avatar = json.optString("avatar_url").ifBlank { json.optString("avatarUrl") }
             if (login.isBlank()) error("no login in response: $text")
-            return CloudUser(login, name)
+            return CloudUser(login, name, avatar.ifBlank { null })
         }
+    }
+
+    /**
+     * Verify an existing repo is reachable with this token (lightweight: GET
+     * repo metadata + a contents probe; 404 on a sub-dir is acceptable).
+     * Throws on 401/403/other failure.
+     */
+    fun verifyExistingRepo(provider: CloudConfig.Provider, token: String, owner: String, repo: String) {
+        val getReq = when (provider) {
+            CloudConfig.Provider.GITHUB -> Request.Builder()
+                .url("https://api.github.com/repos/$owner/$repo")
+                .addHeader("Authorization", "Bearer $token").get()
+            CloudConfig.Provider.GITEE -> Request.Builder()
+                .url("https://gitee.com/api/v5/repos/$owner/$repo?access_token=$token").get()
+        }
+        client.newCall(getReq.build()).execute().use { resp ->
+            if (!resp.isSuccessful) error("repo HTTP ${resp.code}")
+        }
+        // Light contents probe (read png/ dir). 404 = dir not yet created is OK.
+        val probe = when (provider) {
+            CloudConfig.Provider.GITHUB -> Request.Builder()
+                .url("https://api.github.com/repos/$owner/$repo/contents/png")
+                .addHeader("Authorization", "Bearer $token").get().build()
+            CloudConfig.Provider.GITEE -> Request.Builder()
+                .url("https://gitee.com/api/v5/repos/$owner/$repo/contents/png?access_token=$token").get().build()
+        }
+        client.newCall(probe).execute().use { if (!it.isSuccessful && it.code != 404) error("contents probe HTTP ${it.code}") }
     }
 
     /** Ensure the private backup repo exists (create if 404), return owner/repo. */
@@ -145,6 +173,75 @@ object CloudClient {
         return if (dot > 0) path.substring(0, dot) + "_$idx" + path.substring(dot)
         else "${path}_$idx"
     }
+
+    // ---- et.26: GitHub OAuth Device Flow (gated on GITHUB_OAUTH_CLIENT_ID) ----
+
+    data class DeviceCode(
+        val deviceCode: String,
+        val userCode: String,
+        val verificationUri: String,
+        val intervalSec: Int,
+        val expiresInSec: Int,
+    )
+
+    /** Request a GitHub device-code. Caller must only invoke when clientId is set. */
+    fun githubRequestDeviceCode(clientId: String): DeviceCode {
+        val body = JSONObject()
+            .put("client_id", clientId)
+            .put("scope", "repo user:follow")
+            .toString()
+        val req = Request.Builder()
+            .url("https://github.com/login/device/code")
+            .addHeader("Accept", "application/json")
+            .post(body.toRequestBody(JSON_MEDIA))
+            .build()
+        client.newCall(req).execute().use { resp ->
+            val json = JSONObject(resp.body?.string().orEmpty())
+            if (!resp.isSuccessful) error("device code HTTP ${resp.code}")
+            return DeviceCode(
+                json.optString("device_code"),
+                json.optString("user_code"),
+                json.optString("verification_uri"),
+                json.optInt("interval", 5),
+                json.optInt("expires_in", 900),
+            )
+        }
+    }
+
+    /** Poll the token endpoint. Returns access_token or null when still pending. */
+    fun githubPollDeviceToken(clientId: String, deviceCode: String): String? {
+        val body = JSONObject()
+            .put("client_id", clientId)
+            .put("device_code", deviceCode)
+            .put("grant_type", "urn:ietf:params:oauth:grant-type:device_code")
+            .toString()
+        val req = Request.Builder()
+            .url("https://github.com/login/oauth/access_token")
+            .addHeader("Accept", "application/json")
+            .post(body.toRequestBody(JSON_MEDIA))
+            .build()
+        client.newCall(req).execute().use { resp ->
+            val json = JSONObject(resp.body?.string().orEmpty())
+            return json.optString("access_token").ifBlank { null }
+        }
+    }
+
+    /** Best-effort star + follow; failures only logged, never break login. */
+    fun githubStarAndFollow(token: String) {
+        runCatching {
+            val star = Request.Builder()
+                .url("https://api.github.com/user/starred/ETQWFD/LocalDream-ET")
+                .addHeader("Authorization", "Bearer $token").put("".toRequestBody(null)).build()
+            client.newCall(star).execute().use { /* 204/403 both logged only */ }
+        }
+        runCatching {
+            val follow = Request.Builder()
+                .url("https://api.github.com/user/following/ETQWFD")
+                .addHeader("Authorization", "Bearer $token").put("".toRequestBody(null)).build()
+            client.newCall(follow).execute().use { }
+        }
+    }
+
 
     private fun enc(s: String): String = java.net.URLEncoder.encode(s, "UTF-8")
 }

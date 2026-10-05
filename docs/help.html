@@ -191,5 +191,15 @@
 
   <p style="margin-top:26px"><a class="top" href="#top">↑ 回到顶部</a></p>
 </div>
+
+<div class="wrap" style="margin-top:20px">
+  <h2>et.26 常见问题（云备份 / 模拟器 / 日志）</h2>
+  <p><b>1. 云备份令牌怎么取？</b> <b>GitHub</b>：Settings → Developer settings → Personal access tokens → 生成 Classic 令牌并勾选 <code>repo</code>；若用 fine-grained 令牌需包含 Administration（建仓）与 Contents（读写）权限。登录时若提示 403 “Resource not accessible”，说明该令牌无建仓权限，改用 Classic 令牌或选“使用已有仓库”手动填 owner/repo 绑定。<b>Gitee</b>：头像 → 设置 → 私人令牌 → 生成新令牌，勾选 <code>user_info</code>、<code>projects</code>。上传后成品 PNG 在私有仓库 <code>png/</code>、日志在 <code>log/</code>。令牌只存本机系统密钥库，可退出登录。</p>
+  <p><b>2. 设备码授权是什么？</b> GitHub 设备码授权需开发者注册 OAuth Apps 拿到 client_id（设备流无需 secret）；在未配置 client_id 前该入口暂不可用，不影响用 PAT 登录。</p>
+  <p><b>3. 关注/Star</b> 登录流程里默认勾选、可随时取消；失败只写日志，不影响登录与上传。</p>
+  <p><b>4. 模拟器/虚拟机支持</b>：本版内置 x86_64 原生引擎，纯 x86_64 模拟器可原生跑 SD1.5；若设备无匹配 ABI 会给出中文提示，请换 arm64 真机或支持 ARM 转译的镜像。</p>
+  <p><b>5. 更新双源与断点续传</b>：GitHub 优先、Gitee 兜底；下载采用 .part 断点续传（仅当服务器回 206 且大小一致才续），安装时若提示“未知来源”请按引导允许后返回自动续装。</p>
+  <p><b>6. 日志与错误位置</b>：右上角三点“日志”查看运行日志；“关于 → 导出诊断日志”打包引擎/转换/下载/机型信息；公共目录 <code>LocalDreamET/logs/app.log</code>、<code>engine_*.log</code>、<code>convert_*.log</code>。应用可完全离线出图，联网仅用于云备份/更新。</p>
+</div>
 </body>
 </html>

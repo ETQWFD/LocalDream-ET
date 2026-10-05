@@ -12,21 +12,29 @@ import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
 /**
- * Stores the OAuth access token encrypted at rest with an Android Keystore AES
- * key (no androidx dependency, works on minSdk 28). The token is never written
- * to plaintext, never logged, and must never leak into diagnostic exports.
+ * Per-provider encrypted credential store. GitHub and Gitee are stored in
+ * separate SharedPreferences files so the user can be logged into both at once;
+ * saving/reading/logout always targets the given provider and never clobbers
+ * the other. Tokens are encrypted at rest with an Android Keystore AES key,
+ * never logged, and never leak into diagnostic exports.
  */
 class SecureTokenStore(context: Context) {
-    private val prefs: SharedPreferences =
-        context.applicationContext.getSharedPreferences("cloud_secure", Context.MODE_PRIVATE)
+    private val app = context.applicationContext
 
-    private companion object {
-        const val ALIAS = "ldet_cloud_key"
-        const val KEY_TOKEN = "access_token"
-        const val KEY_PROVIDER = "provider"
-        const val KEY_LOGIN = "login"
-        const val KEY_NAME = "display_name"
-    }
+    enum class RepoState { READY, PENDING }
+
+    data class CloudAuthState(
+        val provider: CloudConfig.Provider,
+        val login: String,
+        val displayName: String,
+        val avatarUrl: String?,
+        val owner: String?,
+        val repo: String?,
+        val repoState: RepoState,
+    )
+
+    private fun prefs(provider: CloudConfig.Provider): SharedPreferences =
+        app.getSharedPreferences("cloud_secure_${provider.name}", Context.MODE_PRIVATE)
 
     private fun keyStore(): KeyStore = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
 
@@ -66,27 +74,64 @@ class SecureTokenStore(context: Context) {
         String(c.doFinal(ct), Charsets.UTF_8)
     }.getOrNull()
 
-    fun saveToken(provider: CloudConfig.Provider, token: String, login: String, displayName: String) {
-        prefs.edit()
+    fun saveToken(
+        provider: CloudConfig.Provider,
+        token: String,
+        login: String,
+        displayName: String,
+        avatarUrl: String? = null,
+        owner: String? = null,
+        repo: String? = null,
+        repoState: RepoState = RepoState.PENDING,
+    ) {
+        prefs(provider).edit()
             .putString(KEY_TOKEN, encrypt(token))
-            .putString(KEY_PROVIDER, provider.name)
             .putString(KEY_LOGIN, login)
             .putString(KEY_NAME, displayName)
+            .putString(KEY_AVATAR, avatarUrl)
+            .putString(KEY_OWNER, owner)
+            .putString(KEY_REPO, repo)
+            .putString(KEY_REPO_STATE, repoState.name)
             .apply()
     }
 
-    val provider: CloudConfig.Provider? get() =
-        prefs.getString(KEY_PROVIDER, null)?.let { runCatching { CloudConfig.Provider.valueOf(it) }.getOrNull() }
+    fun accessToken(provider: CloudConfig.Provider): String? =
+        prefs(provider).getString(KEY_TOKEN, null)?.let { decrypt(it) }
 
-    val login: String? get() = prefs.getString(KEY_LOGIN, null)
-    val displayName: String? get() = prefs.getString(KEY_NAME, null)
+    /** Full login state for a provider, or null if not logged in. */
+    fun state(provider: CloudConfig.Provider): CloudAuthState? {
+        val p = prefs(provider)
+        val token = p.getString(KEY_TOKEN, null)?.let { decrypt(it) } ?: return null
+        val login = p.getString(KEY_LOGIN, null) ?: return null
+        return CloudAuthState(
+            provider = provider,
+            login = login,
+            displayName = p.getString(KEY_NAME, login) ?: login,
+            avatarUrl = p.getString(KEY_AVATAR, null),
+            owner = p.getString(KEY_OWNER, null),
+            repo = p.getString(KEY_REPO, null),
+            repoState = runCatching {
+                RepoState.valueOf(p.getString(KEY_REPO_STATE, RepoState.PENDING.name) ?: RepoState.PENDING.name)
+            }.getOrDefault(RepoState.PENDING),
+        )
+    }
 
-    fun accessToken(): String? =
-        prefs.getString(KEY_TOKEN, null)?.let { decrypt(it) }
+    /** All providers currently logged in (for the settings entry). */
+    fun loggedInProviders(): List<CloudAuthState> =
+        CloudConfig.Provider.entries.mapNotNull { state(it) }
 
-    val isLoggedIn: Boolean get() = accessToken() != null
+    fun logout(provider: CloudConfig.Provider) {
+        prefs(provider).edit().clear().apply()
+    }
 
-    fun logout() {
-        prefs.edit().clear().apply()
+    private companion object {
+        const val ALIAS = "ldet_cloud_key"
+        const val KEY_TOKEN = "access_token"
+        const val KEY_LOGIN = "login"
+        const val KEY_NAME = "display_name"
+        const val KEY_AVATAR = "avatar_url"
+        const val KEY_OWNER = "owner"
+        const val KEY_REPO = "repo"
+        const val KEY_REPO_STATE = "repo_state"
     }
 }

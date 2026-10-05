@@ -49,8 +49,12 @@ android {
         minSdk = 28
 //        minSdk = 31
         targetSdk = 36
-        versionCode = 99
-        versionName = "3.0.0-et.25"
+        versionCode = 100
+        versionName = "3.0.0-et.26"
+
+        // et.26: GitHub OAuth Device Flow client_id. Empty => device-flow entry
+        // is shown disabled (no request, no fake login). Device flow needs no secret.
+        buildConfigField("String", "GITHUB_OAUTH_CLIENT_ID", "\"\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -64,7 +68,7 @@ android {
             // fully functional APK is assembled. QNN NPU libraries ship for
             // aarch64 only; the v7a build is CPU/GPU.
             //noinspection ChromeOsAbiSupport
-            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
+            abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64")
         }
     }
 
@@ -170,6 +174,7 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+    implementation("io.coil-kt:coil-compose:2.6.0")
     implementation(libs.androidx.material3.adaptive)
     implementation(libs.androidx.material3.window.size)
     implementation(libs.androidx.graphics.shapes)

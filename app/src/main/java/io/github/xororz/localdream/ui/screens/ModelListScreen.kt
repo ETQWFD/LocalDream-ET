@@ -573,7 +573,21 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
     }
 
     if (showLogsPage) {
-        LogsPage(onBack = { showLogsPage = false })
+        // et.26: render as a full-screen Dialog so it floats above the main
+        // Scaffold (the previous inline child was painted underneath it and
+        // looked like "logs won't open").
+        androidx.compose.ui.window.Dialog(
+            onDismissRequest = { showLogsPage = false },
+            properties = androidx.compose.ui.window.DialogProperties(
+                usePlatformDefaultWidth = false,
+            ),
+        ) {
+            androidx.compose.material3.Surface(
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                LogsPage(onBack = { showLogsPage = false })
+            }
+        }
     }
 
     if (showCloudBackupDialog) {

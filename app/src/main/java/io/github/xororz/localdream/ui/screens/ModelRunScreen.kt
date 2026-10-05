@@ -2405,7 +2405,11 @@ fun ModelRunScreen(
                                             currentWidth = w
                                             currentHeight = h
                                             aspectRatio = inferAspectRatioString(w, h)
+                                            clearImg2imgState()
                                             saveAllFields()
+                                            // et.26: must restart/re-select backend with the
+                                            // new resolution, matching the inline chips path.
+                                            onSizeMaybeRestartBackend()
                                         }
                                     },
                                     onSchedulerChange = { value ->
@@ -3993,6 +3997,51 @@ fun ModelRunScreen(
                                         ).show()
                                     },
                                 )
+                            }
+                        }
+                    },
+                )
+                // et.26 E2: fixed cloud upload button next to Save.
+                OverlayIconButton(
+                    icon = Icons.Default.Refresh,
+                    contentDescription = "Upload to cloud backup",
+                    onClick = {
+                        val bmp = historyBitmap
+                        if (bmp == null) {
+                            Toast.makeText(context, "No image to upload", Toast.LENGTH_SHORT).show()
+                            return@OverlayIconButton
+                        }
+                        val store = io.github.xororz.localdream.cloud.SecureTokenStore(context)
+                        val auth = store.loggedInProviders().firstOrNull()
+                        if (auth == null) {
+                            Toast.makeText(context, R.string.logs_upload_need_login, Toast.LENGTH_LONG).show()
+                            return@OverlayIconButton
+                        }
+                        val token = store.accessToken(auth.provider)
+                        if (token == null) {
+                            Toast.makeText(context, R.string.logs_upload_need_login, Toast.LENGTH_LONG).show()
+                            return@OverlayIconButton
+                        }
+                        if (auth.repoState != io.github.xororz.localdream.cloud.SecureTokenStore.RepoState.READY) {
+                            Toast.makeText(context, R.string.cloud_backup_state_pending, Toast.LENGTH_LONG).show()
+                            return@OverlayIconButton
+                        }
+                        Toast.makeText(context, "Uploading…", Toast.LENGTH_SHORT).show()
+                        scope.launch {
+                            runCatching {
+                                withContext(kotlinx.coroutines.Dispatchers.IO) {
+                                    val baos = java.io.ByteArrayOutputStream()
+                                    bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, baos)
+                                    val ts = java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.US).format(java.util.Date())
+                                    io.github.xororz.localdream.cloud.CloudClient.uploadContent(
+                                        auth.provider, token, auth.owner!!, auth.repo!!,
+                                        "png/localdream_${ts}.png", baos.toByteArray(), "upload image",
+                                    )
+                                }
+                            }.onSuccess { path ->
+                                Toast.makeText(context, "Uploaded: $path", Toast.LENGTH_LONG).show()
+                            }.onFailure { e ->
+                                Toast.makeText(context, "Upload failed: ${e.message}", Toast.LENGTH_LONG).show()
                             }
                         }
                     },

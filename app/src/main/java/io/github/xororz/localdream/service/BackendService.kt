@@ -494,21 +494,22 @@ class BackendService : Service() {
                 return false
             }
 
-            // et.25: on a pure x86/x86_64 emulator without ARM translation the
-            // arm .so cannot load and the engine dies with a cryptic error.
-            // Detect it up front and report a friendly message instead.
-            if (isPureX86Emulator()) {
-                Log.e(TAG, "pure x86 emulator detected; arm engine cannot run")
+            val executableFile = File(nativeDir, EXECUTABLE_NAME)
+
+            // et.26: x86_64 native core is now packaged. On an x86_64 device the
+            // system extracts lib/x86_64 and nativeLibraryDir already points at it,
+            // so we exec it directly. Only block when there is NO matching core for
+            // this process ABI (executable missing) and no ARM translation layer.
+            if (!executableFile.exists() && isPureX86Emulator()) {
+                Log.e(TAG, "no x86_64 core packaged and pure x86 emulator; arm engine cannot run")
                 updateState(
                     BackendState.Error(
-                        "Emulator without ARM translation: the on-device engine requires an ARM (or ARM-translated) environment. Use a real device or an ARM-enabled emulator image.",
+                        "当前设备/模拟器为 x86 架构且无 ARM 兼容层。请使用已内置 x86_64 引擎的版本，或换 arm64 真机/支持 ARM 转译的镜像。",
                         modelId,
                     ),
                 )
                 return false
             }
-
-            val executableFile = File(nativeDir, EXECUTABLE_NAME)
 
             if (!executableFile.exists()) {
                 Log.e(TAG, "error: executable does not exist: ${executableFile.absolutePath}")
