@@ -1,7 +1,7 @@
 {
-  "versionCode": 102,
-  "versionName": "3.0.0-et.28",
+  "versionCode": 103,
+  "versionName": "3.0.0-et.29",
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
-  "size": 153280011,
-  "releaseNotes": "ET 定制版 v3.0.0-et.28（包名 etc.github.ai，可从 et.27 覆盖安装）。\n• 修复“已加前台服务但熄屏仍停”的真实根因：转换改由前台服务自身执行（UI 只观察 ConvertManager），离开列表页或被系统回收不会中途取消转换；WakeLock/WifiLock 与服务同生命周期（无短超时），并给引擎服务补了锁。\n• Android 14+ 长时本地 AI 任务改用 specialUse 前台服务类型；新增厂商自启动/后台运行引导与崩溃日志（crash_*.log）。\n• 修图流程完善：选已就绪模型、整张图直传、默认可编辑负向词、真实进度；默认 dpm++2m 20 步。\n电脑版仍为 desktop-v3.0.1，不在本更新范围。国产 ROM 需在系统设置里允许后台运行/自启动；真实出图/转换/下载请真机复测，异常用右上角“日志/导出诊断”回传。开发者：ET，MIT License。"
+  "size": 153282243,
+  "releaseNotes": "ET 定制版 v3.0.0-et.29（包名 etc.github.ai，可从 et.28 覆盖安装）。\n• 修复 QteaMix 等 sd-qnn 预转换模型下载后误报“模型文件不完整”：现按 QNN/MNN 包族分别校验必需权重（QNN：unet.bin/vae_*.bin/clip_v2.mnn；MNN/本机转换：*.mnn.weight 六件套），覆盖 AnythingV5/CuteYukiMix/AbsoluteReality/ChilloutMix/QteaMix。\n• QNN 启动前预检，缺权重给中文提示；解压 CRC 校验与 .part 断点续传保留；错误改中文三语并可重试/修复。\n电脑版仍为 desktop-v3.0.1，不在本更新范围。曾报“文件不完整”的模型删除后在网络稳定时重新下载即可。开发者：ET，MIT License。"
 }

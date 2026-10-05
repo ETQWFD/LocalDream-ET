@@ -508,6 +508,19 @@ class BackendService : Service() {
                 )
                 return false
             }
+            // et.29: QNN NPU packages use the flattened QNN manifest (no .weight
+            // sidecars). Pre-flight with the correct required set so a bad QNN
+            // download fails fast instead of crashing inside native.
+            if (backendType == "sd15npu" && !Model.hasCompleteSdPackage(modelsDir, qnn = true)) {
+                Log.e(TAG, "pre-flight failed: QNN products missing in $modelsDir")
+                updateState(
+                    BackendState.Error(
+                        "Model incomplete: missing QNN weight files in $modelId",
+                        modelId,
+                    ),
+                )
+                return false
+            }
 
             val executableFile = File(nativeDir, EXECUTABLE_NAME)
 

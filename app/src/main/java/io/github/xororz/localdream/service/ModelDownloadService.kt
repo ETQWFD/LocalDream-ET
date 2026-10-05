@@ -270,11 +270,21 @@ class ModelDownloadService : Service() {
                             extractTempDir = null
 
                             // Integrity gate #2: after extraction the model must have
-                            // the real conversion products. Otherwise treat as failed
-                            // (the catch below cleans the half-built dir).
-                            if (!Model.hasConvertedSd15Outputs(modelDir)) {
+                            // the real conversion products. Pick the required manifest
+                            // by package family: sd-qnn NPU packages ship a flattened
+                            // QNN layout (no *.mnn.weight sidecars), CPU packages ship
+                            // the MNN six-piece set.
+                            val isQnnPackage = fileUrl.contains("/sd-qnn/")
+                            val complete = Model.hasCompleteSdPackage(modelDir, isQnnPackage)
+                            if (!complete) {
+                                val actual = modelDir.listFiles()
+                                    ?.joinToString { "${it.name}=${it.length()}" } ?: "(empty)"
+                                io.github.xororz.localdream.cloud.LogHub.log(
+                                    io.github.xororz.localdream.cloud.LogHub.Category.DOWNLOAD,
+                                    "Extracted incomplete model: modelId=$modelId qnn=$isQnnPackage url=$fileUrl actual=[$actual]",
+                                )
                                 throw IOException(
-                                    "Extracted model is incomplete (missing weight files)",
+                                    getString(R.string.error_model_extract_incomplete, modelName),
                                 )
                             }
                         }

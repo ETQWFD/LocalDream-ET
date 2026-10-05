@@ -321,6 +321,7 @@
     <string name="restore_pick_first">請先選擇圖片。</string>
     <string name="restore_run">修改圖片</string>
     <string name="restore_started">已開始生成，結果見歷史。</string>
+    <string name="error_model_extract_incomplete">模型「%1$s」檔案不完整，缺少執行所需權重。安裝包已保留，請重新下載或修復模型；仍失敗請刪除後重新下載。</string>
     <string name="restore_pick_model">請從列表中選擇一個已下載模型開始。</string>
     <string name="close">關閉</string>
     <string name="error_result_abnormal_model">生成結果異常，疑似模型檔案損壞或不完整。請重新驗證或重新下載模型。</string>

@@ -331,6 +331,7 @@
     <string name="restore_pick_first">Please pick an image first.</string>
     <string name="restore_run">Edit Image</string>
     <string name="restore_started">Started; see history for the result.</string>
+    <string name="error_model_extract_incomplete">Model "%1$s" files are incomplete (missing required weights). The downloaded package is kept; please retry or repair the model. If it still fails, delete and re-download.</string>
     <string name="restore_pick_model">Pick a downloaded model from the list to start.</string>
     <string name="close">Close</string>
     <string name="error_result_abnormal_model">Generation result abnormal, likely corrupted or incomplete model files. Please re-verify / re-download the model.</string>

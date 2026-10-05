@@ -465,16 +465,29 @@ data class Model(
         // Produced weight/bin files that prove an on-device SD1.5 conversion
         // actually completed. The *.mnn graph templates are copied from the
         // cvtbase assets and are always present, so these are the real check.
-        private val CONVERTED_SD15_OUTPUTS = listOf(
+        private val MNN_REQUIRED = listOf(
             "clip_v2.mnn.weight", "unet.mnn.weight", "vae_decoder.mnn.weight",
             "vae_encoder.mnn.weight", "pos_emb.bin", "token_emb.bin",
         )
 
-        fun hasConvertedSd15Outputs(modelDir: File): Boolean {
+        // QNN (Hexagon NPU) pre-converted packages ship a flattened layout with
+        // weights embedded in the .mnn graph or as plain .bin files; there are no
+        // *.mnn.weight sidecars. This is the engine's sd15npu contract.
+        private val QNN_REQUIRED = listOf(
+            "clip_v2.mnn", "unet.bin", "vae_encoder.bin", "vae_decoder.bin",
+            "pos_emb.bin", "token_emb.bin",
+        )
+
+        fun hasCompleteSdPackage(modelDir: File, qnn: Boolean): Boolean {
             if (!modelDir.isDirectory) return false
-            return CONVERTED_SD15_OUTPUTS.all { name ->
+            val required = if (qnn) QNN_REQUIRED else MNN_REQUIRED
+            return required.all { name ->
                 File(modelDir, name).let { it.isFile && it.length() > 0L }
             }
+        }
+
+        fun hasConvertedSd15Outputs(modelDir: File): Boolean {
+            return hasCompleteSdPackage(modelDir, qnn = false)
         }
     }
 }
