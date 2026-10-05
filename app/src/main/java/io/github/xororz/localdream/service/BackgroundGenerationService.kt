@@ -198,8 +198,13 @@ class BackgroundGenerationService : Service() {
         // previews which the backend already crops to the visible region.
         val effectiveWidth = data.getIntExtra("effective_width", width)
         val effectiveHeight = data.getIntExtra("effective_height", height)
-        val denoiseStrength = data.getFloatExtra("denoise_strength", 0.6f)
+        // et.25: img2img strength is clamped to 0.3–0.7 and defaults to 0.45.
+        // strength=1 degrades to pure-noise txt2img; out-of-range values are
+        // rejected here before they reach the native sampler.
+        val denoiseStrength = data.getFloatExtra("denoise_strength", 0.45f)
+            .coerceIn(0.3f, 0.7f)
         val useOpenCL = data.getBooleanExtra("use_opencl", false)
+        val hasInitImage = data.getBooleanExtra("has_image", false)
         val scheduler = data.getStringExtra("scheduler") ?: "dpm"
         val aspectRatio = data.getStringExtra("aspect_ratio") ?: "1:1"
         // Ultrafix: tiled img2img repair over an upscaled image. Uses its own
@@ -337,19 +342,30 @@ class BackgroundGenerationService : Service() {
             val showProcess = preferences.getBoolean("show_diffusion_process", false)
             val showStride = preferences.getInt("show_diffusion_stride", 1)
 
+            // et.25: GPU -> CPU auto-recovery. If this device's GPU fp16 has
+            // already produced a bad image once, we default to CPU. Each
+            // generation attempt may be retried exactly once on CPU with safe
+            // params when the GPU output fails the structural health check.
+            var attemptOpenCL = useOpenCL && !preferences.getBoolean("gpu_unstable", false)
+            var attemptCfg = cfg
+            var attemptSampler = scheduler
+            var attemptSteps = steps
+            var cpuRetryDone = false
+
+            attemptLoop@ while (true) {
             val jsonObject = JSONObject().apply {
                 put("prompt", prompt)
                 put("negative_prompt", negativePrompt)
-                put("steps", steps)
-                put("cfg", cfg)
+                put("steps", attemptSteps)
+                put("cfg", attemptCfg)
                 // Per-step previews come back as base64 JPEG (tiny) instead of
                 // raw RGB; the final image stays raw (lossless, loopback-cheap).
                 put("preview_format", "jpeg")
                 put("width", width)
                 put("height", height)
                 put("denoise_strength", denoiseStrength)
-                put("use_opencl", useOpenCL)
-                put("scheduler", scheduler)
+                put("use_opencl", attemptOpenCL)
+                put("scheduler", attemptSampler)
                 // Ultrafix never streams previews: each one would tile-decode
                 // the full image (the backend rejects it as well).
                 put("show_diffusion_process", if (ultrafix) false else showProcess)
@@ -583,6 +599,48 @@ class BackgroundGenerationService : Service() {
                                         "RGB conversion + Bitmap creation took: ${System.currentTimeMillis() - bitmapStartTime}ms",
                                     )
 
+                                    // et.25: structural health gate + GPU->CPU auto
+                                    // recovery. A divergent latent / VAE-NaN
+                                    // "shattered glass" result is never saved as a
+                                    // success; on the GPU we retry exactly once on
+                                    // CPU with safe params before declaring failure.
+                                    val health = io.github.xororz.localdream.cloud.BitmapHealth.assess(bitmap)
+                                    if (health != null) {
+                                        io.github.xororz.localdream.cloud.LogHub.log(
+                                            io.github.xororz.localdream.cloud.LogHub.Category.GENERATE,
+                                            "$health use_opencl=$attemptOpenCL has_image=${!image.isNullOrBlank()} size=${resultWidth}x$resultHeight strength=$denoiseStrength",
+                                        )
+                                        if (attemptOpenCL && !cpuRetryDone) {
+                                            // Mark this device's GPU as unstable and
+                                            // retry once on CPU with safe defaults.
+                                            preferences.edit().putBoolean("gpu_unstable", true).apply()
+                                            cpuRetryDone = true
+                                            attemptOpenCL = false
+                                            attemptCfg = 7f
+                                            attemptSampler = "dpm++2m"
+                                            attemptSteps = 20
+                                            io.github.xororz.localdream.cloud.LogHub.log(
+                                                io.github.xororz.localdream.cloud.LogHub.Category.GENERATE,
+                                                "GPU output abnormal, auto switching to CPU retry",
+                                            )
+                                            updateState(GenerationState.Progress(0f))
+                                            break@readLoop
+                                        }
+                                        // CPU also bad: likely corrupted model weights.
+                                        throw java.io.IOException(
+                                            getString(R.string.error_result_abnormal_model),
+                                        )
+                                    }
+
+                                    // Surface a one-time, non-intrusive notice that
+                                    // this device's GPU was found unstable.
+                                    if (cpuRetryDone) {
+                                        io.github.xororz.localdream.cloud.LogHub.log(
+                                            io.github.xororz.localdream.cloud.LogHub.Category.GENERATE,
+                                            "CPU retry produced a valid image; GPU marked unstable for this device",
+                                        )
+                                    }
+
                                     Log.d(
                                         "BgGenService",
                                         "=== Total processing time for complete message: ${System.currentTimeMillis() - completeStartTime}ms, size: ${resultWidth}x$resultHeight ===",
@@ -639,6 +697,11 @@ class BackgroundGenerationService : Service() {
                     }
                 }
             }
+            // et.25: if the GPU output was bad and we flipped to CPU, re-post
+            // once with CPU safe params. Otherwise the attempt loop is finished.
+            if (cpuRetryDone) continue@attemptLoop
+            break@attemptLoop
+            } // attemptLoop
         } catch (e: Exception) {
             if (completed) {
                 // Result already delivered; a teardown exception from the

@@ -656,6 +656,33 @@ fun ModelRunScreen(
         }
     }
 
+    // et.25: after the output W/H actually changes (ratio chip / custom ratio),
+    // re-declare the backend so the live engine is restarted with the new canvas
+    // instead of reusing a process that was started at the old resolution.
+    // Debounced; only acts when the backend is already running for this model.
+    var sizeRestartJob: kotlinx.coroutines.Job? = null
+    fun onSizeMaybeRestartBackend() {
+        sizeRestartJob?.cancel()
+        sizeRestartJob = scope.launch {
+            delay(300)
+            val m = model ?: return@launch
+            val st = BackendService.backendState.value
+            val running = st is BackendService.BackendState.Running &&
+                BackendService.servingModelId.value == modelId
+            if (!running) return@launch
+            val intent = Intent(context, BackendService::class.java).apply {
+                action = BackendService.ACTION_RESTART
+                putExtra("modelId", modelId)
+                putExtra("backendType", m.backendType)
+                putExtra("width", currentWidth)
+                putExtra("height", currentHeight)
+                putExtra("use_opencl", useOpenCL)
+            }
+            runCatching { context.startForegroundService(intent) }
+            backendReady = false
+        }
+    }
+
     val onStepsChange = remember {
         { value: Float ->
             steps = value
@@ -1874,9 +1901,10 @@ fun ModelRunScreen(
                             aspectRatio =
                                 inferAspectRatioString(currentWidth, currentHeight)
                         }
-                        model?.runOnCpu == true &&
-                            model.isDit != true &&
-                            model.usesFixedCanvas != true -> {
+                        model?.isDit != true &&
+                            model?.usesFixedCanvas != true -> {
+                            // et.25: all non-fixed non-DiT SD1.5 (CPU or GPU/QNN)
+                            // recompute W/H from the ratio, not just CPU models.
                             val (w, h) = sd15SizeForRatio(newRatio)
                             currentWidth = w
                             currentHeight = h
@@ -1889,6 +1917,7 @@ fun ModelRunScreen(
                     }
                     clearImg2imgState()
                     saveAllFields()
+                    onSizeMaybeRestartBackend()
                 }
                 showCustomAspectRatioDialog = false
             },
@@ -2224,13 +2253,20 @@ fun ModelRunScreen(
                             val isFixedCanvasModel = model?.usesFixedCanvas == true
                             val isSd15CpuModel =
                                 model?.runOnCpu == true && !isFixedCanvasModel && !isDitModel
-                            if (isFixedCanvasModel || isDitModel || isSd15CpuModel) {
+                            // et.25 FIX: any SD1.5 that maps a ratio onto W/H —
+                            // whether it runs on CPU/MNN or on the GPU/OpenCL/QNN
+                            // path (runOnCpu=false) — must recompute width/height.
+                            // Previously the GPU/QNN SD1.5 fell into the "else"
+                            // branch that only changed the ratio text, so the
+                            // output pixel size never actually followed the chip.
+                            val isSd15RatioModel = !isFixedCanvasModel && !isDitModel
+                            if (isFixedCanvasModel || isDitModel || isSd15RatioModel) {
                             val ratioPresets = when {
                                 isDitModel -> listOf("1:1", "3:4", "4:3", "9:16", "16:9")
-                                isSd15CpuModel -> SD15_ASPECT_PRESETS
+                                isSd15RatioModel -> SD15_ASPECT_PRESETS
                                 else -> listOf("1:1", "3:4", "4:3")
                             }
-                            val selectedRatio = if (isSd15CpuModel) {
+                            val selectedRatio = if (isSd15RatioModel) {
                                 inferAspectRatioString(currentWidth, currentHeight)
                             } else {
                                 aspectRatio
@@ -2246,6 +2282,14 @@ fun ModelRunScreen(
                                 Text(
                                     stringResource(R.string.aspect_ratio),
                                     style = MaterialTheme.typography.bodyMedium,
+                                    modifier = Modifier.padding(end = 4.dp),
+                                )
+                                // et.25: show the real output pixels that will be
+                                // sent to the engine, so a ratio change is visible.
+                                Text(
+                                    "${currentWidth}×${currentHeight}",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.padding(end = 4.dp),
                                 )
                                 ratioPresets.forEach { ratio ->
@@ -2272,7 +2316,7 @@ fun ModelRunScreen(
                                                             currentWidth, currentHeight,
                                                         )
                                                     }
-                                                    isSd15CpuModel -> {
+                                                    isSd15RatioModel -> {
                                                         val (w, h) = sd15SizeForRatio(ratio)
                                                         currentWidth = w
                                                         currentHeight = h
@@ -2284,13 +2328,14 @@ fun ModelRunScreen(
                                                 }
                                                 clearImg2imgState()
                                                 saveAllFields()
+                                                onSizeMaybeRestartBackend()
                                             }
                                         },
                                         label = { Text(ratio) },
                                         enabled = !isRunning,
                                     )
                                 }
-                                if (!isDitModel && !isSd15CpuModel) {
+                                if (!isDitModel && !isSd15RatioModel) {
                                     FilterChip(
                                         selected = ratioIsCustom,
                                         onClick = {

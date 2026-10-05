@@ -30,6 +30,7 @@ class LocalDreamApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        io.github.xororz.localdream.cloud.RollingLogger.init(this)
         startMigration()
     }
 

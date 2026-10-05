@@ -494,6 +494,20 @@ class BackendService : Service() {
                 return false
             }
 
+            // et.25: on a pure x86/x86_64 emulator without ARM translation the
+            // arm .so cannot load and the engine dies with a cryptic error.
+            // Detect it up front and report a friendly message instead.
+            if (isPureX86Emulator()) {
+                Log.e(TAG, "pure x86 emulator detected; arm engine cannot run")
+                updateState(
+                    BackendState.Error(
+                        "Emulator without ARM translation: the on-device engine requires an ARM (or ARM-translated) environment. Use a real device or an ARM-enabled emulator image.",
+                        modelId,
+                    ),
+                )
+                return false
+            }
+
             val executableFile = File(nativeDir, EXECUTABLE_NAME)
 
             if (!executableFile.exists()) {
@@ -783,6 +797,21 @@ class BackendService : Service() {
     // True when proc is still the tracked process and no intentional stop is in
     // progress, i.e. its exit really is an unexpected crash worth reporting.
     private fun isLiveCrash(proc: Process): Boolean = !stopping && process === proc
+
+    // et.25: a pure x86/x86_64 emulator (ranchu/goldfish/generic) whose ABI list
+    // contains no ARM code cannot load our arm .so. Emulators that do expose an
+    // arm64 translation layer DO list arm64-v8a and are allowed through.
+    private fun isPureX86Emulator(): Boolean {
+        val hw = (android.os.Build.HARDWARE ?: "").lowercase()
+        val product = (android.os.Build.PRODUCT ?: "").lowercase()
+        val isEmulator = hw.contains("ranchu") || hw.contains("goldfish") ||
+            hw.contains("sdk") || product.startsWith("sdk") ||
+            product.startsWith("google_sdk") || product.contains("emulator") ||
+            product == "generic"
+        if (!isEmulator) return false
+        val abis = android.os.Build.SUPPORTED_ABIS.joinToString(",").lowercase()
+        return !abis.contains("arm")
+    }
 
     override fun onDestroy() {
         super.onDestroy()

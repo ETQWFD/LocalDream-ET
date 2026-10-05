@@ -50,7 +50,9 @@ object AppUpdater {
 
     // Edit these two constants to retarget the update channel.
     const val DEVELOPER = "ET"
-    private const val MANIFEST_URL = "https://etqwfd.github.io/LocalDream-ET/update.json"
+    // et.25: dual channel. GitHub (Pages + raw + releases) is authoritative;
+    // Gitee mirror is only a fallback and a 404/unreachable Gitee must NOT fail
+    // the check — any one channel being available is enough.
     private const val RELEASES_API =
         "https://api.github.com/repos/ETQWFD/LocalDream-ET/releases/latest"
 
@@ -81,8 +83,17 @@ object AppUpdater {
      * versionCode is strictly newer than the installed build, otherwise null.
      */
     suspend fun check(): UpdateInfo? = withContext(Dispatchers.IO) {
-        runCatching { fetchManifest() }.getOrNull()
-            ?: runCatching { fetchLatestRelease() }.getOrNull()
+        // et.25 dual channel: try GitHub Pages, GitHub raw, then the optional
+        // Gitee mirror. A failing Gitee channel is ignored.
+        val channels = listOf(
+            io.github.xororz.localdream.cloud.CloudConfig.githubUpdateJson,
+            io.github.xororz.localdream.cloud.CloudConfig.githubUpdateJsonRaw,
+            io.github.xororz.localdream.cloud.CloudConfig.giteeUpdateJson,
+        )
+        for (url in channels) {
+            runCatching { fetchManifest(url) }.getOrNull()?.let { return@withContext it }
+        }
+        runCatching { fetchLatestRelease() }.getOrNull()
     }
 
     private fun httpGet(url: String): String {
@@ -97,8 +108,8 @@ object AppUpdater {
         }
     }
 
-    private fun fetchManifest(): UpdateInfo? {
-        val json = JSONObject(httpGet(MANIFEST_URL))
+    private fun fetchManifest(url: String): UpdateInfo? {
+        val json = JSONObject(httpGet(url))
         val url = json.optString("apkUrl").ifBlank { json.optString("apk_url") }
         if (url.isBlank()) return null
         return UpdateInfo(

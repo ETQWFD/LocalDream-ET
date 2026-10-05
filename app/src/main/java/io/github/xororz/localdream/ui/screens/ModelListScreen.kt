@@ -301,6 +301,8 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
     var showCustomModelDialog by remember { mutableStateOf(false) }
     var showUrlImportDialog by remember { mutableStateOf(false) }
     var showAddMenu by remember { mutableStateOf(false) }
+    var showLogsPage by remember { mutableStateOf(false) }
+    var showCloudBackupDialog by remember { mutableStateOf(false) }
     var showCustomNpuModelDialog by remember { mutableStateOf(false) }
     var isConverting by remember { mutableStateOf(false) }
     var conversionProgress by remember { mutableStateOf("") }
@@ -568,6 +570,14 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                 }
             },
         )
+    }
+
+    if (showLogsPage) {
+        LogsPage(onBack = { showLogsPage = false })
+    }
+
+    if (showCloudBackupDialog) {
+        CloudBackupDialog(onDismiss = { showCloudBackupDialog = false })
     }
 
     LaunchedEffect(showSettingsDialog) {
@@ -1108,6 +1118,26 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                                 onClick = {
                                     menuExpanded = false
                                     navController.navigate(Screen.RemoteLink.route)
+                                },
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.logs_title)) },
+                                leadingIcon = {
+                                    Icon(Icons.Default.Article, contentDescription = null)
+                                },
+                                onClick = {
+                                    menuExpanded = false
+                                    showLogsPage = true
+                                },
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.cloud_backup_title)) },
+                                leadingIcon = {
+                                    Icon(Icons.Default.Cloud, contentDescription = null)
+                                },
+                                onClick = {
+                                    menuExpanded = false
+                                    showCloudBackupDialog = true
                                 },
                             )
                             DropdownMenuItem(

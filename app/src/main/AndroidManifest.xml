@@ -94,6 +94,7 @@
             android:enabled="true"
             android:exported="false" />
 
+
         <!-- Shares downloaded update APKs with the system package installer. -->
         <provider
             android:name="androidx.core.content.FileProvider"
