@@ -585,6 +585,44 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                     ) {
                         Text(stringResource(R.string.export_diagnostics))
                     }
+
+                    // et.30: in-about memory diagnostic readout.
+                    var memRefresh by remember { mutableStateOf(0) }
+                    val memLines = remember(memRefresh) {
+                        runCatching {
+                            val rt = Runtime.getRuntime()
+                            val used = (rt.totalMemory() - rt.freeMemory()) / (1024 * 1024)
+                            val total = rt.totalMemory() / (1024 * 1024)
+                            val max = rt.maxMemory() / (1024 * 1024)
+                            val am = context.getSystemService(android.content.Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+                            val mi = android.app.ActivityManager.MemoryInfo()
+                            am.getMemoryInfo(mi)
+                            val avail = mi.availMem / (1024 * 1024)
+                            val sysTotal = mi.totalMem / (1024 * 1024)
+                            val hwm = io.github.xororz.localdream.utils.EngineMemoryStats.lastVmHwmKb / 1024
+                            val rss = io.github.xororz.localdream.utils.EngineMemoryStats.lastVmRssKb / 1024
+                            val threads = io.github.xororz.localdream.utils.EngineMemoryStats.lastThreads
+                            listOf(
+                                "Java heap: ${used}MB / ${total}MB (max ${max}MB)",
+                                "System: ${avail}MB avail / ${sysTotal}MB total",
+                                "Engine peak: ${hwm}MB HWM, ${rss}MB RSS, ${threads} threads",
+                            )
+                        }.getOrDefault(listOf("(unavailable)"))
+                    }
+                    Text(
+                        stringResource(R.string.mem_diag_title),
+                        style = MaterialTheme.typography.titleSmall,
+                        modifier = Modifier.padding(top = 12.dp, bottom = 4.dp),
+                    )
+                    memLines.forEach { Text(it, style = MaterialTheme.typography.bodySmall) }
+                    TextButton(onClick = { memRefresh++ }) {
+                        Text(stringResource(R.string.mem_diag_refresh))
+                    }
+                    Text(
+                        stringResource(R.string.mem_diag_note),
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
                 }
             },
             confirmButton = {

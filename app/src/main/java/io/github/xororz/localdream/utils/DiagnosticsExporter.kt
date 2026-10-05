@@ -39,7 +39,7 @@ object DiagnosticsExporter {
         sb.appendLine("==== LocalDream ET Diagnostic Report ====")
         sb.appendLine("generated: ${Date()}")
         appendAppInfo(context, sb)
-        appendDeviceInfo(sb)
+        appendDeviceInfo(context, sb)
         appendModelsListing(context, sb)
         appendEngineLogs(context, sb)
         appendConvertLogs(context, sb)
@@ -88,7 +88,7 @@ object DiagnosticsExporter {
         sb.appendLine("versionCode: $vc")
     }.getOrElse { sb.appendLine("App: unavailable: ${it.message}") }
 
-    private fun appendDeviceInfo(sb: StringBuilder) = runCatching {
+    private fun appendDeviceInfo(context: Context, sb: StringBuilder) = runCatching {
         sb.appendLine("\n---- Device ----")
         sb.appendLine("manufacturer: ${Build.MANUFACTURER}")
         sb.appendLine("model: ${Build.MODEL}")
@@ -97,6 +97,18 @@ object DiagnosticsExporter {
         sb.appendLine("androidRelease: ${Build.VERSION.RELEASE} (sdk ${Build.VERSION.SDK_INT})")
         val rt = Runtime.getRuntime()
         sb.appendLine("memTotalMb: ${rt.totalMemory() / (1024 * 1024)}  memFreeMb: ${rt.freeMemory() / (1024 * 1024)}  memMaxMb: ${rt.maxMemory() / (1024 * 1024)}")
+        // et.30: system memory + PSS + engine child peak.
+        val am = context.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+        val mi = android.app.ActivityManager.MemoryInfo()
+        am.getMemoryInfo(mi)
+        sb.appendLine("sysAvailMb: ${mi.availMem / (1024 * 1024)}  sysTotalMb: ${mi.totalMem / (1024 * 1024)}  thresholdMb: ${mi.threshold / (1024 * 1024)}  lowMemory: ${mi.lowMemory}")
+        val pss = android.os.Debug.MemoryInfo()
+        android.os.Debug.getMemoryInfo(pss)
+        sb.appendLine("pssTotalKb: ${pss.totalPss}  nativePssKb: ${pss.nativePss}  dalvikPssKb: ${pss.dalvikPss}")
+        sb.appendLine("cpuCores: ${Runtime.getRuntime().availableProcessors()}  engineThreadsPerSession: 4")
+        sb.appendLine("engineVmRssKb: ${EngineMemoryStats.lastVmRssKb}  engineVmHwmKb: ${EngineMemoryStats.lastVmHwmKb}  engineThreads: ${EngineMemoryStats.lastThreads}")
+        // et.30: OpenCL/GPU probe for diagnostics.
+        sb.appendLine("openclProbe: ${DeviceCapabilities.openclProbeReport()}")
     }.getOrElse { sb.appendLine("Device: unavailable: ${it.message}") }
 
     private fun appendModelsListing(context: Context, sb: StringBuilder) = runCatching {

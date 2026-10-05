@@ -321,6 +321,15 @@
     <string name="restore_pick_first">請先選擇圖片。</string>
     <string name="restore_run">修改圖片</string>
     <string name="restore_started">已開始生成，結果見歷史。</string>
+    <string name="mem_warn_title">可用記憶體偏低</string>
+    <string name="mem_warn_body">目前可用記憶體偏低，切換到其他應用可能卡頓，且可能生成失敗。建議：尺寸降到 512、步數降到 20、關閉其他背景應用。</string>
+    <string name="mem_warn_proceed">仍要生成</string>
+    <string name="mem_warn_adjust">去調整</string>
+    <string name="mem_diag_title">記憶體診斷</string>
+    <string name="mem_diag_refresh">重新整理</string>
+    <string name="mem_diag_note">診斷資訊，隨機型/執行階段波動。</string>
+    <string name="err_engine_oom_killed">記憶體不足，引擎被系統結束：已自動降到 384 安全參數重試仍失敗，請手動選 384 或更低、關閉背景其他應用。</string>
+    <string name="gpu_unavailable_cpu">本機未偵測到可用 GPU(OpenCL)，使用 CPU 執行（速度較慢）。</string>
     <string name="error_model_extract_incomplete">模型「%1$s」檔案不完整，缺少執行所需權重。安裝包已保留，請重新下載或修復模型；仍失敗請刪除後重新下載。</string>
     <string name="restore_pick_model">請從列表中選擇一個已下載模型開始。</string>
     <string name="close">關閉</string>

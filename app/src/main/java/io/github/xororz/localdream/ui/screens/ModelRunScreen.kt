@@ -271,6 +271,8 @@ fun ModelRunScreen(
     var showResetConfirmDialog by remember { mutableStateOf(false) }
     var showOpenCLWarningDialog by remember { mutableStateOf(false) }
     var showInterruptDialog by remember { mutableStateOf(false) }
+    var showMemWarn by remember { mutableStateOf(false) }
+    var memWarnBypass by remember { mutableStateOf(false) }
 
     var currentBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var intermediateBitmap by remember { mutableStateOf<Bitmap?>(null) }
@@ -1359,12 +1361,15 @@ fun ModelRunScreen(
             if (shouldStitch) {
                 withContext(Dispatchers.IO) {
                     try {
+                        // et.30: sample-decode the 12MP source to long edge <=2048
+                        // before compositing; final output is <=768 anyway.
                         val originalBitmap =
-                            context.contentResolver.openInputStream(snapshotSelectedImageUri!!)!!
-                                .use { BitmapFactory.decodeStream(it) }
+                            io.github.xororz.localdream.utils.ImageDecode
+                                .decodeSampledUri(context, snapshotSelectedImageUri!!, 2048)
 
                         val mutableOriginal =
-                            originalBitmap.copy(Bitmap.Config.ARGB_8888, true)
+                            originalBitmap?.copy(Bitmap.Config.ARGB_8888, true)
+                                ?: error("decode failed")
 
                         snapshotDrawingOverlayBitmap?.let { drawing ->
                             drawImageOverlay(mutableOriginal, drawing, snapshotCropRect!!)
@@ -1481,6 +1486,19 @@ fun ModelRunScreen(
             LogCapture.start()
         }
         onDispose {
+            // et.30: release the native engine child process when leaving the
+            // screen, but ONLY if no generation task is running — an active
+            // foreground generation must keep the engine alive.
+            runCatching {
+                val state = backendState
+                val generating = state is BackendService.BackendState.Running ||
+                    state is BackendService.BackendState.Starting
+                if (!generating) {                    context.startService(
+                        Intent(context, io.github.xororz.localdream.service.BackendService::class.java)
+                            .setAction(BackendService.ACTION_STOP),
+                    )
+                }
+            }
             if (captureEnabled) {
                 LogCapture.stopAndPublish()
             }
@@ -1517,7 +1535,7 @@ fun ModelRunScreen(
 
             promptField.replaceText(if (isFirstRun) defaults.prompt else prefs.prompt)
             negativePromptField.replaceText(
-                if (isFirstRun) defaults.negativePrompt else prefs.negativePrompt,
+                if (isFirstRun) io.github.xororz.localdream.data.Model.DEFAULT_NEGATIVE else prefs.negativePrompt,
             )
 
             steps = if (isFirstRun) defaults.steps else prefs.steps
@@ -1682,7 +1700,8 @@ fun ModelRunScreen(
         if (currentBitmap != null) return@LaunchedEffect
         val item = recentHistory.firstOrNull() ?: return@LaunchedEffect
         val bitmap = withContext(Dispatchers.IO) {
-            BitmapFactory.decodeFile(item.imageFile.absolutePath)
+            io.github.xororz.localdream.utils.ImageDecode
+                .decodeSampledFile(item.imageFile.absolutePath, 768)
         }
         if (bitmap != null && currentBitmap == null) {
             currentBitmap = bitmap
@@ -2024,13 +2043,13 @@ fun ModelRunScreen(
                 scheduler = defaults.scheduler
                 aspectRatio = defaults.aspectRatio
                 promptField.replaceText(defaults.prompt)
-                negativePromptField.replaceText(defaults.negativePrompt)
+                negativePromptField.replaceText(io.github.xororz.localdream.data.Model.DEFAULT_NEGATIVE)
                 denoiseStrength = defaults.denoiseStrength
                 scope.launch(Dispatchers.IO) {
                     generationPreferences.saveAllFields(
                         modelId = modelId,
                         prompt = defaults.prompt,
-                        negativePrompt = defaults.negativePrompt,
+                        negativePrompt = io.github.xororz.localdream.data.Model.DEFAULT_NEGATIVE,
                         steps = defaults.steps,
                         cfg = defaults.cfg,
                         seed = defaults.seed,
@@ -2520,6 +2539,17 @@ fun ModelRunScreen(
                             onClick = {
                                 focusManager.clearFocus()
                                 pendingUltrafix = false
+                                // et.30: pre-generation memory advisory. Non-blocking:
+                                // if availMem is low, ask the user before starting.
+                                if (!memWarnBypass) {
+                                    val advice = io.github.xororz.localdream.utils.MemoryAdvisor
+                                        .assess(context, maxOf(currentWidth, currentHeight), model?.backendType ?: "sd15cpu")
+                                    if (advice.shouldWarn) {
+                                        showMemWarn = true
+                                        return@Button
+                                    }
+                                }
+                                memWarnBypass = false
                                 Log.d(
                                     "ModelRunScreen",
                                     "start generation",
@@ -2769,6 +2799,24 @@ fun ModelRunScreen(
                                 }
                             }
                         }
+                    }
+                    if (showMemWarn) {
+                        AlertDialog(
+                            onDismissRequest = { showMemWarn = false },
+                            title = { Text(stringResource(R.string.mem_warn_title)) },
+                            text = { Text(stringResource(R.string.mem_warn_body)) },
+                            confirmButton = {
+                                TextButton(onClick = {
+                                    memWarnBypass = true
+                                    showMemWarn = false
+                                }) { Text(stringResource(R.string.mem_warn_proceed)) }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = { showMemWarn = false }) {
+                                    Text(stringResource(R.string.mem_warn_adjust))
+                                }
+                            },
+                        )
                     }
                 }
             }
@@ -3344,7 +3392,8 @@ fun ModelRunScreen(
                             onHistoryThumbClick = { item ->
                                 scope.launch {
                                     val bitmap = withContext(Dispatchers.IO) {
-                                        BitmapFactory.decodeFile(item.imageFile.absolutePath)
+                                        io.github.xororz.localdream.utils.ImageDecode
+                                            .decodeSampledFile(item.imageFile.absolutePath, 768)
                                     }
                                     if (bitmap != null) {
                                         currentBitmap = bitmap
@@ -3887,7 +3936,9 @@ fun ModelRunScreen(
         val detailImagePath = selectedHistoryItem?.imageFile?.absolutePath
         val historyBitmap by produceState<Bitmap?>(null, detailImagePath) {
             value = withContext(Dispatchers.IO) {
-                detailImagePath?.let { BitmapFactory.decodeFile(it) }
+                detailImagePath?.let {
+                    io.github.xororz.localdream.utils.ImageDecode.decodeSampledFile(it, 1024)
+                }
             }
         }
         val dismissDetail = {
@@ -4069,7 +4120,8 @@ fun ModelRunScreen(
                 if (item != null) {
                     scope.launch {
                         val bmp = withContext(Dispatchers.IO) {
-                            BitmapFactory.decodeFile(item.imageFile.absolutePath)
+                            io.github.xororz.localdream.utils.ImageDecode
+                                .decodeSampledFile(item.imageFile.absolutePath, 768)
                         }
                         if (bmp != null) {
                             sendBitmapToImg2img(bmp)

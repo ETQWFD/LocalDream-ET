@@ -31,6 +31,13 @@ class LocalDreamApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         io.github.xororz.localdream.cloud.RollingLogger.init(this)
+        // et.30: log OpenCL/GPU probe once at startup for diagnostics.
+        runCatching {
+            io.github.xororz.localdream.cloud.LogHub.log(
+                io.github.xororz.localdream.cloud.LogHub.Category.APP,
+                "openclProbe: ${io.github.xororz.localdream.utils.DeviceCapabilities.openclProbeReport()}",
+            )
+        }
         // et.28: log uncaught crashes to filesDir/crash_<ts>.log before delegating
         // to the default handler, so a screen-off generation crash is diagnosable.
         val prev = Thread.getDefaultUncaughtExceptionHandler()

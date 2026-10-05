@@ -453,6 +453,16 @@ internal fun AdvancedSettingsDialog(
                             Text("GPU")
                         }
                     }
+                    // et.30: show a note when SD1.5 has no usable OpenCL GPU.
+                    if (!isDit && !isSdxl && runOnCpu &&
+                        !io.github.xororz.localdream.utils.DeviceCapabilities.openclRecommended()
+                    ) {
+                        Text(
+                            stringResource(R.string.gpu_unavailable_cpu),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
                 Column {
                     Text(

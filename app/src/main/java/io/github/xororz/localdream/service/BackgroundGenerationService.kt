@@ -73,6 +73,11 @@ class BackgroundGenerationService : Service() {
     // the generation instead of computing a result nobody will read.
     @Volatile
     private var activeCall: okhttp3.Call? = null
+    // et.30: mutable init-image copy for OOM safe-step rescale.
+    private var retryImage: String? = null
+    // et.30: engine context for OOM auto-restart.
+    private var engineModelId: String? = null
+    private var engineBackendType: String = "sd15cpu"
 
     @Volatile
     private var cancelRequested = false
@@ -197,8 +202,8 @@ class BackgroundGenerationService : Service() {
         val steps = data.getIntExtra("steps", 20)
         val cfg = data.getFloatExtra("cfg", 7f)
         val seed = if (data.hasExtra("seed")) data.getLongExtra("seed", 0) else null
-        val width = data.getIntExtra("width", 512)
-        val height = data.getIntExtra("height", 512)
+        var width = data.getIntExtra("width", 512)
+        var height = data.getIntExtra("height", 512)
         // Effective dimensions = target crop size for SDXL aspect-pad mode,
         // or equal to width/height otherwise. Used for decoding progress
         // previews which the backend already crops to the visible region.
@@ -220,6 +225,9 @@ class BackgroundGenerationService : Service() {
         // Backend to talk to: the local backend by default, or a remote host's
         // generation port when running in connected-device mode.
         val backendHost = data.getStringExtra("backend_host") ?: LOCAL_BACKEND_HOST
+        // et.30: save model context for OOM auto-restart of the engine.
+        engineModelId = data.getStringExtra("modelId")
+        engineBackendType = data.getStringExtra("backendType") ?: "sd15cpu"
 
         val image = if (ultrafix) {
             try {
@@ -248,6 +256,7 @@ class BackgroundGenerationService : Service() {
         } else {
             null
         }
+        retryImage = image
         val mask = if (data.getBooleanExtra("has_mask", false)) {
             try {
                 val maskFile = File(applicationContext.filesDir, "mask.txt")
@@ -356,9 +365,15 @@ class BackgroundGenerationService : Service() {
             var attemptCfg = cfg
             var attemptSampler = scheduler
             var attemptSteps = steps
+            var attemptWidth = width
+            var attemptHeight = height
             var cpuRetryDone = false
+            // et.30: independent OOM safe-step retry (384 long edge). Each flag
+            // fires at most once so GPU->CPU and OOM->384 cannot loop.
+            var safeOomRetryDone = false
 
             attemptLoop@ while (true) {
+            try {
             val jsonObject = JSONObject().apply {
                 put("prompt", prompt)
                 put("negative_prompt", negativePrompt)
@@ -367,8 +382,8 @@ class BackgroundGenerationService : Service() {
                 // Per-step previews come back as base64 JPEG (tiny) instead of
                 // raw RGB; the final image stays raw (lossless, loopback-cheap).
                 put("preview_format", "jpeg")
-                put("width", width)
-                put("height", height)
+                put("width", attemptWidth)
+                put("height", attemptHeight)
                 put("denoise_strength", denoiseStrength)
                 put("use_opencl", attemptOpenCL)
                 put("scheduler", attemptSampler)
@@ -387,7 +402,7 @@ class BackgroundGenerationService : Service() {
                     put("aspect_ratio", aspectRatio)
                 }
                 seed?.let { put("seed", it) }
-                image?.let { put("image", it) }
+                retryImage?.let { put("image", it) }
                 mask?.let { put("mask", it) }
                 referenceImages?.let { put("reference_images", it) }
             }
@@ -707,6 +722,88 @@ class BackgroundGenerationService : Service() {
             // once with CPU safe params. Otherwise the attempt loop is finished.
             if (cpuRetryDone) continue@attemptLoop
             break@attemptLoop
+            } catch (e: Exception) {
+                val exitCode = io.github.xororz.localdream.utils.EngineExitInfo.lastExitCode
+                val engineDied = exitCode in setOf(137, 134, 139) ||
+                    (e.message ?: "").let { m ->
+                        m.contains("read interrupted", true) ||
+                            m.contains("connection reset", true) ||
+                            m.contains("broken pipe", true) ||
+                            m.contains("unexpected end", true)
+                    }
+                if (engineDied && !safeOomRetryDone) {
+                    safeOomRetryDone = true
+                    io.github.xororz.localdream.cloud.LogHub.log(
+                        io.github.xororz.localdream.cloud.LogHub.Category.GENERATE,
+                        "Engine died mid-run (exit=$exitCode, err=${e.message}); auto retry at 384 safe step",
+                    )
+                    val ratio = io.github.xororz.localdream.ui.screens.inferAspectRatioString(attemptWidth, attemptHeight)
+                    val (nw, nh) = io.github.xororz.localdream.ui.screens.sd15SizeForRatio(ratio, 384)
+                    attemptWidth = nw
+                    attemptHeight = nh
+                    attemptCfg = 7f
+                    attemptSampler = "dpm++2m"
+                    attemptSteps = 20
+                    // Restart the engine at the new safe resolution, then wait
+                    // for 8081 to be ready before resending.
+                    if (engineModelId != null) {
+                        try {
+                            val restartIntent = android.content.Intent(
+                                this@BackgroundGenerationService,
+                                io.github.xororz.localdream.service.BackendService::class.java,
+                            ).apply {
+                                setAction(io.github.xororz.localdream.service.BackendService.ACTION_RESTART)
+                                putExtra("modelId", engineModelId)
+                                putExtra("backendType", engineBackendType)
+                                putExtra("use_opencl", false)
+                                putExtra("width", attemptWidth)
+                                putExtra("height", attemptHeight)
+                            }
+                            startService(restartIntent)
+                            // Wait for the new engine to listen on 8081.
+                            var waited = 0L
+                            var ready = false
+                            while (waited < 45_000L) {
+                                try {
+                                    java.net.Socket("127.0.0.1", 8081).use { ready = true; break }
+                                } catch (_: Exception) {
+                                    Thread.sleep(400)
+                                    waited += 400
+                                }
+                            }
+                            io.github.xororz.localdream.cloud.LogHub.log(
+                                io.github.xororz.localdream.cloud.LogHub.Category.GENERATE,
+                                if (ready) "Engine restarted, 8081 ready at ${attemptWidth}x${attemptHeight}"
+                                else "Engine restart timed out waiting for 8081",
+                            )
+                            if (!ready) throw IOException("Engine restart timeout")
+                        } catch (re: Exception) {
+                            io.github.xororz.localdream.cloud.LogHub.log(
+                                io.github.xororz.localdream.cloud.LogHub.Category.GENERATE,
+                                "Engine restart failed: ${re.message}",
+                            )
+                        }
+                    }
+                    // Rescale the init image to the new safe resolution.
+                    if (!image.isNullOrBlank()) {
+                        try {
+                            val bytes = android.util.Base64.decode(image, android.util.Base64.DEFAULT)
+                            val bmp = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                            if (bmp != null) {
+                                val scaled = android.graphics.Bitmap.createScaledBitmap(bmp, attemptWidth, attemptHeight, true)
+                                if (scaled != bmp) bmp.recycle()
+                                val baos = java.io.ByteArrayOutputStream()
+                                scaled.compress(android.graphics.Bitmap.CompressFormat.JPEG, 92, baos)
+                                // Replace the image used in the JSON.
+                                retryImage = android.util.Base64.encodeToString(baos.toByteArray(), android.util.Base64.NO_WRAP)
+                            }
+                        } catch (_: Exception) {}
+                    }
+                    updateState(GenerationState.Progress(0f))
+                    continue@attemptLoop
+                }
+                throw e
+            }
             } // attemptLoop
         } catch (e: Exception) {
             if (completed) {
@@ -722,7 +819,7 @@ class BackgroundGenerationService : Service() {
                 Log.e("GenerationService", "generation error", e)
                 updateState(
                     GenerationState.Error(
-                        e.message ?: this@BackgroundGenerationService.getString(R.string.unknown_error),
+                        getString(R.string.err_engine_oom_killed),
                     ),
                 )
             }

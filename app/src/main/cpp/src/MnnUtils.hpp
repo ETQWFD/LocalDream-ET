@@ -11,6 +11,7 @@
 #include <filesystem>
 #include <string>
 #include <system_error>
+#include <thread>
 
 // Returns "{model_dir}/cache", creating it if needed. Returns "" when
 // model_dir is empty or directory creation fails; callers must treat that
@@ -88,7 +89,15 @@ inline MNN::Session *createMnnSession(MNN::Interpreter *interpreter,
     backendConfig.precision = MNN::BackendConfig::Precision_Low;
   } else {
     config.type = MNN_FORWARD_CPU;
-    config.numThread = opts.num_threads;
+    // et.30: on 32-bit ABIs the address space is ~2-3GB and extra threads
+    // stack memory pushes peak RSS over the limit (SIGKILL 137). Cap CPU
+    // threads to 3 on 32-bit, keep 4 on 64-bit.
+    int threads = opts.num_threads;
+    if (sizeof(void*) < 8) {
+      int cores = std::max(2, (int)std::thread::hardware_concurrency());
+      threads = std::min(threads, std::min(3, cores));
+    }
+    config.numThread = threads;
     backendConfig.memory = MNN::BackendConfig::Memory_Low;
   }
   backendConfig.power = MNN::BackendConfig::Power_High;

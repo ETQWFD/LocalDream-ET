@@ -54,17 +54,22 @@ fun RestoreScreen(
     var preview by remember { mutableStateOf<Bitmap?>(null) }
     var busy by remember { mutableStateOf(false) }
     var msg by remember { mutableStateOf<String?>(null) }
+    var showMemWarn by remember { mutableStateOf(false) }
+    var memWarnBypass by remember { mutableStateOf(false) }
 
     val picker = rememberLauncherForActivityResult(
         ActivityResultContracts.GetContent(),
     ) { uri: Uri? ->
         uri ?: return@rememberLauncherForActivityResult
         scope.launch {
+            // et.30: sample-decode so a multi-MP phone photo does not hold tens
+            // of MB of ARGB; the long edge is capped to the RAM-tier generation size.
+            val maxEdge = io.github.xororz.localdream.utils.DeviceCapabilities
+                .sd15LongEdgeForRam(context)
             val bmp = withContext(Dispatchers.IO) {
                 runCatching {
-                    context.contentResolver.openInputStream(uri)?.use {
-                        BitmapFactory.decodeStream(it)
-                    }
+                    io.github.xororz.localdream.utils.ImageDecode
+                        .decodeSampledUri(context, uri, maxEdge)
                 }.getOrNull()
             }
             preview = bmp
@@ -138,6 +143,16 @@ fun RestoreScreen(
                         msg = context.getString(R.string.restore_pick_first)
                         return@Button
                     }
+                    // et.30: pre-generation memory advisory (non-blocking).
+                    if (!memWarnBypass) {
+                        val advice = io.github.xororz.localdream.utils.MemoryAdvisor
+                            .assess(context, io.github.xororz.localdream.utils.DeviceCapabilities.sd15LongEdgeForRam(context), backendType)
+                        if (advice.shouldWarn) {
+                            showMemWarn = true
+                            return@Button
+                        }
+                    }
+                    memWarnBypass = false
                     busy = true
                     msg = null
                     io.github.xororz.localdream.utils.BatteryOptimization.ensureIgnoring(context)
@@ -155,11 +170,10 @@ fun RestoreScreen(
                                 )
                                 val targetW = if (bmp.width >= bmp.height) w else h
                                 val targetH = if (bmp.width >= bmp.height) h else w
-                                val baos = ByteArrayOutputStream()
-                                bmp.compress(Bitmap.CompressFormat.PNG, 100, baos)
-                                val b64 = android.util.Base64.encodeToString(
-                                    baos.toByteArray(), android.util.Base64.NO_WRAP,
-                                )
+                                // et.30: encode as JPEG (not PNG) and base64; photo
+                                // bytes are far smaller, matching the main img2img path.
+                                val b64 = io.github.xororz.localdream.utils.ImageDecode
+                                    .toJpegBase64(bmp, 92)
                                 java.io.File(context.filesDir, "tmp.txt").writeText(b64)
                                 // 1) declare/start the chosen model engine first.
                                 val be = Intent(context, io.github.xororz.localdream.service.BackendService::class.java).apply {
@@ -208,6 +222,43 @@ fun RestoreScreen(
                 modifier = Modifier.fillMaxWidth(),
             ) { Text(stringResource(R.string.restore_run)) }
             msg?.let { Text(it) }
+            if (showMemWarn) {
+                androidx.compose.material3.AlertDialog(
+                    onDismissRequest = { showMemWarn = false },
+                    title = { Text(stringResource(R.string.mem_warn_title)) },
+                    text = { Text(stringResource(R.string.mem_warn_body)) },
+                    confirmButton = {
+                        androidx.compose.material3.TextButton(onClick = {
+                            memWarnBypass = true
+                            showMemWarn = false
+                        }) { Text(stringResource(R.string.mem_warn_proceed)) }
+                    },
+                    dismissButton = {
+                        androidx.compose.material3.TextButton(onClick = { showMemWarn = false }) {
+                            Text(stringResource(R.string.mem_warn_adjust))
+                        }
+                    },
+                )
+            }
+        }
+    }
+
+    // et.30: release the native engine when leaving, but only if no task is running.
+    androidx.compose.runtime.DisposableEffect(modelId) {
+        onDispose {
+            runCatching {
+                val state = io.github.xororz.localdream.service.BackendService.backendState.value
+                val generating = state is io.github.xororz.localdream.service.BackendService.BackendState.Running ||
+                    state is io.github.xororz.localdream.service.BackendService.BackendState.Starting
+                if (!busy && !generating) {
+                    context.startService(
+                        android.content.Intent(
+                            context,
+                            io.github.xororz.localdream.service.BackendService::class.java,
+                        ).setAction(io.github.xororz.localdream.service.BackendService.ACTION_STOP),
+                    )
+                }
+            }
         }
     }
 }

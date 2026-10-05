@@ -132,9 +132,10 @@ fun UpscaleScreen(navController: NavController, modifier: Modifier = Modifier) {
         uri?.let {
             scope.launch(Dispatchers.IO) {
                 try {
-                    val bitmap = context.contentResolver.openInputStream(it)?.use { stream ->
-                        BitmapFactory.decodeStream(stream)
-                    }
+                    // et.30: sample-decode to long edge <=1536 to avoid OOM on
+                    // 12MP phone photos; upscaler input is capped below anyway.
+                    val bitmap = io.github.xororz.localdream.utils.ImageDecode
+                        .decodeSampledUri(context, it, 1536)
 
                     if (bitmap != null) {
                         val totalPixels = bitmap.width.toLong() * bitmap.height.toLong()

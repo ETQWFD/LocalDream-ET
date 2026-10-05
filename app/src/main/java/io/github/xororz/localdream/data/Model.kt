@@ -457,7 +457,12 @@ data class Model(
         // performUpscale() actually loads, not just a non-empty directory.
         const val UPSCALER_FILE_NAME = "upscaler.bin"
 
-        fun isUpscalerDownloaded(context: Context, upscalerId: String): Boolean {
+        // et.30: slim default negative prompt (was a long clothes/maid template that
+    // inflated CLIP tokens and repeated <|endoftext|> chunks). ~60-70 tokens.
+    const val DEFAULT_NEGATIVE =
+        "lowres, bad anatomy, bad hands, missing fingers, extra fingers, extra limbs, deformed, blurry, ugly, worst quality, watermark, text, jpeg artifacts"
+
+    fun isUpscalerDownloaded(context: Context, upscalerId: String): Boolean {
             val file = File(File(getModelsDir(context), upscalerId), UPSCALER_FILE_NAME)
             return file.exists() && file.length() > 0
         }

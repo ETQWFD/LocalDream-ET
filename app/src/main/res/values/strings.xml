@@ -331,6 +331,15 @@
     <string name="restore_pick_first">Please pick an image first.</string>
     <string name="restore_run">Edit Image</string>
     <string name="restore_started">Started; see history for the result.</string>
+    <string name="mem_warn_title">Low available memory</string>
+    <string name="mem_warn_body">Available memory is low; the app may jank and generation may fail. Suggested: lower size to 512, steps to 20, and close other background apps.</string>
+    <string name="mem_warn_proceed">Generate anyway</string>
+    <string name="mem_warn_adjust">Adjust</string>
+    <string name="mem_diag_title">Memory diagnostic</string>
+    <string name="mem_diag_refresh">Refresh</string>
+    <string name="mem_diag_note">Diagnostic info; varies by device and runtime stage.</string>
+    <string name="err_engine_oom_killed">Out of memory: the engine was killed by the system. We auto-retried at the safe 384 setting; if it still fails, please choose 384 or lower and close other background apps.</string>
+    <string name="gpu_unavailable_cpu">No usable GPU (OpenCL) detected on this device; running on CPU (slower).</string>
     <string name="error_model_extract_incomplete">Model "%1$s" files are incomplete (missing required weights). The downloaded package is kept; please retry or repair the model. If it still fails, delete and re-download.</string>
     <string name="restore_pick_model">Pick a downloaded model from the list to start.</string>
     <string name="close">Close</string>

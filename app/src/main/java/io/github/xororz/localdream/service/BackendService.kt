@@ -729,7 +729,15 @@ class BackendService : Service() {
             }
 
             val proc = processBuilder.start()
+            // et.30: clear stale exit code before starting a new engine so the
+            // next crash is not confused with a previous 137.
+            io.github.xororz.localdream.utils.EngineExitInfo.clear()
             process = proc
+            // et.30: track the engine child process's peak RSS for diagnostics.
+            runCatching {
+                val pid = proc.javaClass.getMethod("pid").invoke(proc) as Int
+                io.github.xororz.localdream.utils.EngineMemoryStats.attach(pid)
+            }
             io.github.xororz.localdream.cloud.LogHub.log(
                 io.github.xororz.localdream.cloud.LogHub.Category.ENGINE,
                 "Engine start: $modelId pid=${proc.hashCode()}",
@@ -785,6 +793,7 @@ class BackendService : Service() {
             val exitCode = try {
                 proc.inputStream.bufferedReader().use { reader ->
                     var line: String?
+                    var n = 0
                     while (reader.readLine().also { line = it } != null) {
                         Log.i(TAG, "Backend: $line")
                         line?.let {
@@ -792,8 +801,12 @@ class BackendService : Service() {
                             tail.addLast(it)
                             while (tail.size > 40) tail.pollFirst()
                         }
+                        if (++n % 20 == 0) {
+                            runCatching { io.github.xororz.localdream.utils.EngineMemoryStats.sample() }
+                        }
                     }
                 }
+                runCatching { io.github.xororz.localdream.utils.EngineMemoryStats.sample() }
                 proc.waitFor()
             } catch (e: Exception) {
                 Log.e(TAG, "monitor error", e)
@@ -883,6 +896,20 @@ class BackendService : Service() {
                 }
 
                 Log.i(TAG, "process end, code: ${proc.exitValue()}")
+                runCatching {
+                    io.github.xororz.localdream.utils.EngineExitInfo.record(proc.exitValue(), servingModelId.value ?: "")
+                    io.github.xororz.localdream.cloud.LogHub.log(
+                        io.github.xororz.localdream.cloud.LogHub.Category.ENGINE,
+                        io.github.xororz.localdream.utils.EngineExitInfo.describe(proc.exitValue()),
+                    )
+                }
+                runCatching {
+                    io.github.xororz.localdream.utils.EngineMemoryStats.sample()
+                    io.github.xororz.localdream.cloud.LogHub.log(
+                        io.github.xororz.localdream.cloud.LogHub.Category.ENGINE,
+                        "Engine peak VmHWM=${io.github.xororz.localdream.utils.EngineMemoryStats.lastVmHwmKb}kB threads=${io.github.xororz.localdream.utils.EngineMemoryStats.lastThreads}",
+                    )
+                }
                 updateState(BackendState.Idle)
             } catch (e: Exception) {
                 Log.e(TAG, "error", e)

@@ -184,6 +184,26 @@ object DeviceCapabilities {
             ))
     }
 
+    // et.30: detailed OpenCL/GPU probe for diagnostics (not gating). Logs once.
+    fun openclProbeReport(): String {
+        val r = glRenderer().orEmpty()
+        val vendor = when {
+            r.contains("adreno", true) -> "Adreno"
+            r.contains("mali", true) -> "Mali"
+            r.contains("xclipse", true) -> "Xclipse"
+            r.contains("powervr", true) -> "PowerVR"
+            else -> "unknown"
+        }
+        val paths = listOf(
+            "/system/lib/libOpenCL.so", "/system/lib64/libOpenCL.so",
+            "/vendor/lib/libOpenCL.so", "/vendor/lib64/libOpenCL.so",
+            "/system/vendor/lib/libOpenCL.so", "/system/vendor/lib64/libOpenCL.so",
+            "/system/lib/egl/libGLES_mali.so", "/vendor/lib/egl/libGLES_mali.so",
+        )
+        val present = paths.filter { java.io.File(it).exists() }
+        return "GL_RENDERER=$r vendor=$vendor openclPathsPresent=${present.joinToString(",")}"
+    }
+
     /** Big DiT (Z-Image / FLUX.2 Klein / Qwen Image 2.1): arm64 + elite NPU. */
     fun canRunDit(): Boolean {
         if (!is64Bit()) return false
@@ -221,6 +241,9 @@ object DeviceCapabilities {
      * MNN fp16 UNet does not OOM on mid-range phones.
      */
     fun sd15LongEdgeForRam(context: Context): Int {
+        // et.30: 32-bit (armeabi-v7a) address space is ~2-3GB; 512 on a 32-bit
+        // device triggers SIGKILL (exit 137) mid-diffusion. Cap 32-bit to 384.
+        if (!is64Bit()) return 384
         val total = totalRamBytes(context)
         val gb = total / (1024.0 * 1024.0 * 1024.0)
         return when {
