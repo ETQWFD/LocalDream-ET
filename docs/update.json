@@ -1,7 +1,7 @@
 {
-  "versionCode": 101,
-  "versionName": "3.0.0-et.27",
+  "versionCode": 102,
+  "versionName": "3.0.0-et.28",
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
-  "size": 153269491,
-  "releaseNotes": "ET 定制版 v3.0.0-et.27（包名 etc.github.ai，可从 et.26 覆盖安装；模型在公共目录 LocalDreamET 不受影响）。\n• 熄屏/后台持续运行：下载、解压、转换、生成都走前台服务，持有 WakeLock 与 Wi-Fi 锁，并在用户首次发起长任务时引导关闭电池优化；应用被回收后下载按 .part 断点续传、转换按原子 finished 与 6 产物对账。\n• 统一日志：引擎、下载、转换、生成、更新、云上传均写入公共目录 LocalDreamET/logs/app.log，日志页可按类查看/复制/分享；错误给出真实原因（HTTP 码、退出码、信号、内存不足）。\n• SD1.5 对全部 64 位安卓机开放 CPU/GPU（含华为麒麟、联发科、Exynos、Tensor），OpenCL 不可用时自动回退 CPU；大模型（SDXL/DiT/千问）当前仅支持骁龙 Hexagon NPU（SM8650/8750 级别），其它机型 App 会如实锁定。\n• 图片尺寸按内存自适应长边：≤6GB 512、≤10GB 640、>10GB 768（64 对齐），支持 1:1/2:3/3:4/4:3/3:2/9:16/16:9 与自定义。\n• 新增“修图”整图 img2img 工作台：选模型→上传整图→中文正/负向提示→重绘强度（0.3–0.7，默认 0.45）→结果进历史可存/云备份。\n• 内存不足（std::bad_alloc）给中文引导：降低尺寸或步数后重试。\n• 三 ABI：arm64-v8a、armeabi-v7a、x86_64（模拟器可原生跑 SD1.5 CPU）。\n电脑版仍为 desktop-v3.0.1，不在本更新范围。真实出图/转换/下载请真机或模拟器复测；异常用右上角“日志/导出诊断日志”回传。开发者：ET，MIT License。"
+  "size": 153280011,
+  "releaseNotes": "ET 定制版 v3.0.0-et.28（包名 etc.github.ai，可从 et.27 覆盖安装）。\n• 修复“已加前台服务但熄屏仍停”的真实根因：转换改由前台服务自身执行（UI 只观察 ConvertManager），离开列表页或被系统回收不会中途取消转换；WakeLock/WifiLock 与服务同生命周期（无短超时），并给引擎服务补了锁。\n• Android 14+ 长时本地 AI 任务改用 specialUse 前台服务类型；新增厂商自启动/后台运行引导与崩溃日志（crash_*.log）。\n• 修图流程完善：选已就绪模型、整张图直传、默认可编辑负向词、真实进度；默认 dpm++2m 20 步。\n电脑版仍为 desktop-v3.0.1，不在本更新范围。国产 ROM 需在系统设置里允许后台运行/自启动；真实出图/转换/下载请真机复测，异常用右上角“日志/导出诊断”回传。开发者：ET，MIT License。"
 }

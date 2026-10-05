@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="description" content="Local Dream ET — 在手机与电脑本地运行 Stable Diffusion 的离线推理 App。">
 <title>Local Dream ET — 本地 Stable Diffusion 推理</title>
 <style>
@@ -52,7 +53,7 @@
   <h1>Local Dream ET</h1>
   <p class="tagline">在手机与电脑本地运行 Stable Diffusion 的离线推理 App，无需联网、不上传图片。</p>
   <div class="badges">
-    <span class="badge b">v3.0.0-et.27 / build 101</span>
+    <span class="badge b">v3.0.0-et.28 / build 102</span>
     <span class="badge">三 ABI：arm64-v8a · armeabi-v7a · x86_64</span>
     <span class="badge">包名 etc.github.ai</span>
     <span class="badge">签名 CN=ET</span>
@@ -77,7 +78,8 @@
     <a class="btn primary" href="https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk">手机 APK（Android）</a>
     <a class="btn ghost" href="https://github.com/ETQWFD/LocalDream-ET/releases/latest">电脑版 Windows</a>
   </div>
-  <p class="muted">手机版 v3.0.0-et.27，约 153 MB，含 arm64-v8a / armeabi-v7a / x86_64 三套原生引擎，包名 <code>etc.github.ai</code>，签名 <code>CN=ET</code>。电脑版为 desktop-v3.0.1（本版未更新）。</p>
+  <p class="muted">手机版 v3.0.0-et.28，约 153 MB，含 arm64-v8a / armeabi-v7a / x86_64 三套原生引擎，包名 <code>etc.github.ai</code>，签名 <code>CN=ET</code>。电脑版为 desktop-v3.0.1（本版未更新）。</p>
+  <p class="muted">本站已启用 HTTPS。但微信/QQ 可能对未在中国大陆 ICP 备案的第三方域名（含 github.io 及本自定义域）直接安全拦截（“已停止访问”），这是平台侧限制、网页无法解除；被拦截时请用系统浏览器打开，或到 GitHub Release 页下载。如需在微信内稳定访问需自备已 ICP 备案域名（本版不提供）。</p>
 </section>
 
 <!-- 功能列表 -->
@@ -156,6 +158,26 @@
 <footer>
   <p>源码：<a href="https://github.com/ETQWFD/LocalDream-ET" target="_blank" rel="noopener">github.com/ETQWFD/LocalDream-ET</a> · License MIT · Copyright © 2026 ET</p>
 </footer>
+
+<!-- 微信/QQ 内置浏览器提示（X5/TBS 兼容写法，ES5） -->
+<script>
+(function () {
+  try {
+    var ua = navigator.userAgent || "";
+    var isWx = ua.indexOf("MicroMessenger") >= 0;
+    var isQQ = ua.indexOf("QQ/") >= 0 || ua.indexOf("MQQBrowser") >= 0;
+    if (!isWx && !isQQ) return;
+    var bar = document.createElement("div");
+    bar.style.cssText = "background:#fff8e1;border-bottom:1px solid #f0d98a;color:#5a4a00;padding:10px 16px;font-size:13px;line-height:1.6";
+    bar.innerHTML = "你正在微信/QQ 内置浏览器打开。若无法下载或提示“已停止访问”，请点右上角 ··· 选择“在浏览器打开/在 Safari 或 Chrome 中打开”后再下载安装包（安卓：···→在浏览器打开；iOS：···→在 Safari 打开）。<a href=\"#\" id=\"ldetCloseBar\" style=\"margin-left:10px;color:#8a6d00\">关闭</a>";
+    document.body.insertBefore(bar, document.body.firstChild);
+    document.getElementById("ldetCloseBar").onclick = function (e) {
+      e.preventDefault();
+      bar.parentNode.removeChild(bar);
+    };
+  } catch (err) {}
+})();
+</script>
 
 </div>
 </body>

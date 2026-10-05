@@ -318,6 +318,24 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
     var currentBaseUrl by remember { mutableStateOf("https://hf-mirror.com/") }
 
     val modelRepository = remember { ModelRepository.getInstance(context) }
+    // et.28: observe the service-owned conversion state; the UI never owns the
+    // coroutine, it only renders progress and refreshes on success/failure.
+    val convertState by io.github.xororz.localdream.service.ConvertManager.state
+        .collectAsState()
+    LaunchedEffect(convertState) {
+        when (val s = convertState) {
+            is io.github.xororz.localdream.service.ConvertManager.UiState.Success -> {
+                modelRepository.refreshAllModels()
+                io.github.xororz.localdream.service.ConvertManager.idle()
+                snackbarHostState.showSnackbar("模型转换完成")
+            }
+            is io.github.xororz.localdream.service.ConvertManager.UiState.Failed -> {
+                io.github.xororz.localdream.service.ConvertManager.idle()
+                snackbarHostState.showSnackbar("转换失败：${s.reason}")
+            }
+            else -> Unit
+        }
+    }
     val upscalerRepository = remember { UpscalerRepository.getInstance(context) }
     val remoteRepository = remember { RemoteRepository.getInstance(context) }
     // Connected-device mode: the list shows the host device's installed
@@ -813,36 +831,11 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
             onModelAdded = { modelName, fileUri, clipSkip, loraFiles ->
                 showCustomModelDialog = false
                 io.github.xororz.localdream.utils.BatteryOptimization.ensureIgnoring(context)
-                scope.launch {
-                    convertCustomModel(
-                        context = context,
-                        modelName = modelName,
-                        fileUri = fileUri,
-                        clipSkip = clipSkip,
-                        loraFiles = loraFiles,
-                        onProgress = { progress ->
-                            conversionProgress = progress
-                        },
-                        onStart = {
-                            isConverting = true
-                        },
-                        onSuccess = {
-                            isConverting = false
-                            scope.launch {
-                                modelRepository.refreshAllModels()
-                                snackbarHostState.showSnackbar(msgModelConversionSuccess)
-                            }
-                        },
-                        onError = { error ->
-                            isConverting = false
-                            scope.launch {
-                                snackbarHostState.showSnackbar(
-                                    msgModelConversionFailed.format(error),
-                                )
-                            }
-                        },
-                    )
-                }
+                // et.28: conversion runs inside ConvertService's own service scope,
+                // not this UI coroutine, so leaving the page does not cancel it.
+                io.github.xororz.localdream.service.ConvertService.start(
+                    context, modelName, fileUri, clipSkip,
+                )
             },
         )
     }
@@ -4231,10 +4224,8 @@ suspend fun convertCustomModel(
             environment().putAll(env)
         }
 
-        // et.27: keep the whole app process foregrounded during conversion so
-        // the child converter survives screen-off / background reclaim.
-        io.github.xororz.localdream.service.ConvertService.start(context.applicationContext)
-
+        // et.28: the service now owns the conversion lifecycle; the converter
+        // itself no longer toggles its own foreground service.
         val process = processBuilder.start()
 
         val convertTail = java.util.concurrent.ConcurrentLinkedDeque<String>()

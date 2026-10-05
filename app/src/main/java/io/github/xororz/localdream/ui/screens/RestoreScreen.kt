@@ -47,7 +47,9 @@ fun RestoreScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var prompt by remember { mutableStateOf("") }
-    var negative by remember { mutableStateOf("") }
+    var negative by remember {
+        mutableStateOf("lowres, blurry, deformed, extra fingers, bad anatomy, watermark, text")
+    }
     var strength by remember { mutableStateOf(0.45f) }
     var preview by remember { mutableStateOf<Bitmap?>(null) }
     var busy by remember { mutableStateOf(false) }
@@ -129,6 +131,7 @@ fun RestoreScreen(
             )
             Spacer(Modifier.height(12.dp))
             Button(
+                enabled = preview != null && !busy,
                 onClick = {
                     val bmp = preview
                     if (bmp == null) {
@@ -202,7 +205,6 @@ fun RestoreScreen(
                         busy = false
                     }
                 },
-                enabled = !busy,
                 modifier = Modifier.fillMaxWidth(),
             ) { Text(stringResource(R.string.restore_run)) }
             msg?.let { Text(it) }

@@ -57,7 +57,7 @@ class UpdateDownloadService : Service() {
         val pm = getSystemService(POWER_SERVICE) as PowerManager
         wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "ldet:update").apply {
             setReferenceCounted(false)
-            acquire(10 * 60 * 1000L)
+            acquire()
         }
     }
 

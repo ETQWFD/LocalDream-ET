@@ -138,7 +138,7 @@ class ModelDownloadService : Service() {
         runCatching {
             val pm = getSystemService(POWER_SERVICE) as android.os.PowerManager
             wakeLock = pm.newWakeLock(android.os.PowerManager.PARTIAL_WAKE_LOCK, "ldet:dl").apply {
-                setReferenceCounted(false); acquire(30 * 60 * 1000L)
+                setReferenceCounted(false); acquire()
             }
             val wm = getSystemService(WIFI_SERVICE) as android.net.wifi.WifiManager
             wifiLock = wm.createWifiLock(

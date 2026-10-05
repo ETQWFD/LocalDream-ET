@@ -167,9 +167,24 @@ class BackendService : Service() {
         val listenOnAll: Boolean,
     )
 
+    private var wakeLock: android.os.PowerManager.WakeLock? = null
+    private var wifiLock: android.net.wifi.WifiManager.WifiLock? = null
+
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
+        // et.28: the engine holds a native child process; keep CPU/WiFi alive
+        // for the whole engine lifetime so screen-off does not stall inference.
+        runCatching {
+            val pm = getSystemService(POWER_SERVICE) as android.os.PowerManager
+            wakeLock = pm.newWakeLock(android.os.PowerManager.PARTIAL_WAKE_LOCK, "ldet:backend").apply {
+                setReferenceCounted(false); acquire()
+            }
+            val wm = getSystemService(WIFI_SERVICE) as android.net.wifi.WifiManager
+            wifiLock = wm.createWifiLock(
+                android.net.wifi.WifiManager.WIFI_MODE_FULL_HIGH_PERF, "ldet:backend",
+            ).apply { setReferenceCounted(false); acquire() }
+        }
         serviceScope.launch { prepareRuntimeDir() }
     }
 
@@ -828,6 +843,8 @@ class BackendService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        runCatching { if (wakeLock?.isHeld == true) wakeLock?.release() }
+        runCatching { if (wifiLock?.isHeld == true) wifiLock?.release() }
         // The scope is never cancelled, so this job still runs after
         // onDestroy returns; closing the dispatcher afterwards lets its
         // thread wind down once the backend process has exited.

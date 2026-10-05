@@ -31,6 +31,27 @@ class LocalDreamApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         io.github.xororz.localdream.cloud.RollingLogger.init(this)
+        // et.28: log uncaught crashes to filesDir/crash_<ts>.log before delegating
+        // to the default handler, so a screen-off generation crash is diagnosable.
+        val prev = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { t, e ->
+            runCatching {
+                val ts = System.currentTimeMillis()
+                val sb = StringBuilder()
+                    .append("time=").append(ts).append('\n')
+                    .append("thread=").append(t.name).append('\n')
+                    .append("device=").append(android.os.Build.MANUFACTURER)
+                    .append('/').append(android.os.Build.MODEL).append('\n')
+                    .append("screenOn=").append(
+                        (getSystemService(Context.POWER_SERVICE) as android.os.PowerManager)
+                            .isInteractive,
+                    ).append('\n')
+                    .append("exception=").append(e).append('\n')
+                for (el in e.stackTrace.take(40)) sb.append("  at ").append(el).append('\n')
+                java.io.File(filesDir, "crash_$ts.log").writeText(sb.toString())
+            }
+            prev?.uncaughtException(t, e)
+        }
         // et.27: RAM-adaptive SD1.5 long edge.
         runCatching {
             io.github.xororz.localdream.ui.screens.sd15LongEdge =

@@ -49,7 +49,7 @@ class BackgroundGenerationService : Service() {
             PowerManager.PARTIAL_WAKE_LOCK,
             "LocalDreamET:generation",
         ).also {
-            runCatching { it.acquire(6 * 60 * 60 * 1000L) }
+            runCatching { it.acquire() }
         }
         runCatching {
             val wm = getSystemService(Context.WIFI_SERVICE) as android.net.wifi.WifiManager
@@ -194,7 +194,7 @@ class BackgroundGenerationService : Service() {
                     io.github.xororz.localdream.util.ChinesePrompt.translatePrompt(negativePrompt)
             }
         }
-        val steps = data.getIntExtra("steps", 28)
+        val steps = data.getIntExtra("steps", 20)
         val cfg = data.getFloatExtra("cfg", 7f)
         val seed = if (data.hasExtra("seed")) data.getLongExtra("seed", 0) else null
         val width = data.getIntExtra("width", 512)
