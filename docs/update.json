@@ -1,7 +1,7 @@
 {
-  "versionCode": 103,
-  "versionName": "3.0.0-et.29",
+  "versionCode": 104,
+  "versionName": "3.0.0-et.30",
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
-  "size": 153282243,
-  "releaseNotes": "ET 定制版 v3.0.0-et.29（包名 etc.github.ai，可从 et.28 覆盖安装）。\n• 修复 QteaMix 等 sd-qnn 预转换模型下载后误报“模型文件不完整”：现按 QNN/MNN 包族分别校验必需权重（QNN：unet.bin/vae_*.bin/clip_v2.mnn；MNN/本机转换：*.mnn.weight 六件套），覆盖 AnythingV5/CuteYukiMix/AbsoluteReality/ChilloutMix/QteaMix。\n• QNN 启动前预检，缺权重给中文提示；解压 CRC 校验与 .part 断点续传保留；错误改中文三语并可重试/修复。\n电脑版仍为 desktop-v3.0.1，不在本更新范围。曾报“文件不完整”的模型删除后在网络稳定时重新下载即可。开发者：ET，MIT License。"
+  "size": 153326407,
+  "releaseNotes": "ET 定制版 v3.0.0-et.30（包名 etc.github.ai，可从 et.29 覆盖安装）。\n• 内存治理：修图/历史大图统一采样解码、任务后引擎子进程自动释放、关于页可见内存诊断块。\n• 32 位老手机默认 384 分辨率；出图中途被系统结束（exit 137）时自动重启引擎并降到 384 安全参数重试一次，建议老机直接用 384。\n• 精简默认负向词，避免超长模板拖慢 CLIP；OpenCL/GPU 探测可在诊断里回传 GL_RENDERER 与 libOpenCL 路径。\n电脑版仍为 desktop-v3.0.1，不在本更新范围。开发者：ET，MIT License。"
 }

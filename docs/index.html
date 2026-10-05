@@ -53,7 +53,7 @@
   <h1>Local Dream ET</h1>
   <p class="tagline">在手机与电脑本地运行 Stable Diffusion 的离线推理 App，无需联网、不上传图片。</p>
   <div class="badges">
-    <span class="badge b">v3.0.0-et.29 / build 103</span>
+    <span class="badge b">v3.0.0-et.30 / build 104</span>
     <span class="badge">三 ABI：arm64-v8a · armeabi-v7a · x86_64</span>
     <span class="badge">包名 etc.github.ai</span>
     <span class="badge">签名 CN=ET</span>
@@ -78,8 +78,8 @@
     <a class="btn primary" href="https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk">手机 APK（Android）</a>
     <a class="btn ghost" href="https://github.com/ETQWFD/LocalDream-ET/releases/latest">电脑版 Windows</a>
   </div>
-  <p class="muted">手机版 v3.0.0-et.29，约 153 MB，含 arm64-v8a / armeabi-v7a / x86_64 三套原生引擎，包名 <code>etc.github.ai</code>，签名 <code>CN=ET</code>。电脑版为 desktop-v3.0.1（本版未更新）。</p>
-  <p class="muted">et.29：修复部分预转换模型（如 QteaMix/AnythingV5 的骁龙 NPU 包）下载后提示“模型文件不完整”而无法使用的问题——现按模型包真实结构校验，骁龙/32 位/x86_64 对应包都能正确识别；曾报该错的模型删除后重新下载即可。</p>
+  <p class="muted">手机版 v3.0.0-et.30，约 153 MB，含 arm64-v8a / armeabi-v7a / x86_64 三套原生引擎，包名 <code>etc.github.ai</code>，签名 <code>CN=ET</code>。电脑版为 desktop-v3.0.1（本版未更新）。</p>
+  <p class="muted">et.30：①降低运行内存占用（图片采样、任务后自动释放引擎、关于页内存诊断）；②32 位老手机默认 384 分辨率，出图中途被系统结束（137）会自动降到 384 安全参数重试；③GPU 加速需设备支持 OpenCL，不支持时自动用 CPU。</p>
   <p class="muted">本站已启用 HTTPS。但微信/QQ 可能对未在中国大陆 ICP 备案的第三方域名（含 github.io 及本自定义域）直接安全拦截（“已停止访问”），这是平台侧限制、网页无法解除；被拦截时请用系统浏览器打开，或到 GitHub Release 页下载。如需在微信内稳定访问需自备已 ICP 备案域名（本版不提供）。</p>
 </section>
 
