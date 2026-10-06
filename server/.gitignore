@@ -1,0 +1,15 @@
+build/
+build-win/
+dist-linux/
+dist-win/
+stage/
+vendor/
+.smoke/
+*.exe
+*.dll
+*.tar.gz
+*.res
+models/*
+logs/*
+!models/.gitkeep
+!logs/.gitkeep

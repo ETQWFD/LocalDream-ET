@@ -1,0 +1,11 @@
+# Local Dream ET Server 配置模板 (Copyright (C) 2026 etc)
+# 实际运行时生成 config/etserver.conf（首次启动自动写入）
+port=8080
+inner_port=17860
+api_key=__GENERATED_ON_FIRST_RUN__
+model_path=
+model_id=
+content_filter=0
+dark_theme=1
+threads=2
+autostart=0
