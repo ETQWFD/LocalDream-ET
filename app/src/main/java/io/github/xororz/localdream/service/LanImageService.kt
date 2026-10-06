@@ -10,6 +10,7 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.wifi.WifiManager
+import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
 import android.util.Base64
@@ -62,7 +63,18 @@ class LanImageService : Service() {
             return START_NOT_STICKY
         }
 
-        startForeground(NOTIFICATION_ID, buildNotification())
+        // et.40: on Android 14+ (targetSdk 34+) declare the FGS type explicitly to match
+        // the manifest (specialUse) instead of relying on the 2-arg overload, which can
+        // raise ForegroundServiceTypeNotAllowed on some ROMs.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            startForeground(
+                NOTIFICATION_ID,
+                buildNotification(),
+                android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE,
+            )
+        } else {
+            startForeground(NOTIFICATION_ID, buildNotification())
+        }
 
         val chosenModel = intent?.getStringExtra(EXTRA_MODEL_ID)
         if (chosenModel != null && server == null) {
@@ -73,8 +85,25 @@ class LanImageService : Service() {
             // Pick a free port starting at 8082.
             actualPort = findFreePort(DEFAULT_PORT, DEFAULT_PORT + 20)
             StateHolder._port.value = actualPort
-            val key = ApiKeyStore(this).getOrCreate()
-            val srv = LanImageServer(port = actualPort, authKey = key, driver = EngineDriver())
+            ApiKeyStore(this).getOrCreate()
+            // et.40: hand the server a live key provider so "reset key" takes effect
+            // on the next request without restarting the listener.
+            val keyStore = ApiKeyStore(this)
+            // et.40: external requests that omit steps/scheduler inherit the user's
+            // chosen speed tier (极速=8/euler_a, 均衡=16/dpm, 质量=28/dpm_karras).
+            val tier = getSharedPreferences("app_prefs", MODE_PRIVATE).getString("speed_tier", "balanced")
+            val (defSteps, defSched) = when (tier) {
+                "fast" -> 8 to "euler_a"
+                "quality" -> 28 to "dpm_karras"
+                else -> 16 to "dpm"
+            }
+            val srv = LanImageServer(
+                port = actualPort,
+                authKeyProvider = { keyStore.current().orEmpty() },
+                driver = EngineDriver(),
+                defaultSteps = defSteps,
+                defaultScheduler = defSched,
+            )
             try {
                 srv.start()
             } catch (e: Exception) {

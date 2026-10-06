@@ -27,6 +27,8 @@
     <uses-permission android:name="android.permission.EXECUTE_PRIVATE_BINARY" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <!-- In-app self update: download the APK and launch the system installer. -->
@@ -93,12 +95,18 @@
             android:exported="false"
             android:foregroundServiceType="dataSync" />
 
-        <!-- et.37 (Bug9): foreground service exposing a LAN A1111/OpenAI-compatible image API. -->
+        <!-- et.37 (Bug9): foreground service exposing a LAN A1111/OpenAI-compatible image API.
+             et.40: switched dataSync -> specialUse to match the on-device generation FGS
+             and avoid Android 14+ dataSync time limits / type restrictions. -->
         <service
             android:name=".service.LanImageService"
             android:enabled="true"
             android:exported="false"
-            android:foregroundServiceType="dataSync" />
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Local LAN HTTP API serving on-device image generation" />
+        </service>
 
         <!-- et.24: foreground service carrying the in-app APK update download. -->
         <service

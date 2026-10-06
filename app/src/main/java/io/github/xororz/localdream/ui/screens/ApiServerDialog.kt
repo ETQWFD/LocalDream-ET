@@ -72,7 +72,9 @@ fun ApiServerDialog(onDismiss: () -> Unit) {
         loading = false
     }
 
-    val key = remember { ApiKeyStore(context).current() ?: ApiKeyStore(context).getOrCreate() }
+    // et.40: reactive so "reset key" updates the displayed value immediately (the
+    // running server already reads the key live, no restart needed).
+    var keyDisplay by remember { mutableStateOf(ApiKeyStore(context).current() ?: ApiKeyStore(context).getOrCreate()) }
     val lanIp = remember { LanImageService.localLanIp() }
     val onWifi = remember { isOnWifi(context) }
 
@@ -150,7 +152,7 @@ fun ApiServerDialog(onDismiss: () -> Unit) {
                     )
                     CopyRow(
                         label = stringResource(R.string.api_server_key_label),
-                        value = key,
+                        value = keyDisplay,
                         context = context,
                     )
                     CopyRow(
@@ -175,6 +177,7 @@ fun ApiServerDialog(onDismiss: () -> Unit) {
                         OutlinedButton(
                             onClick = {
                                 ApiKeyStore(context).resetKey()
+                                keyDisplay = ApiKeyStore(context).current().orEmpty()
                                 Toast.makeText(context, R.string.api_server_copied, Toast.LENGTH_SHORT).show()
                             },
                             modifier = Modifier.padding(start = 8.dp),

@@ -357,6 +357,28 @@ fun ModelRunScreen(
     var useOpenCL by remember { mutableStateOf(false) }
     var batchCounts by remember { mutableIntStateOf(GenerationDefaults.GLOBAL.batchCounts) }
     var scheduler by remember { mutableStateOf(GenerationDefaults.GLOBAL.scheduler) }
+    // et.40: visible 极速/均衡/质量 speed tier. Persisted in app_prefs "speed_tier".
+    // Low-end devices (32-bit / lowRam / <=4GB, i.e. sd15LongEdge<=384) default to 极速.
+    val lowEndDevice = remember {
+        io.github.xororz.localdream.utils.DeviceCapabilities.sd15LongEdgeForRam(context) <= 384
+    }
+    var speedTier by remember {
+        mutableStateOf(
+            context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+                .getString("speed_tier", null)
+                ?: if (lowEndDevice) "fast" else "balanced",
+        )
+    }
+    // et.40: first-run hint on low-end devices that the fast tier is the default.
+    LaunchedEffect(Unit) {
+        if (lowEndDevice && speedTier == "fast") {
+            android.widget.Toast.makeText(
+                context,
+                "已为低配设备默认极速档（384/8步），可在出图页切换均衡/质量",
+                android.widget.Toast.LENGTH_LONG,
+            ).show()
+        }
+    }
     var aspectRatio by remember { mutableStateOf(GenerationDefaults.GLOBAL.aspectRatio) }
     var showCustomAspectRatioDialog by remember { mutableStateOf(false) }
     var currentBatchIndex by remember { mutableIntStateOf(0) }
@@ -2292,6 +2314,44 @@ fun ModelRunScreen(
                             // Previously the GPU/QNN SD1.5 fell into the "else"
                             // branch that only changed the ratio text, so the
                             // output pixel size never actually followed the chip.
+                            // et.40: visible 极速/均衡/质量 speed tier. Selecting applies
+                            // steps + scheduler (engine-accepted strings) and persists.
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                Text(
+                                    "速度档",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                )
+                                listOf(
+                                    "fast" to "极速",
+                                    "balanced" to "均衡",
+                                    "quality" to "质量",
+                                ).forEach { (t, label) ->
+                                    FilterChip(
+                                        selected = speedTier == t,
+                                        onClick = {
+                                            if (!isRunning) {
+                                                speedTier = t
+                                                context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+                                                    .edit().putString("speed_tier", t).apply()
+                                                when (t) {
+                                                    "fast" -> { steps = 8f; scheduler = "euler_a" }
+                                                    "quality" -> { steps = 28f; scheduler = "dpm_karras" }
+                                                    else -> { steps = 16f; scheduler = "dpm" }
+                                                }
+                                                saveAllFields()
+                                            }
+                                        },
+                                        label = { Text(label) },
+                                        enabled = !isRunning,
+                                    )
+                                }
+                            }
                             val isSd15RatioModel = !isFixedCanvasModel && !isDitModel
                             if (isFixedCanvasModel || isDitModel || isSd15RatioModel) {
                             val ratioPresets = when {

@@ -14,7 +14,12 @@ import androidx.compose.runtime.Immutable
 data class GenerationDefaults(
     val prompt: String = "",
     val negativePrompt: String = "",
-    val steps: Float = 20f,
+    // et.40: default steps lowered 20 -> 16 for the fast default. dpm is the
+    // engine's fast multistep scheduler (already the default) so 16 steps still
+    // converge on SD1.5 while cutting ~20% of compute. Users can raise the on-screen
+    // steps slider for quality; low-RAM devices already default to the 384 long edge
+    // (et.39), compounding the speed-up.
+    val steps: Float = 16f,
     val cfg: Float = 7f,
     val scheduler: String = "dpm",
     val seed: String = "",

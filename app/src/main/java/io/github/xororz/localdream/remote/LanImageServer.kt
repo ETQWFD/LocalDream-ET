@@ -25,8 +25,14 @@ import java.util.concurrent.Executors
  */
 class LanImageServer(
     private val port: Int,
-    private val authKey: String,
+    // et.40: dynamic provider so a "reset key" takes effect on the very next request
+    // without restarting the listener.
+    private val authKeyProvider: () -> String,
     private val driver: Driver,
+    // et.40: when an external client omits steps/scheduler, inject the user's chosen
+    // speed-tier defaults instead of a hardcoded 20.
+    private val defaultSteps: Int = 16,
+    private val defaultScheduler: String = "dpm",
 ) {
     /** Bridges this server to the real local engine on 127.0.0.1:8081. Blocking. */
     interface Driver {
@@ -159,15 +165,16 @@ class LanImageServer(
     }
 
     private fun authed(req: Request): Boolean {
+        val expected = authKeyProvider()
         val auth = req.headers["authorization"]
         if (auth != null && auth.startsWith("Bearer ", ignoreCase = true)) {
-            if (auth.removePrefix("Bearer ").trim() == authKey) return true
+            if (auth.removePrefix("Bearer ").trim() == expected) return true
         }
-        req.headers["x-api-key"]?.let { if (it.trim() == authKey) return true }
+        req.headers["x-api-key"]?.let { if (it.trim() == expected) return true }
         // ?api_key=
         req.query.split('&').forEach { kv ->
             val e = kv.split('=')
-            if (e.size == 2 && e[0] == "api_key" && e[1] == authKey) return true
+            if (e.size == 2 && e[0] == "api_key" && e[1] == expected) return true
         }
         return false
     }
@@ -225,12 +232,12 @@ class LanImageServer(
             driver.generate(
                 prompt = prompt,
                 negativePrompt = b.optString("negative_prompt", ""),
-                steps = b.optInt("steps", 20).coerceIn(1, 150),
+                steps = b.optInt("steps", defaultSteps).coerceIn(1, 150),
                 cfg = b.optDouble("cfg_scale", 7.0).toFloat(),
                 width = b.optInt("width", 512),
                 height = b.optInt("height", 512),
                 seed = if (b.has("seed")) b.optLong("seed", -1L) else -1L,
-                sampler = b.optString("sampler_name", "").ifEmpty { null },
+                sampler = b.optString("sampler_name", "").ifEmpty { defaultScheduler },
                 initImageBase64 = null,
                 denoiseStrength = 0.45f,
                 n = n,
@@ -260,12 +267,12 @@ class LanImageServer(
             driver.generate(
                 prompt = prompt,
                 negativePrompt = b.optString("negative_prompt", ""),
-                steps = b.optInt("steps", 20).coerceIn(1, 150),
+                steps = b.optInt("steps", defaultSteps).coerceIn(1, 150),
                 cfg = b.optDouble("cfg_scale", 7.0).toFloat(),
                 width = b.optInt("width", 512),
                 height = b.optInt("height", 512),
                 seed = if (b.has("seed")) b.optLong("seed", -1L) else -1L,
-                sampler = b.optString("sampler_name", "").ifEmpty { null },
+                sampler = b.optString("sampler_name", "").ifEmpty { defaultScheduler },
                 initImageBase64 = initB64,
                 denoiseStrength = b.optDouble("denoising_strength", 0.75).toFloat().coerceIn(0.1f, 0.9f),
                 n = n,
@@ -291,12 +298,12 @@ class LanImageServer(
             driver.generate(
                 prompt = prompt,
                 negativePrompt = "",
-                steps = b.optInt("steps", 20).coerceIn(1, 150),
+                steps = b.optInt("steps", defaultSteps).coerceIn(1, 150),
                 cfg = b.optDouble("cfg_scale", 7.0).toFloat(),
                 width = w,
                 height = h,
                 seed = -1L,
-                sampler = null,
+                sampler = defaultScheduler,
                 initImageBase64 = null,
                 denoiseStrength = 0.45f,
                 n = n,
