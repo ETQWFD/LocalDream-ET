@@ -1,21 +1,21 @@
 {
   "name": "Local Dream ET Server",
-  "version": "1.0.0",
-  "versionCode": 100,
-  "tag": "server-v1.0.0",
+  "version": "1.1.0",
+  "versionCode": 110,
+  "tag": "server-v1.1.0",
   "prerelease": true,
   "channel": "github",
   "platforms": {
     "windows": {
-      "file": "LocalDreamET-Server-Setup-1.0.0.exe",
-      "size": 11244374,
-      "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/server-v1.0.0/LocalDreamET-Server-Setup-1.0.0.exe"
+      "file": "LocalDreamET-Server-Setup-1.1.0.exe",
+      "size": 11250530,
+      "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/server-v1.1.0/LocalDreamET-Server-Setup-1.1.0.exe"
     },
     "linux-x86_64": {
-      "file": "LocalDreamET-Server-1.0.0-linux-x86_64.tar.gz",
-      "size": 16514252,
-      "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/server-v1.0.0/LocalDreamET-Server-1.0.0-linux-x86_64.tar.gz"
+      "file": "LocalDreamET-Server-1.1.0-linux-x86_64.tar.gz",
+      "size": 16516388,
+      "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/server-v1.1.0/LocalDreamET-Server-1.1.0-linux-x86_64.tar.gz"
     }
   },
-  "notes": "本地离线出图 HTTP API 服务端：OpenAI / sdapi 兼容，46 位 API Key，看门狗，内容限制默认关闭。Copyright (C) 2026 etc (MIT)"
+  "notes": "v1.1.0：模型对齐手机端 SD1.5（含 DreamShaper8/AbsoluteReality/QteaMix/CuteYukiMix/BreakDomain/Counterfeit），断点续传+完整性校验；Windows 后台+图形窗口（复制地址/Key/模型、切模型、主题、限制默认无限制）。Copyright (C) 2026 etc (MIT)"
 }

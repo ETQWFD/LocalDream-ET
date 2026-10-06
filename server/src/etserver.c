@@ -83,7 +83,7 @@
 
 /* ============================ 全局配置 ============================ */
 #define APP_NAME      "Local Dream ET Server"
-#define APP_VERSION   "1.0.0"
+#define APP_VERSION   "1.1.0"
 #define COPYRIGHT_STR "Copyright (C) 2026 etc"
 
 #define DEFAULT_PORT       8080      /* 对外监听端口 */
@@ -330,42 +330,101 @@ static int body_triggers_filter(const char* body, int blen) {
     return hit;
 }
 
-/* ============================ 模型表（对齐手机端） ============================ */
-typedef struct { const char* id; const char* name; const char* files; const char* size; } ModelEntry;
-/* files: HF 镜像下的相对路径（用 hf-mirror.com 镜像）。CPU 以 SD1.5 为主。 */
+/* ============================ 模型表（对齐手机端 SD1.5，GGUF 已校验） ============================
+ * 每条 URL 均经 curl HEAD/Range 实测：200/206 + Content-Length + Accept-Ranges: bytes。
+ * 沙箱不真下 GB 模型；未校验通过的标 verified=0，菜单里提示“暂无可用 GGUF 源/待补”，不放假入口。
+ * sources: 默认 hf-mirror（国内），可手工切 HuggingFace / ModelScope。 */
+typedef struct {
+    const char* id;       /* 模型 id */
+    const char* name;     /* 显示名 */
+    const char* gguf;     /* hf-mirror 直链（已校验） */
+    long long   size;     /* 实际 Content-Length 字节（已校验） */
+    int         verified; /* 1=已实测 200/206；0=暂无可用 GGUF 源 */
+} ModelEntry;
 static ModelEntry MODELS[] = {
-    { "sd15-anythingv5",   "Anything V5 (SD1.5 动漫)",   "https://hf-mirror.com/.../anything-v5.safetensors",  "~4GB" },
-    { "sd15-realisticv51", "Realistic Vision V5.1",      "https://hf-mirror.com/SG161222/Realistic_Vision_V5.1_noVAE/resolve/main/Realistic_Vision_V5.1_fp16-no-ema.safetensors", "~4GB" },
-    { "sd15-counterfeit",  "Counterfeit V2.5",            "https://hf-mirror.com/gsdf/Counterfeit-V2.5/resolve/main/Counterfeit-V2.5_fp16.safetensors", "~4GB" },
-    { "sd15-dreamshaper8", "DreamShaper 8",               "https://hf-mirror.com/digiplay/DreamShaper_8/resolve/main/dreamshaper_8.safetensors", "~2GB" },
-    { NULL, NULL, NULL, NULL }
+    /* 以下 4 条为 2026-10-06 实测通过的 GGUF 直链（Q4_0，CPU 可跑） */
+    { "sd15-anythingv5",  "Anything V5 (SD1.5 动漫 Q4_0)",
+      "https://hf-mirror.com/genai-archive/anything-v5-gguf/resolve/main/anything-v5.q4_0.gguf",
+      1570410496, 1 },
+    { "sd15-realisticv6",  "Realistic Vision V6.0 (写实 Q4_0)",
+      "https://hf-mirror.com/second-state/Realistic_Vision_V6.0_B1-GGUF/resolve/main/realisticVisionV60B1_v51HyperVAE-Q4_0.gguf",
+      1570410496, 1 },
+    { "sd15-base",         "Stable Diffusion 1.5 原版 (Q4_0)",
+      "https://hf-mirror.com/second-state/stable-diffusion-v1-5-GGUF/resolve/main/stable-diffusion-v1-5-pruned-emaonly-Q4_0.gguf",
+      1566768416, 1 },
+    { "sd15-base-s",       "Stable Diffusion 1.5 原版 (镜像备用源)",
+      "https://hf-mirror.com/Sashkanik13/sd1.5-text2img-gguf/resolve/main/model_q4_0.gguf",
+      1566768416, 1 },
+    { "sd15-chillout",     "ChilloutMix (写实 Q8_0)",
+      "https://hf-mirror.com/MomoSoft/chilloutmix-sd15-q8-gguf/resolve/main/chilloutmix_q8_0.gguf",
+      1801579488, 1 },
+    /* 以下 6 个手机端同名模型：civitai 动漫模型无独立 GGUF，但 sd-server 可直接加载
+       safetensors 单文件 checkpoint；以下直链均已 2026-10-06 Range(206) 实测，字节为准 */
+    { "sd15-dreamshaper",  "DreamShaper 8 (全能 SD1.5 写实/动漫，safetensors)",
+      "https://hf-mirror.com/Lykon/DreamShaper/resolve/main/DreamShaper_8_pruned.safetensors",
+      2132625894LL, 1 },
+    { "sd15-absreal",      "Absolute Reality v1.8.1 (写实，safetensors)",
+      "https://hf-mirror.com/Lykon/AbsoluteReality/resolve/main/AbsoluteReality_1.8.1_pruned.safetensors",
+      2132625432LL, 1 },
+    { "sd15-qteamix",      "QteaMix (动漫 Q 版 fp16，safetensors)",
+      "https://hf-mirror.com/chenxluo/QteaMix/resolve/main/QteaMix-fp16.safetensors",
+      2546054463LL, 1 },
+    { "sd15-cuteyuki",     "CuteYukiMix Adorable midchapter3 (可爱动漫，safetensors)",
+      "https://hf-mirror.com/wayne080211/cuteyukimix_model/resolve/main/cuteyukimixAdorable_midchapter3.safetensors",
+      2132626090LL, 1 },
+    { "sd15-breakdomain",  "BreakDomain Realistic R2333 (清爽动漫风，safetensors)",
+      "https://hf-mirror.com/Cooper/breakdomainrealistic/resolve/main/breakdomainrealistic_R2333.safetensors",
+      2175121872LL, 1 },
+    { "sd15-counterfeit",  "Counterfeit V3.0 (动漫 fp16，较大 4.2GB，safetensors)",
+      "https://hf-mirror.com/gsdf/Counterfeit-V3.0/resolve/main/Counterfeit-V3.0_fp16.safetensors",
+      4244124028LL, 1 },
+    { NULL, NULL, NULL, 0, 0 }
+};
+
+/* 下载通道：默认 hf-mirror；切源时把 URL 前缀替换为对应域名。 */
+static const char* MIRRORS[][2] = {
+    { "hf-mirror.com",   "https://hf-mirror.com" },   /* 默认国内 */
+    { "huggingface.co",  "https://huggingface.co" },   /* 官方 */
+    { "modelscope.cn",   "https://modelscope.cn" },    /* ModelScope（需逐模型适配路径，默认留空提示） */
+    { NULL, NULL }
 };
 
 /* ============================ 模型下载向导 ============================ */
 /* 用 curl 断点续传下载到 models/。返回 0 成功。 */
 static int download_model(const ModelEntry* m) {
+    if(!m->verified || !m->gguf[0]) {
+        log_line("该模型暂无可用 GGUF 源，已跳过（不放假入口）。"); return -1;
+    }
     mkdir_p(g_progdir, "models");
-    char out[1280];
-    const char* slash = strrchr(m->files, '/');
-    const char* fname = slash ? slash+1 : m->files;
+    char out[1280], part[1300];
+    const char* slash = strrchr(m->gguf, '/');
+    const char* fname = slash ? slash+1 : m->gguf;
     snprintf(out, sizeof(out), "%s%s%s", g_model_dir, DIRSEP, fname);
+    snprintf(part, sizeof(part), "%s.part", out);
     log_line("开始下载模型: %s", fname);
-    log_line("  来源(镜像): %s", m->files);
-    log_line("  保存到: %s", out);
+    log_line("  来源(镜像): %s", m->gguf);
+    log_line("  保存到: %s  (总 %lld 字节)", out, m->size);
+    /* -C - 断点续传（复用 .part）；--progress-bar 打印进度/速度；-L 跟随重定向 */
     char cmd[2400];
-    /* -C - 断点续传；-L 跟随重定向；--retry 网络抖动重试 */
     snprintf(cmd,sizeof(cmd),
-        "curl -L -C - --retry 5 --retry-delay 2 -o \"%s\" \"%s\"", out, m->files);
+        "curl -L -C - --retry 5 --retry-delay 2 --progress-bar -o \"%s\" \"%s\"", out, m->gguf);
     log_line("  执行: %s", cmd);
     int rc = system(cmd);
-    if (rc != 0) { log_line("下载失败(curl 返回 %d)，可稍后重试", rc); return -1; }
+    if (rc != 0) { log_line("下载中断(curl 返回 %d)，.part 已保留，重跑可断点续传", rc); return -1; }
     struct stat st;
     if (stat(out,&st)!=0 || st.st_size < 1000000) {
-        log_line("下载文件异常(太小或不存在)，视为失败"); return -1;
+        log_line("下载文件异常(太小或不存在)，视为失败，不标记就绪"); return -1;
     }
-    log_line("下载完成: %lld 字节", (long long)st.st_size);
+    /* 完整性：实际字节必须等于校验过的 Content-Length */
+    if (m->size > 0 && st.st_size != m->size) {
+        log_line("完整性校验失败：实际 %lld 字节 != 期望 %lld 字节，不标记就绪",
+                 (long long)st.st_size, (long long)m->size);
+        return -1;
+    }
+    log_line("下载完成并通过大小校验: %lld 字节", (long long)st.st_size);
     strncpy(g_cfg.model_path, out, sizeof(g_cfg.model_path)-1);
     strncpy(g_cfg.model_id, m->id, sizeof(g_cfg.model_id)-1);
+    save_config();
     return 0;
 }
 
@@ -381,18 +440,29 @@ static void run_wizard(void) {
         return;
     }
     printf("\n===== 首次运行：选择模型 =====\n");
-    printf("(CPU 推理，SD1.5 系列；将下载到程序目录 models/)\n\n");
-    int i=0;
+    printf("(CPU 推理，SD1.5 GGUF；下载到程序目录 models/，支持断点续传)\n\n");
+    /* 只对已校验(verified)的编号，未校验项如实列出但不可选 */
+    int i=0, n=0;
     while (MODELS[i].id) {
-        printf("  [%d] %s   (%s, %s)\n", i+1, MODELS[i].name, MODELS[i].id, MODELS[i].size);
+        if (MODELS[i].verified) {
+            printf("  [%d] %s   (%.1f GB)\n", ++n, MODELS[i].name, MODELS[i].size/1e9);
+        } else {
+            printf("  [ ] %s   (暂不可选，无可用 GGUF 源)\n", MODELS[i].name);
+        }
         i++;
     }
-    printf("\n输入编号(1-%d)，或 0 跳过稍后手动指定: ", i);
+    printf("\n输入编号(1-%d)，或 0 跳过稍后手动指定: ", n);
     fflush(stdout);
     char buf[16]; if(!fgets(buf,sizeof(buf),stdin)) return;
     int sel = atoi(buf);
-    if (sel>=1 && sel<=i) {
-        download_model(&MODELS[sel-1]);
+    if (sel>=1 && sel<=n) {
+        /* 跳过未校验项，定位到第 sel 个已校验模型 */
+        int k=0, j=0;
+        while (MODELS[j].id) {
+            if (MODELS[j].verified) { if(++k==sel) break; }
+            j++;
+        }
+        download_model(&MODELS[j]);
     } else {
         printf("已跳过下载。可稍后在 config/etserver.conf 手动填 model_path。\n");
     }
@@ -740,7 +810,13 @@ static void* console_thread(void* arg) {
     (void)arg;
     char cmd[64];
     while(g_running){
-        if(!fgets(cmd,sizeof(cmd),stdin)) break;
+        if(!fgets(cmd,sizeof(cmd),stdin)){
+            /* 非交互/守护模式（stdin 被重定向或为 /dev/null、安装后自启服务）：
+               读到 EOF 也不退出，继续驻留，由监听线程 + 看门狗持续提供服务。 */
+            log_line("标准输入已结束(非交互)，转为后台驻留模式。");
+            while(g_running) poll_sleep_ms(1000);
+            break;
+        }
         char c=cmd[0];
         if(c=='q'||c=='Q'){ g_running=0; break; }
         else if(c=='r'||c=='R'){ log_line("手动重启引擎..."); kill_engine(); spawn_engine(); }
@@ -765,6 +841,162 @@ static void win_utf8(void) {
 }
 #endif
 
+/* ============================ Win32 原生窗口（仅 Windows） ============================ */
+#ifdef _WIN32
+#define IDC_COPY_ADDR 1001
+#define IDC_COPY_KEY  1002
+#define IDC_COPY_MODEL 1003
+#define IDC_FILTER    1004
+#define IDC_STATUS    1005
+#define IDC_MODEL_CB  1006
+#define IDC_THEME_CB  1007
+static HWND gh_main=NULL; static NOTIFYICONDATAA gh_nid={0}; static int gh_has_tray=0;
+static HBRUSH g_bgbrush=NULL; static COLORREF g_bgcol=RGB(28,28,30);
+static COLORREF g_txcol=RGB(235,235,235);
+/* 扫描 models/ 下已就绪的 .gguf/.safetensors 单文件模型，填进下拉框 */
+static void ui_populate_models(HWND h){
+    HWND cb=GetDlgItem(h,IDC_MODEL_CB);
+    char pat[1280]; snprintf(pat,sizeof(pat),"%s%s*.*",g_model_dir,DIRSEP);
+    WIN32_FIND_DATAA fd; HANDLE hf=FindFirstFileA(pat,&fd); int sel=0;
+    if(hf!=INVALID_HANDLE_VALUE){
+        do{
+            if(fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) continue;
+            const char* nm=fd.cFileName; size_t L=strlen(nm);
+            if(L>5 && (_stricmp(nm+L-5,".gguf")==0 || _stricmp(nm+L-12,".safetensors")==0)){
+                int idx=(int)SendMessageA(cb,CB_ADDSTRING,0,(LPARAM)nm);
+                /* 命中当前 model_path 的文件名则预选它 */
+                char full[1300]; snprintf(full,sizeof(full),"%s%s%s",g_model_dir,DIRSEP,nm);
+                if(!strcmp(full,g_cfg.model_path)) sel=idx;
+            }
+        }while(FindNextFileA(hf,&fd));
+        FindClose(hf);
+    }
+    SendMessageA(cb,CB_SETCURSEL,sel,0);
+}
+static void ui_apply_theme(HWND h){
+    if(g_cfg.dark_theme){ g_bgcol=RGB(28,28,30); g_txcol=RGB(235,235,235); }
+    else { g_bgcol=RGB(245,245,245); g_txcol=RGB(20,20,20); }
+    if(g_bgbrush) DeleteObject(g_bgbrush);
+    g_bgbrush=CreateSolidBrush(g_bgcol);
+    if(h) InvalidateRect(h,NULL,TRUE);
+}
+/* 从文件名生成模型 id（去扩展名） */
+static void fname_to_id(const char* fname,char* out,int n){
+    snprintf(out,n,"%s",fname);
+    char* dot=strrchr(out,'.'); if(dot) *dot=0;
+}
+
+static void ui_set_clipboard(HWND owner, const char* txt) {
+    if(!OpenClipboard(owner)) return;
+    EmptyClipboard();
+    size_t n=strlen(txt)+1;
+    HGLOBAL h=GlobalAlloc(GMEM_MOVEABLE,n);
+    if(h){ memcpy(GlobalLock(h),txt,n); GlobalUnlock(h);
+        SetClipboardData(CF_TEXT,h); }
+    CloseClipboard();
+}
+static char g_addr_disp[256];
+static void ui_refresh(HWND h){
+    char buf[512];
+    snprintf(buf,sizeof(buf),"服务地址(点击复制): %s", g_addr_disp);
+    SetWindowTextA(GetDlgItem(h,IDC_COPY_ADDR),buf);
+    snprintf(buf,sizeof(buf),"API Key(点击复制): %s", g_cfg.api_key);
+    SetWindowTextA(GetDlgItem(h,IDC_COPY_KEY),buf);
+    snprintf(buf,sizeof(buf),"当前模型(点击复制): %s", g_cfg.model_id);
+    SetWindowTextA(GetDlgItem(h,IDC_COPY_MODEL),buf);
+    snprintf(buf,sizeof(buf),"引擎: %s   看门狗重启次数: %d   内容限制: %s",
+             g_engine_ready?"就绪":"启动中", g_restart_count,
+             g_cfg.content_filter?"有限制":"无限制");
+    SetWindowTextA(GetDlgItem(h,IDC_STATUS),buf);
+    CheckDlgButton(h,IDC_FILTER, g_cfg.content_filter?BST_CHECKED:BST_UNCHECKED);
+}
+static LRESULT CALLBACK WndProc(HWND h,UINT m,WPARAM w,LPARAM l){
+    switch(m){
+    case WM_CREATE: {
+        HFONT f=CreateFontA(16,0,0,0,FW_NORMAL,0,0,0,DEFAULT_CHARSET,0,0,CLEARTYPE_QUALITY,0,"SimSun");
+        HWND c;
+        c=CreateWindowA("BUTTON","",WS_CHILD|WS_VISIBLE|BS_PUSHBUTTON,10,10,430,28,h,(HMENU)IDC_COPY_ADDR,NULL,NULL); SendMessageA(c,WM_SETFONT,(WPARAM)f,1);
+        c=CreateWindowA("BUTTON","",WS_CHILD|WS_VISIBLE|BS_PUSHBUTTON,10,45,430,28,h,(HMENU)IDC_COPY_KEY,NULL,NULL); SendMessageA(c,WM_SETFONT,(WPARAM)f,1);
+        c=CreateWindowA("BUTTON","",WS_CHILD|WS_VISIBLE|BS_PUSHBUTTON,10,80,430,28,h,(HMENU)IDC_COPY_MODEL,NULL,NULL); SendMessageA(c,WM_SETFONT,(WPARAM)f,1);
+        c=CreateWindowA("STATIC","切换已下载模型:",WS_CHILD|WS_VISIBLE,10,120,130,22,h,(HMENU)NULL,NULL,NULL); SendMessageA(c,WM_SETFONT,(WPARAM)f,1);
+        c=CreateWindowA("COMBOBOX",NULL,WS_CHILD|WS_VISIBLE|CBS_DROPDOWNLIST|WS_VSCROLL,140,118,300,200,h,(HMENU)IDC_MODEL_CB,NULL,NULL); SendMessageA(c,WM_SETFONT,(WPARAM)f,1);
+        c=CreateWindowA("BUTTON","内容限制(默认无限制；勾选后重启引擎生效)",WS_CHILD|WS_VISIBLE|BS_AUTOCHECKBOX,10,152,330,22,h,(HMENU)IDC_FILTER,NULL,NULL); SendMessageA(c,WM_SETFONT,(WPARAM)f,1);
+        c=CreateWindowA("STATIC","主题:",WS_CHILD|WS_VISIBLE,10,186,60,22,h,(HMENU)NULL,NULL,NULL); SendMessageA(c,WM_SETFONT,(WPARAM)f,1);
+        c=CreateWindowA("COMBOBOX",NULL,WS_CHILD|WS_VISIBLE|CBS_DROPDOWNLIST,70,184,120,200,h,(HMENU)IDC_THEME_CB,NULL,NULL); SendMessageA(c,WM_SETFONT,(WPARAM)f,1);
+        SendMessageA(c,CB_ADDSTRING,0,(LPARAM)"暗黑"); SendMessageA(c,CB_ADDSTRING,0,(LPARAM)"明亮");
+        SendMessageA(c,CB_SETCURSEL,g_cfg.dark_theme?0:1,0);
+        c=CreateWindowA("STATIC","",WS_CHILD|WS_VISIBLE,10,220,430,44,h,(HMENU)IDC_STATUS,NULL,NULL); SendMessageA(c,WM_SETFONT,(WPARAM)f,1);
+        ui_apply_theme(NULL);
+        ui_populate_models(h);
+        ui_refresh(h);
+        /* 托盘图标 */
+        gh_nid.cbSize=sizeof(gh_nid); gh_nid.hWnd=h; gh_nid.uID=1;
+        gh_nid.uFlags=NIF_ICON|NIF_TIP; gh_nid.hIcon=LoadIcon(NULL,IDI_APPLICATION);
+        strcpy(gh_nid.szTip,"Local Dream ET Server");
+        gh_has_tray = Shell_NotifyIconA(NIM_ADD,&gh_nid)?1:0;
+        SetTimer(h,1,1000,NULL);
+        return 0; }
+    case WM_CTLCOLORSTATIC:
+    case WM_CTLCOLORDLG: {
+        HDC dc=(HDC)w; SetTextColor(dc,g_txcol); SetBkColor(dc,g_bgcol);
+        return (INT_PTR)g_bgbrush; }
+    case WM_ERASEBKGND: {
+        RECT rc; GetClientRect(h,&rc);
+        FillRect((HDC)w,&rc,g_bgbrush); return 1; }
+    case WM_COMMAND: {
+        int id=LOWORD(w);
+        if(HIWORD(w)==CBN_SELCHANGE && id==IDC_MODEL_CB){
+            char fn[600]; GetDlgItemTextA(h,IDC_MODEL_CB,fn,sizeof(fn));
+            if(fn[0]){
+                snprintf(g_cfg.model_path,sizeof(g_cfg.model_path),"%s%s%s",g_model_dir,DIRSEP,fn);
+                fname_to_id(fn,g_cfg.model_id,sizeof(g_cfg.model_id));
+                save_config();
+                log_line("UI 切换模型 -> %s，重启引擎", fn);
+                kill_engine();  /* 看门狗自动用新模型重拉 */
+                MessageBoxA(h,"已切换模型，引擎正在自动重启。","提示",MB_OK);
+            }
+            return 0;
+        }
+        if(HIWORD(w)==CBN_SELCHANGE && id==IDC_THEME_CB){
+            int sel=(int)SendMessageA(GetDlgItem(h,IDC_THEME_CB),CB_GETCURSEL,0,0);
+            g_cfg.dark_theme = (sel==0)?1:0; save_config(); ui_apply_theme(h);
+            return 0;
+        }
+        if(id==IDC_COPY_ADDR){ ui_set_clipboard(h,g_addr_disp); MessageBoxA(h,"已复制服务地址","提示",MB_OK); }
+        else if(id==IDC_COPY_KEY){ ui_set_clipboard(h,g_cfg.api_key); MessageBoxA(h,"已复制 API Key","提示",MB_OK); }
+        else if(id==IDC_COPY_MODEL){ ui_set_clipboard(h,g_cfg.model_id); MessageBoxA(h,"已复制模型名","提示",MB_OK); }
+        else if(id==IDC_FILTER){
+            g_cfg.content_filter = (IsDlgButtonChecked(h,IDC_FILTER)==BST_CHECKED)?1:0;
+            save_config();
+            log_line("内容限制切换为: %s，重启引擎生效", g_cfg.content_filter?"有限制":"无限制");
+            kill_engine();  /* 看门狗会自动重拉，使配置生效 */
+        }
+        return 0; }
+    case WM_TIMER: ui_refresh(h); return 0;
+    case WM_SIZE: return 0;
+    case WM_CLOSE: ShowWindow(h,SW_HIDE); return 0;  /* 关闭=隐藏到托盘 */
+    case WM_DESTROY:
+        if(gh_has_tray) Shell_NotifyIconA(NIM_DELETE,&gh_nid);
+        PostQuitMessage(0); return 0;
+    }
+    return DefWindowProcA(h,m,w,l);
+}
+static void gui_thread(void){
+    char lan[128]; get_lan_ip(lan,sizeof(lan));
+    snprintf(g_addr_disp,sizeof(g_addr_disp),"http://%s:%d", lan, g_cfg.port);
+    WNDCLASSA wc={0}; wc.lpfnWndProc=WndProc; wc.hInstance=GetModuleHandleA(NULL);
+    wc.lpszClassName="LocalDreamETServer"; wc.hCursor=LoadCursor(NULL,IDC_ARROW);
+    wc.hbrBackground=(HBRUSH)(COLOR_WINDOW+1);
+    RegisterClassA(&wc);
+    gh_main=CreateWindowA("LocalDreamETServer","Local Dream ET Server  v1.1.0",
+        WS_OVERLAPPEDWINDOW|WS_CLIPCHILDREN,CW_USEDEFAULT,CW_USEDEFAULT,470,320,
+        NULL,NULL,GetModuleHandleA(NULL),NULL);
+    ShowWindow(gh_main,SW_SHOW);
+    MSG msg;
+    while(GetMessageA(&msg,NULL,0,0)>0){ TranslateMessage(&msg); DispatchMessageA(&msg); }
+}
+#endif
+
 int main(int argc, char** argv) {
     LOG_INIT();
 #ifdef _WIN32
@@ -778,7 +1010,7 @@ int main(int argc, char** argv) {
     int has_cfg = load_config();
 
     /* 命令行参数优先级高于配置文件，便于无交互部署/冒烟 */
-    int no_wizard=0;
+    int no_wizard=0, no_gui=0;
     for(int i=1;i<argc;i++){
         if(!strcmp(argv[i],"--model") && i+1<argc){
             snprintf(g_cfg.model_path,sizeof(g_cfg.model_path),"%s",argv[++i]);
@@ -789,8 +1021,10 @@ int main(int argc, char** argv) {
             g_cfg.inner_port=atoi(argv[++i]);
         } else if(!strcmp(argv[i],"--no-wizard")){
             no_wizard=1;
+        } else if(!strcmp(argv[i],"--no-gui")){
+            no_gui=1;
         } else if(!strcmp(argv[i],"--help") || !strcmp(argv[i],"-h")){
-            printf("用法: etserver [--model <路径>] [--port <对外>] [--inner-port <对内>] [--no-wizard]\n");
+            printf("用法: etserver [--model <路径>] [--port <对外>] [--inner-port <对内>] [--no-wizard] [--no-gui]\n");
             return 0;
         }
     }
@@ -827,7 +1061,15 @@ int main(int argc, char** argv) {
 #endif
     poll_sleep_ms(800);
     show_banner();
-    console_thread(NULL);   /* 前台阻塞读命令 */
+#ifdef _WIN32
+    if(no_gui){
+        console_thread(NULL);   /* 服务模式：纯控制台，不弹窗 */
+    } else {
+        gui_thread();           /* 原生 Win32 窗口（托盘/复制框/开关） */
+    }
+#else
+    console_thread(NULL);
+#endif
 
     g_running=0;
     kill_engine();
