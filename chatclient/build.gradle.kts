@@ -19,8 +19,8 @@ android {
         applicationId = "etc.github.ai.chat"
         minSdk = 28
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0.0-et"
+        versionCode = 2
+        versionName = "1.0.1-et"
     }
 
     lint {

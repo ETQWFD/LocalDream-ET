@@ -1733,7 +1733,11 @@ fun ModelRunScreen(
                     Log.d("ModelRunScreen", "update bitmap")
 
                     state.seed?.let { returnedSeed = it }
-                    progress = 0f
+                    // et.36: per-image result done — leave the bar at 1.0 for THIS image so the
+                    // continuous batch bar lands exactly on the (i/n) boundary instead of
+                    // snapping back to 0% ("第一张跑完又从0重跑"). The next image's own
+                    // progress then continues from that boundary.
+                    progress = 1f
 
                     val genTime = generationStartTime?.let { startTime ->
                         val endTime = System.currentTimeMillis()
@@ -1858,8 +1862,13 @@ fun ModelRunScreen(
             }
 
             else -> {
-                isRunning = false
-                progress = 0f
+                // et.36: the batch loop emits Idle (resetState) BETWEEN images. Don't tear the
+                // progress card down or zero the bar mid-batch — only the loop's epilogue
+                // (currentBatchIndex=0) ends the whole run.
+                if (currentBatchIndex == 0) {
+                    isRunning = false
+                    progress = 0f
+                }
             }
         }
     }
@@ -2908,12 +2917,19 @@ fun ModelRunScreen(
                             },
                             style = MaterialTheme.typography.titleMedium,
                         )
+                        // et.36: total batch progress = (completedImages + this image's step)/n,
+                        // continuous across the whole batch instead of resetting per image.
+                        val batchTotalProgress = if (batchCounts > 1 && currentBatchIndex > 0) {
+                            ((currentBatchIndex - 1) + progress.coerceIn(0f, 1f)) / batchCounts
+                        } else {
+                            progress
+                        }
                         SmoothLinearWavyProgressIndicator(
-                            progress = progress,
+                            progress = batchTotalProgress,
                             modifier = Modifier.fillMaxWidth(),
                         )
                         Text(
-                            "${(progress * 100).toInt()}%",
+                            "${(batchTotalProgress * 100).toInt()}%",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )

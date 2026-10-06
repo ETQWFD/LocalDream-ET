@@ -41,10 +41,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import io.github.xororz.localdream.R
-import io.github.xororz.localdream.cloud.CloudClient
-import io.github.xororz.localdream.cloud.CloudConfig
+import io.github.xororz.localdream.cloud.CloudUploader
 import io.github.xororz.localdream.cloud.LogHub
-import io.github.xororz.localdream.cloud.SecureTokenStore
 import io.github.xororz.localdream.utils.Storage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -131,16 +129,31 @@ fun UploadImagesScreen(onBack: () -> Unit, onGoGenerate: () -> Unit) {
                             val result = runCatching { uploadPicks(context, picks) }
                             withContext(Dispatchers.Main) {
                                 busy = false
-                                result.onSuccess { (ok, fail) ->
-                                    Toast.makeText(
-                                        context,
-                                        context.getString(R.string.upload_images_done, ok, picks.size),
-                                        Toast.LENGTH_LONG,
-                                    ).show()
+                                result.onSuccess { r ->
+                                    // et.35/36: never blindly say "no network". Show the real
+                                    // outcome; if anything failed, surface the mapped reason.
+                                    when {
+                                        r.fail == 0 -> Toast.makeText(
+                                            context,
+                                            context.getString(R.string.upload_images_done, r.ok, picks.size),
+                                            Toast.LENGTH_LONG,
+                                        ).show()
+                                        r.ok == 0 -> Toast.makeText(
+                                            context,
+                                            CloudUploader.classify(context, r.firstError ?: Exception()),
+                                            Toast.LENGTH_LONG,
+                                        ).show()
+                                        else -> Toast.makeText(
+                                            context,
+                                            context.getString(R.string.upload_images_done, r.ok, picks.size) +
+                                                "（" + CloudUploader.classify(context, r.firstError ?: Exception()) + "）",
+                                            Toast.LENGTH_LONG,
+                                        ).show()
+                                    }
                                 }.onFailure { e ->
                                     Toast.makeText(
                                         context,
-                                        context.getString(R.string.upload_images_no_net) + ": " + (e.message ?: "?"),
+                                        CloudUploader.classify(context, e),
                                         Toast.LENGTH_LONG,
                                     ).show()
                                 }
@@ -192,34 +205,28 @@ fun UploadImagesScreen(onBack: () -> Unit, onGoGenerate: () -> Unit) {
     }
 }
 
-private suspend fun uploadPicks(context: android.content.Context, picks: List<File>): Pair<Int, Int> {
-    val store = SecureTokenStore(context)
-    val auth = store.loggedInProviders().firstOrNull()
-        ?: error(context.getString(io.github.xororz.localdream.R.string.logs_upload_need_login))
-    val provider = auth.provider
-    val token = store.accessToken(provider) ?: error("no token")
-    CloudClient.ensurePrivateRepo(provider, token, auth.login)
-    val owner = auth.owner ?: auth.login
-    val repo = auth.repo ?: CloudConfig.BACKUP_REPO
+private class BatchUploadResult(val ok: Int, val fail: Int, val firstError: Throwable?)
+
+// et.35/36: uses the shared real-upload path. No network pre-check — the real
+// HTTP call decides. Per-file failures are collected (first reason surfaced to UI).
+private suspend fun uploadPicks(context: android.content.Context, picks: List<File>): BatchUploadResult {
     var ok = 0
     var fail = 0
+    var firstError: Throwable? = null
     picks.forEach { f ->
         runCatching {
-            val stamp = SimpleDateFormat("yyyyMMddHHmmss", Locale.US).format(Date())
+            val stamp = SimpleDateFormat("yyyyMMddHHmm", Locale.US).format(Date())
             val ext = f.extension.lowercase().ifEmpty { "png" }
-            CloudClient.uploadContent(
-                provider, token, owner, repo,
-                "png/${stamp}_${f.hashCode().and(0xffff)}.${ext}",
-                f.readBytes(),
-                "upload image $stamp",
-            )
+            CloudUploader.uploadFile(context, f, "png/$stamp.$ext")
+        }.onSuccess {
             ok++
         }.onFailure { e ->
             fail++
+            if (firstError == null) firstError = e
             runCatching {
                 LogHub.log(LogHub.Category.UPLOAD, "FAIL png/${f.name}: ${e.message}")
             }
         }
     }
-    return ok to fail
+    return BatchUploadResult(ok, fail, firstError)
 }

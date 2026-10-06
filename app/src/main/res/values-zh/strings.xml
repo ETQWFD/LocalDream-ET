@@ -342,6 +342,12 @@
     <string name="cloud_upload_ok">图片已上传到云端</string>
     <string name="cloud_upload_failed">上传失败：%1$s</string>
     <string name="cloud_upload_no_net">当前无网络，云上传不可用。</string>
+    <string name="cloud_err_timeout">GitHub 连接超时，请稍后重试或切换网络</string>
+    <string name="cloud_err_unreachable">无法连接 GitHub，请检查网络后重试</string>
+    <string name="cloud_err_auth">云端令牌无效或权限不足，请重新登录</string>
+    <string name="cloud_err_notfound">仓库不存在或无权限</string>
+    <string name="cloud_err_http">上传失败（HTTP %1$d）</string>
+    <string name="cloud_err_other">上传失败，请稍后重试</string>
     <string name="error_model_extract_incomplete">模型“%1$s”文件不完整，缺少运行所需权重。安装包已保留，请重新下载或修复模型；仍失败请删除后重新下载。</string>
     <string name="restore_pick_model">请从列表中选择一个已下载模型开始。</string>
     <string name="close">关闭</string>

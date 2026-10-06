@@ -352,6 +352,12 @@
     <string name="cloud_upload_ok">Image uploaded to cloud</string>
     <string name="cloud_upload_failed">Upload failed: %1$s</string>
     <string name="cloud_upload_no_net">No network; cloud upload is disabled.</string>
+    <string name="cloud_err_timeout">GitHub connection timed out. Try again later or switch network.</string>
+    <string name="cloud_err_unreachable">Cannot reach GitHub. Please check your network and retry.</string>
+    <string name="cloud_err_auth">Token invalid or lacks permission. Please sign in again.</string>
+    <string name="cloud_err_notfound">Repository does not exist or you have no access.</string>
+    <string name="cloud_err_http">Upload failed (HTTP %1$d).</string>
+    <string name="cloud_err_other">Upload failed. Please try again later.</string>
     <string name="error_model_extract_incomplete">Model "%1$s" files are incomplete (missing required weights). The downloaded package is kept; please retry or repair the model. If it still fails, delete and re-download.</string>
     <string name="restore_pick_model">Pick a downloaded model from the list to start.</string>
     <string name="close">Close</string>

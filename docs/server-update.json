@@ -1,21 +1,21 @@
 {
   "name": "Local Dream ET Server",
-  "version": "1.1.2",
-  "versionCode": 112,
-  "tag": "server-v1.1.2",
+  "version": "1.1.4",
+  "versionCode": 114,
+  "tag": "server-v1.1.4",
   "prerelease": true,
   "channel": "github",
   "platforms": {
     "windows": {
-      "file": "LocalDreamET-Server-Setup-1.1.2.exe",
-      "size": 11253649,
-      "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/server-v1.1.2/LocalDreamET-Server-Setup-1.1.2.exe"
+      "file": "LocalDreamET-Server-Setup-1.1.4.exe",
+      "size": 11254297,
+      "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/server-v1.1.4/LocalDreamET-Server-Setup-1.1.4.exe"
     },
     "linux-x86_64": {
-      "file": "LocalDreamET-Server-1.1.2-linux-x86_64.tar.gz",
-      "size": 16519475,
-      "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/server-v1.1.2/LocalDreamET-Server-1.1.2-linux-x86_64.tar.gz"
+      "file": "LocalDreamET-Server-1.1.4-linux-x86_64.tar.gz",
+      "size": 16521076,
+      "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/server-v1.1.4/LocalDreamET-Server-1.1.4-linux-x86_64.tar.gz"
     }
   },
-  "notes": "v1.1.2：①模型下载首选国内魔搭 ModelScope，失败自动回退 hf-mirror、再 HuggingFace；每个链接均经 HEAD/Range 实测，魔搭没有的模型不放假链接而在向导/界面中文明示并切换镜像；②临时文件(.part)下载+大小校验+原子改名，模型完整下载并校验通过前绝不进入“可出图”就绪态（明确显示下载中/未就绪，不空转刷屏）；③图形界面新增步数(默认20)/CFG/批量数滑杆，自动写入配置并真正透传出图，客户端批量 n=6 即返回 6 张；④保持 v1.1.1 的免 UAC 用户级安装、Unicode 新宋体无乱码、引擎缺失只报一次诊断。版权归 etc（MIT）。"
+  "notes": "v1.1.4（真机问题修复）：①服务地址智能识别——枚举全部网卡，过滤/标注 172.16–31、169.254 等 WSL/Hyper-V/Docker 虚拟网卡，优先 192.168/10.x 物理网卡，控制台与图形界面列出全部候选并提示“手机电脑连同一 WiFi、防火墙放行端口”；②模型下载源以国内魔搭 ModelScope 为主并逐条 Range 实测字节，回退 hf-mirror/HF，.part 断点续传+完整校验+原子改名；已实证引擎直读 safetensors/GGUF，下载校验完成即可直接出图，无需转换（向导/日志中文明示）；③真实 46 位 API Key 首启生成并持久化，Bearer/X-API-Key 鉴权可用，GUI 三个复制框一键复制、多模型下拉热加载；④推理线程按本机核数默认（上限8）、引擎常驻复用；批量 batch_size/n 实证真出多张。保留免 UAC 用户级安装、Unicode 新宋体、未完整不就绪、引擎缺失只报一次。版权归 etc（MIT）。"
 }

@@ -2,8 +2,6 @@ package io.github.xororz.localdream.ui.screens
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.net.ConnectivityManager
-import android.net.Network
 import android.widget.Toast
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -44,10 +42,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavController
 import androidx.paging.compose.collectAsLazyPagingItems
 import io.github.xororz.localdream.R
-import io.github.xororz.localdream.cloud.CloudClient
-import io.github.xororz.localdream.cloud.CloudConfig
+import io.github.xororz.localdream.cloud.CloudUploader
 import io.github.xororz.localdream.cloud.LogHub
-import io.github.xororz.localdream.cloud.SecureTokenStore
 import io.github.xororz.localdream.data.GenerationPreferences
 import io.github.xororz.localdream.data.HistoryFilter
 import io.github.xororz.localdream.data.HistoryItem
@@ -121,34 +117,16 @@ fun HistoryScreen(navController: NavController) {
     var uploadingItemId by remember { mutableStateOf<Long?>(null) }
     var showCloudLogin by remember { mutableStateOf(false) }
 
-    // Live network state: the cloud upload button is disabled when offline and
-    // shows a Chinese hint, mirroring the multi-select upload page.
-    val isOnline by produceState(initialValue = hasNetwork(context), context) {
-        val cm = runCatching { context.getSystemService(ConnectivityManager::class.java) }.getOrNull()
-        if (cm == null) {
-            value = hasNetwork(context)
-            return@produceState
-        }
-        val callback = object : ConnectivityManager.NetworkCallback() {
-            override fun onAvailable(network: Network) { value = true }
-            override fun onLost(network: Network) { value = false }
-        }
-        runCatching { cm.registerDefaultNetworkCallback(callback) }
-        awaitDispose { runCatching { cm.unregisterNetworkCallback(callback) } }
-    }
-
+    // et.35/36: NO network pre-check / VALIDATED gate — that falsely reported
+    // "no network" on domestic networks even when GitHub was reachable. We always
+    // fire the real HTTP upload and classify its outcome.
     // Upload one history PNG to the logged-in GitHub/Gitee private repo under
     // png/yyyyMMddHHmm.png (uploadContent auto-suffixes "_2", "_3" on conflict).
     fun onCloudUploadClick(item: HistoryItem) {
-        val store = SecureTokenStore(context)
-        val auth = store.loggedInProviders().firstOrNull()
-        if (auth == null) {
-            // Reuse the existing PAT account dialog; do not build a new login.
+        if (!CloudUploader.isLoggedIn(context)) {
+            // Reuse the existing PAT account dialog; do not build a new login and
+            // do NOT call it "no network".
             showCloudLogin = true
-            return
-        }
-        if (!isOnline) {
-            Toast.makeText(context, context.getString(R.string.cloud_upload_no_net), Toast.LENGTH_LONG).show()
             return
         }
         val src = item.imageFile
@@ -161,19 +139,9 @@ fun HistoryScreen(navController: NavController) {
         scope.launch {
             val res = runCatching {
                 withContext(Dispatchers.IO) {
-                    val provider = auth.provider
-                    val token = store.accessToken(provider) ?: error("no token")
-                    CloudClient.ensurePrivateRepo(provider, token, auth.login)
-                    val owner = auth.owner ?: auth.login
-                    val repo = auth.repo ?: CloudConfig.BACKUP_REPO
                     val stamp = SimpleDateFormat("yyyyMMddHHmm", Locale.US).format(Date(item.timestamp))
                     val ext = src.extension.lowercase().ifEmpty { "png" }
-                    CloudClient.uploadContent(
-                        provider, token, owner, repo,
-                        "png/$stamp.$ext",
-                        src.readBytes(),
-                        "upload image $stamp",
-                    )
+                    CloudUploader.uploadFile(context, src, "png/$stamp.$ext")
                 }
             }
             uploadingItemId = null
@@ -183,7 +151,7 @@ fun HistoryScreen(navController: NavController) {
                 LogHub.log(LogHub.Category.UPLOAD, "single upload FAIL: ${e.message}")
                 Toast.makeText(
                     context,
-                    context.getString(R.string.cloud_upload_failed, e.message ?: "?"),
+                    CloudUploader.classify(context, e),
                     Toast.LENGTH_LONG,
                 ).show()
             }
@@ -539,11 +507,3 @@ fun HistoryScreen(navController: NavController) {
         CloudBackupDialog(onDismiss = { showCloudLogin = false })
     }
 }
-
-/** Quick offline/online snapshot used as the initial network state. */
-private fun hasNetwork(context: android.content.Context): Boolean = runCatching {
-    val cm = context.getSystemService(ConnectivityManager::class.java) ?: return false
-    val info = cm.activeNetworkInfo
-    @Suppress("DEPRECATION")
-    info != null && info.isConnected
-}.getOrDefault(false)

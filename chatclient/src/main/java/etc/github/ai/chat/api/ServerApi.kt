@@ -35,6 +35,16 @@ object ServerApi {
         .retryOnConnectionFailure(false)
         .build()
 
+    // Short-timeout probe for the settings "connect test" and the LAN scanner.
+    // /healthz answers in milliseconds on a reachable server, so 3s + one
+    // retry fails fast and yields actionable Chinese error messages.
+    private val quickClient: OkHttpClient = OkHttpClient.Builder()
+        .connectTimeout(3, TimeUnit.SECONDS)
+        .readTimeout(3, TimeUnit.SECONDS)
+        .writeTimeout(3, TimeUnit.SECONDS)
+        .retryOnConnectionFailure(false)
+        .build()
+
     sealed class Health {
         data class Ready(val model: String) : Health()
         data object Starting : Health()
@@ -56,26 +66,44 @@ object ServerApi {
         return this
     }
 
-    // ---- GET /healthz (no key) --------------------------------------------
+    // ---- GET /healthz (no key), short timeout + one retry -------------------
     fun healthz(baseRaw: String): Health {
         val base = try { normalizeBase(baseRaw) } catch (e: Exception) {
             return Health.Fail(e.message ?: "服务端地址错误")
         }
+        val last = runProbe(base)
+        if (last !is Health.Fail) return last
+        // one automatic retry
+        return runProbe(base)
+    }
+
+    /** Used by the LAN scanner against raw "http://ip:8080" URLs. */
+    fun probeRaw(base: String): Health = runProbe(base)
+
+    private fun runProbe(base: String): Health {
         val req = try {
             Request.Builder().url("$base/healthz").get().build()
         } catch (e: Exception) {
             return Health.Fail("地址格式错误：${e.message}")
         }
-        client.newCall(req).execute().use { resp ->
-            val body = resp.body?.string().orEmpty()
-            return when (resp.code) {
-                200 -> {
-                    val model = runCatching { JSONObject(body).optString("model") }.getOrDefault("")
-                    Health.Ready(model.ifBlank { "(未知模型)" })
+        return try {
+            quickClient.newCall(req).execute().use { resp ->
+                val body = resp.body?.string().orEmpty()
+                when (resp.code) {
+                    200 -> {
+                        val model = runCatching { JSONObject(body).optString("model") }.getOrDefault("")
+                        Health.Ready(model.ifBlank { "(未知模型)" })
+                    }
+                    503 -> Health.Starting
+                    else -> Health.Fail("HTTP ${resp.code}：${body.take(120)}")
                 }
-                503 -> Health.Starting
-                else -> Health.Fail("HTTP ${resp.code}：${body.take(120)}")
             }
+        } catch (e: java.net.SocketTimeoutException) {
+            Health.Fail("连接超时（3 秒无响应）")
+        } catch (e: java.net.ConnectException) {
+            Health.Fail("连接被拒绝（端口未开放？）")
+        } catch (e: Exception) {
+            Health.Fail("连不上：${e.message ?: "网络错误"}")
         }
     }
 

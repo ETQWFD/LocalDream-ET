@@ -10,6 +10,18 @@ import java.io.IOException
 import java.util.concurrent.TimeUnit
 
 /**
+ * et.35: typed HTTP error so the UI can map it to a clean Chinese reason instead
+ * of blaming every failure on "no network". Network-level failures (timeouts,
+ * unknown host, connection refused) are still thrown as their original
+ * SocketTimeoutException / UnknownHostException / ConnectException so callers can
+ * classify them too.
+ */
+class CloudHttpException(
+    val code: Int,
+    message: String,
+) : IOException(message)
+
+/**
  * Real OAuth + REST calls for GitHub and Gitee private backup.
  *
  * No credential is baked in: [CloudConfig] supplies empty strings by default, in
@@ -54,7 +66,7 @@ object CloudClient {
         }
         client.newCall(req.build()).execute().use { resp ->
             val text = resp.body?.string().orEmpty()
-            if (!resp.isSuccessful) error("user HTTP ${resp.code}: $text")
+            if (!resp.isSuccessful) throw CloudHttpException(resp.code, "user HTTP ${resp.code}")
             val json = JSONObject(text)
             val login = json.optString("login").ifBlank { json.optString("username") }
             val name = json.optString("name").ifBlank { login }
@@ -78,7 +90,7 @@ object CloudClient {
                 .url("https://gitee.com/api/v5/repos/$owner/$repo?access_token=$token").get()
         }
         client.newCall(getReq.build()).execute().use { resp ->
-            if (!resp.isSuccessful) error("repo HTTP ${resp.code}")
+            if (!resp.isSuccessful) throw CloudHttpException(resp.code, "repo HTTP ${resp.code}")
         }
         // Light contents probe (read png/ dir). 404 = dir not yet created is OK.
         val probe = when (provider) {
@@ -123,7 +135,7 @@ object CloudClient {
         }
         client.newCall(req.build()).execute().use { resp ->
             val text = resp.body?.string().orEmpty()
-            if (!resp.isSuccessful) error("create repo HTTP ${resp.code}: $text")
+            if (!resp.isSuccessful) throw CloudHttpException(resp.code, "create repo HTTP ${resp.code}")
         }
         return owner to repo
     }
@@ -175,16 +187,19 @@ object CloudClient {
                     candidate = withExt(path, attempt + 1)
                 }
             }.onFailure { e ->
-                // Network / timeout / unknown host — surface the real cause.
+                // et.35: keep the original network exception type
+                // (SocketTimeoutException / UnknownHostException / ConnectException) so
+                // the UI can map a precise Chinese reason, instead of flattening it into
+                // a generic IOException that looked like "no network" with empty detail.
                 LogHub.log(
                     LogHub.Category.UPLOAD,
                     "NETERR ${provider.name} $path: ${e.message}",
                 )
-                throw IOException("Network error uploading to $provider: ${e.message}")
+                throw e
             }
         }
         LogHub.log(LogHub.Category.UPLOAD, "FAIL ${provider.name} $path HTTP $lastCode")
-        throw IOException("Upload failed: $provider HTTP $lastCode (path=$path)")
+        throw CloudHttpException(lastCode, "Upload failed HTTP $lastCode")
     }
 
     private fun withExt(path: String, idx: Int): String {

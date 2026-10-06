@@ -748,6 +748,16 @@ class BackendService : Service() {
             val systemLibPathsStr = systemLibPaths.joinToString(":")
             env["LD_LIBRARY_PATH"] = systemLibPathsStr
             env["DSP_LIBRARY_PATH"] = runtimeDir.absolutePath
+            // et.36: size inference worker threads to the device's real core count but
+            // with a cap. On big.LITTLE phones spawning one thread per core makes the
+            // big/little cores fight the scheduler and thrashes instead of speeding up;
+            // cap at 4 (leave headroom for the UI) and use all cores only on <=4-core
+            // devices. Honored via OMP_NUM_THREADS by the native BLAS/engine.
+            val engineThreads = Runtime.getRuntime().availableProcessors()
+                .coerceAtLeast(2)
+                .coerceAtMost(4)
+            env["OMP_NUM_THREADS"] = engineThreads.toString()
+            Log.i(TAG, "engineThreads(OMP_NUM_THREADS)=$engineThreads of ${Runtime.getRuntime().availableProcessors()} cores")
             if (ditEngineDir != null) {
                 // ggml-hexagon asks FastRPC for its skel by bare name, so both
                 // the runtime directory holding the skels and the platform

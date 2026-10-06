@@ -56,6 +56,7 @@
   #include <windows.h>
   #include <shellapi.h>
   #include <commctrl.h>
+  #include <iphlpapi.h>
   #include <io.h>
   #pragma comment(lib,"ws2_32.lib")
   #pragma comment(lib,"shell32.lib")
@@ -70,6 +71,7 @@
   #define SHUT_WR      SD_SEND    /* Windows shutdown 第二参数 */
 #else
   #include <unistd.h>
+  #include <ifaddrs.h>
   #include <sys/socket.h>
   #include <netinet/in.h>
   #include <arpa/inet.h>
@@ -84,7 +86,7 @@
 
 /* ============================ 全局配置 ============================ */
 #define APP_NAME      "Local Dream ET Server"
-#define APP_VERSION   "1.1.2"
+#define APP_VERSION   "1.1.4"
 #define COPYRIGHT_STR "Copyright (C) 2026 etc"
 
 #define DEFAULT_PORT       8080      /* 对外监听端口 */
@@ -239,6 +241,20 @@ static void gen_api_key(char* out) {
     out[KEY_LEN]=0;
 }
 
+/* v1.1.4 Bug6：按本机真实逻辑核数给引擎线程默认，避免超发抖动；上限 8。 */
+static int default_threads(void) {
+#ifdef _WIN32
+    SYSTEM_INFO si; GetSystemInfo(&si);
+    int n = (int)si.dwNumberOfProcessors;
+#else
+    long n = sysconf(_SC_NPROCESSORS_ONLN);
+    if (n <= 0) n = 2;
+#endif
+    if (n < 1) n = 1;
+    if (n > 8) n = 8;     /* 上限，防超发导致抖动 */
+    return (int)n;
+}
+
 /* ------------------------- 配置读写 ------------------------- */
 static void default_config(void) {
     memset(&g_cfg, 0, sizeof(g_cfg));
@@ -246,7 +262,7 @@ static void default_config(void) {
     g_cfg.inner_port = UPSTREAM_BASE_PORT;
     g_cfg.content_filter = 0;   /* 默认无限制 */
     g_cfg.dark_theme = 1;
-    g_cfg.threads = 2;
+    g_cfg.threads = default_threads();   /* v1.1.4：按真实核数 */
     g_cfg.autostart = 0;
     g_cfg.steps = 20;          /* v1.1.2 默认步数 */
     g_cfg.cfg_scale = 7.0;     /* v1.1.2 默认 CFG */
@@ -334,37 +350,115 @@ static void mkdir_p(const char* base, const char* sub) {
     mkdir_recursive(p);
 }
 
-/* 取本机局域网 IPv4（用于展示） */
-static void get_lan_ip(char* out, int outlen) {
-    out[0]=0;
+/* ==================== 本机 IP 枚举（v1.1.3：区分物理/虚拟网卡） ====================
+ * 手机要连的是物理局域网 IP，不是 WSL/Hyper-V/Docker 虚拟网卡(172.x)。
+ * 枚举所有非 loopback 的 IPv4，过滤保留段，按友好名识别虚拟网卡并降权。 */
+typedef struct {
+    char ip[64];
+    char nic[128];     /* 适配器名/友好名 */
+    int  virtual_nic;  /* 1=疑似虚拟网卡(WSL/Hyper-V/Docker/VM 等) */
+} IpCandidate;
+#define MAX_IPS 24
+static IpCandidate g_ips[MAX_IPS];
+static int   g_nips = 0;
+static char  g_recommended_ip[64] = "127.0.0.1";
+
+/* 判断适配器名是否疑似虚拟网卡 */
+static int nic_is_virtual(const char* name) {
+    static const char* bad[] = {"wsl","hyper-v","hyperv","vethernet","docker","loopback",
+        "vmware","virtualbox","vbox","vmnet","veth","br-","virbr","tun","tap","zerotier",NULL};
+    char l[256]; int n=0;
+    for(; name[n] && n<255; n++) l[n]=tolower((unsigned char)name[n]); l[n]=0;
+    for(int i=0; bad[i]; i++) if(strstr(l,bad[i])) return 1;
+    return 0;
+}
+/* 判断 IP 是否为应过滤的保留/链路本地段 */
+static int ip_is_filtered(const char* ip) {
+    unsigned a,b;
+    if(sscanf(ip,"%u.%u",&a,&b)>=2){
+        if(a==169 && b==254) return 1;              /* APIPA/链路本地 */
+        if(a==172 && b>=16 && b<=31) return 1;     /* 172.16-31 虚拟网卡常用段 */
+        if(a==127) return 1;
+    }
+    return 0;
+}
+static int ip_is_lan_private(const char* ip){
+    unsigned a,b; if(sscanf(ip,"%u.%u",&a,&b)>=2){
+        if(a==192 && b==168) return 1;
+        if(a==10) return 1;
+        if(a==172 && b>=16 && b<=31) return 1;
+    }
+    return 0;
+}
+
+static void collect_ips(void) {
+    g_nips=0; g_recommended_ip[0]=0;
 #ifdef _WIN32
-    char host[256]; gethostname(host,sizeof(host));
-    struct addrinfo hints,*res=NULL; memset(&hints,0,sizeof(hints));
-    hints.ai_family=AF_INET;
-    if (getaddrinfo(host,NULL,&hints,&res)==0) {
-        for(struct addrinfo*r=res;r;r=r->ai_next){
-            struct sockaddr_in*in=(struct sockaddr_in*)r->ai_addr;
-            const char* s=inet_ntoa(in->sin_addr);
-            if(strncmp(s,"127.",4)!=0){ snprintf(out,outlen,"%s",s); break; }
+    ULONG flags = GAA_FLAG_SKIP_ANYCAST|GAA_FLAG_SKIP_MULTICAST|GAA_FLAG_SKIP_DNS_SERVER;
+    ULONG sz=15000;
+    IP_ADAPTER_ADDRESSES* ads=(IP_ADAPTER_ADDRESSES*)malloc(sz);
+    if(!ads) return;
+    DWORD r=GetAdaptersAddresses(AF_INET, flags, NULL, ads, &sz);
+    if(r==ERROR_BUFFER_OVERFLOW){ free(ads); ads=(IP_ADAPTER_ADDRESSES*)malloc(sz);
+        r=GetAdaptersAddresses(AF_INET, flags, NULL, ads, &sz); }
+    if(r==NO_ERROR){
+        for(IP_ADAPTER_ADDRESSES* a=ads; a; a=a->Next){
+            if(a->IfType==IF_TYPE_SOFTWARE_LOOPBACK) continue;
+            const char* name = a->FriendlyName ? a->FriendlyName : (a->AdapterName?a->AdapterName:"");
+            int virt = nic_is_virtual(name);
+            for(IP_ADAPTER_UNICAST_ADDRESS* u=a->FirstUnicastAddress; u; u=u->Next){
+                if(u->Address.lpSockaddr->sa_family!=AF_INET) continue;
+                struct sockaddr_in* sin=(struct sockaddr_in*)u->Address.lpSockaddr;
+                char ip[64]; inet_ntop(AF_INET,&sin->sin_addr,ip,sizeof(ip));
+                if(ip_is_filtered(ip)) continue;
+                if(g_nips<MAX_IPS){
+                    snprintf(g_ips[g_nips].ip,64,"%s",ip);
+                    snprintf(g_ips[g_nips].nic,128,"%s",name);
+                    g_ips[g_nips].virtual_nic=virt;
+                    g_nips++;
+                }
+            }
         }
-        freeaddrinfo(res);
     }
+    free(ads);
 #else
-    /* 用一个 UDP 连外部地址的方式取出口 IP（不真正发包） */
-    int s = socket(AF_INET, SOCK_DGRAM, 0);
-    if (s>=0) {
-        struct sockaddr_in d; memset(&d,0,sizeof(d));
-        d.sin_family=AF_INET; d.sin_port=htons(80);
-        inet_pton(AF_INET,"8.8.8.8",&d.sin_addr);
-        if (connect(s,(struct sockaddr*)&d,sizeof(d))==0) {
-            struct sockaddr_in l; socklen_t n=sizeof(l);
-            getsockname(s,(struct sockaddr*)&l,&n);
-            inet_ntop(AF_INET,&l.sin_addr,out,outlen);
+    struct ifaddrs* ifs=NULL;
+    if(getifaddrs(&ifs)!=0) return;
+    for(struct ifaddrs* i=ifs; i; i=i->ifa_next){
+        if(!i->ifa_addr || i->ifa_addr->sa_family!=AF_INET) continue;
+        if(i->ifa_name && strstr(i->ifa_name,"lo")) continue;
+        char ip[64];
+        inet_ntop(AF_INET,&((struct sockaddr_in*)i->ifa_addr)->sin_addr,ip,sizeof(ip));
+        if(ip_is_filtered(ip)) continue;
+        int virt = nic_is_virtual(i->ifa_name?i->ifa_name:"");
+        if(g_nips<MAX_IPS){
+            snprintf(g_ips[g_nips].ip,64,"%s",ip);
+            snprintf(g_ips[g_nips].nic,128,"%s",i->ifa_name?i->ifa_name:"");
+            g_ips[g_nips].virtual_nic=virt;
+            g_nips++;
         }
-        close_socket(s);
     }
+    freeifaddrs(ifs);
 #endif
-    if (!out[0]) snprintf(out,outlen,"127.0.0.1");
+    /* 选推荐：物理网卡 + 192.168/10 优先；否则物理；否则任意 */
+    int pick=-1;
+    for(int pref=0; pref<3 && pick<0; pref++){
+        for(int k=0;k<g_nips;k++){
+            int phys=!g_ips[k].virtual_nic;
+            int lan=ip_is_lan_private(g_ips[k].ip);
+            if(pref==0 && phys && lan){ pick=k; break; }
+            if(pref==1 && phys){ pick=k; break; }
+            if(pref==2){ pick=k; break; }
+        }
+    }
+    if(pick>=0) snprintf(g_recommended_ip,64,"%s",g_ips[pick].ip);
+    else snprintf(g_recommended_ip,64,"127.0.0.1");
+}
+
+/* 向后兼容：返回推荐局域网 IP */
+static void get_lan_ip(char* out, int outlen) {
+    if(g_nips==0) collect_ips();
+    snprintf(out,outlen,"%s", g_recommended_ip);
 }
 
 /* ============================ 内容限制 ============================
@@ -466,21 +560,25 @@ static ModelEntry MODELS[] = {
         {"HuggingFace",
          "https://huggingface.co/Sashkanik13/sd1.5-text2img-gguf/resolve/main/model_q4_0.gguf",
          1566768416} } },
-    { "sd15-chillout",     "ChilloutMix (写实 Q8_0)",
-      { {"魔搭ModelScope", "", 0},
+    { "sd15-chillout",     "ChilloutMix (写实，魔搭首选 fp32 直读)",
+      /* v1.1.4：魔搭首选 TheKernelZ/chilloutmix(实测206,4.26GB fp32 safetensors 直读)；
+         hf-mirror/HF 为 Q8_0 GGUF(1.8GB) 回退。 */
+      { {"魔搭ModelScope",
+         "https://modelscope.cn/models/TheKernelZ/chilloutmix_NiPrunedFp32Fix/resolve/master/chilloutmix_NiPrunedFp32Fix.safetensors",
+         4265097179LL},
         {"hf-mirror",
          "https://hf-mirror.com/MomoSoft/chilloutmix-sd15-q8-gguf/resolve/main/chilloutmix_q8_0.gguf",
          1801579488},
         {"HuggingFace",
          "https://huggingface.co/MomoSoft/chilloutmix-sd15-q8-gguf/resolve/main/chilloutmix_q8_0.gguf",
          1801579488} } },
-    { "sd15-dreamshaper",  "DreamShaper 8 (全能 SD1.5 写实/动漫，safetensors)",
+    { "sd15-dreamshaper",  "DreamShaper 8 (全能 SD1.5 写实/动漫，对齐手机 digiplay 源)",
       { {"魔搭ModelScope", "", 0},
         {"hf-mirror",
-         "https://hf-mirror.com/Lykon/DreamShaper/resolve/main/DreamShaper_8_pruned.safetensors",
+         "https://hf-mirror.com/digiplay/DreamShaper_8/resolve/main/dreamshaper_8.safetensors",
          2132625894LL},
         {"HuggingFace",
-         "https://huggingface.co/Lykon/DreamShaper/resolve/main/DreamShaper_8_pruned.safetensors",
+         "https://huggingface.co/digiplay/DreamShaper_8/resolve/main/dreamshaper_8.safetensors",
          2132625894LL} } },
     { "sd15-absreal",      "Absolute Reality v1.8.1 (写实，safetensors)",
       { {"魔搭ModelScope", "", 0},
@@ -1117,15 +1215,22 @@ static void* listen_thread(void* arg) {
 
 /* ============================ 主界面展示 ============================ */
 static void show_banner(void) {
-    char lan[64]; get_lan_ip(lan,sizeof(lan));
+    collect_ips();
     printf("\n");
     printf("==============================================================\n");
     printf("   %s  v%s\n", APP_NAME, APP_VERSION);
     printf("   %s\n", COPYRIGHT_STR);
     printf("--------------------------------------------------------------\n");
-    printf("  [服务地址]  http://%s:%d\n", lan, g_cfg.port);
-    printf("             http://127.0.0.1:%d  (本机)\n", g_cfg.port);
-    printf("  [API Key ]  %s\n", g_cfg.api_key);
+    printf("  [推荐局域网地址]  http://%s:%d\n", g_recommended_ip, g_cfg.port);
+    printf("  [所有候选 IPv4]（手机请填下面“物理网卡”那个）:\n");
+    for (int k = 0; k < g_nips; k++) {
+        const char* tag = g_ips[k].virtual_nic ? "可能为虚拟网卡" : "物理网卡";
+        printf("      http://%s:%d   (%s  %s)\n", g_ips[k].ip, g_cfg.port, g_ips[k].nic, tag);
+    }
+    printf("      http://127.0.0.1:%d  (仅本机)\n", g_cfg.port);
+    printf("  [手机连接提示] 请让手机与电脑连同一个 WiFi，在手机端填写上面的\n");
+    printf("      http://物理网卡IP:端口；Windows 首次弹防火墙请点“允许”，\n");
+    printf("      若仍连不上，请在 Windows 防火墙放行本程序或 TCP 端口 %d。\n", g_cfg.port);
     printf("  [模型    ]  %s\n", g_cfg.model_id[0]?g_cfg.model_id:"(未选择)");
     printf("  [内容限制]  %s   [主题] %s   [重启次数] %d\n",
            g_cfg.content_filter?"开启(拦截)":"无限制",
@@ -1137,6 +1242,8 @@ static void show_banner(void) {
     printf("           OpenAI 风格  POST /v1/images/generations\n");
     printf("           健康检查(免Key) GET /healthz\n");
     printf("  请求时带:  Authorization: Bearer <上面的 Key>\n");
+    printf("  [引擎] 直读 safetensors / GGUF，下载并校验完整后即可直接出图，\n");
+    printf("          无需像手机端那样转换。\n");
     printf("--------------------------------------------------------------\n");
     printf("  命令: r=重启引擎  f=切换内容限制  k=重置Key  i=重新显示  q=退出\n");
     printf("==============================================================\n\n");
@@ -1286,6 +1393,15 @@ static void ui_refresh(HWND h){
     else                          ready="⏳ 未就绪：引擎加载中，暂不能出图";
     snprintf(buf,sizeof(buf),"状态: %s\n看门狗重启次数: %d   内容限制: %s   数据目录: %s",
              ready, g_restart_count, g_cfg.content_filter?"有限制":"无限制", g_datadir);
+    /* v1.1.4 Bug2：列出所有候选 IP，标注物理/虚拟，手机填“物理网卡”那个 */
+    for (int k=0;k<g_nips;k++){
+        char line[200];
+        snprintf(line,sizeof(line),"\n  %s:%d (%s)", g_ips[k].ip, g_cfg.port,
+                 g_ips[k].virtual_nic?"虚拟网卡":"物理");
+        strncat(buf,line,sizeof(buf)-strlen(buf)-1);
+    }
+    strncat(buf,"\n同WiFi连接；防火墙点“允许”。引擎直读safetensors/GGUF，无需转换。",
+            sizeof(buf)-strlen(buf)-1);
     ui_set_text(h,IDC_STATUS,buf);
     CheckDlgButton(h,IDC_FILTER, g_cfg.content_filter?BST_CHECKED:BST_UNCHECKED);
     /* 滑杆数值标签 */
@@ -1328,7 +1444,7 @@ static LRESULT CALLBACK WndProc(HWND h,UINT m,WPARAM w,LPARAM l){
         c=CreateWindowW(TRACKBAR_CLASSW,L"",WS_CHILD|WS_VISIBLE|TBS_HORZ|TBS_NOTICKS,100,278,300,26,h,(HMENU)IDC_BATCH_SLD,NULL,NULL); SendMessageW(c,WM_SETFONT,(WPARAM)gh_font,1);
         SendMessageW(c,TBM_SETRANGEMIN,0,1); SendMessageW(c,TBM_SETRANGEMAX,0,8); SendMessageW(c,TBM_SETPOS,0,g_cfg.batch_size);
         c=CreateWindowW(L"STATIC",L"",WS_CHILD|WS_VISIBLE,410,282,150,20,h,(HMENU)IDC_BATCH_VAL,NULL,NULL); SendMessageW(c,WM_SETFONT,(WPARAM)gh_font,1);
-        c=CreateWindowW(L"STATIC",L"",WS_CHILD|WS_VISIBLE,10,316,540,80,h,(HMENU)IDC_STATUS,NULL,NULL); SendMessageW(c,WM_SETFONT,(WPARAM)gh_font,1);
+        c=CreateWindowW(L"STATIC",L"",WS_CHILD|WS_VISIBLE,10,316,560,120,h,(HMENU)IDC_STATUS,NULL,NULL); SendMessageW(c,WM_SETFONT,(WPARAM)gh_font,1);
         ui_apply_theme(NULL);
         ui_populate_models(h);
         ui_refresh(h);
@@ -1399,7 +1515,7 @@ static LRESULT CALLBACK WndProc(HWND h,UINT m,WPARAM w,LPARAM l){
 }
 static void gui_thread(void){
     InitCommonControls();   /* v1.1.2: 启用 trackbar 等公共控件 */
-    char lan[128]; get_lan_ip(lan,sizeof(lan));
+    char lan[128]; collect_ips(); snprintf(lan,sizeof(lan),"%s",g_recommended_ip);
     snprintf(g_addr_disp,sizeof(g_addr_disp),"http://%s:%d", lan, g_cfg.port);
     WNDCLASSW wc={0}; wc.lpfnWndProc=WndProc; wc.hInstance=GetModuleHandleW(NULL);
     wc.lpszClassName=L"LocalDreamETServer"; wc.hCursor=LoadCursor(NULL,IDC_ARROW);

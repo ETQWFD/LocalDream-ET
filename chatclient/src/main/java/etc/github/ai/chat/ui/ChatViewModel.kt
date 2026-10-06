@@ -62,11 +62,59 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
     /** The user message that owns the latest "pending" AI bubble, for retry. */
     var lastErrorUserText by mutableStateOf<String?>(null)
         private set
+    /** Shown when user hits send without server address / API key configured. */
+    var needSetup by mutableStateOf(false)
+        private set
+
+    // ---- LAN scan state (used by the settings screen) ---------------------
+    var scanning by mutableStateOf(false)
+        private set
+    var scanProgress by mutableStateOf("")
+        private set
+    var scanFound by mutableStateOf<List<etc.github.ai.chat.api.LanScanner.Found>>(emptyList())
+        private set
+    private var scanCancelled = false
 
     fun onInputChange(v: String) { input = v }
     fun onDenoisingChange(v: Float) { denoising = v }
     fun openSettings() { showSettings = true }
     fun closeSettings() { showSettings = false }
+    fun dismissNeedSetup() { needSetup = false }
+    fun goSetupFromNeedSetup() { needSetup = false; showSettings = true }
+    fun clearPickedImage() {
+        pendingImageUri = null
+        pendingImagePreview = null
+    }
+
+    fun startLanScan() {
+        if (scanning) return
+        scanning = true
+        scanCancelled = false
+        scanFound = emptyList()
+        scanProgress = "正在扫描 0/0"
+        viewModelScope.launch {
+            val r = withContext(Dispatchers.IO) {
+                runCatching {
+                    etc.github.ai.chat.api.LanScanner.scan(
+                        onProgress = { done, total ->
+                            scanProgress = "正在扫描 $done/$total"
+                        },
+                        isCancelled = { scanCancelled },
+                    )
+                }
+            }
+            scanning = false
+            r.onSuccess { scanFound = it }
+            scanProgress = if (scanFound.isEmpty()) "未发现服务端" else "发现 ${scanFound.size} 台"
+        }
+    }
+
+    fun cancelLanScan() { scanCancelled = true }
+
+    /** User tapped a discovered server row: write it into settings. */
+    fun fillAddress(base: String) {
+        updateSettings(settings.copy(baseUrl = base))
+    }
 
     fun updateSettings(s: Settings) {
         settings = s
@@ -88,6 +136,11 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
         val prompt = input.trim()
         val picked = pendingImageUri
         if (prompt.isEmpty() && picked == null) return
+        // no silent dead button: guide to settings instead.
+        if (settings.baseUrl.isBlank() || settings.apiKey.isBlank()) {
+            needSetup = true
+            return
+        }
 
         val imgPreview = pendingImagePreview
         val userMsg = ChatMsg.User(System.currentTimeMillis(), prompt, imgPreview)
