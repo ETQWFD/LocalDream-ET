@@ -93,6 +93,13 @@
             android:exported="false"
             android:foregroundServiceType="dataSync" />
 
+        <!-- et.37 (Bug9): foreground service exposing a LAN A1111/OpenAI-compatible image API. -->
+        <service
+            android:name=".service.LanImageService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
         <!-- et.24: foreground service carrying the in-app APK update download. -->
         <service
             android:name=".service.UpdateDownloadService"

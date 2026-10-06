@@ -310,6 +310,7 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
     var restoreUseOpenCL by remember { mutableStateOf(false) }
     var showRestoreModelPicker by remember { mutableStateOf(false) }
     var showCloudBackupDialog by remember { mutableStateOf(false) }
+    var showApiServerDialog by remember { mutableStateOf(false) }
     var showCustomNpuModelDialog by remember { mutableStateOf(false) }
     var isConverting by remember { mutableStateOf(false) }
     var conversionProgress by remember { mutableStateOf("") }
@@ -766,6 +767,10 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
 
     if (showCloudBackupDialog) {
         CloudBackupDialog(onDismiss = { showCloudBackupDialog = false })
+    }
+
+    if (showApiServerDialog) {
+        ApiServerDialog(onDismiss = { showApiServerDialog = false })
     }
 
     LaunchedEffect(showSettingsDialog) {
@@ -1323,6 +1328,16 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                                 onClick = {
                                     menuExpanded = false
                                     showCloudBackupDialog = true
+                                },
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.api_server_title)) },
+                                leadingIcon = {
+                                    Icon(Icons.Default.Api, contentDescription = null)
+                                },
+                                onClick = {
+                                    menuExpanded = false
+                                    showApiServerDialog = true
                                 },
                             )
                             DropdownMenuItem(
