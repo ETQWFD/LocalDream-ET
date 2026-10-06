@@ -1,7 +1,7 @@
 {
-  "versionCode": 106,
-  "versionName": "3.0.0-et.32",
+  "versionCode": 107,
+  "versionName": "3.0.0-et.33",
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
-  "size": 153393647,
-  "releaseNotes": "ET 定制版 v3.0.0-et.32（包名 etc.github.ai，可从 et.31 覆盖安装）。\n• 修复非高通/32位/x86 真机出现 Prepare runtime dir failed: QNN libraries 致命错——按 arm64+Qualcomm Snapdragon 门槛判定，不支持时自动回退 CPU/GPU，不再崩溃。\n• 设置新增上传图片：多选本机 outputs 目录图片，逐张传到仓库 png/，422 自动换名，失败给真实 HTTP 码。\n• 日志上传改为完整聚合：in-app 缓冲 + 公共 app.log + engine_*.log + convert_*.log，单个来源过大保留头尾并标注省略字节，非空才上传。\n电脑版仍为 desktop-v3.0.1，不在本更新范围。开发者：ET，MIT License。"
+  "size": 153394283,
+  "releaseNotes": "ET 定制版 v3.0.0-et.33（包名 etc.github.ai，可从 et.32 覆盖安装）。\n• 彻底消除 Prepare runtime dir failed: Failed to prepare QNN libraries 致命错误：高通 NPU / DiT 加速库改为“尽力而为”准备，32位/非骁龙/缺库一律跳过；即使骁龙高端机磁盘满或复制失败，也只回退 CPU/GPU 继续出图，不再崩溃。\n• sd15npu 在设备不支持或加速库未就绪时自动改用 sd15cpu（有 OpenCL 走 GPU）。\n• 打包保留原生引擎符号，三架构引擎与已验证版本逐字节一致（未改 C++），更稳。\n电脑版仍为 desktop-v3.0.1，不在本更新范围。开发者：ET，MIT License。"
 }
