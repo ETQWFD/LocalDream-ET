@@ -303,6 +303,7 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
     var showUrlImportDialog by remember { mutableStateOf(false) }
     var showAddMenu by remember { mutableStateOf(false) }
     var showLogsPage by remember { mutableStateOf(false) }
+    var showUploadImages by remember { mutableStateOf(false) }
     var showRestoreScreen by remember { mutableStateOf(false) }
     var restoreModelId by remember { mutableStateOf<String?>(null) }
     var restoreBackendType by remember { mutableStateOf("local") }
@@ -648,6 +649,22 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                 modifier = Modifier.fillMaxSize(),
             ) {
                 LogsPage(onBack = { showLogsPage = false })
+            }
+        }
+    }
+
+    if (showUploadImages) {
+        androidx.compose.ui.window.Dialog(
+            onDismissRequest = { showUploadImages = false },
+            properties = androidx.compose.ui.window.DialogProperties(
+                usePlatformDefaultWidth = false,
+            ),
+        ) {
+            androidx.compose.material3.Surface(modifier = Modifier.fillMaxSize()) {
+                UploadImagesScreen(
+                    onBack = { showUploadImages = false },
+                    onGoGenerate = { showUploadImages = false },
+                )
             }
         }
     }
@@ -1286,6 +1303,16 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                                 onClick = {
                                     menuExpanded = false
                                     showLogsPage = true
+                                },
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.upload_images_title)) },
+                                leadingIcon = {
+                                    Icon(Icons.Default.Cloud, contentDescription = null)
+                                },
+                                onClick = {
+                                    menuExpanded = false
+                                    showUploadImages = true
                                 },
                             )
                             DropdownMenuItem(

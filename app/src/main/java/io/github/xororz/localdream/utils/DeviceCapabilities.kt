@@ -26,6 +26,21 @@ object DeviceCapabilities {
     fun is64Bit(): Boolean =
         Build.SUPPORTED_ABIS?.any { it.equals("arm64-v8a", ignoreCase = true) } == true
 
+    /**
+     * SD1.5 QNN NPU (Hexagon) runtime is only useful on arm64-v8a Qualcomm
+     * Snapdragon SoCs. On 32-bit ROMs, Kirin/MediaTek/Exynos/Tensor, or when
+     * the SoC part is below the QNN lib set we ship, we must never attempt to
+     * prepare or launch qnnlibs — instead fall back to CPU/GPU.
+     */
+    fun hasQnnNpu(): Boolean {
+        if (!is64Bit()) return false
+        val info = socInfo
+        if (info.vendor != SocVendor.QUALCOMM) return false
+        val part = info.snapdragonPart ?: return false
+        // We ship HTP v68/v69/v73/v75/v79/v81 skels; admit SM8450 (v68) and newer.
+        return part >= 8450
+    }
+
     // ---- Robust SoC / GPU identification ---------------------------------
     // Build.SOC_MODEL alone is unreliable: some ROMs (incl. certain Huawei /
     // custom Android 16 builds) leave it blank, and users then see a generic

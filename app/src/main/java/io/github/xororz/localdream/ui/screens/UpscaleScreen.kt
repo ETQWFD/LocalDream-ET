@@ -854,33 +854,40 @@ fun prepareRuntimeDir(context: Context): File {
     val runtimeDir = BackendService.prepareRuntimeDirRoot(context.filesDir)
 
     try {
-        val qnnlibsAssets = context.assets.list("qnnlibs")
-        qnnlibsAssets?.forEach { fileName ->
-            val targetLib = File(runtimeDir, fileName)
+        // et.32: only copy qnnlibs on arm64 Qualcomm Snapdragon; on other
+        // devices skip silently (upscaler itself is CPU/GPU and does not need
+        // Hexagon). Never throw a fatal "Prepare QNN libraries" error.
+        if (io.github.xororz.localdream.utils.DeviceCapabilities.hasQnnNpu()) {
+            val qnnlibsAssets = context.assets.list("qnnlibs")
+            qnnlibsAssets?.forEach { fileName ->
+                val targetLib = File(runtimeDir, fileName)
 
-            val needsCopy = !targetLib.exists() ||
-                run {
-                    val assetInputStream = context.assets.open("qnnlibs/$fileName")
-                    val assetSize = assetInputStream.use { it.available().toLong() }
-                    targetLib.length() != assetSize
-                }
-
-            if (needsCopy) {
-                val assetInputStream = context.assets.open("qnnlibs/$fileName")
-                assetInputStream.use { input ->
-                    targetLib.outputStream().use { output ->
-                        input.copyTo(output)
+                val needsCopy = !targetLib.exists() ||
+                    run {
+                        val assetInputStream = context.assets.open("qnnlibs/$fileName")
+                        val assetSize = assetInputStream.use { it.available().toLong() }
+                        targetLib.length() != assetSize
                     }
-                }
-                Log.d("UpscaleScreen", "Copied $fileName from assets to runtime directory")
-            }
 
-            targetLib.setReadable(true, true)
-            targetLib.setExecutable(true, true)
+                if (needsCopy) {
+                    val assetInputStream = context.assets.open("qnnlibs/$fileName")
+                    assetInputStream.use { input ->
+                        targetLib.outputStream().use { output ->
+                            input.copyTo(output)
+                        }
+                    }
+                    Log.d("UpscaleScreen", "Copied $fileName from assets to runtime directory")
+                }
+
+                targetLib.setReadable(true, true)
+                targetLib.setExecutable(true, true)
+            }
+        } else {
+            Log.d("UpscaleScreen", "QNN libraries skipped: device lacks Hexagon NPU")
         }
     } catch (e: IOException) {
-        Log.e("UpscaleScreen", "Failed to prepare QNN libraries from assets", e)
-        throw RuntimeException("Failed to prepare QNN libraries from assets", e)
+        // et.32: never crash the app on QNN copy failure; upscaler runs CPU/GPU.
+        Log.e("UpscaleScreen", "QNN libraries copy failed; continuing without them", e)
     }
 
     runtimeDir.setReadable(true, true)

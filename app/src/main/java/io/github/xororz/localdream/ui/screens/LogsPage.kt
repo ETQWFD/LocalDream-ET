@@ -3,6 +3,10 @@ package io.github.xororz.localdream.ui.screens
 import android.content.Context
 import android.content.Intent
 import android.widget.Toast
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -44,10 +48,6 @@ import io.github.xororz.localdream.utils.Storage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import java.io.File
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 /**
  * On-device log viewer. Combines the in-process LogHub ring buffer with the
@@ -157,10 +157,13 @@ private fun uploadLogs(context: Context, scope: CoroutineScope) {
         val res = runCatching {
             CloudClient.ensurePrivateRepo(provider, token, auth.login)
             val ts = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
+            // et.32: aggregate in-app buffer + public app.log + engine_*.log +
+            // convert_*.log into one non-empty text; huge sources keep head+tail.
+            val payload = aggregateAllLogs(context).toByteArray()
             CloudClient.uploadContent(
                 provider, token, auth.owner ?: auth.login, auth.repo ?: CloudConfig.BACKUP_REPO,
                 "log/logs_$ts.txt",
-                LogHub.formatted(null).toByteArray(),
+                payload,
                 "logs $ts",
             )
         }
@@ -172,6 +175,58 @@ private fun uploadLogs(context: Context, scope: CoroutineScope) {
             }
         }
     }
+}
+
+/** et.32: full log aggregation for upload. Non-empty; large sources truncated head+tail. */
+internal fun aggregateAllLogs(context: Context): String {
+    val sb = StringBuilder()
+    sb.appendLine("=== LocalDream ET diagnostics ===")
+    sb.appendLine("generated_at: ${SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date())}")
+    sb.appendLine("device: ${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL} (abi=${android.os.Build.SUPPORTED_ABIS?.joinToString()})")
+    sb.appendLine()
+
+    fun appendSection(title: String, files: List<File>) {
+        sb.appendLine("---- $title ----")
+        if (files.isEmpty()) { sb.appendLine("(none)"); return }
+        files.sortedByDescending { it.lastModified() }.take(5).forEach { f ->
+            sb.appendLine("== ${f.name} (${f.length()} bytes) ==")
+            val text = runCatching { f.readText() }.getOrDefault("(unreadable)")
+            val capped = capHeadTail(text, headBytes = 64 * 1024, tailBytes = 64 * 1024)
+            sb.append(capped)
+            if (!capped.endsWith("\n")) sb.appendLine()
+        }
+    }
+
+    runCatching {
+        sb.appendLine("---- In-app LogHub buffer ----")
+        val inApp = LogHub.formatted(null)
+        if (inApp.isBlank()) sb.appendLine("(empty)") else sb.appendLine(inApp)
+    }
+    appendSection(
+        "Public app.log",
+        listOf(File(Storage.logsDir(context), "app.log")),
+    )
+    appendSection(
+        "Engine logs",
+        (context.filesDir.listFiles()?.toList() ?: emptyList())
+            .filter { it.name.startsWith("engine_") && it.name.endsWith(".log") },
+    )
+    appendSection(
+        "Convert logs",
+        (Storage.tempDir(context).listFiles()?.toList() ?: emptyList())
+            .filter { it.name.startsWith("convert_") && it.name.endsWith(".log") },
+    )
+    val out = sb.toString()
+    return if (out.isBlank()) "=== LocalDream ET: no logs at ${Date()} ===" else out
+}
+
+private fun capHeadTail(text: String, headBytes: Int, tailBytes: Int): String {
+    val bytes = text.toByteArray()
+    if (bytes.size <= headBytes + tailBytes) return text
+    val head = String(bytes.copyOfRange(0, headBytes))
+    val tail = String(bytes.copyOfRange(bytes.size - tailBytes, bytes.size))
+    val omitted = bytes.size - headBytes - tailBytes
+    return head + "\n…中间省略 $omitted 字节 / middle truncated …\n" + tail
 }
 
 private fun StringBuilder.appendEngineAndConvertFiles(context: Context, filter: LogHub.Category?) {

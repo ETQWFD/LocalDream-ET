@@ -330,6 +330,13 @@
     <string name="mem_diag_note">诊断信息，随机型/运行阶段波动。</string>
     <string name="err_engine_oom_killed">内存不足，引擎被系统结束：已自动降到 384 安全参数重试仍失败，请手动选 384 或更低、关闭后台其它应用。</string>
     <string name="gpu_unavailable_cpu">本机未检测到可用 GPU(OpenCL)，使用 CPU 运行（速度较慢）。</string>
+    <string name="qnn_unavailable_cpu">本机不支持高通 Hexagon NPU，已自动使用 CPU/GPU 运行。</string>
+    <string name="upload_images_title">上传生成图片</string>
+    <string name="upload_images_empty">还没有生成图片，去生成一张吧。</string>
+    <string name="upload_images_go_generate">去生成</string>
+    <string name="upload_images_confirm">上传所选（%1$d）</string>
+    <string name="upload_images_no_net">当前无网络，请联网后重试。</string>
+    <string name="upload_images_done">已上传 %1$d/%2$d 张到云端。</string>
     <string name="error_model_extract_incomplete">模型“%1$s”文件不完整，缺少运行所需权重。安装包已保留，请重新下载或修复模型；仍失败请删除后重新下载。</string>
     <string name="restore_pick_model">请从列表中选择一个已下载模型开始。</string>
     <string name="close">关闭</string>

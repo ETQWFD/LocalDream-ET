@@ -20,6 +20,8 @@ object Storage {
     const val DIR_NAME = "LocalDreamET"
     const val MODELS = "models"
     const val TEMP = "temp_downloads"
+    const val OUTPUTS = "outputs"
+    const val LOGS = "logs"
 
     /** The preferred public root on shared storage. */
     fun publicRoot(): File =
@@ -50,4 +52,12 @@ object Storage {
 
     fun tempDir(context: Context): File =
         File(root(context), TEMP).apply { if (!exists()) runCatching { mkdirs() } }
+
+    /** Public outputs folder holding generated PNG files. */
+    fun outputsDir(context: Context): File =
+        File(root(context), OUTPUTS).apply { if (!exists()) runCatching { mkdirs() } }
+
+    /** Public logs folder holding app.log / engine_*.log / convert_*.log. */
+    fun logsDir(context: Context): File =
+        File(root(context), LOGS).apply { if (!exists()) runCatching { mkdirs() } }
 }

@@ -340,6 +340,13 @@
     <string name="mem_diag_note">Diagnostic info; varies by device and runtime stage.</string>
     <string name="err_engine_oom_killed">Out of memory: the engine was killed by the system. We auto-retried at the safe 384 setting; if it still fails, please choose 384 or lower and close other background apps.</string>
     <string name="gpu_unavailable_cpu">No usable GPU (OpenCL) detected on this device; running on CPU (slower).</string>
+    <string name="qnn_unavailable_cpu">Hexagon NPU not supported on this device; using CPU/GPU instead.</string>
+    <string name="upload_images_title">Upload generated images</string>
+    <string name="upload_images_empty">No generated images yet. Go generate one first.</string>
+    <string name="upload_images_go_generate">Go generate</string>
+    <string name="upload_images_confirm">Upload selected (%1$d)</string>
+    <string name="upload_images_no_net">No network; please connect and retry.</string>
+    <string name="upload_images_done">Uploaded %1$d of %2$d to cloud.</string>
     <string name="error_model_extract_incomplete">Model "%1$s" files are incomplete (missing required weights). The downloaded package is kept; please retry or repair the model. If it still fails, delete and re-download.</string>
     <string name="restore_pick_model">Pick a downloaded model from the list to start.</string>
     <string name="close">Close</string>

@@ -382,31 +382,46 @@ class BackendService : Service() {
             runtimeDir = prepareRuntimeDirRoot(filesDir)
 
             try {
-                val qnnlibsAssets = assets.list("qnnlibs")
-                qnnlibsAssets?.forEach { fileName ->
-                    val targetLib = File(runtimeDir, fileName)
+                // et.32: only copy qnnlibs on arm64 Qualcomm devices that can
+                // actually load them. On 32-bit / Kirin / MediaTek / Tensor /
+                // older chips we must not attempt to prepare QNN — the user
+                // gets CPU/GPU instead, never a fatal "Prepare runtime dir failed".
+                val qnnSupported = io.github.xororz.localdream.utils.DeviceCapabilities.hasQnnNpu()
+                if (qnnSupported) {
+                    val qnnlibsAssets = assets.list("qnnlibs")
+                    qnnlibsAssets?.forEach { fileName ->
+                        val targetLib = File(runtimeDir, fileName)
 
-                    val needsCopy = !targetLib.exists() ||
-                        run {
-                            val assetInputStream = assets.open("qnnlibs/$fileName")
-                            val assetSize = assetInputStream.use { it.available().toLong() }
-                            targetLib.length() != assetSize
-                        }
-
-                    if (needsCopy) {
-                        val assetInputStream = assets.open("qnnlibs/$fileName")
-                        assetInputStream.use { input ->
-                            targetLib.outputStream().use { output ->
-                                input.copyTo(output)
+                        val needsCopy = !targetLib.exists() ||
+                            run {
+                                val assetInputStream = assets.open("qnnlibs/$fileName")
+                                val assetSize = assetInputStream.use { it.available().toLong() }
+                                targetLib.length() != assetSize
                             }
-                        }
-                        Log.d(TAG, "Copied $fileName from assets to runtime directory")
-                    }
 
-                    targetLib.setReadable(true, true)
-                    targetLib.setExecutable(true, true)
+                        if (needsCopy) {
+                            val assetInputStream = assets.open("qnnlibs/$fileName")
+                            assetInputStream.use { input ->
+                                targetLib.outputStream().use { output ->
+                                    input.copyTo(output)
+                                }
+                            }
+                            Log.d(TAG, "Copied $fileName from assets to runtime directory")
+                        }
+
+                        targetLib.setReadable(true, true)
+                        targetLib.setExecutable(true, true)
+                    }
+                    Log.i(TAG, "QNN libraries prepared in runtime directory")
+                } else {
+                    Log.i(TAG, "QNN libraries skipped: device is not arm64 Qualcomm Snapdragon")
+                    runCatching {
+                        io.github.xororz.localdream.cloud.LogHub.log(
+                            io.github.xororz.localdream.cloud.LogHub.Category.ENGINE,
+                            "QNN NPU not supported on this device; using CPU/GPU",
+                        )
+                    }
                 }
-                Log.i(TAG, "QNN libraries prepared in runtime directory")
 
                 // The DiT engine's Hexagon skels share this directory: it is
                 // already on the DSP search path, and they are only useful on
@@ -478,7 +493,7 @@ class BackendService : Service() {
 
     private fun startBackend(config: BackendConfig): Boolean {
         val modelId = config.modelId
-        val backendType = config.backendType
+        var backendType = config.backendType
         val width = config.width
         val height = config.height
         Log.i(TAG, "backend start, model: $modelId, resolution: $width×$height")
@@ -488,16 +503,26 @@ class BackendService : Service() {
         stopping = false
         updateState(BackendState.Starting)
 
+        // et.32: if the user (or a stale state) asked for sd15npu on a device
+        // that cannot run Hexagon (32-bit / non-Qualcomm / older SoC), silently
+        // fall back to sd15cpu instead of launching a process that will die.
+        if (backendType == "sd15npu" &&
+            !io.github.xororz.localdream.utils.DeviceCapabilities.hasQnnNpu()
+        ) {
+            Log.w(TAG, "sd15npu requested but device lacks Hexagon NPU; falling back to sd15cpu")
+            runCatching {
+                io.github.xororz.localdream.cloud.LogHub.log(
+                    io.github.xororz.localdream.cloud.LogHub.Category.ENGINE,
+                    "sd15npu on unsupported device -> fallback sd15cpu (model=$modelId)",
+                )
+            }
+            backendType = "sd15cpu"
+        }
+
         try {
             val nativeDir = applicationInfo.nativeLibraryDir
             val modelsDir = File(Model.getModelsDir(this), modelId)
 
-            // Pre-flight self-check: for on-device converted SD1.5 checkpoints,
-            // verify the real conversion products before exec'ing the engine.
-            // A half-downloaded/corrupt zip used to reach native startup and
-            // crash there, surfacing only as a generic "cannot connect 8081".
-            // Failing fast here gives an actionable "model incomplete, re-download"
-            // instead of letting the engine die.
             if (backendType == "sd15cpu" && !Model.hasConvertedSd15Outputs(modelsDir)) {
                 Log.e(TAG, "pre-flight failed: SD1.5 products missing in $modelsDir")
                 updateState(
