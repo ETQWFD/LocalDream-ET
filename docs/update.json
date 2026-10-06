@@ -1,7 +1,7 @@
 {
-  "versionCode": 105,
-  "versionName": "3.0.0-et.31",
+  "versionCode": 106,
+  "versionName": "3.0.0-et.32",
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
-  "size": 153349931,
-  "releaseNotes": "ET 定制版 v3.0.0-et.31（包名 etc.github.ai，可从 et.30 覆盖安装）。\n• 修图弹窗渲染真实已下载模型列表（空态提示去下载，不支持 img2img 的 DiT/SDXL 置灰说明）。\n• 公共目录模型扫描加日志；重装/清数据后内置模型按目录存在判定为已下载，无需重下重转。\n• 新增内容限制开关（默认开=本地违禁词拦截+精简基线；关=逐字直通并弹一次法律责任确认；三语持久化，文生图与修图都生效）。\n• 云上传按钮接线：结果页与历史每张图可单张传到 png/，日志页可传 log/；Contents API 201/200+html_url 才成功，422 自动换名，未登录/403/无网均给真因提示。\n电脑版仍为 desktop-v3.0.1，不在本更新范围。开发者：ET，MIT License。"
+  "size": 153393647,
+  "releaseNotes": "ET 定制版 v3.0.0-et.32（包名 etc.github.ai，可从 et.31 覆盖安装）。\n• 修复非高通/32位/x86 真机出现 Prepare runtime dir failed: QNN libraries 致命错——按 arm64+Qualcomm Snapdragon 门槛判定，不支持时自动回退 CPU/GPU，不再崩溃。\n• 设置新增上传图片：多选本机 outputs 目录图片，逐张传到仓库 png/，422 自动换名，失败给真实 HTTP 码。\n• 日志上传改为完整聚合：in-app 缓冲 + 公共 app.log + engine_*.log + convert_*.log，单个来源过大保留头尾并标注省略字节，非空才上传。\n电脑版仍为 desktop-v3.0.1，不在本更新范围。开发者：ET，MIT License。"
 }
