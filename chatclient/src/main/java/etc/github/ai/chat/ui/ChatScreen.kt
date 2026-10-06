@@ -83,7 +83,7 @@ fun ChatScreen(vm: ChatViewModel) {
     var viewerBitmap by remember { mutableStateOf<Bitmap?>(null) }
 
     // auto-scroll to the newest message whenever the list changes
-    LaunchedEffect(vm.messagesVersion) {
+    LaunchedEffect(vm.messages.size, vm.generating) {
         if (vm.messages.isNotEmpty()) {
             runCatching { listState.animateScrollToItem(vm.messages.lastIndex) }
         }
@@ -178,7 +178,11 @@ fun ChatScreen(vm: ChatViewModel) {
                 items(vm.messages, key = { it.id }) { msg ->
                     when (msg) {
                         is ChatMsg.User -> UserBubble(msg)
-                        is ChatMsg.Ai -> AiBubble(msg, onImageClick = { viewerBitmap = it })
+                        is ChatMsg.Ai -> AiBubble(
+                            msg,
+                            onImageClick = { viewerBitmap = it },
+                            onRetry = { vm.retryError(msg) },
+                        )
                     }
                 }
             }
@@ -318,7 +322,7 @@ private fun UserBubble(msg: ChatMsg.User) {
                 .widthIn(max = 290.dp),
             horizontalAlignment = Alignment.End,
         ) {
-            msg.imagePreview?.let {
+            msg.preview?.let {
                 Image(
                     it.asImageBitmap(), "参考图",
                     Modifier
@@ -336,7 +340,7 @@ private fun UserBubble(msg: ChatMsg.User) {
 }
 
 @Composable
-private fun AiBubble(msg: ChatMsg.Ai, onImageClick: (Bitmap) -> Unit) {
+private fun AiBubble(msg: ChatMsg.Ai, onImageClick: (Bitmap) -> Unit, onRetry: () -> Unit) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) {
         Column(
             Modifier
@@ -355,6 +359,9 @@ private fun AiBubble(msg: ChatMsg.Ai, onImageClick: (Bitmap) -> Unit) {
             if (msg.error != null) {
                 Text("出错了：${msg.error}", color = MaterialTheme.colorScheme.error)
                 Spacer(Modifier.height(4.dp))
+                TextButton(onClick = onRetry, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 0.dp)) {
+                    Text("重试")
+                }
             }
             // EVERY image the server returns, inline in this bubble, 3 per row
             if (msg.images.isNotEmpty()) {

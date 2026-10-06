@@ -48,6 +48,7 @@ import io.github.xororz.localdream.utils.Storage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * On-device log viewer. Combines the in-process LogHub ring buffer with the
@@ -155,23 +156,25 @@ private fun uploadLogs(context: Context, scope: CoroutineScope) {
     Toast.makeText(context, R.string.logs_uploading, Toast.LENGTH_SHORT).show()
     scope.launch {
         val res = runCatching {
-            CloudClient.ensurePrivateRepo(provider, token, auth.login)
-            val ts = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
-            // et.32: aggregate in-app buffer + public app.log + engine_*.log +
-            // convert_*.log into one non-empty text; huge sources keep head+tail.
-            val payload = aggregateAllLogs(context).toByteArray()
-            CloudClient.uploadContent(
-                provider, token, auth.owner ?: auth.login, auth.repo ?: CloudConfig.BACKUP_REPO,
-                "log/logs_$ts.txt",
-                payload,
-                "logs $ts",
-            )
+            withContext(Dispatchers.IO) {
+                val ts = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
+                // et.32: aggregate in-app buffer + public app.log + engine_*.log +
+                // convert_*.log into one non-empty text; huge sources keep head+tail.
+                val payload = aggregateAllLogs(context).toByteArray()
+                io.github.xororz.localdream.cloud.CloudUploader.uploadBytes(
+                    context, payload, "log/logs_$ts.txt",
+                )
+            }
         }
         launch(Dispatchers.Main) {
             res.onSuccess { path ->
                 Toast.makeText(context, context.getString(R.string.logs_upload_ok, path), Toast.LENGTH_LONG).show()
             }.onFailure { e ->
-                Toast.makeText(context, context.getString(R.string.logs_upload_failed, e.message ?: "?"), Toast.LENGTH_LONG).show()
+                Toast.makeText(
+                    context,
+                    io.github.xororz.localdream.cloud.CloudUploader.classify(context, e),
+                    Toast.LENGTH_LONG,
+                ).show()
             }
         }
     }

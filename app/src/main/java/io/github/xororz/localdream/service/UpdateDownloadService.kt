@@ -36,11 +36,15 @@ class UpdateDownloadService : Service() {
         private const val CHANNEL_ID = "update_download_channel"
         private const val NOTIF_ID = 4711
         private const val EXTRA_URL = "apk_url"
+        private const val EXTRA_SIZE = "expected_size"
+        private const val EXTRA_SHA256 = "expected_sha256"
         private const val ACTION_RETRY = "io.github.xororz.localdream.UPDATE_RETRY"
 
-        fun start(context: Context, apkUrl: String) {
+        fun start(context: Context, apkUrl: String, expectedSize: Long = 0L, expectedSha256: String = "") {
             val i = Intent(context, UpdateDownloadService::class.java).apply {
                 putExtra(EXTRA_URL, apkUrl)
+                putExtra(EXTRA_SIZE, expectedSize)
+                putExtra(EXTRA_SHA256, expectedSha256)
             }
             context.startForegroundService(i)
         }
@@ -48,6 +52,8 @@ class UpdateDownloadService : Service() {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var wakeLock: PowerManager.WakeLock? = null
+    private var expectedSize: Long = 0L
+    private var expectedSha256: String = ""
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -67,6 +73,8 @@ class UpdateDownloadService : Service() {
             stopSelf(); return START_NOT_STICKY
         }
         startForeground(NOTIF_ID, buildNotification(0, -1L, -1L, false))
+        expectedSize = intent.getLongExtra(EXTRA_SIZE, 0L)
+        expectedSha256 = intent.getStringExtra(EXTRA_SHA256).orEmpty()
         io.github.xororz.localdream.cloud.LogHub.log(
             io.github.xororz.localdream.cloud.LogHub.Category.UPDATE,
             "Update download start: $url",
@@ -75,7 +83,7 @@ class UpdateDownloadService : Service() {
             var lastTs = System.currentTimeMillis()
             var lastBytes = 0L
             try {
-                val apk: File = AppUpdater.download(this@UpdateDownloadService, url) { done, total ->
+                val apk: File = AppUpdater.download(this@UpdateDownloadService, url, expectedSize, expectedSha256) { done, total ->
                     val now = System.currentTimeMillis()
                     val dt = (now - lastTs).coerceAtLeast(1L)
                     val speed = (done - lastBytes) * 1000L / dt
@@ -175,7 +183,11 @@ class UpdateDownloadService : Service() {
     }.getOrNull()
 
     private fun failNotification(reason: String, url: String) {
-        val retry = Intent(this, UpdateDownloadService::class.java).apply { putExtra(EXTRA_URL, url) }
+        val retry = Intent(this, UpdateDownloadService::class.java).apply {
+            putExtra(EXTRA_URL, url)
+            putExtra(EXTRA_SIZE, expectedSize)
+            putExtra(EXTRA_SHA256, expectedSha256)
+        }
         val rpi = PendingIntent.getService(
             this, url.hashCode(), retry,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,

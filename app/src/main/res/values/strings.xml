@@ -355,6 +355,9 @@
     <string name="cloud_err_timeout">GitHub connection timed out. Try again later or switch network.</string>
     <string name="cloud_err_unreachable">Cannot reach GitHub. Please check your network and retry.</string>
     <string name="cloud_err_auth">Token invalid or lacks permission. Please sign in again.</string>
+    <string name="cloud_err_401">Cloud token is invalid. Please sign in again.</string>
+    <string name="cloud_err_403_finegrained">Token lacks Contents read/write. Fine-grained token: grant Contents: Read and write on this repo (Administration is only needed to create a repo). Classic token: check the repo scope. Or use an existing repo you own.</string>
+    <string name="cloud_err_403_generic">No permission to upload to this repo. Check the repo name/path or re-authorize.</string>
     <string name="cloud_err_notfound">Repository does not exist or you have no access.</string>
     <string name="cloud_err_http">Upload failed (HTTP %1$d).</string>
     <string name="cloud_err_other">Upload failed. Please try again later.</string>

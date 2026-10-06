@@ -21,6 +21,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
 import java.io.File
+import java.io.IOException
 import java.net.HttpURLConnection
 import java.util.concurrent.TimeUnit
 
@@ -46,6 +47,7 @@ object AppUpdater {
         val releaseNotes: String,
         val apkUrl: String,
         val sizeBytes: Long,
+        val sha256: String = "",
     )
 
     // Edit these two constants to retarget the update channel.
@@ -118,6 +120,7 @@ object AppUpdater {
             releaseNotes = json.optString("releaseNotes").ifBlank { json.optString("notes") },
             apkUrl = url,
             sizeBytes = json.optLong("size", 0L),
+            sha256 = json.optString("sha256", "").trim().lowercase(),
         ).takeIf { it.versionCode > BuildConfig.VERSION_CODE }
     }
 
@@ -206,14 +209,79 @@ object AppUpdater {
     }
 
     /**
-     * Streams the APK into the app cache, invoking [onProgress] with
-     * downloaded / total bytes. Returns the saved file. Uses the fastest
-     * reachable GitHub mirror and HTTP Range resume.
+     * Public download entry. Downloads the APK then verifies it against the
+     * manifest's expected size and sha256. If verification fails (truncated /
+     * stitched resume / corrupt proxy), the corrupt file and its .part are deleted
+     * and the whole download restarts — at most 3 attempts. A failing verification
+     * must NEVER reach the installer (et.38: "package not signed / parse error").
      */
     suspend fun download(
         context: Context,
         url: String,
+        expectedSize: Long = 0L,
+        expectedSha256: String = "",
         onProgress: (downloaded: Long, total: Long) -> Unit = { _, _ -> },
+    ): File = withContext(Dispatchers.IO) {
+        var lastError: Exception? = null
+        repeat(3) { attempt ->
+            val target = downloadOnce(context, url, onProgress)
+            val problem = verifyApk(target, expectedSize, expectedSha256)
+            if (problem == null) {
+                io.github.xororz.localdream.cloud.LogHub.log(
+                    io.github.xororz.localdream.cloud.LogHub.Category.UPDATE,
+                    "integrity OK: ${target.length()} bytes" +
+                        (if (expectedSha256.isNotBlank()) ", sha256 matched" else ""),
+                )
+                return@withContext target
+            }
+            io.github.xororz.localdream.cloud.LogHub.log(
+                io.github.xororz.localdream.cloud.LogHub.Category.UPDATE,
+                "integrity check failed: $problem (attempt ${attempt + 1}/3); re-downloading clean",
+            )
+            runCatching { target.delete() }
+            runCatching { File(io.github.xororz.localdream.utils.Storage.tempDir(context), "localdream-update.apk.part").delete() }
+            lastError = IOException("integrity check failed: $problem")
+        }
+        throw lastError ?: IOException("download failed integrity check")
+    }
+
+    /** Returns null when the APK passes size + sha256, or a human reason when not. */
+    private fun verifyApk(apk: File, expectedSize: Long, expectedSha256: String): String? {
+        if (!apk.exists() || apk.length() <= 0L) return "file missing or empty"
+        if (expectedSize > 0L && apk.length() != expectedSize) {
+            return "size mismatch: got ${apk.length()}, expected $expectedSize"
+        }
+        if (expectedSha256.isNotBlank()) {
+            val actual = sha256Of(apk)
+            if (!actual.equals(expectedSha256, ignoreCase = true)) {
+                return "sha256 mismatch"
+            }
+        }
+        return null
+    }
+
+    private fun sha256Of(file: File): String = runCatching {
+        val md = java.security.MessageDigest.getInstance("SHA-256")
+        file.inputStream().use { input ->
+            val buf = ByteArray(64 * 1024)
+            while (true) {
+                val r = input.read(buf)
+                if (r < 0) break
+                md.update(buf, 0, r)
+            }
+        }
+        md.digest().joinToString("") { "%02x".format(it) }
+    }.getOrDefault("")
+
+    /**
+     * Streams the APK into the app cache, invoking [onProgress] with
+     * downloaded / total bytes. Returns the saved file. Uses the fastest
+     * reachable GitHub mirror and HTTP Range resume.
+     */
+    private suspend fun downloadOnce(
+        context: Context,
+        url: String,
+        onProgress: (downloaded: Long, total: Long) -> Unit,
     ): File = withContext(Dispatchers.IO) {
         // et.21: write the update APK into the user-visible shared folder
         // /storage/emulated/0/LocalDreamET/temp_downloads (survives cache

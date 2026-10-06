@@ -19,6 +19,8 @@ import java.util.concurrent.TimeUnit
 class CloudHttpException(
     val code: Int,
     message: String,
+    /** Parsed upstream error message body (e.g. GitHub's "message"), may be null. */
+    val detail: String? = null,
 ) : IOException(message)
 
 /**
@@ -141,9 +143,14 @@ object CloudClient {
     }
 
     /**
-     * Upload bytes to <owner>/<repo>/<path> via the contents API. If the path
-     * already exists (422 / non-200 due to conflict), append a numeric suffix and
-     * retry a few times rather than overwriting. Returns the final path.
+     * Upload bytes to <owner>/<repo>/<path> via the contents API.
+     *
+     * - body JSON = {message, content(base64, no data: prefix, no line breaks)};
+     *   a NEW file sends no `sha`. (et.38)
+     * - On conflict (422 / needs-sha), append a numeric suffix and retry.
+     * - On transient failure (5xx, timeout / connection reset) retry a few times
+     *   with exponential backoff, instead of failing on the first blip.
+     * - On success, verify the response's content.path actually lands under [path]'s dir.
      */
     fun uploadContent(
         provider: CloudConfig.Provider,
@@ -157,50 +164,84 @@ object CloudClient {
         val b64 = Base64.encodeToString(bytes, Base64.NO_WRAP)
         var candidate = path
         var lastCode = 0
+        var lastDetail: String? = null
+        // Suffix attempts (file-exists conflict) — up to 6 distinct filenames.
         repeat(6) { attempt ->
-            val body = JSONObject()
-                .put("message", message)
-                .put("content", b64)
-                .toString()
-            val req = when (provider) {
-                CloudConfig.Provider.GITHUB -> Request.Builder()
-                    .url("https://api.github.com/repos/$owner/$repo/contents/$candidate")
-                    .addHeader("Authorization", "Bearer $token")
-                    .addHeader("Accept", "application/vnd.github+json")
-                    .put(body.toRequestBody(JSON_MEDIA))
-                CloudConfig.Provider.GITEE -> Request.Builder()
-                    .url("https://gitee.com/api/v5/repos/$owner/$repo/contents/$candidate?access_token=$token")
-                    .put(body.toRequestBody(JSON_MEDIA))
-            }
-            runCatching {
-                client.newCall(req.build()).execute().use { resp ->
-                    lastCode = resp.code
-                    val text = resp.body?.string().orEmpty()
-                    if (resp.isSuccessful) {
-                        LogHub.log(
-                            LogHub.Category.UPLOAD,
-                            "OK ${provider.name} $owner/$repo/$candidate (HTTP $lastCode)",
-                        )
-                        return "$owner/$repo/$candidate"
+            // Transient retries within this filename (5xx / IO blips).
+            var ioFailure: IOException? = null
+            var transient = 0
+            while (transient <= 2) {
+                try {
+                    val body = JSONObject()
+                        .put("message", message)
+                        .put("content", b64)
+                        .toString()
+                    val req = when (provider) {
+                        CloudConfig.Provider.GITHUB -> Request.Builder()
+                            .url("https://api.github.com/repos/$owner/$repo/contents/$candidate")
+                            .addHeader("Authorization", "Bearer $token")
+                            .addHeader("Accept", "application/vnd.github+json")
+                            .put(body.toRequestBody(JSON_MEDIA))
+                        CloudConfig.Provider.GITEE -> Request.Builder()
+                            .url("https://gitee.com/api/v5/repos/$owner/$repo/contents/$candidate?access_token=$token")
+                            .put(body.toRequestBody(JSON_MEDIA))
                     }
-                    // Conflict: try a suffixed filename.
-                    candidate = withExt(path, attempt + 1)
+                    client.newCall(req.build()).execute().use { resp ->
+                        lastCode = resp.code
+                        val text = resp.body?.string().orEmpty()
+                        if (resp.isSuccessful) {
+                            // Verify the file really landed at the requested path.
+                            val savedPath = runCatching {
+                                JSONObject(text).getJSONObject("content").optString("path")
+                            }.getOrDefault("")
+                            LogHub.log(
+                                LogHub.Category.UPLOAD,
+                                "OK ${provider.name} $owner/$repo/$candidate (HTTP $lastCode, path=$savedPath)",
+                            )
+                            return if (savedPath.isNotBlank()) "$owner/$repo/$savedPath" else "$owner/$repo/$candidate"
+                        }
+                        lastDetail = parseErrorMessage(text)
+                        // Conflict / already exists without sha -> suffix the filename.
+                        if (resp.code == 422 || resp.code == 409) {
+                            candidate = withExt(path, attempt + 1)
+                            return@use // break out to next suffix attempt
+                        }
+                        // Transient server error -> backoff and retry same filename.
+                        if (resp.code in 500..599) {
+                            transient++
+                            if (transient <= 2) {
+                                Thread.sleep(600L * transient)
+                                return@use
+                            }
+                        }
+                        // Non-retryable client error (401/403/404/etc): stop.
+                        throw CloudHttpException(resp.code, "Upload failed HTTP ${resp.code}", lastDetail)
+                    }
+                    return "$owner/$repo/$candidate"
+                } catch (e: IOException) {
+                    // Already-decided client errors propagate immediately.
+                    if (e is CloudHttpException) throw e
+                    ioFailure = e
+                    transient++
+                    if (transient <= 2) {
+                        Thread.sleep(600L * transient)
+                    } else {
+                        LogHub.log(LogHub.Category.UPLOAD, "NETERR ${provider.name} $path: ${e.message}")
+                        throw e
+                    }
                 }
-            }.onFailure { e ->
-                // et.35: keep the original network exception type
-                // (SocketTimeoutException / UnknownHostException / ConnectException) so
-                // the UI can map a precise Chinese reason, instead of flattening it into
-                // a generic IOException that looked like "no network" with empty detail.
-                LogHub.log(
-                    LogHub.Category.UPLOAD,
-                    "NETERR ${provider.name} $path: ${e.message}",
-                )
-                throw e
             }
+            ioFailure?.let { throw it }
         }
-        LogHub.log(LogHub.Category.UPLOAD, "FAIL ${provider.name} $path HTTP $lastCode")
-        throw CloudHttpException(lastCode, "Upload failed HTTP $lastCode")
+        LogHub.log(LogHub.Category.UPLOAD, "FAIL ${provider.name} $path HTTP $lastCode ($lastDetail)")
+        throw CloudHttpException(lastCode, "Upload failed HTTP $lastCode", lastDetail)
     }
+
+    /** Pull GitHub/Gitee's human "message" out of an error body, if present. */
+    private fun parseErrorMessage(text: String): String? = runCatching {
+        val o = JSONObject(text)
+        o.optString("message").ifBlank { null }
+    }.getOrNull()
 
     private fun withExt(path: String, idx: Int): String {
         val dot = path.lastIndexOf('.')

@@ -88,7 +88,9 @@ internal fun UpdateDialog(
         // notification and launches the installer on tap; it retries with Range
         // resume on failure. We keep a light reader so the dialog shows live
         // bytes while open, but the service is the source of truth.
-        io.github.xororz.localdream.service.UpdateDownloadService.start(context, target.apkUrl)
+        io.github.xororz.localdream.service.UpdateDownloadService.start(
+            context, target.apkUrl, target.sizeBytes, target.sha256,
+        )
         statusText = context.getString(R.string.update_running_in_notification)
         scope.launch {
             // Poll the .part / final apk so the dialog progress stays live while open.

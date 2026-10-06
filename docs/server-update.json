@@ -1,21 +1,21 @@
 {
   "name": "Local Dream ET Server",
-  "version": "1.1.4",
-  "versionCode": 114,
-  "tag": "server-v1.1.4",
+  "version": "1.1.5",
+  "versionCode": 115,
+  "tag": "server-v1.1.5",
   "prerelease": true,
   "channel": "github",
   "platforms": {
     "windows": {
-      "file": "LocalDreamET-Server-Setup-1.1.4.exe",
-      "size": 11254297,
-      "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/server-v1.1.4/LocalDreamET-Server-Setup-1.1.4.exe"
+      "file": "LocalDreamET-Server-Setup-1.1.5.exe",
+      "size": 11255637,
+      "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/server-v1.1.5/LocalDreamET-Server-Setup-1.1.5.exe"
     },
     "linux-x86_64": {
-      "file": "LocalDreamET-Server-1.1.4-linux-x86_64.tar.gz",
-      "size": 16521076,
-      "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/server-v1.1.4/LocalDreamET-Server-1.1.4-linux-x86_64.tar.gz"
+      "file": "LocalDreamET-Server-1.1.5-linux-x86_64.tar.gz",
+      "size": 16521086,
+      "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/server-v1.1.5/LocalDreamET-Server-1.1.5-linux-x86_64.tar.gz"
     }
   },
-  "notes": "v1.1.4（真机问题修复）：①服务地址智能识别——枚举全部网卡，过滤/标注 172.16–31、169.254 等 WSL/Hyper-V/Docker 虚拟网卡，优先 192.168/10.x 物理网卡，控制台与图形界面列出全部候选并提示“手机电脑连同一 WiFi、防火墙放行端口”；②模型下载源以国内魔搭 ModelScope 为主并逐条 Range 实测字节，回退 hf-mirror/HF，.part 断点续传+完整校验+原子改名；已实证引擎直读 safetensors/GGUF，下载校验完成即可直接出图，无需转换（向导/日志中文明示）；③真实 46 位 API Key 首启生成并持久化，Bearer/X-API-Key 鉴权可用，GUI 三个复制框一键复制、多模型下拉热加载；④推理线程按本机核数默认（上限8）、引擎常驻复用；批量 batch_size/n 实证真出多张。保留免 UAC 用户级安装、Unicode 新宋体、未完整不就绪、引擎缺失只报一次。版权归 etc（MIT）。"
+  "notes": "v1.1.5（真机复查）：①确认内容限制默认 content_filter=0=无限制，关闭后代理层对正/反向提示词不拦截、不注入负面词、不改写（代码走查过滤门被开关短路，含敏感词请求实测穿过过滤层到转发层返回未就绪而非拦截）；仅显式开启才过滤。②全部模型首选源（魔搭2+hf-mirror11）无代理 Range 206 复测、总字节与清单一致，无死链；引擎直读 safetensors/GGUF 无需转换，.part 续传+完整校验+原子改名，未完整不就绪。③46 位 Key 真随机持久化、Bearer/X-API-Key 鉴权错 key 401、/healthz 免 key，GUI 三复制框点按复制、多模型下拉热加载。④物理/虚拟网卡智能识别与防火墙提示保持；批量 batch_size/n 实证真出多张；Unicode 新宋体、看门狗引擎缺失只报一次、免 UAC 用户级安装均不回退。版权归 etc（MIT）。"
 }

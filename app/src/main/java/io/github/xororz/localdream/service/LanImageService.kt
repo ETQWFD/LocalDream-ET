@@ -184,6 +184,15 @@ class LanImageService : Service() {
             denoiseStrength: Float,
             n: Int,
         ): List<String> = synchronized(genLock) {
+            // et.38: honor the same on-device content-restriction toggle as the app UI.
+            // OFF by default => the LAN API applies no filtering/injection at all.
+            val restrictedOn = getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+                .getBoolean("content_restricted", false)
+            if (restrictedOn) {
+                val hit = io.github.xororz.localdream.utils.ContentFilter.containsBlocked(prompt)
+                    ?: io.github.xororz.localdream.utils.ContentFilter.containsBlocked(negativePrompt)
+                if (hit != null) throw IOException("content restricted")
+            }
             val out = ArrayList<String>(n)
             repeat(n) {
                 out.add(generateOne(prompt, negativePrompt, steps, cfg, width, height, seed, sampler, initImageBase64, denoiseStrength))

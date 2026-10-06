@@ -1812,7 +1812,7 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                     item {
                         val prefs = context.getSharedPreferences("app_prefs", android.content.Context.MODE_PRIVATE)
                         var contentRestricted by remember {
-                            mutableStateOf(prefs.getBoolean("content_restricted", true))
+                            mutableStateOf(prefs.getBoolean("content_restricted", false))
                         }
                         var showConfirmDisable by remember { mutableStateOf(false) }
                         Row(verticalAlignment = Alignment.CenterVertically) {

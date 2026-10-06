@@ -2645,9 +2645,10 @@ fun ModelRunScreen(
                                         val needEnglish = model?.isDit != true
                                         val rawPrompt = promptField.text
                                         val rawNegative = negativePromptField.text
-                                        // et.31: content restriction check (ON only).
+                                        // et.31/38: content restriction check (OFF by default;
+                                        // only when the user explicitly turns it ON).
                                         val restrictedOn = context.getSharedPreferences("app_prefs", android.content.Context.MODE_PRIVATE)
-                                            .getBoolean("content_restricted", true)
+                                            .getBoolean("content_restricted", false)
                                         if (restrictedOn) {
                                             val hit = io.github.xororz.localdream.utils.ContentFilter
                                                 .containsBlocked(rawPrompt)
