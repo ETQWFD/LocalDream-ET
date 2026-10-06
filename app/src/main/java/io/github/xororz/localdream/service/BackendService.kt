@@ -48,6 +48,11 @@ class BackendService : Service() {
     @Volatile
     private var runtimeDirReady = false
 
+    // et.33: QNN NPU 库是否真正就绪（设备支持且资产复制成功）。
+    // 复制失败时为 false，sd15npu 会因此回退到 CPU/GPU，绝不致命崩溃。
+    @Volatile
+    private var qnnLibsReady = false
+
     // All backend process management (asset copies, exec, destroy/waitFor)
     // runs on this single thread: jobs stay ordered relative to each other
     // and the main thread never blocks on waitFor() or large file copies.
@@ -381,76 +386,12 @@ class BackendService : Service() {
         try {
             runtimeDir = prepareRuntimeDirRoot(filesDir)
 
-            try {
-                // et.32: only copy qnnlibs on arm64 Qualcomm devices that can
-                // actually load them. On 32-bit / Kirin / MediaTek / Tensor /
-                // older chips we must not attempt to prepare QNN — the user
-                // gets CPU/GPU instead, never a fatal "Prepare runtime dir failed".
-                val qnnSupported = io.github.xororz.localdream.utils.DeviceCapabilities.hasQnnNpu()
-                if (qnnSupported) {
-                    val qnnlibsAssets = assets.list("qnnlibs")
-                    qnnlibsAssets?.forEach { fileName ->
-                        val targetLib = File(runtimeDir, fileName)
-
-                        val needsCopy = !targetLib.exists() ||
-                            run {
-                                val assetInputStream = assets.open("qnnlibs/$fileName")
-                                val assetSize = assetInputStream.use { it.available().toLong() }
-                                targetLib.length() != assetSize
-                            }
-
-                        if (needsCopy) {
-                            val assetInputStream = assets.open("qnnlibs/$fileName")
-                            assetInputStream.use { input ->
-                                targetLib.outputStream().use { output ->
-                                    input.copyTo(output)
-                                }
-                            }
-                            Log.d(TAG, "Copied $fileName from assets to runtime directory")
-                        }
-
-                        targetLib.setReadable(true, true)
-                        targetLib.setExecutable(true, true)
-                    }
-                    Log.i(TAG, "QNN libraries prepared in runtime directory")
-                } else {
-                    Log.i(TAG, "QNN libraries skipped: device is not arm64 Qualcomm Snapdragon")
-                    runCatching {
-                        io.github.xororz.localdream.cloud.LogHub.log(
-                            io.github.xororz.localdream.cloud.LogHub.Category.ENGINE,
-                            "QNN NPU not supported on this device; using CPU/GPU",
-                        )
-                    }
-                }
-
-                // The DiT engine's Hexagon skels share this directory: it is
-                // already on the DSP search path, and they are only useful on
-                // the devices whose HTP version the engine covers.
-                if (DitEngine.isSupportedDevice()) {
-                    // Skel rebuilds often keep the exact (page-aligned) size,
-                    // so also refresh any copy older than the installed APK.
-                    val apkUpdateTime =
-                        packageManager.getPackageInfo(packageName, 0).lastUpdateTime
-                    assets.list("ditlibs")?.forEach { fileName ->
-                        val target = File(runtimeDir, fileName)
-                        val assetSize =
-                            assets.open("ditlibs/$fileName").use { it.available().toLong() }
-                        if (!target.exists() || target.length() != assetSize ||
-                            target.lastModified() < apkUpdateTime
-                        ) {
-                            assets.open("ditlibs/$fileName").use { input ->
-                                target.outputStream().use { output -> input.copyTo(output) }
-                            }
-                            Log.d(TAG, "Copied $fileName from assets to runtime directory")
-                        }
-                        target.setReadable(true, true)
-                        target.setExecutable(true, true)
-                    }
-                }
-            } catch (e: IOException) {
-                Log.e(TAG, "Failed to prepare QNN libraries from assets", e)
-                throw RuntimeException("Failed to prepare QNN libraries from assets", e)
-            }
+            // et.33: QNN 是“可选加速器”，它的资源准备永远不能阻断 CPU/GPU 出图。
+            // 分别对 QNN 与 DiT 库做独立、尽力而为的复制；任何 IO 失败（磁盘满、
+            // 资源缺失、单文件损坏）都只记录日志并把对应加速标记置为不可用，
+            // 随后正常完成运行目录准备，由 sd15cpu / GPU 出图。
+            prepareQnnLibrariesBestEffort(runtimeDir)
+            prepareDitLibrariesBestEffort(runtimeDir)
 
             if (BuildConfig.FLAVOR == "filter") {
                 try {
@@ -491,6 +432,89 @@ class BackendService : Service() {
         }
     }
 
+    /**
+     * et.33: 尽力复制高通 QNN Hexagon 库。只有 arm64 + 骁龙 SM8450 及以上才尝试；
+     * 任何 IO/磁盘异常都只记录日志并令 [qnnLibsReady]=false，绝不抛出致命错误，
+     * 调用方随后正常用 CPU/GPU 出图。
+     */
+    private fun prepareQnnLibrariesBestEffort(runtimeDir: File) {
+        qnnLibsReady = false
+        if (!io.github.xororz.localdream.utils.DeviceCapabilities.hasQnnNpu()) {
+            Log.i(TAG, "QNN libraries skipped: device is not arm64 Qualcomm Snapdragon >= SM8450")
+            runCatching {
+                io.github.xororz.localdream.cloud.LogHub.log(
+                    io.github.xororz.localdream.cloud.LogHub.Category.ENGINE,
+                    "QNN NPU not supported on this device; using CPU/GPU",
+                )
+            }
+            return
+        }
+        val qnnAssets = try { assets.list("qnnlibs") } catch (e: Exception) {
+            Log.w(TAG, "QNN assets missing in APK; falling back to CPU/GPU", e); null
+        }
+        if (qnnAssets.isNullOrEmpty()) {
+            Log.w(TAG, "QNN assets empty; will use CPU/GPU")
+            return
+        }
+        var copied = 0
+        try {
+            qnnAssets.forEach { fileName ->
+                val targetLib = File(runtimeDir, fileName)
+                val assetSize = assets.open("qnnlibs/$fileName").use { it.available().toLong() }
+                val needsCopy = !targetLib.exists() || targetLib.length() != assetSize
+                if (needsCopy) {
+                    assets.open("qnnlibs/$fileName").use { input ->
+                        targetLib.outputStream().use { output -> input.copyTo(output) }
+                    }
+                }
+                targetLib.setReadable(true, true)
+                targetLib.setExecutable(true, true)
+                copied++
+            }
+        } catch (e: Exception) {
+            // 磁盘满 / IO 中断 / 单文件损坏：不阻断，回退 CPU/GPU。
+            Log.e(TAG, "QNN copy failed ($copied/${qnnAssets.size}); using CPU/GPU", e)
+            runCatching {
+                io.github.xororz.localdream.cloud.LogHub.log(
+                    io.github.xororz.localdream.cloud.LogHub.Category.ENGINE,
+                    "NPU 加速库准备失败，已自动改用 CPU/GPU（可清理存储空间后重试）",
+                )
+            }
+            return
+        }
+        if (copied == qnnAssets.size) {
+            qnnLibsReady = true
+            Log.i(TAG, "QNN libraries prepared in runtime directory")
+        } else {
+            Log.w(TAG, "QNN incomplete ($copied/${qnnAssets.size}); using CPU/GPU")
+        }
+    }
+
+    /**
+     * et.33: 尽力复制大模型(DiT/SDXL) 的 Hexagon skel。失败仅记日志，不影响 SD1.5。
+     */
+    private fun prepareDitLibrariesBestEffort(runtimeDir: File) {
+        if (!DitEngine.isSupportedDevice()) return
+        try {
+            val apkUpdateTime = packageManager.getPackageInfo(packageName, 0).lastUpdateTime
+            assets.list("ditlibs")?.forEach { fileName ->
+                val target = File(runtimeDir, fileName)
+                val assetSize = assets.open("ditlibs/$fileName").use { it.available().toLong() }
+                if (!target.exists() || target.length() != assetSize ||
+                    target.lastModified() < apkUpdateTime
+                ) {
+                    assets.open("ditlibs/$fileName").use { input ->
+                        target.outputStream().use { output -> input.copyTo(output) }
+                    }
+                }
+                target.setReadable(true, true)
+                target.setExecutable(true, true)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "DiT libraries copy failed; large-model NPU may be unavailable", e)
+        }
+    }
+
     private fun startBackend(config: BackendConfig): Boolean {
         val modelId = config.modelId
         var backendType = config.backendType
@@ -503,17 +527,20 @@ class BackendService : Service() {
         stopping = false
         updateState(BackendState.Starting)
 
-        // et.32: if the user (or a stale state) asked for sd15npu on a device
-        // that cannot run Hexagon (32-bit / non-Qualcomm / older SoC), silently
-        // fall back to sd15cpu instead of launching a process that will die.
+        // et.32/et.33: if the user (or a stale state) asked for sd15npu on a
+        // device that cannot run Hexagon (32-bit / non-Qualcomm / older SoC),
+        // or the QNN libs failed to prepare (disk full / IO error / assets
+        // incomplete), fall back to sd15cpu instead of launching a process that
+        // will crash — never a fatal "Prepare QNN libraries" error.
         if (backendType == "sd15npu" &&
-            !io.github.xororz.localdream.utils.DeviceCapabilities.hasQnnNpu()
+            (!io.github.xororz.localdream.utils.DeviceCapabilities.hasQnnNpu() ||
+                !qnnLibsReady)
         ) {
-            Log.w(TAG, "sd15npu requested but device lacks Hexagon NPU; falling back to sd15cpu")
+            Log.w(TAG, "sd15npu requested but Hexagon NPU unavailable/ready=$qnnLibsReady; falling back to sd15cpu")
             runCatching {
                 io.github.xororz.localdream.cloud.LogHub.log(
                     io.github.xororz.localdream.cloud.LogHub.Category.ENGINE,
-                    "sd15npu on unsupported device -> fallback sd15cpu (model=$modelId)",
+                    "sd15npu on unsupported/unready device -> fallback sd15cpu (model=$modelId)",
                 )
             }
             backendType = "sd15cpu"

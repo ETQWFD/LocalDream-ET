@@ -49,8 +49,8 @@ android {
         minSdk = 28
 //        minSdk = 31
         targetSdk = 36
-        versionCode = 106
-        versionName = "3.0.0-et.32"
+        versionCode = 107
+        versionName = "3.0.0-et.33"
 
         // et.26: GitHub OAuth Device Flow client_id. Empty => device-flow entry
         // is shown disabled (no request, no fake login). Device flow needs no secret.
@@ -132,6 +132,9 @@ android {
         }
         jniLibs {
             useLegacyPackaging = true
+            // et.33: 保留预编译原生引擎的原始符号，勿在打包时二次 strip，
+            // 保证出货 .so 与已用双 NDK(armv7 r25 / arm64 r29) 验证的库逐字节一致。
+            keepDebugSymbols += listOf("**/*.so")
         }
     }
     flavorDimensions += "version"
