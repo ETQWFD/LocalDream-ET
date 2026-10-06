@@ -347,6 +347,11 @@
     <string name="upload_images_confirm">Upload selected (%1$d)</string>
     <string name="upload_images_no_net">No network; please connect and retry.</string>
     <string name="upload_images_done">Uploaded %1$d of %2$d to cloud.</string>
+    <string name="cloud_upload_one">Upload this image to cloud</string>
+    <string name="cloud_uploading">Uploading to cloud…</string>
+    <string name="cloud_upload_ok">Image uploaded to cloud</string>
+    <string name="cloud_upload_failed">Upload failed: %1$s</string>
+    <string name="cloud_upload_no_net">No network; cloud upload is disabled.</string>
     <string name="error_model_extract_incomplete">Model "%1$s" files are incomplete (missing required weights). The downloaded package is kept; please retry or repair the model. If it still fails, delete and re-download.</string>
     <string name="restore_pick_model">Pick a downloaded model from the list to start.</string>
     <string name="close">Close</string>

@@ -36,9 +36,15 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun OverlayIconButton(icon: ImageVector, contentDescription: String?, onClick: () -> Unit) {
+fun OverlayIconButton(
+    icon: ImageVector,
+    contentDescription: String?,
+    enabled: Boolean = true,
+    onClick: () -> Unit,
+) {
     FilledTonalIconButton(
         onClick = onClick,
+        enabled = enabled,
         colors = IconButtonDefaults.filledTonalIconButtonColors(
             containerColor = MaterialTheme.colorScheme.scrim.copy(alpha = 0.5f),
             contentColor = Color.White,

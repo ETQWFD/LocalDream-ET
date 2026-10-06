@@ -1,0 +1,36 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="1024"
+    android:viewportHeight="1024">
+
+    <!-- ET geometric wordmark, centered inside the adaptive safe zone -->
+    <!-- E -->
+    <path android:pathData="M322,392 L322,632"
+        android:fillColor="#00000000" android:strokeColor="#FFF3E2C4"
+        android:strokeWidth="64" android:strokeLineCap="round" android:strokeLineJoin="round" />
+    <path android:pathData="M322,392 L470,392"
+        android:fillColor="#00000000" android:strokeColor="#FFF3E2C4"
+        android:strokeWidth="64" android:strokeLineCap="round" android:strokeLineJoin="round" />
+    <path android:pathData="M322,512 L448,512"
+        android:fillColor="#00000000" android:strokeColor="#FFF3E2C4"
+        android:strokeWidth="64" android:strokeLineCap="round" android:strokeLineJoin="round" />
+    <path android:pathData="M322,632 L470,632"
+        android:fillColor="#00000000" android:strokeColor="#FFF3E2C4"
+        android:strokeWidth="64" android:strokeLineCap="round" android:strokeLineJoin="round" />
+    <!-- T -->
+    <path android:pathData="M548,392 L748,392"
+        android:fillColor="#00000000" android:strokeColor="#FFF3E2C4"
+        android:strokeWidth="64" android:strokeLineCap="round" android:strokeLineJoin="round" />
+    <path android:pathData="M648,392 L648,632"
+        android:fillColor="#00000000" android:strokeColor="#FFF3E2C4"
+        android:strokeWidth="64" android:strokeLineCap="round" android:strokeLineJoin="round" />
+
+    <!-- gold sparkles, carry over the "dream" identity -->
+    <path
+        android:fillColor="#FFFFD27A"
+        android:pathData="M800,250 L820,316 L886,336 L820,356 L800,422 L780,356 L714,336 L780,316 Z" />
+    <path
+        android:fillColor="#FFFFE6A8"
+        android:pathData="M250,690 L263,732 L305,745 L263,758 L250,800 L237,758 L195,745 L237,732 Z" />
+</vector>

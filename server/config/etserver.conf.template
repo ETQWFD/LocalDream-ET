@@ -9,3 +9,6 @@ content_filter=0
 dark_theme=1
 threads=2
 autostart=0
+steps=20
+cfg_scale=7.00
+batch_size=1

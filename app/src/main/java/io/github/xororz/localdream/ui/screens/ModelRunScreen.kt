@@ -980,6 +980,10 @@ fun ModelRunScreen(
                 selectedImageUri = Uri.fromFile(File(context.filesDir, "tmp.txt"))
                 hasOriginalImageForStitch = false
                 base64EncodeDone = true
+                // et.34: entering img2img ("修图") starts from the default
+                // denoising strength, not a stale slider value left over from a
+                // previous txt2img/edit run.
+                denoiseStrength = GenerationDefaults.GLOBAL.denoiseStrength
                 true
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
@@ -2550,6 +2554,13 @@ fun ModelRunScreen(
                                     }
                                 }
                                 memWarnBypass = false
+                                // et.34: disable the button and raise the progress card
+                                // immediately on tap — before base64 encoding / prompt MT /
+                                // the service's first Progress event (which can take seconds) —
+                                // so a second tap can't start a concurrent batch. The
+                                // Progress/Complete/Error branches below own the reset.
+                                isRunning = true
+                                progress = 0f
                                 Log.d(
                                     "ModelRunScreen",
                                     "start generation",

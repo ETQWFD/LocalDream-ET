@@ -98,14 +98,20 @@ internal fun UpdateDialog(
             val expected = target.sizeBytes
             while (true) {
                 kotlinx.coroutines.delay(800)
+                // et.34: the .part file is the live download stream. Prefer its size
+                // so the percentage tracks real bytes; a leftover finished APK must
+                // never make it jump to ~99% before the new download has moved.
                 val done = when {
-                    finalApk.exists() -> finalApk.length()
                     part.exists() -> part.length()
+                    finalApk.exists() -> finalApk.length()
                     else -> 0L
                 }
                 if (expected > 0) progress = (done.toFloat() / expected).coerceIn(0f, 1f)
                 statusText = "${formatBytes(done)} / ${formatBytes(if (expected > 0) expected else done)}"
-                if (finalApk.exists() && (expected <= 0 || finalApk.length() >= expected)) {
+                // Complete only once the service has renamed .part -> final (part gone).
+                if (!part.exists() && finalApk.exists() &&
+                    (expected <= 0 || finalApk.length() >= expected)
+                ) {
                     downloadedFile = finalApk
                     break
                 }

@@ -22,3 +22,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "LocalDream"
 include(":app")
+include(":chatclient")

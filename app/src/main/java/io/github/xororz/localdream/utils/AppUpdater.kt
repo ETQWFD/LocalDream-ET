@@ -237,6 +237,12 @@ object AppUpdater {
         if (total > 0 && from >= total) from = 0L
         if (from == 0L && part.exists()) part.delete()
 
+        // et.34: a fresh download starts from 0 — drop any previously completed
+        // APK left at [target]. Otherwise the dialog polling (which reads file
+        // sizes) would see the OLD finished APK at ~99% of the new size the
+        // instant the download starts, i.e. "jumping to 99% before bytes move".
+        if (from == 0L && target.exists()) target.delete()
+
         val builder = Request.Builder()
             .url(best.url)
             .header("User-Agent", "LocalDream-ET/${BuildConfig.VERSION_NAME}")

@@ -66,11 +66,38 @@ fun UploadImagesScreen(onBack: () -> Unit, onGoGenerate: () -> Unit) {
 
     LaunchedEffect(Unit) {
         images = withContext(Dispatchers.IO) {
-            val out = Storage.outputsDir(context)
-            val list = (out.listFiles()?.toList() ?: emptyList())
-                .filter { it.isFile && it.extension.lowercase() in setOf("png", "jpg", "jpeg", "webp") }
+            // et.34: the real history PNGs live in the app-private history tree
+            // filesDir/history/<modelId>/<ts>.png|jpg, NOT the public outputs dir
+            // (which only holds explicit "save to gallery" copies). Scan every
+            // place a generated image can actually be, then dedupe.
+            val exts = setOf("png", "jpg", "jpeg", "webp")
+            fun collectImages(root: File?): List<File> {
+                root ?: return emptyList()
+                if (!root.exists()) return emptyList()
+                return (root.walkTopDown().filter {
+                    it.isFile && it.extension.lowercase() in exts
+                }.toList())
+            }
+
+            val sources = mutableListOf<File>()
+            // 1) App-private history tree (authoritative source of generated images).
+            sources += collectImages(File(context.filesDir, "history"))
+            // 2) Public / private-fallback outputs dir (where this page used to look).
+            sources += collectImages(Storage.outputsDir(context))
+            // 3) Gallery/Pictures/LocalDream copies written by "save to gallery".
+            runCatching {
+                val pics = File(
+                    android.os.Environment.getExternalStoragePublicDirectory(
+                        android.os.Environment.DIRECTORY_PICTURES,
+                    ),
+                    "LocalDream",
+                )
+                sources += collectImages(pics)
+            }
+
+            sources
+                .distinctBy { it.absolutePath }
                 .sortedByDescending { it.lastModified() }
-            list
         }
     }
 

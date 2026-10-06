@@ -337,6 +337,11 @@
     <string name="upload_images_confirm">上传所选（%1$d）</string>
     <string name="upload_images_no_net">当前无网络，请联网后重试。</string>
     <string name="upload_images_done">已上传 %1$d/%2$d 张到云端。</string>
+    <string name="cloud_upload_one">上传此图到云端</string>
+    <string name="cloud_uploading">正在上传到云端…</string>
+    <string name="cloud_upload_ok">图片已上传到云端</string>
+    <string name="cloud_upload_failed">上传失败：%1$s</string>
+    <string name="cloud_upload_no_net">当前无网络，云上传不可用。</string>
     <string name="error_model_extract_incomplete">模型“%1$s”文件不完整，缺少运行所需权重。安装包已保留，请重新下载或修复模型；仍失败请删除后重新下载。</string>
     <string name="restore_pick_model">请从列表中选择一个已下载模型开始。</string>
     <string name="close">关闭</string>

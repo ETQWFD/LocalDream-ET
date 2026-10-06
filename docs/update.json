@@ -1,7 +1,7 @@
 {
-  "versionCode": 107,
-  "versionName": "3.0.0-et.33",
+  "versionCode": 108,
+  "versionName": "3.0.0-et.34",
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
-  "size": 153394283,
-  "releaseNotes": "ET 定制版 v3.0.0-et.33（包名 etc.github.ai，可从 et.32 覆盖安装）。\n• 彻底消除 Prepare runtime dir failed: Failed to prepare QNN libraries 致命错误：高通 NPU / DiT 加速库改为“尽力而为”准备，32位/非骁龙/缺库一律跳过；即使骁龙高端机磁盘满或复制失败，也只回退 CPU/GPU 继续出图，不再崩溃。\n• sd15npu 在设备不支持或加速库未就绪时自动改用 sd15cpu（有 OpenCL 走 GPU）。\n• 打包保留原生引擎符号，三架构引擎与已验证版本逐字节一致（未改 C++），更稳。\n电脑版仍为 desktop-v3.0.1，不在本更新范围。开发者：ET，MIT License。"
+  "size": 153407915,
+  "releaseNotes": "ET 定制版 v3.0.0-et.34（包名 etc.github.ai，可从 et.33 覆盖安装）。\n• 历史/生成结果每张图新增“云”上传按钮（删除按钮旁）：未登录弹登录、无网络中文提示，按年月日时分命名上传到你自己仓库的 png/ 目录。\n• 修复“设置→上传图片”读不到历史图：现在同时扫描应用历史目录、公共 outputs 与 Pictures/LocalDream，历史生成图都能列出并选择上传。\n• 修图（img2img）：进入时清掉残留重绘度，点击修图后按钮立即禁用直到完成，修图过程显示真实进度条，结果写入历史并可云上传。\n• 修复应用内更新提前跳到 99%：按已下载/总字节显示真实进度，通知栏同步真实百分比；新下载前清理残留安装包。模型下载同样真实进度，后台前台服务+WakeLock 续传续算。\n• 保持 et.33 的 NPU/DiT 尽力准备、失败回退 CPU/GPU 不致命。\n电脑版服务端同步升级 v1.1.2（国内魔搭首源、下载完整校验后才就绪、步数/CFG/批量滑杆）。开发者：ET，MIT License。"
 }

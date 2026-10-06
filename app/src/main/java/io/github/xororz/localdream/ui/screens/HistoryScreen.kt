@@ -2,12 +2,15 @@ package io.github.xororz.localdream.ui.screens
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.net.ConnectivityManager
+import android.net.Network
 import android.widget.Toast
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
@@ -41,6 +44,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavController
 import androidx.paging.compose.collectAsLazyPagingItems
 import io.github.xororz.localdream.R
+import io.github.xororz.localdream.cloud.CloudClient
+import io.github.xororz.localdream.cloud.CloudConfig
+import io.github.xororz.localdream.cloud.LogHub
+import io.github.xororz.localdream.cloud.SecureTokenStore
 import io.github.xororz.localdream.data.GenerationPreferences
 import io.github.xororz.localdream.data.HistoryFilter
 import io.github.xororz.localdream.data.HistoryItem
@@ -55,6 +62,10 @@ import io.github.xororz.localdream.utils.saveImageFromFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 // Global history browser reachable from the model list. Shares the grid,
 // filter bar, and filter sheet with the model run screen but offers only
@@ -105,6 +116,79 @@ fun HistoryScreen(navController: NavController) {
     var showParamsDialog by remember { mutableStateOf(false) }
     var showShareDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
+
+    // et.34: per-image cloud upload (reuses the existing PAT login state).
+    var uploadingItemId by remember { mutableStateOf<Long?>(null) }
+    var showCloudLogin by remember { mutableStateOf(false) }
+
+    // Live network state: the cloud upload button is disabled when offline and
+    // shows a Chinese hint, mirroring the multi-select upload page.
+    val isOnline by produceState(initialValue = hasNetwork(context), context) {
+        val cm = runCatching { context.getSystemService(ConnectivityManager::class.java) }.getOrNull()
+        if (cm == null) {
+            value = hasNetwork(context)
+            return@produceState
+        }
+        val callback = object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) { value = true }
+            override fun onLost(network: Network) { value = false }
+        }
+        runCatching { cm.registerDefaultNetworkCallback(callback) }
+        awaitDispose { runCatching { cm.unregisterNetworkCallback(callback) } }
+    }
+
+    // Upload one history PNG to the logged-in GitHub/Gitee private repo under
+    // png/yyyyMMddHHmm.png (uploadContent auto-suffixes "_2", "_3" on conflict).
+    fun onCloudUploadClick(item: HistoryItem) {
+        val store = SecureTokenStore(context)
+        val auth = store.loggedInProviders().firstOrNull()
+        if (auth == null) {
+            // Reuse the existing PAT account dialog; do not build a new login.
+            showCloudLogin = true
+            return
+        }
+        if (!isOnline) {
+            Toast.makeText(context, context.getString(R.string.cloud_upload_no_net), Toast.LENGTH_LONG).show()
+            return
+        }
+        val src = item.imageFile
+        if (!src.exists()) {
+            Toast.makeText(context, R.string.delete_failed, Toast.LENGTH_SHORT).show()
+            return
+        }
+        uploadingItemId = item.id
+        Toast.makeText(context, context.getString(R.string.cloud_uploading), Toast.LENGTH_SHORT).show()
+        scope.launch {
+            val res = runCatching {
+                withContext(Dispatchers.IO) {
+                    val provider = auth.provider
+                    val token = store.accessToken(provider) ?: error("no token")
+                    CloudClient.ensurePrivateRepo(provider, token, auth.login)
+                    val owner = auth.owner ?: auth.login
+                    val repo = auth.repo ?: CloudConfig.BACKUP_REPO
+                    val stamp = SimpleDateFormat("yyyyMMddHHmm", Locale.US).format(Date(item.timestamp))
+                    val ext = src.extension.lowercase().ifEmpty { "png" }
+                    CloudClient.uploadContent(
+                        provider, token, owner, repo,
+                        "png/$stamp.$ext",
+                        src.readBytes(),
+                        "upload image $stamp",
+                    )
+                }
+            }
+            uploadingItemId = null
+            res.onSuccess {
+                Toast.makeText(context, context.getString(R.string.cloud_upload_ok), Toast.LENGTH_LONG).show()
+            }.onFailure { e ->
+                LogHub.log(LogHub.Category.UPLOAD, "single upload FAIL: ${e.message}")
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.cloud_upload_failed, e.message ?: "?"),
+                    Toast.LENGTH_LONG,
+                ).show()
+            }
+        }
+    }
 
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
@@ -274,6 +358,15 @@ fun HistoryScreen(navController: NavController) {
                         }
                     },
                 )
+                // et.34: one-tap cloud upload of this PNG into the private repo's
+                // png/ directory. Offline => disabled; not logged in => opens the
+                // existing account/login dialog rather than inventing a new login.
+                OverlayIconButton(
+                    icon = Icons.Default.CloudUpload,
+                    contentDescription = stringResource(R.string.cloud_upload_one),
+                    enabled = uploadingItemId != item.id,
+                    onClick = { onCloudUploadClick(item) },
+                )
                 OverlayIconButton(
                     icon = Icons.Default.Delete,
                     contentDescription = "Delete image",
@@ -441,4 +534,16 @@ fun HistoryScreen(navController: NavController) {
             onDismiss = { showBatchDeleteDialog = false },
         )
     }
+
+    if (showCloudLogin) {
+        CloudBackupDialog(onDismiss = { showCloudLogin = false })
+    }
 }
+
+/** Quick offline/online snapshot used as the initial network state. */
+private fun hasNetwork(context: android.content.Context): Boolean = runCatching {
+    val cm = context.getSystemService(ConnectivityManager::class.java) ?: return false
+    val info = cm.activeNetworkInfo
+    @Suppress("DEPRECATION")
+    info != null && info.isConnected
+}.getOrDefault(false)

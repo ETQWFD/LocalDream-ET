@@ -2,7 +2,7 @@
  * Local Dream ET Server - 本地 AI 出图 HTTP API 外壳
  * ---------------------------------------------------------------------------
  * 版权所有 (c) 2026  Local Dream ET Server  (ET)
- * 版本: 1.0.0
+ * 版本: 1.1.2
  *
  * 本程序是一层“外壳 / 鉴权反向代理 / 看门狗”，真实的出图推理由子进程
  * stable-diffusion.cpp 的 sd-server 提供（MIT 许可，上游仓库
@@ -55,6 +55,7 @@
   #include <process.h>
   #include <windows.h>
   #include <shellapi.h>
+  #include <commctrl.h>
   #include <io.h>
   #pragma comment(lib,"ws2_32.lib")
   #pragma comment(lib,"shell32.lib")
@@ -83,7 +84,7 @@
 
 /* ============================ 全局配置 ============================ */
 #define APP_NAME      "Local Dream ET Server"
-#define APP_VERSION   "1.1.1"
+#define APP_VERSION   "1.1.2"
 #define COPYRIGHT_STR "Copyright (C) 2026 etc"
 
 #define DEFAULT_PORT       8080      /* 对外监听端口 */
@@ -102,6 +103,10 @@ typedef struct {
     int   dark_theme;       /* 1=暗黑(默认) */
     int   threads;
     int   autostart;
+    /* ---- v1.1.2: 出图默认参数（代理层对入站请求补默认） ---- */
+    int   steps;            /* 默认步数，GUI 滑杆，默认 20 */
+    double cfg_scale;       /* 默认 CFG，GUI 滑杆，默认 7.0 */
+    int   batch_size;       /* 默认批量(GUI batch)；txt2img=batch_size，OpenAI=n，默认 1 */
 } Config;
 
 static Config g_cfg;
@@ -243,6 +248,9 @@ static void default_config(void) {
     g_cfg.dark_theme = 1;
     g_cfg.threads = 2;
     g_cfg.autostart = 0;
+    g_cfg.steps = 20;          /* v1.1.2 默认步数 */
+    g_cfg.cfg_scale = 7.0;     /* v1.1.2 默认 CFG */
+    g_cfg.batch_size = 1;      /* v1.1.2 默认批量 */
     gen_api_key(g_cfg.api_key); /* 首次随机生成 */
     g_cfg.model_path[0]=0; g_cfg.model_id[0]=0;
 }
@@ -261,6 +269,9 @@ static void save_config(void) {
     fprintf(f, "dark_theme=%d\n", g_cfg.dark_theme);
     fprintf(f, "threads=%d\n", g_cfg.threads);
     fprintf(f, "autostart=%d\n", g_cfg.autostart);
+    fprintf(f, "steps=%d\n", g_cfg.steps);
+    fprintf(f, "cfg_scale=%.2f\n", g_cfg.cfg_scale);
+    fprintf(f, "batch_size=%d\n", g_cfg.batch_size);
     fclose(f);
 }
 
@@ -282,6 +293,9 @@ static int load_config(void) {
         else if (!strcmp(k,"dark_theme"))  g_cfg.dark_theme=atoi(v);
         else if (!strcmp(k,"threads"))     g_cfg.threads=atoi(v);
         else if (!strcmp(k,"autostart"))   g_cfg.autostart=atoi(v);
+        else if (!strcmp(k,"steps"))      g_cfg.steps=atoi(v);
+        else if (!strcmp(k,"cfg_scale"))  g_cfg.cfg_scale=atof(v);
+        else if (!strcmp(k,"batch_size")) g_cfg.batch_size=atoi(v);
     }
     fclose(f);
     /* 兜底：key 长度不对就重新生成 */
@@ -399,102 +413,237 @@ static int body_triggers_filter(const char* body, int blen) {
     return hit;
 }
 
-/* ============================ 模型表（对齐手机端 SD1.5，GGUF 已校验） ============================
- * 每条 URL 均经 curl HEAD/Range 实测：200/206 + Content-Length + Accept-Ranges: bytes。
- * 沙箱不真下 GB 模型；未校验通过的标 verified=0，菜单里提示“暂无可用 GGUF 源/待补”，不放假入口。
- * sources: 默认 hf-mirror（国内），可手工切 HuggingFace / ModelScope。 */
+/* ============================ 模型表（对齐手机端 SD1.5） ============================
+ * 每个模型最多 3 个下载源，按顺序尝试：[0]=魔搭ModelScope(国内首选) [1]=hf-mirror(国内镜像)
+ * [2]=huggingface 官方。每个源都在下载前用 HTTP HEAD + Range(0-0) 实测可达性与总字节；
+ * 某源 url 为空表示“魔搭无此模型”，运行时会用中文明示后自动切到下一个可用镜像，绝不放假链接。
+ * size 为 2026-10-06 实测 Content-Length / Content-Range 总字节。 */
+typedef struct {
+    const char* label;   /* 源中文名 */
+    const char* url;     /* 直链；"" 表示无此源 */
+    long long   size;    /* 实测总字节（0=运行时探测） */
+} ModelSrc;
+
 typedef struct {
     const char* id;       /* 模型 id */
     const char* name;     /* 显示名 */
-    const char* gguf;     /* hf-mirror 直链（已校验） */
-    long long   size;     /* 实际 Content-Length 字节（已校验） */
-    int         verified; /* 1=已实测 200/206；0=暂无可用 GGUF 源 */
+    ModelSrc src[3];      /* [0]=魔搭 [1]=hf-mirror [2]=huggingface */
 } ModelEntry;
-static ModelEntry MODELS[] = {
-    /* 以下 4 条为 2026-10-06 实测通过的 GGUF 直链（Q4_0，CPU 可跑） */
-    { "sd15-anythingv5",  "Anything V5 (SD1.5 动漫 Q4_0)",
-      "https://hf-mirror.com/genai-archive/anything-v5-gguf/resolve/main/anything-v5.q4_0.gguf",
-      1570410496, 1 },
-    { "sd15-realisticv6",  "Realistic Vision V6.0 (写实 Q4_0)",
-      "https://hf-mirror.com/second-state/Realistic_Vision_V6.0_B1-GGUF/resolve/main/realisticVisionV60B1_v51HyperVAE-Q4_0.gguf",
-      1570410496, 1 },
-    { "sd15-base",         "Stable Diffusion 1.5 原版 (Q4_0)",
-      "https://hf-mirror.com/second-state/stable-diffusion-v1-5-GGUF/resolve/main/stable-diffusion-v1-5-pruned-emaonly-Q4_0.gguf",
-      1566768416, 1 },
-    { "sd15-base-s",       "Stable Diffusion 1.5 原版 (镜像备用源)",
-      "https://hf-mirror.com/Sashkanik13/sd1.5-text2img-gguf/resolve/main/model_q4_0.gguf",
-      1566768416, 1 },
-    { "sd15-chillout",     "ChilloutMix (写实 Q8_0)",
-      "https://hf-mirror.com/MomoSoft/chilloutmix-sd15-q8-gguf/resolve/main/chilloutmix_q8_0.gguf",
-      1801579488, 1 },
-    /* 以下 6 个手机端同名模型：civitai 动漫模型无独立 GGUF，但 sd-server 可直接加载
-       safetensors 单文件 checkpoint；以下直链均已 2026-10-06 Range(206) 实测，字节为准 */
-    { "sd15-dreamshaper",  "DreamShaper 8 (全能 SD1.5 写实/动漫，safetensors)",
-      "https://hf-mirror.com/Lykon/DreamShaper/resolve/main/DreamShaper_8_pruned.safetensors",
-      2132625894LL, 1 },
-    { "sd15-absreal",      "Absolute Reality v1.8.1 (写实，safetensors)",
-      "https://hf-mirror.com/Lykon/AbsoluteReality/resolve/main/AbsoluteReality_1.8.1_pruned.safetensors",
-      2132625432LL, 1 },
-    { "sd15-qteamix",      "QteaMix (动漫 Q 版 fp16，safetensors)",
-      "https://hf-mirror.com/chenxluo/QteaMix/resolve/main/QteaMix-fp16.safetensors",
-      2546054463LL, 1 },
-    { "sd15-cuteyuki",     "CuteYukiMix Adorable midchapter3 (可爱动漫，safetensors)",
-      "https://hf-mirror.com/wayne080211/cuteyukimix_model/resolve/main/cuteyukimixAdorable_midchapter3.safetensors",
-      2132626090LL, 1 },
-    { "sd15-breakdomain",  "BreakDomain Realistic R2333 (清爽动漫风，safetensors)",
-      "https://hf-mirror.com/Cooper/breakdomainrealistic/resolve/main/breakdomainrealistic_R2333.safetensors",
-      2175121872LL, 1 },
-    { "sd15-counterfeit",  "Counterfeit V3.0 (动漫 fp16，较大 4.2GB，safetensors)",
-      "https://hf-mirror.com/gsdf/Counterfeit-V3.0/resolve/main/Counterfeit-V3.0_fp16.safetensors",
-      4244124028LL, 1 },
-    { NULL, NULL, NULL, 0, 0 }
-};
 
-/* 下载通道：默认 hf-mirror；切源时把 URL 前缀替换为对应域名。 */
-static const char* MIRRORS[][2] = {
-    { "hf-mirror.com",   "https://hf-mirror.com" },   /* 默认国内 */
-    { "huggingface.co",  "https://huggingface.co" },   /* 官方 */
-    { "modelscope.cn",   "https://modelscope.cn" },    /* ModelScope（需逐模型适配路径，默认留空提示） */
-    { NULL, NULL }
+static ModelEntry MODELS[] = {
+    { "sd15-anythingv5",  "Anything V5 (SD1.5 动漫 Q4_0)",
+      { {"魔搭ModelScope", "", 0},
+        {"hf-mirror",
+         "https://hf-mirror.com/genai-archive/anything-v5-gguf/resolve/main/anything-v5.q4_0.gguf",
+         1570410496},
+        {"HuggingFace",
+         "https://huggingface.co/genai-archive/anything-v5-gguf/resolve/main/anything-v5.q4_0.gguf",
+         1570410496} } },
+    { "sd15-realisticv6",  "Realistic Vision V6.0 (写实 Q4_0)",
+      { {"魔搭ModelScope", "", 0},
+        {"hf-mirror",
+         "https://hf-mirror.com/second-state/Realistic_Vision_V6.0_B1-GGUF/resolve/main/realisticVisionV60B1_v51HyperVAE-Q4_0.gguf",
+         1570410496},
+        {"HuggingFace",
+         "https://huggingface.co/second-state/Realistic_Vision_V6.0_B1-GGUF/resolve/main/realisticVisionV60B1_v51HyperVAE-Q4_0.gguf",
+         1570410496} } },
+    { "sd15-base",         "Stable Diffusion 1.5 原版",
+      /* 魔搭有 fp32 emaonly safetensors(4.26GB，实测206)；hf-mirror/HF 为 Q4_0 GGUF(1.57GB)。 */
+      { {"魔搭ModelScope",
+         "https://modelscope.cn/models/AI-ModelScope/stable-diffusion-v1-5/resolve/master/v1-5-pruned-emaonly.safetensors",
+         4265146304LL},
+        {"hf-mirror",
+         "https://hf-mirror.com/second-state/stable-diffusion-v1-5-GGUF/resolve/main/stable-diffusion-v1-5-pruned-emaonly-Q4_0.gguf",
+         1566768416},
+        {"HuggingFace",
+         "https://huggingface.co/second-state/stable-diffusion-v1-5-GGUF/resolve/main/stable-diffusion-v1-5-pruned-emaonly-Q4_0.gguf",
+         1566768416} } },
+    { "sd15-base-s",       "Stable Diffusion 1.5 原版 (镜像备用源)",
+      { {"魔搭ModelScope", "", 0},
+        {"hf-mirror",
+         "https://hf-mirror.com/Sashkanik13/sd1.5-text2img-gguf/resolve/main/model_q4_0.gguf",
+         1566768416},
+        {"HuggingFace",
+         "https://huggingface.co/Sashkanik13/sd1.5-text2img-gguf/resolve/main/model_q4_0.gguf",
+         1566768416} } },
+    { "sd15-chillout",     "ChilloutMix (写实 Q8_0)",
+      { {"魔搭ModelScope", "", 0},
+        {"hf-mirror",
+         "https://hf-mirror.com/MomoSoft/chilloutmix-sd15-q8-gguf/resolve/main/chilloutmix_q8_0.gguf",
+         1801579488},
+        {"HuggingFace",
+         "https://huggingface.co/MomoSoft/chilloutmix-sd15-q8-gguf/resolve/main/chilloutmix_q8_0.gguf",
+         1801579488} } },
+    { "sd15-dreamshaper",  "DreamShaper 8 (全能 SD1.5 写实/动漫，safetensors)",
+      { {"魔搭ModelScope", "", 0},
+        {"hf-mirror",
+         "https://hf-mirror.com/Lykon/DreamShaper/resolve/main/DreamShaper_8_pruned.safetensors",
+         2132625894LL},
+        {"HuggingFace",
+         "https://huggingface.co/Lykon/DreamShaper/resolve/main/DreamShaper_8_pruned.safetensors",
+         2132625894LL} } },
+    { "sd15-absreal",      "Absolute Reality v1.8.1 (写实，safetensors)",
+      { {"魔搭ModelScope", "", 0},
+        {"hf-mirror",
+         "https://hf-mirror.com/Lykon/AbsoluteReality/resolve/main/AbsoluteReality_1.8.1_pruned.safetensors",
+         2132625432LL},
+        {"HuggingFace",
+         "https://huggingface.co/Lykon/AbsoluteReality/resolve/main/AbsoluteReality_1.8.1_pruned.safetensors",
+         2132625432LL} } },
+    { "sd15-qteamix",      "QteaMix (动漫 Q 版 fp16，safetensors)",
+      { {"魔搭ModelScope", "", 0},
+        {"hf-mirror",
+         "https://hf-mirror.com/chenxluo/QteaMix/resolve/main/QteaMix-fp16.safetensors",
+         2546054463LL},
+        {"HuggingFace",
+         "https://huggingface.co/chenxluo/QteaMix/resolve/main/QteaMix-fp16.safetensors",
+         2546054463LL} } },
+    { "sd15-cuteyuki",     "CuteYukiMix Adorable midchapter3 (可爱动漫，safetensors)",
+      { {"魔搭ModelScope", "", 0},
+        {"hf-mirror",
+         "https://hf-mirror.com/wayne080211/cuteyukimix_model/resolve/main/cuteyukimixAdorable_midchapter3.safetensors",
+         2132626090LL},
+        {"HuggingFace",
+         "https://huggingface.co/wayne080211/cuteyukimix_model/resolve/main/cuteyukimixAdorable_midchapter3.safetensors",
+         2132626090LL} } },
+    { "sd15-breakdomain",  "BreakDomain Realistic R2333 (清爽动漫风，safetensors)",
+      { {"魔搭ModelScope", "", 0},
+        {"hf-mirror",
+         "https://hf-mirror.com/Cooper/breakdomainrealistic/resolve/main/breakdomainrealistic_R2333.safetensors",
+         2175121872LL},
+        {"HuggingFace",
+         "https://huggingface.co/Cooper/breakdomainrealistic/resolve/main/breakdomainrealistic_R2333.safetensors",
+         2175121872LL} } },
+    { "sd15-counterfeit",  "Counterfeit V3.0 (动漫 fp16，较大 4.2GB，safetensors)",
+      { {"魔搭ModelScope", "", 0},
+        {"hf-mirror",
+         "https://hf-mirror.com/gsdf/Counterfeit-V3.0/resolve/main/Counterfeit-V3.0_fp16.safetensors",
+         4244124028LL},
+        {"HuggingFace",
+         "https://huggingface.co/gsdf/Counterfeit-V3.0/resolve/main/Counterfeit-V3.0_fp16.safetensors",
+         4244124028LL} } },
+    { NULL, NULL, {{NULL,NULL,0}} }
 };
 
 /* ============================ 模型下载向导 ============================ */
-/* 用 curl 断点续传下载到 models/。返回 0 成功。 */
-static int download_model(const ModelEntry* m) {
-    if(!m->verified || !m->gguf[0]) {
-        log_line("该模型暂无可用 GGUF 源，已跳过（不放假入口）。"); return -1;
-    }
-    mkdir_p(g_datadir, "models");
-    char out[1280], part[1300];
-    const char* slash = strrchr(m->gguf, '/');
-    const char* fname = slash ? slash+1 : m->gguf;
-    snprintf(out, sizeof(out), "%s%s%s", g_model_dir, DIRSEP, fname);
-    snprintf(part, sizeof(part), "%s.part", out);
-    log_line("开始下载模型: %s", fname);
-    log_line("  来源(镜像): %s", m->gguf);
-    log_line("  保存到: %s  (总 %lld 字节)", out, m->size);
-    /* -C - 断点续传（复用 .part）；--progress-bar 打印进度/速度；-L 跟随重定向 */
-    char cmd[2400];
+/* 用 curl 对 URL 做一次 Range(0-0) 实测：跟随重定向，期望 206，返回总字节。
+ * 可达返回 1 且 *total_out 填总字节；不可达/不支持 Range 返回 0。 */
+static int http_probe_size(const char* url, long long* total_out) {
+    char hdrfile[1400];
+    snprintf(hdrfile,sizeof(hdrfile),"%s%s.probe.XXXXXX", g_datadir, DIRSEP);
+    /* mkstemp-style 唯一名：直接用进程内计数 */
+    static int probe_n=0;
+    snprintf(hdrfile,sizeof(hdrfile),"%s%s.probe%d.tmp", g_datadir, DIRSEP, ++probe_n);
+    char cmd[3200];
     snprintf(cmd,sizeof(cmd),
-        "curl -L -C - --retry 5 --retry-delay 2 --progress-bar -o \"%s\" \"%s\"", out, m->gguf);
-    log_line("  执行: %s", cmd);
+        "curl -sL -m 30 --max-redirs 10 -H \"Range: bytes=0-0\" -o /dev/null -D \"%s\" \"%s\"",
+        hdrfile, url);
     int rc = system(cmd);
-    if (rc != 0) { log_line("下载中断(curl 返回 %d)，.part 已保留，重跑可断点续传", rc); return -1; }
-    struct stat st;
-    if (stat(out,&st)!=0 || st.st_size < 1000000) {
-        log_line("下载文件异常(太小或不存在)，视为失败，不标记就绪"); return -1;
+    if (rc!=0) { remove(hdrfile); return 0; }
+    FILE* f=fopen(hdrfile,"r");
+    if(!f){ return 0; }
+    char line[512]; long long total=0; int code=0; long long cl=0;
+    while(fgets(line,sizeof(line),f)){
+        size_t L=strlen(line); while(L && (line[L-1]=='\r'||line[L-1]=='\n')) line[--L]=0;
+        if(strncmp(line,"HTTP/",5)==0){ sscanf(line,"HTTP/1.1 %d",&code); if(code==0) sscanf(line,"HTTP/2 %d",&code); }
+        else if(strncasecmp(line,"Content-Range:",14)==0){ char* p=strchr(line,'/'); if(p) total=atoll(p+1); }
+        else if(strncasecmp(line,"Content-Length:",15)==0){ cl=atoll(line+15); }
     }
-    /* 完整性：实际字节必须等于校验过的 Content-Length */
-    if (m->size > 0 && st.st_size != m->size) {
-        log_line("完整性校验失败：实际 %lld 字节 != 期望 %lld 字节，不标记就绪",
-                 (long long)st.st_size, (long long)m->size);
+    fclose(f); remove(hdrfile);
+    if(total<=0) total=cl;   /* 个别源不返回 Content-Range 时退而用 Content-Length */
+    if(code!=206 && code!=200) return 0;
+    if(total<=0) return 0;
+    *total_out=total;
+    return 1;
+}
+
+/* 用 curl 断点续传下载单个源到 .part，完成后校验大小并原子 rename。
+ * 返回 0=成功(文件已就绪)。 */
+static int download_one_source(const ModelSrc* s, const char* out) {
+    mkdir_p(g_datadir, "models");
+    char part[1300];
+    snprintf(part, sizeof(part), "%s.part", out);
+
+    /* 已存在完整文件则跳过 */
+    struct stat st;
+    if(stat(out,&st)==0 && st.st_size>1000000){
+        log_line("目标文件已存在: %s (%lld 字节)，跳过下载。", out, (long long)st.st_size);
+        return 0;
+    }
+
+    /* 下载前实测可达性与总字节 */
+    log_line("  探测源 [%s]: %s", s->label, s->url);
+    long long measured=0;
+    if(!http_probe_size(s->url, &measured)){
+        log_line("  该源不可达或不支持断点续传，跳过。");
         return -1;
     }
-    log_line("下载完成并通过大小校验: %lld 字节", (long long)st.st_size);
-    strncpy(g_cfg.model_path, out, sizeof(g_cfg.model_path)-1);
-    strncpy(g_cfg.model_id, m->id, sizeof(g_cfg.model_id)-1);
-    save_config();
+    log_line("  源可达，实测总大小 %lld 字节。", measured);
+    /* 以实测为准；与硬编码不一致时以实测为准（但至少不能是 0） */
+    long long expect = s->size>0 ? s->size : measured;
+
+    log_line("  保存到: %s", out);
+    char cmd[2600];
+    snprintf(cmd,sizeof(cmd),
+        "curl -L -C - --retry 8 --retry-delay 2 --retry-all-errors --progress-bar -o \"%s\" \"%s\"",
+        part, s->url);
+    log_line("  执行: %s", cmd);
+    int rc = system(cmd);
+    if (rc != 0) {
+        log_line("  下载中断(curl 返回 %d)，.part 已保留，重跑可断点续传。", rc);
+        return -1;
+    }
+    if(stat(part,&st)!=0 || st.st_size < 1000000){
+        log_line("  下载文件异常(太小/不存在)，视为失败，.part 保留待续传。");
+        return -1;
+    }
+    /* 完整性：实际字节必须等于实测期望 */
+    if (expect > 0 && st.st_size != expect) {
+        log_line("  完整性校验失败：实际 %lld 字节 != 期望 %lld 字节，不标记就绪。",
+                 (long long)st.st_size, expect);
+        return -1;
+    }
+    /* 原子 rename：.part -> 最终文件（同目录 rename 原子） */
+    if(rename(part, out)!=0){
+        log_line("  重命名 .part->最终文件失败，请手动处理 %s。", part);
+        return -1;
+    }
+    log_line("  下载完成并通过大小校验: %lld 字节，已就绪。", (long long)st.st_size);
     return 0;
+}
+
+/* 按 [魔搭 -> hf-mirror -> HuggingFace] 顺序尝试，首个实测可达且校验通过的源胜出。
+ * 魔搭无此模型时用中文明示后自动切换镜像。返回 0=成功。 */
+static int download_model(const ModelEntry* m) {
+    int any_url=0;
+    for(int i=0;i<3;i++) if(m->src[i].url[0]) any_url=1;
+    if(!any_url){
+        log_line("该模型暂无任何可用下载源，已跳过（不放假入口）。"); return -1;
+    }
+    mkdir_p(g_datadir, "models");
+
+    for(int i=0;i<3;i++){
+        const ModelSrc* s=&m->src[i];
+        if(!s->url[0]){
+            if(i==0) log_line("【魔搭 ModelScope】无此模型（%s），将自动切换国内镜像 hf-mirror。", m->name);
+            continue;
+        }
+        const char* slash=strrchr(s->url,'/');
+        const char* fname = slash ? slash+1 : s->url;
+        char out[1280];
+        snprintf(out,sizeof(out),"%s%s%s", g_model_dir, DIRSEP, fname);
+        log_line("==== 下载模型: %s ====", m->name);
+        log_line("  首选源 [%s]: %s", s->label, s->url);
+        if(download_one_source(s, out)==0){
+            strncpy(g_cfg.model_path, out, sizeof(g_cfg.model_path)-1);
+            strncpy(g_cfg.model_id, m->id, sizeof(g_cfg.model_id)-1);
+            save_config();
+            return 0;
+        }
+        log_line("  源 [%s] 失败，尝试下一个镜像……", s->label);
+    }
+    log_line("所有下载源均失败：%s。.part 已保留，重跑可断点续传。", m->name);
+    return -1;
 }
 
 static void run_wizard(void) {
@@ -509,14 +658,17 @@ static void run_wizard(void) {
         return;
     }
     printf("\n===== 首次运行：选择模型 =====\n");
-    printf("(CPU 推理，SD1.5 GGUF；下载到程序目录 models/，支持断点续传)\n\n");
-    /* 只对已校验(verified)的编号，未校验项如实列出但不可选 */
+    printf("(CPU 推理，SD1.5；下载到 %s/models/，魔搭优先、自动镜像回退、断点续传)\n\n", g_datadir);
+    /* 列出每个模型及其首选源是否可用 */
     int i=0, n=0;
     while (MODELS[i].id) {
-        if (MODELS[i].verified) {
-            printf("  [%d] %s   (%.1f GB)\n", ++n, MODELS[i].name, MODELS[i].size/1e9);
+        /* 至少有一个下载源就可选；优先源用魔搭/镜像标注 */
+        int has_src=0; long long sz=0;
+        for(int k=0;k<3;k++) if(MODELS[i].src[k].url[0]){ has_src=1; if(MODELS[i].src[k].size>0) sz=MODELS[i].src[k].size; break; }
+        if (has_src) {
+            printf("  [%d] %s   (%.1f GB)\n", ++n, MODELS[i].name, sz/1e9);
         } else {
-            printf("  [ ] %s   (暂不可选，无可用 GGUF 源)\n", MODELS[i].name);
+            printf("  [ ] %s   (暂不可选，无可用下载源)\n", MODELS[i].name);
         }
         i++;
     }
@@ -525,10 +677,11 @@ static void run_wizard(void) {
     char buf[16]; if(!fgets(buf,sizeof(buf),stdin)) return;
     int sel = atoi(buf);
     if (sel>=1 && sel<=n) {
-        /* 跳过未校验项，定位到第 sel 个已校验模型 */
+        /* 定位到第 sel 个有下载源的模型 */
         int k=0, j=0;
         while (MODELS[j].id) {
-            if (MODELS[j].verified) { if(++k==sel) break; }
+            int has=0; for(int t=0;t<3;t++) if(MODELS[j].src[t].url[0]) has=1;
+            if(has){ if(++k==sel) break; }
             j++;
         }
         download_model(&MODELS[j]);
@@ -749,9 +902,62 @@ static void send_json(sock_t c, int code, const char* status, const char* body) 
     shutdown(c, SHUT_WR);
 }
 
-/* 把客户端已解析的请求转发给上游，并把上游响应原样流式回传给客户端。 */
+/* ============================ 代理层默认参数注入（v1.1.2） ============================
+ * 引擎 sd-server 吃请求体里的 steps/cfg_scale/batch_size（或 OpenAI 的 n），不读命令行默认。
+ * 因此对生成类入站请求：客户端没带的字段，用 GUI/config 的默认值补上，保证默认透传生效。
+ * 已有字段绝不覆盖。 */
+static int json_has_key(const char* body, const char* key){
+    char pat[160]; snprintf(pat,sizeof(pat),"\"%s\"",key);
+    return strstr(body, pat)!=NULL;
+}
+/* 判断 path 是否为需要注入默认参数的生成类端点 */
+static int is_gen_path(const char* path){
+    return !strcmp(path,"/sdapi/v1/txt2img") ||
+           !strcmp(path,"/sdapi/v1/img2img") ||
+           !strcmp(path,"/v1/images/generations");
+}
+/* 返回 malloc 的新 body（原 body + 注入片段）；*out_len 为其长度。无需注入时原样 malloc 副本。 */
+static char* build_injected_body(const char* body, int blen, const char* path, int* out_len){
+    *out_len=blen;
+    char* nb = malloc((size_t)blen + 512);   /* 注入片段最长约 300 字节，留足余量防堆溢出 */
+    if(!nb) return NULL;
+    memcpy(nb, body, blen); nb[blen]=0;
+    /* 仅对 JSON 对象体注入 */
+    char* ob = strchr(nb,'{');
+    if(!ob){ *out_len=blen; return nb; }
+    char frag[320]; frag[0]=0;
+    int is_openai = !strcmp(path,"/v1/images/generations");
+    if(!json_has_key(nb,"steps")){
+        char t[64]; snprintf(t,sizeof(t),"\"steps\":%d,", g_cfg.steps); strcat(frag,t);
+    }
+    if(!json_has_key(nb,"cfg_scale")){
+        char t[64]; snprintf(t,sizeof(t),"\"cfg_scale\":%.2f,", g_cfg.cfg_scale); strcat(frag,t);
+    }
+    if(is_openai){
+        if(!json_has_key(nb,"n")){
+            char t[64]; snprintf(t,sizeof(t),"\"n\":%d,", g_cfg.batch_size); strcat(frag,t);
+        }
+    } else {
+        if(!json_has_key(nb,"batch_size")){
+            char t[64]; snprintf(t,sizeof(t),"\"batch_size\":%d,", g_cfg.batch_size); strcat(frag,t);
+        }
+    }
+    if(!frag[0]){ *out_len=blen; return nb; }
+    size_t fl=strlen(frag);
+    /* 在 '{' 后插入 frag：把 '{' 之后的内容整体右移 fl 字节（含结尾 NUL） */
+    size_t keep = (size_t)blen - (size_t)(ob - nb) + 1; /* ob 之后(含 NUL)的字节数 */
+    memmove(ob+1+fl, ob+1, keep);
+    memcpy(ob+1, frag, fl);
+    *out_len = blen + (int)fl;
+    return nb;
+}
+
+/* 把客户端已解析的请求转发给上游，并把上游响应原样流式回传给客户端。
+ * override_cl>=0 时使用显式 Content-Length（代理层注入默认字段后 body 长度变化），
+ * 并不再透传入站的 content-length 行。 */
 static void forward_to_upstream(sock_t c, const char* method, const char* target,
-                                const char* hdr_block, const char* body, int body_len) {
+                                const char* hdr_block, const char* body, int body_len,
+                                int override_cl) {
     sock_t u = socket(AF_INET, SOCK_STREAM, 0);
     if (u<0) { send_json(c,502,"Bad Gateway","{\"error\":\"upstream socket\"}"); return; }
     struct sockaddr_in a; memset(&a,0,sizeof(a));
@@ -762,20 +968,23 @@ static void forward_to_upstream(sock_t c, const char* method, const char* target
         send_json(c,503,"Service Unavailable","{\"error\":\"engine not ready, try again\"}");
         return;
     }
-    /* 拼转发请求行 + 透传头(去掉 Host/Connection)，强制 Connection: close */
+    /* 拼转发请求行 + 透传头(去掉 Host/Connection/Authorization)，强制 Connection: close */
     char req[MAX_LINE*4]; int w=0;
     w+=snprintf(req+w,sizeof(req)-w,"%s %s HTTP/1.1\r\nHost: 127.0.0.1:%d\r\nConnection: close\r\n",
                 method, target, g_cfg.inner_port);
-    /* 透传 Content-Type / Content-Length / Accept 等（跳过 host/authorization/connection） */
+    /* 透传 Content-Type / Accept 等（跳过 host/authorization/connection/content-length） */
     char hcopy[4096]; snprintf(hcopy,sizeof(hcopy),"%s",hdr_block);
     char* line=strtok(hcopy,"\r\n");
     while(line){
         if(strncasecmp(line,"host:",5) && strncasecmp(line,"authorization:",13) &&
-           strncasecmp(line,"connection:",10)) {
+           strncasecmp(line,"connection:",10) &&
+           !(override_cl>=0 && strncasecmp(line,"content-length:",15)==0)) {
             w+=snprintf(req+w,sizeof(req)-w,"%s\r\n",line);
         }
         line=strtok(NULL,"\r\n");
     }
+    if(override_cl>=0)
+        w+=snprintf(req+w,sizeof(req)-w,"Content-Length: %d\r\n", override_cl);
     w+=snprintf(req+w,sizeof(req)-w,"\r\n");
     send(u,req,w,0);
     if(body_len>0) send(u,body,body_len,0);
@@ -858,8 +1067,22 @@ static void* handle_conn(void* arg) {
         }
     }
 
-    log_line("%s %s -> 200 (转发引擎)", method, path);
-    forward_to_upstream(c, method, target, buf, bodyp, content_len>0?content_len:0);
+    /* ---- 对生成类端点补默认 steps/cfg/batch（客户端未带的字段才补，不覆盖） ---- */
+    int fwd_len = content_len>0?content_len:0;
+    const char* fwd_body = bodyp;
+    char* injected = NULL;
+    if(!strcmp(method,"POST") && is_gen_path(path) && fwd_len>0){
+        injected = build_injected_body(bodyp, fwd_len, path, &fwd_len);
+        if(injected){
+            fwd_body = injected;
+            log_line("注入默认参数: steps=%d cfg=%.2f batch=%d (%s)",
+                     g_cfg.steps, g_cfg.cfg_scale, g_cfg.batch_size, path);
+        }
+    }
+
+    log_line("%s %s -> 转发引擎", method, path);
+    forward_to_upstream(c, method, target, buf, fwd_body, fwd_len, fwd_len);
+    if(injected) free(injected);
     close_socket(c);
     return NULL;
 }
@@ -907,6 +1130,8 @@ static void show_banner(void) {
     printf("  [内容限制]  %s   [主题] %s   [重启次数] %d\n",
            g_cfg.content_filter?"开启(拦截)":"无限制",
            g_cfg.dark_theme?"暗黑":"明亮", g_restart_count);
+    printf("  [默认参数]  steps=%d  cfg=%.1f  batch=%d（代理层自动补全未带字段）\n",
+           g_cfg.steps, g_cfg.cfg_scale, g_cfg.batch_size);
     printf("--------------------------------------------------------------\n");
     printf("  兼容方式: sd.cpp/sdapi 风格  POST /sdapi/v1/txt2img\n");
     printf("           OpenAI 风格  POST /v1/images/generations\n");
@@ -962,6 +1187,12 @@ static void win_utf8(void) {
 #define IDC_STATUS    1005
 #define IDC_MODEL_CB  1006
 #define IDC_THEME_CB  1007
+#define IDC_STEPS_SLD 1008
+#define IDC_CFG_SLD   1009
+#define IDC_BATCH_SLD 1010
+#define IDC_STEPS_VAL 1011
+#define IDC_CFG_VAL   1012
+#define IDC_BATCH_VAL 1013
 static HWND gh_main=NULL; static NOTIFYICONDATAW gh_nid={0}; static int gh_has_tray=0;
 static HFONT  gh_font=NULL;
 static HBRUSH g_bgbrush=NULL; static COLORREF g_bgcol=RGB(28,28,30);
@@ -1047,11 +1278,20 @@ static void ui_refresh(HWND h){
     ui_set_text(h,IDC_COPY_KEY,buf);
     snprintf(buf,sizeof(buf),"当前模型（点击复制）: %s", g_cfg.model_id[0]?g_cfg.model_id:"(未选择)");
     ui_set_text(h,IDC_COPY_MODEL,buf);
-    snprintf(buf,sizeof(buf),"引擎: %s    看门狗重启次数: %d    内容限制: %s    数据目录: %s",
-             g_engine_ready?"就绪":(g_engine_missing?"引擎缺失":"启动中"),
-             g_restart_count, g_cfg.content_filter?"有限制":"无限制", g_datadir);
+    /* 门控：只有引擎就绪才是“可出图”，否则明确提示未就绪 */
+    const char* ready;
+    if(g_engine_ready)            ready="✅ 就绪 · 可出图";
+    else if(g_engine_missing)     ready="⛔ 引擎缺失（见控制台：杀软隔离/加白名单）";
+    else if(g_cfg.model_path[0]==0) ready="⏳ 未就绪：请先在控制台向导下载/选择模型";
+    else                          ready="⏳ 未就绪：引擎加载中，暂不能出图";
+    snprintf(buf,sizeof(buf),"状态: %s\n看门狗重启次数: %d   内容限制: %s   数据目录: %s",
+             ready, g_restart_count, g_cfg.content_filter?"有限制":"无限制", g_datadir);
     ui_set_text(h,IDC_STATUS,buf);
     CheckDlgButton(h,IDC_FILTER, g_cfg.content_filter?BST_CHECKED:BST_UNCHECKED);
+    /* 滑杆数值标签 */
+    snprintf(buf,sizeof(buf),"= %d", g_cfg.steps);      ui_set_text(h,IDC_STEPS_VAL,buf);
+    snprintf(buf,sizeof(buf),"= %.1f", g_cfg.cfg_scale); ui_set_text(h,IDC_CFG_VAL,buf);
+    snprintf(buf,sizeof(buf),"= %d 张", g_cfg.batch_size); ui_set_text(h,IDC_BATCH_VAL,buf);
 }
 
 static LRESULT CALLBACK WndProc(HWND h,UINT m,WPARAM w,LPARAM l){
@@ -1075,7 +1315,20 @@ static LRESULT CALLBACK WndProc(HWND h,UINT m,WPARAM w,LPARAM l){
         c=CreateWindowW(L"COMBOBOX",NULL,WS_CHILD|WS_VISIBLE|CBS_DROPDOWNLIST,80,188,140,220,h,(HMENU)IDC_THEME_CB,NULL,NULL); SendMessageW(c,WM_SETFONT,(WPARAM)gh_font,1);
         SendMessageW(c,CB_ADDSTRING,0,(LPARAM)L"暗黑"); SendMessageW(c,CB_ADDSTRING,0,(LPARAM)L"明亮");
         SendMessageW(c,CB_SETCURSEL,g_cfg.dark_theme?0:1,0);
-        c=CreateWindowW(L"STATIC",L"",WS_CHILD|WS_VISIBLE,10,226,540,70,h,(HMENU)IDC_STATUS,NULL,NULL); SendMessageW(c,WM_SETFONT,(WPARAM)gh_font,1);
+        /* ---- v1.1.2: 出图默认参数滑杆 ---- */
+        c=CreateWindowW(L"STATIC",L"步数 steps：",WS_CHILD|WS_VISIBLE,10,218,90,20,h,(HMENU)NULL,NULL,NULL); SendMessageW(c,WM_SETFONT,(WPARAM)gh_font,1);
+        c=CreateWindowW(TRACKBAR_CLASSW,L"",WS_CHILD|WS_VISIBLE|TBS_HORZ|TBS_NOTICKS,100,214,300,26,h,(HMENU)IDC_STEPS_SLD,NULL,NULL); SendMessageW(c,WM_SETFONT,(WPARAM)gh_font,1);
+        SendMessageW(c,TBM_SETRANGEMIN,0,1); SendMessageW(c,TBM_SETRANGEMAX,0,150); SendMessageW(c,TBM_SETPOS,0,g_cfg.steps);
+        c=CreateWindowW(L"STATIC",L"",WS_CHILD|WS_VISIBLE,410,218,150,20,h,(HMENU)IDC_STEPS_VAL,NULL,NULL); SendMessageW(c,WM_SETFONT,(WPARAM)gh_font,1);
+        c=CreateWindowW(L"STATIC",L"CFG：",WS_CHILD|WS_VISIBLE,10,250,90,20,h,(HMENU)NULL,NULL,NULL); SendMessageW(c,WM_SETFONT,(WPARAM)gh_font,1);
+        c=CreateWindowW(TRACKBAR_CLASSW,L"",WS_CHILD|WS_VISIBLE|TBS_HORZ|TBS_NOTICKS,100,246,300,26,h,(HMENU)IDC_CFG_SLD,NULL,NULL); SendMessageW(c,WM_SETFONT,(WPARAM)gh_font,1);
+        SendMessageW(c,TBM_SETRANGEMIN,0,1); SendMessageW(c,TBM_SETRANGEMAX,0,20); SendMessageW(c,TBM_SETPOS,0,(int)g_cfg.cfg_scale);
+        c=CreateWindowW(L"STATIC",L"",WS_CHILD|WS_VISIBLE,410,250,150,20,h,(HMENU)IDC_CFG_VAL,NULL,NULL); SendMessageW(c,WM_SETFONT,(WPARAM)gh_font,1);
+        c=CreateWindowW(L"STATIC",L"批量 batch：",WS_CHILD|WS_VISIBLE,10,282,90,20,h,(HMENU)NULL,NULL,NULL); SendMessageW(c,WM_SETFONT,(WPARAM)gh_font,1);
+        c=CreateWindowW(TRACKBAR_CLASSW,L"",WS_CHILD|WS_VISIBLE|TBS_HORZ|TBS_NOTICKS,100,278,300,26,h,(HMENU)IDC_BATCH_SLD,NULL,NULL); SendMessageW(c,WM_SETFONT,(WPARAM)gh_font,1);
+        SendMessageW(c,TBM_SETRANGEMIN,0,1); SendMessageW(c,TBM_SETRANGEMAX,0,8); SendMessageW(c,TBM_SETPOS,0,g_cfg.batch_size);
+        c=CreateWindowW(L"STATIC",L"",WS_CHILD|WS_VISIBLE,410,282,150,20,h,(HMENU)IDC_BATCH_VAL,NULL,NULL); SendMessageW(c,WM_SETFONT,(WPARAM)gh_font,1);
+        c=CreateWindowW(L"STATIC",L"",WS_CHILD|WS_VISIBLE,10,316,540,80,h,(HMENU)IDC_STATUS,NULL,NULL); SendMessageW(c,WM_SETFONT,(WPARAM)gh_font,1);
         ui_apply_theme(NULL);
         ui_populate_models(h);
         ui_refresh(h);
@@ -1125,6 +1378,16 @@ static LRESULT CALLBACK WndProc(HWND h,UINT m,WPARAM w,LPARAM l){
             kill_engine();  /* 看门狗会自动重拉，使配置生效 */
         }
         return 0; }
+    case WM_HSCROLL: {
+        HWND sl=(HWND)l;
+        int id = GetDlgCtrlID(sl);
+        int pos = (int)SendMessageW(sl,TBM_GETPOS,0,0);
+        if(id==IDC_STEPS_SLD){ g_cfg.steps=pos; }
+        else if(id==IDC_CFG_SLD){ g_cfg.cfg_scale=(double)pos; }
+        else if(id==IDC_BATCH_SLD){ g_cfg.batch_size=pos<1?1:pos; }
+        save_config();   /* 改动即写 config/etserver.conf，代理层随后按默认补字段 */
+        ui_refresh(h);
+        return 0; }
     case WM_TIMER: ui_refresh(h); return 0;
     case WM_SIZE: return 0;
     case WM_CLOSE: ShowWindow(h,SW_HIDE); return 0;  /* 关闭=隐藏到托盘 */
@@ -1135,6 +1398,7 @@ static LRESULT CALLBACK WndProc(HWND h,UINT m,WPARAM w,LPARAM l){
     return DefWindowProcW(h,m,w,l);
 }
 static void gui_thread(void){
+    InitCommonControls();   /* v1.1.2: 启用 trackbar 等公共控件 */
     char lan[128]; get_lan_ip(lan,sizeof(lan));
     snprintf(g_addr_disp,sizeof(g_addr_disp),"http://%s:%d", lan, g_cfg.port);
     WNDCLASSW wc={0}; wc.lpfnWndProc=WndProc; wc.hInstance=GetModuleHandleW(NULL);
@@ -1143,7 +1407,7 @@ static void gui_thread(void){
     RegisterClassW(&wc);
     wchar_t wtitle[128]; u8w(APP_NAME "  v" APP_VERSION,wtitle,128);
     gh_main=CreateWindowW(L"LocalDreamETServer",wtitle,
-        WS_OVERLAPPEDWINDOW|WS_CLIPCHILDREN,CW_USEDEFAULT,CW_USEDEFAULT,580,360,
+        WS_OVERLAPPEDWINDOW|WS_CLIPCHILDREN,CW_USEDEFAULT,CW_USEDEFAULT,600,460,
         NULL,NULL,GetModuleHandleW(NULL),NULL);
     ShowWindow(gh_main,SW_SHOW);
     MSG msg;
