@@ -83,7 +83,7 @@
 
 /* ============================ 全局配置 ============================ */
 #define APP_NAME      "Local Dream ET Server"
-#define APP_VERSION   "1.1.0"
+#define APP_VERSION   "1.1.1"
 #define COPYRIGHT_STR "Copyright (C) 2026 etc"
 
 #define DEFAULT_PORT       8080      /* 对外监听端口 */
@@ -105,12 +105,14 @@ typedef struct {
 } Config;
 
 static Config g_cfg;
-static char g_progdir[1024] = ".";   /* 程序当前目录 */
+static char g_progdir[1024] = ".";   /* 程序(引擎)所在目录，可能只读(如 Program Files) */
+static char g_datadir[1024] = ".";   /* 可写数据目录：models/config/logs，Program Files 不可写时回退到用户目录 */
 static char g_config_path[1280];
 static char g_model_dir[1280];
 static volatile int g_running = 1;
 static volatile int g_restart_count = 0;
 static volatile int g_engine_ready = 0;  /* 仅由看门狗探测更新；/healthz 直接读，不阻塞请求线程 */
+static volatile int g_engine_missing = 0;/* 引擎可执行文件缺失(永久错误)：看门狗不再疯狂重启 */
 
 /* 前向声明（定义在后文） */
 static void mkdir_p(const char* base, const char* sub);
@@ -155,7 +157,18 @@ static void log_line(const char* fmt, ...) {
     LOG_LEAVE();
 }
 
-/* ------------------------- 取程序目录 ------------------------- */
+/* ------------------------- 目录探测 ------------------------- */
+/* 判断目录可写：在其中创建/删除一个临时文件 */
+static int dir_writable(const char* dir) {
+    char probe[1300];
+    snprintf(probe,sizeof(probe),"%s%s.ldet_write_probe.tmp",dir,DIRSEP);
+    FILE* f=fopen(probe,"wb");
+    if(!f) return 0;
+    fputc('x',f); fclose(f);
+    remove(probe);
+    return 1;
+}
+
 static void detect_progdir(void) {
 #ifdef _WIN32
     GetModuleFileNameA(NULL, g_progdir, sizeof(g_progdir));
@@ -165,9 +178,44 @@ static void detect_progdir(void) {
     if (n > 0) { g_progdir[n]=0; char*s=strrchr(g_progdir,'/'); if(s)*s=0; }
     else strcpy(g_progdir, ".");
 #endif
+}
+
+/* 选择可写数据目录。
+ * 安装在 Program Files 等受保护目录时普通用户无写权限，
+ * 此时把 models/config/logs 放到用户目录，避免 Permission denied。
+ * Linux：优先程序目录，其次 $HOME/.local/share/LocalDreamET-Server。 */
+static void setup_datadir(void) {
+    /* 首选：程序目录自身可写（绿色版 / 用户目录安装）。用本地候选路径先判断。 */
+    char prog_models[1100];
+    snprintf(prog_models,sizeof(prog_models),"%s%smodels",g_progdir,DIRSEP);
+    mkdir_p(g_progdir, "models");
+    if (dir_writable(prog_models)) {
+        snprintf(g_datadir,sizeof(g_datadir),"%s",g_progdir);
+    } else {
+        const char* base=NULL;
+#ifdef _WIN32
+        base=getenv("LOCALAPPDATA");
+        if(!base || !base[0]) base=getenv("USERPROFILE");
+        if(base && base[0])
+            snprintf(g_datadir,sizeof(g_datadir),"%s%sLocalDreamET-Server",base,DIRSEP);
+        else
+            snprintf(g_datadir,sizeof(g_datadir),"%s",g_progdir);
+#else
+        base=getenv("HOME");
+        if(base && base[0])
+            snprintf(g_datadir,sizeof(g_datadir),"%s%s.local%sshare%sLocalDreamET-Server",
+                     base,DIRSEP,DIRSEP,DIRSEP);
+        else
+            snprintf(g_datadir,sizeof(g_datadir),"%s",g_progdir);
+#endif
+        mkdir_p(g_datadir, "models");
+    }
     snprintf(g_config_path, sizeof(g_config_path), "%s%sconfig%setserver.conf",
-             g_progdir, DIRSEP, DIRSEP);
-    snprintf(g_model_dir, sizeof(g_model_dir), "%s%smodels", g_progdir, DIRSEP);
+             g_datadir, DIRSEP, DIRSEP);
+    snprintf(g_model_dir, sizeof(g_model_dir), "%s%smodels", g_datadir, DIRSEP);
+    mkdir_p(g_datadir, "config");
+    mkdir_p(g_datadir, "models");
+    mkdir_p(g_datadir, "logs");
 }
 
 /* ------------------------- 46 位随机 Key ------------------------- */
@@ -200,7 +248,7 @@ static void default_config(void) {
 }
 
 static void save_config(void) {
-    mkdir_p(g_progdir, "config");
+    mkdir_p(g_datadir, "config");
     FILE* f = fopen(g_config_path, "w");
     if (!f) { log_line("无法写入配置: %s", g_config_path); return; }
     fprintf(f, "# Local Dream ET Server 配置 (Copyright (C) 2026 etc)\n");
@@ -242,13 +290,34 @@ static int load_config(void) {
 }
 
 /* ============================ 小工具 ============================ */
+/* 递归创建目录（类似 mkdir -p），已存在不算错 */
+static void mkdir_recursive(const char* path) {
+    char tmp[1280];
+    size_t n = strlen(path);
+    if(n==0 || n>=sizeof(tmp)) return;
+    snprintf(tmp,sizeof(tmp),"%s",path);
+    /* 去掉末尾分隔符 */
+    while(n>1 && (tmp[n-1]=='/' || tmp[n-1]=='\\')){ tmp[--n]=0; }
+    for(char* p=tmp+1; *p; p++){
+        if(*p=='/' || *p=='\\'){
+            char c=*p; *p=0;
+#ifdef _WIN32
+            CreateDirectoryA(tmp,NULL);
+#else
+            mkdir(tmp,0755);
+#endif
+            *p=c;
+        }
+    }
+#ifdef _WIN32
+    CreateDirectoryA(tmp,NULL);
+#else
+    mkdir(tmp,0755);
+#endif
+}
 static void mkdir_p(const char* base, const char* sub) {
     char p[1280]; snprintf(p,sizeof(p),"%s%s%s", base, DIRSEP, sub);
-#ifdef _WIN32
-    CreateDirectoryA(base, NULL); CreateDirectoryA(p, NULL);
-#else
-    mkdir(base, 0755); mkdir(p, 0755);
-#endif
+    mkdir_recursive(p);
 }
 
 /* 取本机局域网 IPv4（用于展示） */
@@ -289,7 +358,7 @@ static void get_lan_ip(char* out, int outlen) {
  */
 static int load_banned_words(const char*** out_list, int* out_n) {
     static const char* words[64]; int n=0;
-    char path[1280]; snprintf(path,sizeof(path),"%s%sconfig%sbanned.txt",g_progdir,DIRSEP,DIRSEP);
+    char path[1280]; snprintf(path,sizeof(path),"%s%sconfig%sbanned.txt",g_datadir,DIRSEP,DIRSEP);
     FILE* f=fopen(path,"r");
     if (f) {
         char buf[256];
@@ -395,7 +464,7 @@ static int download_model(const ModelEntry* m) {
     if(!m->verified || !m->gguf[0]) {
         log_line("该模型暂无可用 GGUF 源，已跳过（不放假入口）。"); return -1;
     }
-    mkdir_p(g_progdir, "models");
+    mkdir_p(g_datadir, "models");
     char out[1280], part[1300];
     const char* slash = strrchr(m->gguf, '/');
     const char* fname = slash ? slash+1 : m->gguf;
@@ -473,13 +542,40 @@ static void run_wizard(void) {
 /* 拼出 sd-server 启动命令并以子进程方式拉起。绑定 127.0.0.1:inner_port。 */
 static int spawn_engine(void) {
     char engine[1280], args[3000];
-    /* 引擎 sd-server 与外壳 etserver 放在同一目录（安装包的 bin/） */
+    /* 引擎解析：优先与外壳同目录；Linux tar 布局在 bin/，Windows 为扁平同目录。
+       若都找不到，置缺失标志（看门狗据此停止刷屏重启）并给出可操作提示。 */
+    {
+        const char* ename;
 #ifdef _WIN32
-    snprintf(engine,sizeof(engine),"%s%ssd-server.exe", g_progdir,DIRSEP);
+        ename="sd-server.exe";
 #else
-    snprintf(engine,sizeof(engine),"%s%ssd-server", g_progdir,DIRSEP);
+        ename="sd-server";
 #endif
-    if (access(engine, X_OK)!=0) { log_line("找不到引擎可执行程序: %s", engine); return -1; }
+        char cand[3][1280]; int nc=0;
+        snprintf(cand[nc++],1280,"%s%s%s",g_progdir,DIRSEP,ename);
+        snprintf(cand[nc++],1280,"%s%sbin%s%s",g_progdir,DIRSEP,DIRSEP,ename);
+        snprintf(cand[nc++],1280,"%s%s..%s%s",g_datadir,DIRSEP,DIRSEP,ename);
+        int found=-1;
+        for(int i=0;i<nc;i++){ if(access(cand[i],X_OK)==0){ found=i; break; } }
+        if(found<0){
+            if(!g_engine_missing){
+                g_engine_missing=1;
+                log_line("==================== 严重：找不到推理引擎 ====================");
+                log_line("缺少文件: %s", ename);
+                log_line("已查找目录: %s", g_progdir);
+                log_line("常见原因: 1) 杀毒软件/Windows 安全中心把 %s 隔离或删除", ename);
+                log_line("          2) 安装不完整（请重新安装，并在杀软中加入信任/白名单）");
+                log_line("          3) 程序被移动后引擎文件未一起复制");
+                log_line("处理: 打开“Windows 安全中心→病毒和威胁防护→保护历史记录”，");
+                log_line("      将被隔离的 %s 还原并允许，或重装时选择“仍要运行”。", ename);
+                log_line("引擎缺失期间看门狗将暂停重启，检测到文件恢复后自动继续。");
+                log_line("============================================================");
+            }
+            return -1;
+        }
+        g_engine_missing=0;
+        snprintf(engine,sizeof(engine),"%s",cand[found]);
+    }
     snprintf(args,sizeof(args),
         "--model \"%s\" --listen-ip 127.0.0.1 --listen-port %d --threads %d",
         g_cfg.model_path, g_cfg.inner_port, g_cfg.threads);
@@ -565,6 +661,20 @@ static void* watchdog_thread(void* arg) {
     while(g_running) {
         poll_sleep_ms(2000);
         if(!g_running) break;
+
+        /* 未选择/下载模型时没有可运行的引擎：保持代理外壳，绝不空转重启 */
+        if(g_cfg.model_path[0]==0){ g_engine_ready=0; continue; }
+
+        /* 引擎文件缺失（多为被杀软隔离）：不刷屏、不累加重启次数；
+           每 ~6s 轻量探测一次文件是否被还原，恢复后自动拉起。 */
+        if(g_engine_missing){
+            g_engine_ready=0;
+            for(int w=0; g_running && w<6; w++) poll_sleep_ms(1000);
+            if(g_running && spawn_engine()==0)
+                log_line("检测到引擎已恢复，正在启动……");
+            continue;
+        }
+
         int alive = child_alive();
         int healthy = alive ? upstream_healthy() : 0;
         g_engine_ready = healthy;   /* 更新全局就绪标志，供 /healthz 毫秒级读取 */
@@ -584,6 +694,8 @@ static void* watchdog_thread(void* arg) {
                     poll_sleep_ms(1000); waited+=1000;
                 }
             }
+            /* spawn 返回 -1 若是引擎缺失，spawn_engine 已置 g_engine_missing，
+               下一轮进入静默等待分支，不会继续刷退避日志。 */
         }
     }
     return NULL;
@@ -841,7 +953,7 @@ static void win_utf8(void) {
 }
 #endif
 
-/* ============================ Win32 原生窗口（仅 Windows） ============================ */
+/* ============================ Win32 原生窗口（Unicode，仅 Windows） ============================ */
 #ifdef _WIN32
 #define IDC_COPY_ADDR 1001
 #define IDC_COPY_KEY  1002
@@ -850,28 +962,55 @@ static void win_utf8(void) {
 #define IDC_STATUS    1005
 #define IDC_MODEL_CB  1006
 #define IDC_THEME_CB  1007
-static HWND gh_main=NULL; static NOTIFYICONDATAA gh_nid={0}; static int gh_has_tray=0;
+static HWND gh_main=NULL; static NOTIFYICONDATAW gh_nid={0}; static int gh_has_tray=0;
+static HFONT  gh_font=NULL;
 static HBRUSH g_bgbrush=NULL; static COLORREF g_bgcol=RGB(28,28,30);
 static COLORREF g_txcol=RGB(235,235,235);
+
+/* UTF-8 -> UTF-16 */
+static int u8w(const char* s, wchar_t* w, int wn){
+    if(!s){ if(wn){w[0]=0;} return 0; }
+    int n=MultiByteToWideChar(CP_UTF8,0,s,-1,w,wn);
+    if(n<=0 && wn>0) w[0]=0;
+    return n;
+}
+/* UTF-16 -> UTF-8 */
+static void wu8(const wchar_t* w, char* s, int sn){
+    int n=WideCharToMultiByte(CP_UTF8,0,w,-1,s,sn,NULL,NULL);
+    if(n<=0 && sn>0) s[0]=0;
+}
+static void ui_set_text(HWND parent, int id, const char* utf8){
+    wchar_t w[1024]; u8w(utf8,w,1024);
+    SetWindowTextW(GetDlgItem(parent,id),w);
+}
+static void ui_msg(HWND parent,const char* utf8){
+    wchar_t w[600], t[64]; u8w(utf8,w,600); u8w("提示",t,64);
+    MessageBoxW(parent,w,t,MB_OK|MB_ICONINFORMATION);
+}
+
 /* 扫描 models/ 下已就绪的 .gguf/.safetensors 单文件模型，填进下拉框 */
 static void ui_populate_models(HWND h){
     HWND cb=GetDlgItem(h,IDC_MODEL_CB);
-    char pat[1280]; snprintf(pat,sizeof(pat),"%s%s*.*",g_model_dir,DIRSEP);
-    WIN32_FIND_DATAA fd; HANDLE hf=FindFirstFileA(pat,&fd); int sel=0;
+    wchar_t wpat[1300]; {
+        char pat[1280]; snprintf(pat,sizeof(pat),"%s%s*.*",g_model_dir,DIRSEP);
+        u8w(pat,wpat,1300);
+    }
+    WIN32_FIND_DATAW fd; HANDLE hf=FindFirstFileW(wpat,&fd); int sel=0;
     if(hf!=INVALID_HANDLE_VALUE){
         do{
             if(fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) continue;
-            const char* nm=fd.cFileName; size_t L=strlen(nm);
-            if(L>5 && (_stricmp(nm+L-5,".gguf")==0 || _stricmp(nm+L-12,".safetensors")==0)){
-                int idx=(int)SendMessageA(cb,CB_ADDSTRING,0,(LPARAM)nm);
-                /* 命中当前 model_path 的文件名则预选它 */
-                char full[1300]; snprintf(full,sizeof(full),"%s%s%s",g_model_dir,DIRSEP,nm);
+            const wchar_t* nm=fd.cFileName; size_t L=wcslen(nm);
+            if(L>5 && (_wcsicmp(nm+L-5,L".gguf")==0 ||
+                       (L>=12 && _wcsicmp(nm+L-12,L".safetensors")==0))){
+                int idx=(int)SendMessageW(cb,CB_ADDSTRING,0,(LPARAM)nm);
+                char u8[600]; wu8(nm,u8,sizeof(u8));
+                char full[1300]; snprintf(full,sizeof(full),"%s%s%s",g_model_dir,DIRSEP,u8);
                 if(!strcmp(full,g_cfg.model_path)) sel=idx;
             }
-        }while(FindNextFileA(hf,&fd));
+        }while(FindNextFileW(hf,&fd));
         FindClose(hf);
     }
-    SendMessageA(cb,CB_SETCURSEL,sel,0);
+    SendMessageW(cb,CB_SETCURSEL,sel,0);
 }
 static void ui_apply_theme(HWND h){
     if(g_cfg.dark_theme){ g_bgcol=RGB(28,28,30); g_txcol=RGB(235,235,235); }
@@ -886,57 +1025,70 @@ static void fname_to_id(const char* fname,char* out,int n){
     char* dot=strrchr(out,'.'); if(dot) *dot=0;
 }
 
-static void ui_set_clipboard(HWND owner, const char* txt) {
+static void ui_set_clipboard(HWND owner, const char* utf8) {
     if(!OpenClipboard(owner)) return;
     EmptyClipboard();
-    size_t n=strlen(txt)+1;
-    HGLOBAL h=GlobalAlloc(GMEM_MOVEABLE,n);
-    if(h){ memcpy(GlobalLock(h),txt,n); GlobalUnlock(h);
-        SetClipboardData(CF_TEXT,h); }
+    int wlen=MultiByteToWideChar(CP_UTF8,0,utf8,-1,NULL,0);
+    HGLOBAL hg=GlobalAlloc(GMEM_MOVEABLE,(size_t)wlen*sizeof(wchar_t));
+    if(hg){
+        wchar_t* dst=(wchar_t*)GlobalLock(hg);
+        MultiByteToWideChar(CP_UTF8,0,utf8,-1,dst,wlen);
+        GlobalUnlock(hg);
+        SetClipboardData(CF_UNICODETEXT,hg);
+    }
     CloseClipboard();
 }
 static char g_addr_disp[256];
 static void ui_refresh(HWND h){
-    char buf[512];
-    snprintf(buf,sizeof(buf),"服务地址(点击复制): %s", g_addr_disp);
-    SetWindowTextA(GetDlgItem(h,IDC_COPY_ADDR),buf);
-    snprintf(buf,sizeof(buf),"API Key(点击复制): %s", g_cfg.api_key);
-    SetWindowTextA(GetDlgItem(h,IDC_COPY_KEY),buf);
-    snprintf(buf,sizeof(buf),"当前模型(点击复制): %s", g_cfg.model_id);
-    SetWindowTextA(GetDlgItem(h,IDC_COPY_MODEL),buf);
-    snprintf(buf,sizeof(buf),"引擎: %s   看门狗重启次数: %d   内容限制: %s",
-             g_engine_ready?"就绪":"启动中", g_restart_count,
-             g_cfg.content_filter?"有限制":"无限制");
-    SetWindowTextA(GetDlgItem(h,IDC_STATUS),buf);
+    char buf[600];
+    snprintf(buf,sizeof(buf),"服务地址（点击复制）: %s", g_addr_disp);
+    ui_set_text(h,IDC_COPY_ADDR,buf);
+    snprintf(buf,sizeof(buf),"API Key（点击复制）: %s", g_cfg.api_key);
+    ui_set_text(h,IDC_COPY_KEY,buf);
+    snprintf(buf,sizeof(buf),"当前模型（点击复制）: %s", g_cfg.model_id[0]?g_cfg.model_id:"(未选择)");
+    ui_set_text(h,IDC_COPY_MODEL,buf);
+    snprintf(buf,sizeof(buf),"引擎: %s    看门狗重启次数: %d    内容限制: %s    数据目录: %s",
+             g_engine_ready?"就绪":(g_engine_missing?"引擎缺失":"启动中"),
+             g_restart_count, g_cfg.content_filter?"有限制":"无限制", g_datadir);
+    ui_set_text(h,IDC_STATUS,buf);
     CheckDlgButton(h,IDC_FILTER, g_cfg.content_filter?BST_CHECKED:BST_UNCHECKED);
 }
+
 static LRESULT CALLBACK WndProc(HWND h,UINT m,WPARAM w,LPARAM l){
     switch(m){
     case WM_CREATE: {
-        HFONT f=CreateFontA(16,0,0,0,FW_NORMAL,0,0,0,DEFAULT_CHARSET,0,0,CLEARTYPE_QUALITY,0,"SimSun");
+        /* 新宋体 NSimSun（回退 SimSun），明确 GB2312_CHARSET 以正确渲染简体中文 */
+        gh_font=CreateFontW(16,0,0,0,FW_NORMAL,0,0,0,GB2312_CHARSET,
+                            OUT_DEFAULT_PRECIS,CLIP_DEFAULT_PRECIS,CLEARTYPE_QUALITY,
+                            DEFAULT_PITCH|FF_DONTCARE,L"NSimSun");
+        if(!gh_font) gh_font=CreateFontW(16,0,0,0,FW_NORMAL,0,0,0,GB2312_CHARSET,
+                            OUT_DEFAULT_PRECIS,CLIP_DEFAULT_PRECIS,CLEARTYPE_QUALITY,
+                            DEFAULT_PITCH|FF_DONTCARE,L"SimSun");
         HWND c;
-        c=CreateWindowA("BUTTON","",WS_CHILD|WS_VISIBLE|BS_PUSHBUTTON,10,10,430,28,h,(HMENU)IDC_COPY_ADDR,NULL,NULL); SendMessageA(c,WM_SETFONT,(WPARAM)f,1);
-        c=CreateWindowA("BUTTON","",WS_CHILD|WS_VISIBLE|BS_PUSHBUTTON,10,45,430,28,h,(HMENU)IDC_COPY_KEY,NULL,NULL); SendMessageA(c,WM_SETFONT,(WPARAM)f,1);
-        c=CreateWindowA("BUTTON","",WS_CHILD|WS_VISIBLE|BS_PUSHBUTTON,10,80,430,28,h,(HMENU)IDC_COPY_MODEL,NULL,NULL); SendMessageA(c,WM_SETFONT,(WPARAM)f,1);
-        c=CreateWindowA("STATIC","切换已下载模型:",WS_CHILD|WS_VISIBLE,10,120,130,22,h,(HMENU)NULL,NULL,NULL); SendMessageA(c,WM_SETFONT,(WPARAM)f,1);
-        c=CreateWindowA("COMBOBOX",NULL,WS_CHILD|WS_VISIBLE|CBS_DROPDOWNLIST|WS_VSCROLL,140,118,300,200,h,(HMENU)IDC_MODEL_CB,NULL,NULL); SendMessageA(c,WM_SETFONT,(WPARAM)f,1);
-        c=CreateWindowA("BUTTON","内容限制(默认无限制；勾选后重启引擎生效)",WS_CHILD|WS_VISIBLE|BS_AUTOCHECKBOX,10,152,330,22,h,(HMENU)IDC_FILTER,NULL,NULL); SendMessageA(c,WM_SETFONT,(WPARAM)f,1);
-        c=CreateWindowA("STATIC","主题:",WS_CHILD|WS_VISIBLE,10,186,60,22,h,(HMENU)NULL,NULL,NULL); SendMessageA(c,WM_SETFONT,(WPARAM)f,1);
-        c=CreateWindowA("COMBOBOX",NULL,WS_CHILD|WS_VISIBLE|CBS_DROPDOWNLIST,70,184,120,200,h,(HMENU)IDC_THEME_CB,NULL,NULL); SendMessageA(c,WM_SETFONT,(WPARAM)f,1);
-        SendMessageA(c,CB_ADDSTRING,0,(LPARAM)"暗黑"); SendMessageA(c,CB_ADDSTRING,0,(LPARAM)"明亮");
-        SendMessageA(c,CB_SETCURSEL,g_cfg.dark_theme?0:1,0);
-        c=CreateWindowA("STATIC","",WS_CHILD|WS_VISIBLE,10,220,430,44,h,(HMENU)IDC_STATUS,NULL,NULL); SendMessageA(c,WM_SETFONT,(WPARAM)f,1);
+        c=CreateWindowW(L"BUTTON",L"",WS_CHILD|WS_VISIBLE|BS_PUSHBUTTON,10,8,540,30,h,(HMENU)IDC_COPY_ADDR,NULL,NULL); SendMessageW(c,WM_SETFONT,(WPARAM)gh_font,1);
+        c=CreateWindowW(L"BUTTON",L"",WS_CHILD|WS_VISIBLE|BS_PUSHBUTTON,10,44,540,30,h,(HMENU)IDC_COPY_KEY,NULL,NULL); SendMessageW(c,WM_SETFONT,(WPARAM)gh_font,1);
+        c=CreateWindowW(L"BUTTON",L"",WS_CHILD|WS_VISIBLE|BS_PUSHBUTTON,10,80,540,30,h,(HMENU)IDC_COPY_MODEL,NULL,NULL); SendMessageW(c,WM_SETFONT,(WPARAM)gh_font,1);
+        c=CreateWindowW(L"STATIC",L"切换已下载模型：",WS_CHILD|WS_VISIBLE,10,122,140,22,h,(HMENU)NULL,NULL,NULL); SendMessageW(c,WM_SETFONT,(WPARAM)gh_font,1);
+        c=CreateWindowW(L"COMBOBOX",NULL,WS_CHILD|WS_VISIBLE|CBS_DROPDOWNLIST|WS_VSCROLL,150,120,400,220,h,(HMENU)IDC_MODEL_CB,NULL,NULL); SendMessageW(c,WM_SETFONT,(WPARAM)gh_font,1);
+        c=CreateWindowW(L"BUTTON",L"内容限制（默认无限制；勾选后重启引擎生效）",WS_CHILD|WS_VISIBLE|BS_AUTOCHECKBOX,10,154,420,22,h,(HMENU)IDC_FILTER,NULL,NULL); SendMessageW(c,WM_SETFONT,(WPARAM)gh_font,1);
+        c=CreateWindowW(L"STATIC",L"主题：",WS_CHILD|WS_VISIBLE,10,190,60,22,h,(HMENU)NULL,NULL,NULL); SendMessageW(c,WM_SETFONT,(WPARAM)gh_font,1);
+        c=CreateWindowW(L"COMBOBOX",NULL,WS_CHILD|WS_VISIBLE|CBS_DROPDOWNLIST,80,188,140,220,h,(HMENU)IDC_THEME_CB,NULL,NULL); SendMessageW(c,WM_SETFONT,(WPARAM)gh_font,1);
+        SendMessageW(c,CB_ADDSTRING,0,(LPARAM)L"暗黑"); SendMessageW(c,CB_ADDSTRING,0,(LPARAM)L"明亮");
+        SendMessageW(c,CB_SETCURSEL,g_cfg.dark_theme?0:1,0);
+        c=CreateWindowW(L"STATIC",L"",WS_CHILD|WS_VISIBLE,10,226,540,70,h,(HMENU)IDC_STATUS,NULL,NULL); SendMessageW(c,WM_SETFONT,(WPARAM)gh_font,1);
         ui_apply_theme(NULL);
         ui_populate_models(h);
         ui_refresh(h);
         /* 托盘图标 */
+        ZeroMemory(&gh_nid,sizeof(gh_nid));
         gh_nid.cbSize=sizeof(gh_nid); gh_nid.hWnd=h; gh_nid.uID=1;
         gh_nid.uFlags=NIF_ICON|NIF_TIP; gh_nid.hIcon=LoadIcon(NULL,IDI_APPLICATION);
-        strcpy(gh_nid.szTip,"Local Dream ET Server");
-        gh_has_tray = Shell_NotifyIconA(NIM_ADD,&gh_nid)?1:0;
+        wcscpy(gh_nid.szTip,L"Local Dream ET Server");
+        gh_has_tray = Shell_NotifyIconW(NIM_ADD,&gh_nid)?1:0;
         SetTimer(h,1,1000,NULL);
         return 0; }
     case WM_CTLCOLORSTATIC:
+    case WM_CTLCOLORBTN:
     case WM_CTLCOLORDLG: {
         HDC dc=(HDC)w; SetTextColor(dc,g_txcol); SetBkColor(dc,g_bgcol);
         return (INT_PTR)g_bgbrush; }
@@ -946,25 +1098,26 @@ static LRESULT CALLBACK WndProc(HWND h,UINT m,WPARAM w,LPARAM l){
     case WM_COMMAND: {
         int id=LOWORD(w);
         if(HIWORD(w)==CBN_SELCHANGE && id==IDC_MODEL_CB){
-            char fn[600]; GetDlgItemTextA(h,IDC_MODEL_CB,fn,sizeof(fn));
+            wchar_t wfn[600]; GetWindowTextW(GetDlgItem(h,IDC_MODEL_CB),wfn,600);
+            char fn[600]; wu8(wfn,fn,sizeof(fn));
             if(fn[0]){
                 snprintf(g_cfg.model_path,sizeof(g_cfg.model_path),"%s%s%s",g_model_dir,DIRSEP,fn);
                 fname_to_id(fn,g_cfg.model_id,sizeof(g_cfg.model_id));
                 save_config();
                 log_line("UI 切换模型 -> %s，重启引擎", fn);
                 kill_engine();  /* 看门狗自动用新模型重拉 */
-                MessageBoxA(h,"已切换模型，引擎正在自动重启。","提示",MB_OK);
+                ui_msg(h,"已切换模型，引擎正在自动重启。");
             }
             return 0;
         }
         if(HIWORD(w)==CBN_SELCHANGE && id==IDC_THEME_CB){
-            int sel=(int)SendMessageA(GetDlgItem(h,IDC_THEME_CB),CB_GETCURSEL,0,0);
+            int sel=(int)SendMessageW(GetDlgItem(h,IDC_THEME_CB),CB_GETCURSEL,0,0);
             g_cfg.dark_theme = (sel==0)?1:0; save_config(); ui_apply_theme(h);
             return 0;
         }
-        if(id==IDC_COPY_ADDR){ ui_set_clipboard(h,g_addr_disp); MessageBoxA(h,"已复制服务地址","提示",MB_OK); }
-        else if(id==IDC_COPY_KEY){ ui_set_clipboard(h,g_cfg.api_key); MessageBoxA(h,"已复制 API Key","提示",MB_OK); }
-        else if(id==IDC_COPY_MODEL){ ui_set_clipboard(h,g_cfg.model_id); MessageBoxA(h,"已复制模型名","提示",MB_OK); }
+        if(id==IDC_COPY_ADDR){ ui_set_clipboard(h,g_addr_disp); ui_msg(h,"已复制服务地址"); }
+        else if(id==IDC_COPY_KEY){ ui_set_clipboard(h,g_cfg.api_key); ui_msg(h,"已复制 API Key"); }
+        else if(id==IDC_COPY_MODEL){ ui_set_clipboard(h,g_cfg.model_id); ui_msg(h,"已复制模型名"); }
         else if(id==IDC_FILTER){
             g_cfg.content_filter = (IsDlgButtonChecked(h,IDC_FILTER)==BST_CHECKED)?1:0;
             save_config();
@@ -976,24 +1129,25 @@ static LRESULT CALLBACK WndProc(HWND h,UINT m,WPARAM w,LPARAM l){
     case WM_SIZE: return 0;
     case WM_CLOSE: ShowWindow(h,SW_HIDE); return 0;  /* 关闭=隐藏到托盘 */
     case WM_DESTROY:
-        if(gh_has_tray) Shell_NotifyIconA(NIM_DELETE,&gh_nid);
+        if(gh_has_tray) Shell_NotifyIconW(NIM_DELETE,&gh_nid);
         PostQuitMessage(0); return 0;
     }
-    return DefWindowProcA(h,m,w,l);
+    return DefWindowProcW(h,m,w,l);
 }
 static void gui_thread(void){
     char lan[128]; get_lan_ip(lan,sizeof(lan));
     snprintf(g_addr_disp,sizeof(g_addr_disp),"http://%s:%d", lan, g_cfg.port);
-    WNDCLASSA wc={0}; wc.lpfnWndProc=WndProc; wc.hInstance=GetModuleHandleA(NULL);
-    wc.lpszClassName="LocalDreamETServer"; wc.hCursor=LoadCursor(NULL,IDC_ARROW);
+    WNDCLASSW wc={0}; wc.lpfnWndProc=WndProc; wc.hInstance=GetModuleHandleW(NULL);
+    wc.lpszClassName=L"LocalDreamETServer"; wc.hCursor=LoadCursor(NULL,IDC_ARROW);
     wc.hbrBackground=(HBRUSH)(COLOR_WINDOW+1);
-    RegisterClassA(&wc);
-    gh_main=CreateWindowA("LocalDreamETServer","Local Dream ET Server  v1.1.0",
-        WS_OVERLAPPEDWINDOW|WS_CLIPCHILDREN,CW_USEDEFAULT,CW_USEDEFAULT,470,320,
-        NULL,NULL,GetModuleHandleA(NULL),NULL);
+    RegisterClassW(&wc);
+    wchar_t wtitle[128]; u8w(APP_NAME "  v" APP_VERSION,wtitle,128);
+    gh_main=CreateWindowW(L"LocalDreamETServer",wtitle,
+        WS_OVERLAPPEDWINDOW|WS_CLIPCHILDREN,CW_USEDEFAULT,CW_USEDEFAULT,580,360,
+        NULL,NULL,GetModuleHandleW(NULL),NULL);
     ShowWindow(gh_main,SW_SHOW);
     MSG msg;
-    while(GetMessageA(&msg,NULL,0,0)>0){ TranslateMessage(&msg); DispatchMessageA(&msg); }
+    while(GetMessageW(&msg,NULL,0,0)>0){ TranslateMessage(&msg); DispatchMessageW(&msg); }
 }
 #endif
 
@@ -1006,6 +1160,7 @@ int main(int argc, char** argv) {
     signal(SIGPIPE, SIG_IGN);
 #endif
     detect_progdir();
+    setup_datadir();   /* 选定可写数据目录(models/config/logs) */
     default_config();
     int has_cfg = load_config();
 
@@ -1030,7 +1185,8 @@ int main(int argc, char** argv) {
     }
 
     printf("=== %s %s 启动 ===\n", APP_NAME, APP_VERSION);
-    printf("工作目录: %s\n", g_progdir);
+    printf("程序目录(引擎): %s\n", g_progdir);
+    printf("数据目录(模型/配置): %s\n", g_datadir);
 
     /* 首次运行向导：无配置或未选模型（--no-wizard 或非 TTY 跳过） */
     if(!no_wizard && (!has_cfg || g_cfg.model_path[0]==0)) {

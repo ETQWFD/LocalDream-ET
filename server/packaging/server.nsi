@@ -6,16 +6,16 @@ ManifestDPIAware true
 !include "x64.nsh"
 
 Name "Local Dream ET Server"
-OutFile "LocalDreamET-Server-Setup-1.1.0.exe"
+OutFile "LocalDreamET-Server-Setup-1.1.1.exe"
 Unicode true
-RequestExecutionLevel admin
+RequestExecutionLevel user
 SetCompressor /SOLID lzma
 ShowInstDetails show
 
-InstallDir "$PROGRAMFILES64\LocalDreamET-Server"
-InstallDirRegKey HKLM "Software\LocalDreamET-Server" "InstallDir"
+InstallDir "$LOCALAPPDATA\Programs\LocalDreamET-Server"
+InstallDirRegKey HKCU "Software\LocalDreamET-Server" "InstallDir"
 
-!define PRODUCT_VERSION "1.1.0"
+!define PRODUCT_VERSION "1.1.1"
 !define PRODUCT_PUBLISHER "etc"
 
 !insertmacro MUI_PAGE_WELCOME
@@ -52,20 +52,20 @@ Section "Local Dream ET Server" SecCore
   CreateShortcut "$DESKTOP\Local Dream ET Server.lnk" \
     "$INSTDIR\Start-Server.bat" "$INSTDIR" "" 0
 
-  WriteRegStr HKLM "Software\LocalDreamET-Server" "InstallDir" "$INSTDIR"
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\LocalDreamET-Server" \
+  WriteRegStr HKCU "Software\LocalDreamET-Server" "InstallDir" "$INSTDIR"
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\LocalDreamET-Server" \
     "DisplayName" "Local Dream ET Server"
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\LocalDreamET-Server" \
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\LocalDreamET-Server" \
     "DisplayVersion" "${PRODUCT_VERSION}"
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\LocalDreamET-Server" \
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\LocalDreamET-Server" \
     "Publisher" "${PRODUCT_PUBLISHER}"
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\LocalDreamET-Server" \
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\LocalDreamET-Server" \
     "DisplayIcon" "$INSTDIR\etserver.exe"
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\LocalDreamET-Server" \
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\LocalDreamET-Server" \
     "UninstallString" '"$INSTDIR\uninstall.exe"'
-  WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\LocalDreamET-Server" \
+  WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\LocalDreamET-Server" \
     "NoModify" 1
-  WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\LocalDreamET-Server" \
+  WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\LocalDreamET-Server" \
     "NoRepair" 1
 
   WriteUninstaller "$INSTDIR\uninstall.exe"
@@ -87,6 +87,6 @@ Section "uninstall"
   RMDir "$INSTDIR\models"
   RMDir "$INSTDIR\logs"
   RMDir "$INSTDIR"
-  DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\LocalDreamET-Server"
-  DeleteRegKey HKLM "Software\LocalDreamET-Server"
+  DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\LocalDreamET-Server"
+  DeleteRegKey HKCU "Software\LocalDreamET-Server"
 SectionEnd

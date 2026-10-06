@@ -1,21 +1,21 @@
 {
   "name": "Local Dream ET Server",
-  "version": "1.1.0",
-  "versionCode": 110,
-  "tag": "server-v1.1.0",
+  "version": "1.1.1",
+  "versionCode": 111,
+  "tag": "server-v1.1.1",
   "prerelease": true,
   "channel": "github",
   "platforms": {
     "windows": {
-      "file": "LocalDreamET-Server-Setup-1.1.0.exe",
-      "size": 11250530,
-      "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/server-v1.1.0/LocalDreamET-Server-Setup-1.1.0.exe"
+      "file": "LocalDreamET-Server-Setup-1.1.1.exe",
+      "size": 11250644,
+      "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/server-v1.1.1/LocalDreamET-Server-Setup-1.1.1.exe"
     },
     "linux-x86_64": {
-      "file": "LocalDreamET-Server-1.1.0-linux-x86_64.tar.gz",
-      "size": 16516388,
-      "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/server-v1.1.0/LocalDreamET-Server-1.1.0-linux-x86_64.tar.gz"
+      "file": "LocalDreamET-Server-1.1.1-linux-x86_64.tar.gz",
+      "size": 16516194,
+      "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/server-v1.1.1/LocalDreamET-Server-1.1.1-linux-x86_64.tar.gz"
     }
   },
-  "notes": "v1.1.0：模型对齐手机端 SD1.5（含 DreamShaper8/AbsoluteReality/QteaMix/CuteYukiMix/BreakDomain/Counterfeit），断点续传+完整性校验；Windows 后台+图形窗口（复制地址/Key/模型、切模型、主题、限制默认无限制）。Copyright (C) 2026 etc (MIT)"
+  "notes": "v1.1.1：①修复安装到 Program Files 导致模型/配置写入 Permission denied——安装器改为免 UAC 用户级安装，程序目录只读时数据自动落到 %LOCALAPPDATA%（Linux 为 ~/.local/share）；②修复 Windows 图形窗口中文乱码，全面 Unicode + 新宋体；③修复找不到 sd-server.exe 时看门狗无限刷屏，改为一次诊断（提示杀软隔离/加白名单）并静默等待文件恢复。默认无限制。Copyright (C) 2026 etc (MIT)"
 }
