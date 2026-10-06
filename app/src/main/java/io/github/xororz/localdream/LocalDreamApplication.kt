@@ -71,6 +71,26 @@ class LocalDreamApplication : Application() {
         startMigration()
     }
 
+    // et.39: on memory pressure, drop the process-wide reference to any held result
+    // bitmap and log the level, so generations don't pin full-size bitmaps after the
+    // user leaves the screen. The on-screen Composable keeps its own copy.
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        runCatching {
+            when (level) {
+                android.content.ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN,
+                android.content.ComponentCallbacks2.TRIM_MEMORY_BACKGROUND,
+                android.content.ComponentCallbacks2.TRIM_MEMORY_MODERATE,
+                android.content.ComponentCallbacks2.TRIM_MEMORY_COMPLETE,
+                -> io.github.xororz.localdream.service.BackgroundGenerationService.clearCompleteState()
+            }
+            io.github.xororz.localdream.cloud.LogHub.log(
+                io.github.xororz.localdream.cloud.LogHub.Category.APP,
+                "onTrimMemory level=$level",
+            )
+        }
+    }
+
     private fun startMigration() {
         migrationJob?.cancel()
         migrationJob = appScope.launch {

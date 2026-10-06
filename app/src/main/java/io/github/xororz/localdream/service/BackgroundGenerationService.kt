@@ -696,6 +696,14 @@ class BackgroundGenerationService : Service() {
                                         "Bitmap consumed, stopping service. Wait time: ${System.currentTimeMillis() - waitStartTime}ms",
                                     )
                                     completed = true
+                                    // et.39: the UI already holds its own reference to the
+                                    // bitmap (on-screen display + async JPEG save). Drop the
+                                    // process-wide StateFlow reference so the singleton does
+                                    // not pin the full-size result bitmap until the next run,
+                                    // and release the big retry base64 string. (We do NOT
+                                    // recycle the native bitmap here — the UI still uses it.)
+                                    _generationState.value = GenerationState.Idle
+                                    retryImage = null
                                     stopSelf()
                                     // The stream carries nothing after complete; leaving
                                     // the loop here avoids a blocked readLine() racing the

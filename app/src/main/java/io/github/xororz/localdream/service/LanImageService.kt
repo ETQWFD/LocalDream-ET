@@ -273,7 +273,12 @@ class LanImageService : Service() {
                 bmp.setPixels(pixels, 0, w, 0, 0, w, h)
                 val baos = ByteArrayOutputStream()
                 bmp.compress(Bitmap.CompressFormat.PNG, 95, baos)
-                Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP)
+                // et.39: this request-local bitmap is no longer needed once PNG bytes
+                // are produced; recycle it immediately so the LAN API mode does not
+                // leak a full-size bitmap per HTTP call (batch n recycles per image).
+                val out = Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP)
+                bmp.recycle()
+                out
             }
             else -> {
                 // Already-compressed jpeg/png frame: return as-is.

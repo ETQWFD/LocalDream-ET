@@ -1,21 +1,21 @@
 {
   "name": "Local Dream ET Server",
-  "version": "1.1.5",
-  "versionCode": 115,
-  "tag": "server-v1.1.5",
+  "version": "1.1.6",
+  "versionCode": 116,
+  "tag": "server-v1.1.6",
   "prerelease": true,
   "channel": "github",
   "platforms": {
     "windows": {
-      "file": "LocalDreamET-Server-Setup-1.1.5.exe",
-      "size": 11255637,
-      "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/server-v1.1.5/LocalDreamET-Server-Setup-1.1.5.exe"
+      "file": "LocalDreamET-Server-Setup-1.1.6.exe",
+      "size": 11254447,
+      "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/server-v1.1.6/LocalDreamET-Server-Setup-1.1.6.exe"
     },
     "linux-x86_64": {
-      "file": "LocalDreamET-Server-1.1.5-linux-x86_64.tar.gz",
-      "size": 16521086,
-      "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/server-v1.1.5/LocalDreamET-Server-1.1.5-linux-x86_64.tar.gz"
+      "file": "LocalDreamET-Server-1.1.6-linux-x86_64.tar.gz",
+      "size": 16521789,
+      "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/server-v1.1.6/LocalDreamET-Server-1.1.6-linux-x86_64.tar.gz"
     }
   },
-  "notes": "v1.1.5（真机复查）：①确认内容限制默认 content_filter=0=无限制，关闭后代理层对正/反向提示词不拦截、不注入负面词、不改写（代码走查过滤门被开关短路，含敏感词请求实测穿过过滤层到转发层返回未就绪而非拦截）；仅显式开启才过滤。②全部模型首选源（魔搭2+hf-mirror11）无代理 Range 206 复测、总字节与清单一致，无死链；引擎直读 safetensors/GGUF 无需转换，.part 续传+完整校验+原子改名，未完整不就绪。③46 位 Key 真随机持久化、Bearer/X-API-Key 鉴权错 key 401、/healthz 免 key，GUI 三复制框点按复制、多模型下拉热加载。④物理/虚拟网卡智能识别与防火墙提示保持；批量 batch_size/n 实证真出多张；Unicode 新宋体、看门狗引擎缺失只报一次、免 UAC 用户级安装均不回退。版权归 etc（MIT）。"
+  "notes": "v1.1.6（性能/内存复查，基于引擎真实参数，不虚报速度）：①引擎单实例常驻、模型启动时仅加载一次，连续/批量出图复用同一进程不重启不重复 load；批量由引擎内部 batch_count 一次出多张。②线程默认按真实核数 min(max(核数,2),8)（保底2、上限8），并在控制台/GUI 显示。③经 --help/strings 核实引擎只支持 --model/--listen-ip/--listen-port/--threads/--mmap 等，无独立 --fp16，精度由模型文件决定，未臆加任何参数（引擎默认 mmap 复用权重）。④代理流式转发用 16KB 小块、注入临时缓冲配对释放，外壳 RSS 约 3.7MB；默认 20 步/长边不变。保留 v1.1.5：默认无内容过滤、魔搭+hf-mirror 源 Range 实测、46 位 Key 持久化与 Bearer/X-API-Key 鉴权、物理/虚拟网卡识别与防火墙提示、Unicode 新宋体、看门狗只报一次、免 UAC 用户级安装、未完整不就绪。版权归 etc（MIT）。"
 }

@@ -86,7 +86,7 @@
 
 /* ============================ 全局配置 ============================ */
 #define APP_NAME      "Local Dream ET Server"
-#define APP_VERSION   "1.1.5"
+#define APP_VERSION   "1.1.6"
 #define COPYRIGHT_STR "Copyright (C) 2026 etc"
 
 #define DEFAULT_PORT       8080      /* 对外监听端口 */
@@ -250,8 +250,8 @@ static int default_threads(void) {
     long n = sysconf(_SC_NPROCESSORS_ONLN);
     if (n <= 0) n = 2;
 #endif
-    if (n < 1) n = 1;
-    if (n > 8) n = 8;     /* 上限，防超发导致抖动 */
+    if (n < 2) n = 2;        /* 低端 1 核也保底 2 线程，避免过慢 */
+    if (n > 8) n = 8;        /* 上限，防超发导致抖动 */
     return (int)n;
 }
 
@@ -1235,8 +1235,8 @@ static void show_banner(void) {
     printf("  [内容限制]  %s   [主题] %s   [重启次数] %d\n",
            g_cfg.content_filter?"开启(拦截)":"无限制",
            g_cfg.dark_theme?"暗黑":"明亮", g_restart_count);
-    printf("  [默认参数]  steps=%d  cfg=%.1f  batch=%d（代理层自动补全未带字段）\n",
-           g_cfg.steps, g_cfg.cfg_scale, g_cfg.batch_size);
+    printf("  [默认参数]  steps=%d  cfg=%.1f  batch=%d  threads=%d（代理层自动补全未带字段）\n",
+           g_cfg.steps, g_cfg.cfg_scale, g_cfg.batch_size, g_cfg.threads);
     printf("--------------------------------------------------------------\n");
     printf("  兼容方式: sd.cpp/sdapi 风格  POST /sdapi/v1/txt2img\n");
     printf("           OpenAI 风格  POST /v1/images/generations\n");

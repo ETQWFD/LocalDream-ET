@@ -259,9 +259,14 @@ object DeviceCapabilities {
         // et.30: 32-bit (armeabi-v7a) address space is ~2-3GB; 512 on a 32-bit
         // device triggers SIGKILL (exit 137) mid-diffusion. Cap 32-bit to 384.
         if (!is64Bit()) return 384
+        val am = context.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+        // et.39: low-RAM / isLowRamDevice devices default to the safe 384 long edge
+        // (and batch is forced to 1 elsewhere) to avoid code=137 under memory pressure.
+        if (am.isLowRamDevice) return 384
         val total = totalRamBytes(context)
         val gb = total / (1024.0 * 1024.0 * 1024.0)
         return when {
+            gb <= 4.0 -> 384
             gb <= 6.0 -> 512
             gb <= 10.0 -> 640
             else -> 768
