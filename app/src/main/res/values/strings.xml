@@ -361,6 +361,8 @@
     <string name="cloud_err_notfound">Repository does not exist or you have no access.</string>
     <string name="cloud_err_http">Upload failed (HTTP %1$d).</string>
     <string name="cloud_err_other">Upload failed. Please try again later.</string>
+    <string name="cloud_err_file_missing">图片文件已不存在（可能已被清理或移动），无法上传。</string>
+    <string name="cloud_err_inflight">该图片正在上传，请稍候。</string>
     <string name="error_model_extract_incomplete">Model "%1$s" files are incomplete (missing required weights). The downloaded package is kept; please retry or repair the model. If it still fails, delete and re-download.</string>
     <string name="restore_pick_model">Pick a downloaded model from the list to start.</string>
     <string name="close">Close</string>

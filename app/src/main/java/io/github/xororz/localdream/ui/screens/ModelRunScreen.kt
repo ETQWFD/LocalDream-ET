@@ -362,6 +362,12 @@ fun ModelRunScreen(
     val lowEndDevice = remember {
         io.github.xororz.localdream.utils.DeviceCapabilities.sd15LongEdgeForRam(context) <= 384
     }
+    // et.41: extremely constrained 32-bit device (PowerVR GE8320-class, no fp16):
+    // pin the fast tier to the smallest stable settings (256 long edge, 6 steps,
+    // euler_a, single batch) so it can actually finish without being SIGKILL'd.
+    val extremeLowRam = remember {
+        io.github.xororz.localdream.utils.DeviceCapabilities.extremeLowRam(context)
+    }
     var speedTier by remember {
         mutableStateOf(
             context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
@@ -371,7 +377,14 @@ fun ModelRunScreen(
     }
     // et.40: first-run hint on low-end devices that the fast tier is the default.
     LaunchedEffect(Unit) {
-        if (lowEndDevice && speedTier == "fast") {
+        if (extremeLowRam && speedTier == "fast") {
+            android.widget.Toast.makeText(
+                context,
+                "该机型算力很低（无半精度加速）：已自动 256/6步/euler_a，单张仍可能需十几分钟；" +
+                    "建议在更高配 64 位手机或电脑服务端出图。",
+                android.widget.Toast.LENGTH_LONG,
+            ).show()
+        } else if (lowEndDevice && speedTier == "fast") {
             android.widget.Toast.makeText(
                 context,
                 "已为低配设备默认极速档（384/8步），可在出图页切换均衡/质量",
@@ -2340,7 +2353,12 @@ fun ModelRunScreen(
                                                 context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
                                                     .edit().putString("speed_tier", t).apply()
                                                 when (t) {
-                                                    "fast" -> { steps = 8f; scheduler = "euler_a" }
+                                                    "fast" -> {
+                                                        // et.41: extreme-low-end uses the smallest stable
+                                                        // settings (6 steps) instead of the normal 8.
+                                                        steps = if (extremeLowRam) 6f else 8f
+                                                        scheduler = "euler_a"
+                                                    }
                                                     "quality" -> { steps = 28f; scheduler = "dpm_karras" }
                                                     else -> { steps = 16f; scheduler = "dpm" }
                                                 }

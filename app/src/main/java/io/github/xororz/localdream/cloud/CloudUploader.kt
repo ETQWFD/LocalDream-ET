@@ -27,13 +27,54 @@ object CloudUploader {
     class NotLoggedInException : Exception()
 
     /**
+     * et.41: the recorded image file is gone (renamed/moved/cleaned) or empty.
+     * Callers surface a clean Chinese message and must NOT retry-spam it.
+     */
+    class FileMissingException(val path: String) : Exception(path)
+
+    // et.41: idempotency — one in-flight upload per canonical absolute path, so a
+    // double-tap / multi-select of the same file does not fire N concurrent attempts.
+    private val inFlight = java.util.Collections.synchronizedSet(mutableSetOf<String>())
+
+    /**
+     * Resolve the *current* on-disk file for a recorded path. Some history rows point
+     * at an old name (generated_image_<ms>_0.png / bare ms.png) that was later moved or
+     * renamed; fall back to searching the private history dir for the same stem.
+     */
+    private fun resolveRealFile(context: Context, recorded: File): File? {
+        if (recorded.exists() && recorded.isFile) return recorded
+        // Best-effort: search filesDir/history recursively for a png/jpg containing the
+        // original file stem (without extension).
+        val stem = recorded.nameWithoutExtension
+        if (stem.isBlank()) return null
+        val root = File(context.filesDir, "history")
+        if (root.isDirectory) {
+            root.walkTopDown().filter { it.isFile && it.extension.lowercase() in setOf("png", "jpg", "jpeg") }
+                .firstOrNull { it.nameWithoutExtension.contains(stem) || stem.contains(it.nameWithoutExtension) }
+                ?.let { return it }
+        }
+        return null
+    }
+
+    /**
      * Uploads [file] to the logged-in provider's private repo under [destPath]
      * (e.g. "png/202610061530.png"). Throws [NotLoggedInException] or a typed/raw
      * failure that [classify] understands. Falls back to the other provider when the
      * primary channel is unreachable.
      */
-    suspend fun uploadFile(context: Context, file: File, destPath: String): String =
-        uploadBytes(context, file.readBytes(), destPath)
+    suspend fun uploadFile(context: Context, file: File, destPath: String): String {
+        val real = resolveRealFile(context, file)
+            ?: throw FileMissingException(file.absolutePath)
+        if (!real.exists() || real.length() <= 0L) throw FileMissingException(real.absolutePath)
+        // Idempotent: skip (treat as already running) if this exact file is uploading.
+        val key = real.canonicalPath
+        if (!inFlight.add(key)) throw FileMissingException("__inflight__")
+        try {
+            return uploadBytes(context, real.readBytes(), destPath)
+        } finally {
+            inFlight.remove(key)
+        }
+    }
 
     /**
      * Upload raw bytes under [destPath] (e.g. "log/logs_….txt"). Shared by the image
@@ -92,6 +133,10 @@ object CloudUploader {
      */
     fun classify(context: Context, t: Throwable): String = when (t) {
         is NotLoggedInException -> context.getString(R.string.logs_upload_need_login)
+        is FileMissingException -> {
+            if (t.path == "__inflight__") context.getString(R.string.cloud_err_inflight)
+            else context.getString(R.string.cloud_err_file_missing)
+        }
         is CloudHttpException -> when (t.code) {
             401 -> context.getString(R.string.cloud_err_401)
             403 -> {

@@ -48,7 +48,7 @@
     <img src="icon.png" alt="" />
     <div>
       <h1>Local Dream ET · 站点数据后台</h1>
-      <div class="sub">官网访问量 · 下载点击 · GitHub 真实下载次数（ET）</div>
+      <div class="sub">下载次数＝GitHub 官方 download_count（真实权威）；访问量/点击＝第三方计数（自 et.41 起埋点，仅量级）</div>
     </div>
     <div class="spacer"></div>
     <a class="back" href="index.html">← 返回官网</a>
@@ -56,9 +56,9 @@
   </div>
 
   <div class="grid">
-    <div class="stat"><div class="k">官网累计访问量</div><div class="v acc" id="visits">—</div><div class="note">每次打开首页计数（Abacus 计数器）</div></div>
-    <div class="stat"><div class="k">下载按钮点击</div><div class="v b2" id="clicks">—</div><div class="note">点击 APK / EXE / ZIP 下载按钮次数</div></div>
-    <div class="stat"><div class="k">GitHub 真实下载总量</div><div class="v w" id="ghTotal">—</div><div class="note">Releases 各资产 download_count 合计</div></div>
+    <div class="stat"><div class="k">官网访问量（第三方计数）</div><div class="v acc" id="visits">—</div><div class="note">自 v3.0.0-et.41 起在首页真实埋点；第三方计数，不去重/不防刷，仅反映量级，可能被广告拦截</div></div>
+    <div class="stat"><div class="k">下载点击量（第三方计数）</div><div class="v b2" id="clicks">—</div><div class="note">点击 APK / EXE / tar.gz 真实下载链接次数；同样自 et.41 起埋点、仅量级；实际文件下载以下方 GitHub 计数为准</div></div>
+    <div class="stat"><div class="k">GitHub 真实下载总量</div><div class="v w" id="ghTotal">—</div><div class="note">Releases 各资产官方 download_count 合计（权威，无法伪造）</div></div>
     <div class="stat"><div class="k">发布版本数</div><div class="v" id="relCount">—</div><div class="note">GitHub Releases 数量</div></div>
   </div>
 
@@ -69,7 +69,7 @@
   </div>
 
   <p class="updated" id="updated"></p>
-  <p class="muted" style="font-size:12px;margin-top:8px">说明：访问量与下载点击由静态站埋点的第三方计数服务统计（去重能力有限，反映量级）；“GitHub 真实下载总量”为实际文件下载次数，以该值为准。</p>
+  <p class="muted" style="font-size:12px;margin-top:8px">数据口径（如实说明）：① <b>各版本/文件下载次数</b> 与 <b>GitHub 真实下载总量</b> 直接读取 GitHub 官方 Releases API 的 <code>download_count</code>，由 GitHub 统计、无法伪造，浏览器匿名读取（每 IP 每小时 60 次，偶发限流会自动重试或使用 2 分钟内缓存，稍后刷新即可）。② <b>官网访问量 / 下载点击量</b> 因 GitHub Pages 是纯静态、无自有后端，采用第三方计数器在首页真实埋点统计（自 <b>v3.0.0-et.41</b> 版本起才开始埋点，更早访问不计；不去重、不防刷、可能被浏览器广告拦截插件屏蔽），<b>仅反映量级</b>，精确流量以 GitHub 下载次数为准；如需去重/精确的独立访客统计，需另行部署计数后端（如 Cloudflare Worker / EdgeOne Pages Functions）或接入正式统计平台。本页不在官网前台展示入口。</p>
 </div>
 
 <script>
@@ -96,41 +96,70 @@
   function fmtDate(s){ try{ return new Date(s).toLocaleString("zh-CN"); }catch(e){ return s||""; } }
   function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];}); }
 
+  var GH_URL="https://api.github.com/repos/"+REPO+"/releases?per_page=100";
+  var GH_CACHE="etld_gh_releases", CACHE_TTL_MS=120000;
+  function ghFromCache(){
+    try{ var raw=sessionStorage.getItem(GH_CACHE); if(!raw) return null;
+      var o=JSON.parse(raw); if(!o || (Date.now()-(o.t||0))>CACHE_TTL_MS) return null; return o.data; }catch(e){ return null; }
+  }
+  function ghToCache(data){ try{ sessionStorage.setItem(GH_CACHE,JSON.stringify({t:Date.now(),data:data})); }catch(e){} }
+  function ghFetch(attempt){
+    return fetch(GH_URL,{cache:"no-store",headers:{Accept:"application/vnd.github+json"}})
+      .then(function(r){
+        if(r.status===403||r.status===429){ var err=new Error("RATE_LIMIT"); err.status=r.status; throw err; }
+        if(!r.ok) throw new Error("HTTP "+r.status);
+        return r.json();
+      })
+      .catch(function(err){
+        if(attempt>0 && (err.message==="RATE_LIMIT"||err.message==="Failed to fetch"||/NetworkError|load failed/i.test(err.message||""))){
+          return new Promise(function(res){ setTimeout(function(){ res(ghFetch(attempt-1)); }, 900); });
+        }
+        throw err;
+      });
+  }
+  function renderReleases(list){
+    var total=0, rels=0, rows=[];
+    list.forEach(function(rel){
+      if(rel.draft) return;
+      rels++;
+      (rel.assets||[]).forEach(function(a){ total += (a.download_count||0); });
+      var assets = rel.assets||[];
+      if(!assets.length){
+        rows.push('<tr><td><span class="tag">'+esc(rel.tag_name)+'</span></td>'+
+          '<td class="muted">（无附件，仅源码）</td><td class="n">—</td><td class="n muted">'+esc(fmtDate(rel.published_at))+'</td></tr>');
+      } else {
+        assets.forEach(function(a,i){
+          rows.push('<tr>'+
+            (i===0?'<td rowspan="'+assets.length+'"><span class="tag">'+esc(rel.tag_name)+'</span>'+(rel.prerelease?' <span class="pill">预览</span>':'')+'</td>':'')+
+            '<td>'+esc(a.name)+'</td>'+
+            '<td class="n"><b>'+Number(a.download_count||0).toLocaleString("zh-CN")+'</b></td>'+
+            '<td class="n muted">'+fmtBytes(a.size)+' · '+esc(fmtDate(a.updated_at))+'</td>'+
+          '</tr>');
+        });
+      }
+    });
+    setTotal(total); setRels(rels);
+    document.getElementById("ghBody").innerHTML =
+      '<table><thead><tr><th>版本</th><th>文件</th><th class="n">真实下载次数</th><th class="n">大小 / 更新时间</th></tr></thead><tbody>'+
+      rows.join("")+'</tbody></table>';
+  }
   function load(){
     document.getElementById("ghBody").innerHTML='<span class="loading">正在从 GitHub 读取…</span>';
     counter("sitevisits").then(setVisits);
     counter("dlclicks").then(setClicks);
 
-    getJSON("https://api.github.com/repos/"+REPO+"/releases?per_page=100")
-      .then(function(list){
-        var total=0, rels=0, rows=[];
-        list.forEach(function(rel){
-          if(rel.draft) return;
-          rels++;
-          (rel.assets||[]).forEach(function(a){ total += (a.download_count||0); });
-          var assets = rel.assets||[];
-          if(!assets.length){
-            rows.push('<tr><td><span class="tag">'+esc(rel.tag_name)+'</span></td>'+
-              '<td class="muted">（无附件，仅源码）</td><td class="n">—</td><td class="n muted">'+esc(fmtDate(rel.published_at))+'</td></tr>');
-          } else {
-            assets.forEach(function(a,i){
-              rows.push('<tr>'+
-                (i===0?'<td rowspan="'+assets.length+'"><span class="tag">'+esc(rel.tag_name)+'</span>'+(rel.prerelease?' <span class="pill">预览</span>':'')+'</td>':'')+
-                '<td>'+esc(a.name)+'</td>'+
-                '<td class="n"><b>'+Number(a.download_count||0).toLocaleString("zh-CN")+'</b></td>'+
-                '<td class="n muted">'+fmtBytes(a.size)+' · '+esc(fmtDate(a.updated_at))+'</td>'+
-              '</tr>');
-            });
-          }
-        });
-        setTotal(total); setRels(rels);
-        document.getElementById("ghBody").innerHTML =
-          '<table><thead><tr><th>版本</th><th>文件</th><th class="n">真实下载次数</th><th class="n">大小 / 更新时间</th></tr></thead><tbody>'+
-          rows.join("")+'</tbody></table>';
-      })
+    ghFetch(3)
+      .then(function(list){ ghToCache(list); renderReleases(list); })
       .catch(function(e){
-        document.getElementById("ghBody").innerHTML =
-          '<span class="err">GitHub 数据读取失败：'+esc(e.message)+'（可能触发匿名限流，稍后点“刷新数据”重试）。下载总量仍可在 GitHub Releases 页面核对。</span>';
+        var cached=ghFromCache();
+        if(cached){ renderReleases(cached); }
+        else if(e.message==="RATE_LIMIT"){
+          document.getElementById("ghBody").innerHTML =
+            '<span class="err">当前网络对 GitHub 匿名接口限流（每 IP 每小时 60 次）。此为浏览器直连 GitHub 的临时限制，不影响任何文件下载；稍后点“刷新数据”即可看到官方 download_count。</span>';
+        } else {
+          document.getElementById("ghBody").innerHTML =
+            '<span class="err">GitHub 数据读取失败：'+esc(e.message)+'。下载次数可在 GitHub Releases 页面核对，稍后重试。</span>';
+        }
       });
     document.getElementById("updated").textContent = "更新于 " + new Date().toLocaleString("zh-CN");
   }

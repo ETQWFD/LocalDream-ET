@@ -967,9 +967,16 @@ class BackendService : Service() {
                 }
                 runCatching {
                     io.github.xororz.localdream.utils.EngineMemoryStats.sample()
+                    val hwm = io.github.xororz.localdream.utils.EngineMemoryStats.lastVmHwmKb
+                    val thr = io.github.xororz.localdream.utils.EngineMemoryStats.lastThreads
+                    // et.41: after the process is destroyed /proc/<pid>/status is gone, so
+                    // live samples may not have populated these. Don't print misleading
+                    // "0kB/0" — say unavailable instead.
+                    val hwmStr = if (hwm > 0) "${hwm}kB" else "unavailable"
+                    val thrStr = if (thr > 0) thr.toString() else "unavailable"
                     io.github.xororz.localdream.cloud.LogHub.log(
                         io.github.xororz.localdream.cloud.LogHub.Category.ENGINE,
-                        "Engine peak VmHWM=${io.github.xororz.localdream.utils.EngineMemoryStats.lastVmHwmKb}kB threads=${io.github.xororz.localdream.utils.EngineMemoryStats.lastThreads}",
+                        "Engine peak VmHWM=$hwmStr threads=$thrStr",
                     )
                 }
                 updateState(BackendState.Idle)

@@ -255,7 +255,20 @@ object DeviceCapabilities {
      * ≤6 GB → 512; ≤10 GB → 640; >10 GB → 768. Kept conservative so the
      * MNN fp16 UNet does not OOM on mid-range phones.
      */
+    /**
+     * et.41: extremely constrained 32-bit device (armeabi-v7a, ~2-3GB RAM, no
+     * fp16/dotprod like the PowerVR Rogue GE8320). Even 384 long edge gets SIGKILL'd
+     * mid-diffusion (code 137), so we fall to the smallest stable SD1.5 canvas.
+     */
+    fun extremeLowRam(context: Context): Boolean {
+        if (is64Bit()) return false
+        val total = totalRamBytes(context)
+        return total <= 3500L * 1024 * 1024 // ~3.4GB
+    }
+
     fun sd15LongEdgeForRam(context: Context): Int {
+        // et.41: worst tier first — 256 long edge (a multiple of 8, engine-accepted).
+        if (extremeLowRam(context)) return 256
         // et.30: 32-bit (armeabi-v7a) address space is ~2-3GB; 512 on a 32-bit
         // device triggers SIGKILL (exit 137) mid-diffusion. Cap 32-bit to 384.
         if (!is64Bit()) return 384
