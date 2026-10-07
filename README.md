@@ -1,20 +1,11 @@
 <div align="center">
 
-# Local Dream ET <img src="./docs/icon.png" width="32" alt="Local Dream ET">
+# Local Dream ET  <img src="./docs/icon.png" width="32" alt="Local Dream ET">
 
 **安卓本地 Stable Diffusion · 骁龙 NPU / CPU / GPU 加速**
 ### ET 定制版（开发者：ET）
 
 </div>
-
-## 这是什么
-
-Local Dream ET 是基于开源项目 [xororz/local-dream](https://github.com/xororz/local-dream) 的定制版本，
-可在安卓手机上**本地**运行 Stable Diffusion 出图，数据不出本机。ET 版在原版基础上加入了
-应用内自更新、32 位适配与品牌定制。
-
-> 本版本的定制修改版权归 **ET** 所有；底层代码遵循原项目及其第三方依赖的开源许可。
-
 ## ET 版新增
 
 - **设置内「检测更新」**：应用读取本仓库 GitHub Pages 上的 `update.json` 比对版本号。
