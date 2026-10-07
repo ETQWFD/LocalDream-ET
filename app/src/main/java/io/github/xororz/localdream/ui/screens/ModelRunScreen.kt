@@ -707,6 +707,13 @@ fun ModelRunScreen(
             val running = st is BackendService.BackendState.Running &&
                 BackendService.servingModelId.value == modelId
             if (!running) return@launch
+            // et.44-patch: only sd15npu bakes resolution into its launch args
+            // (--patch, BackendService:668). sd15cpu/sdxlmnn carry width/height in
+            // each POST /generate body, so changing size / auto-downgrading must NOT
+            // SIGTERM the live engine. NPU path unchanged.
+            if (m.backendType != "sd15npu") {
+                return@launch
+            }
             val intent = Intent(context, BackendService::class.java).apply {
                 action = BackendService.ACTION_RESTART
                 putExtra("modelId", modelId)
@@ -2046,15 +2053,20 @@ fun ModelRunScreen(
                         backendRestartTrigger++
                     } else {
                         model?.let { m ->
-                            val serviceIntent =
-                                Intent(context, BackendService::class.java).apply {
-                                    action = BackendService.ACTION_RESTART
-                                    putExtra("modelId", modelId)
-                                    putExtra("backendType", m.backendType)
-                                    putExtra("width", resolution.width)
-                                    putExtra("height", resolution.height)
-                                }
-                            context.startForegroundService(serviceIntent)
+                            // et.44-patch: only restart the engine for sd15npu (bakes
+                            // --patch). CPU/others take the new size from the next /generate
+                            // body; do not SIGTERM the live process on resolution confirm.
+                            if (m.backendType == "sd15npu") {
+                                val serviceIntent =
+                                    Intent(context, BackendService::class.java).apply {
+                                        action = BackendService.ACTION_RESTART
+                                        putExtra("modelId", modelId)
+                                        putExtra("backendType", m.backendType)
+                                        putExtra("width", resolution.width)
+                                        putExtra("height", resolution.height)
+                                    }
+                                context.startForegroundService(serviceIntent)
+                            }
                             isCheckingBackend = true
                             backendReady = false
                             backendRestartTrigger++

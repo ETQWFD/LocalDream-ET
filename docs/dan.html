@@ -98,7 +98,7 @@
   </div>
 
   <div class="legend">
-    <span class="lg"><span class="dot ok"></span>真实数据：GitHub 官方接口 / 本机探测，不可伪造</span>
+    <span class="lg"><span class="dot ok"></span>真实数据：GitHub 官方接口，不可伪造</span>
     <span class="lg"><span class="dot tp"></span>第三方计数：公开计数器，仅量级</span>
     <span class="lg"><span class="dot na"></span>不可用：纯静态站点天然拿不到，需自建后端</span>
   </div>
@@ -113,7 +113,6 @@
     <div class="kpi"><div class="k">下载点击 PV <span class="src tp">第三方</span></div><div class="v info" id="kClick">—</div><div class="sub">点击真实下载链接·不去重</div></div>
     <div class="kpi"><div class="k">独立访客 UV <span class="src na">不可用</span></div><div class="v dim">N/A</div><div class="sub">静态页无服务端，无法去重</div></div>
     <div class="kpi"><div class="k">来源 IP / 地域 <span class="src na">不可用</span></div><div class="v dim">N/A</div><div class="sub">需服务端访问日志，见下方说明</div></div>
-    <div class="kpi"><div class="k">出图服务健康 <span class="src ok" id="kHealthSrc">探测</span></div><div class="v dim small" id="kHealth">未接入</div><div class="sub" id="kHealthSub">在下方填入公网 healthz</div></div>
   </div>
 
   <!-- platform totals -->
@@ -138,19 +137,6 @@
         <li><b>访问来源 IP / 地域 / Referer / 访问日志</b>：只有 HTTP 服务器（或 Worker/函数后端）能拿到并记录，静态托管拿不到 → 不显示假 IP、假地图。</li>
         <li><b>网站压力（QPS/带宽/在线数）</b>：需服务器指标或 CDN 后台，Pages 无此数据 → 不展示。</li>
       </ul>
-    </div>
-  </div>
-
-  <!-- health -->
-  <div class="card">
-    <div class="hd"><h2>出图服务健康探测</h2><span class="d">浏览器实时 GET 公网 healthz</span></div>
-    <div class="bd">
-      <div class="healthline">
-        <input id="healthUrl" type="text" placeholder="填入公网 healthz 地址，例如 https://节点:端口/healthz（地址保存在你本浏览器，不上传）" />
-        <button class="btn" id="healthGo">探测</button>
-      </div>
-      <div class="status" id="healthOut">未接入：当前没有稳定的公网 healthz 地址。待内网穿透（chmlfrp 等）建好后把地址填到这里，可定时看到 200 就绪 / 503 模型加载中。</div>
-      <p class="foot" id="healthFoot"></p>
     </div>
   </div>
 
@@ -279,46 +265,13 @@
     counter("dlclicks").then(function(v){ $("kClick").textContent = v==null?"N/A":fmt(v); });
   }
 
-  /* ---------- healthz probe ---------- */
-  var HEALTH_KEY="etld_health_url", healthTimer=null;
-  function setHealth(state, text, cls){
-    var el=$("kHealth"); el.textContent=state; el.className="v small "+(cls||"dim");
-    $("kHealthSub").textContent=text;
-  }
-  function probe(){
-    var url=$("healthUrl").value.trim();
-    try{localStorage.setItem(HEALTH_KEY,url);}catch(e){}
-    var out=$("healthOut");
-    if(!url){ setHealth("未接入","在下方填入公网 healthz"); out.className="status dim"; out.textContent="未接入：没有可用的公网 healthz 地址。"; return; }
-    setHealth("探测中…","正在请求",); $("kHealth").className="v small warn";
-    var t0=Date.now();
-    fetch(url,{cache:"no-store",mode:"cors"}).then(function(r){
-      var ms=Date.now()-t0;
-      r.text().then(function(txt){
-        var body=""; try{body=txt;}catch(e){}
-        if(r.status===200){ setHealth("就绪 200","响应 "+ms+"ms","ok"); out.className="status ok"; out.textContent="200 就绪（"+ms+"ms）服务可出图。"; }
-        else if(r.status===503){ setHealth("未就绪 503","加载中/未就绪 "+ms+"ms","warn"); out.className="status warn"; out.textContent="503 服务在线但模型未就绪（可能正在加载）："+esc(body.slice(0,140)); }
-        else { setHealth("HTTP "+r.status,"非预期状态 "+ms+"ms","warn"); out.className="status warn"; out.textContent="HTTP "+r.status+"（"+ms+"ms）："+esc(body.slice(0,140)); }
-        $("healthFoot").textContent="探测 "+new Date().toLocaleTimeString("zh-CN");
-      });
-    }).catch(function(e){
-      setHealth("不可达","跨域受限或离线","bad");
-      out.className="status bad";
-      out.textContent="请求失败："+esc(e.message)+"。可能原因：服务离线、地址错误，或该 healthz 未返回 CORS 头（浏览器跨域探测会被拦，命令行 curl 可测）。这不代表服务一定宕机。";
-      $("healthFoot").textContent="探测 "+new Date().toLocaleTimeString("zh-CN");
-    });
-  }
-  $("healthGo").addEventListener("click",probe);
-  $("healthUrl").addEventListener("keydown",function(e){if(e.key==="Enter")probe();});
-  (function(){ var u=""; try{u=localStorage.getItem(HEALTH_KEY)||"";}catch(e){} if(u){ $("healthUrl").value=u; probe(); } })();
-
   /* ---------- clock / auto refresh ---------- */
   function tickClock(){ $("clock").textContent=new Date().toLocaleString("zh-CN"); $("updated").textContent=new Date().toLocaleTimeString("zh-CN"); }
-  function loadAll(){ loadGH(); loadPV(); tickClock(); if($("healthUrl").value.trim()) probe(); }
+  function loadAll(){ loadGH(); loadPV(); tickClock(); }
   $("refresh").addEventListener("click",loadAll);
   tickClock(); setInterval(tickClock,1000);
   loadAll();
-  healthTimer=setInterval(function(){ loadGH(); loadPV(); if($("healthUrl").value.trim()) probe(); },60000);
+  setInterval(function(){ loadGH(); loadPV(); },60000);
 })();
 </script>
 </body>

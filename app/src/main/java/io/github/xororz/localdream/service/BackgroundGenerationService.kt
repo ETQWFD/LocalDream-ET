@@ -376,6 +376,9 @@ class BackgroundGenerationService : Service() {
             // et.30: independent OOM safe-step retry (384 long edge). Each flag
             // fires at most once so GPU->CPU and OOM->384 cannot loop.
             var safeOomRetryDone = false
+            // et.44-patch: a transport hiccup on an otherwise-live engine gets exactly
+            // one in-place reconnect (fresh connection, same params) — no process restart.
+            var connRetryDone = false
 
             attemptLoop@ while (true) {
             try {
@@ -740,13 +743,13 @@ class BackgroundGenerationService : Service() {
             break@attemptLoop
             } catch (e: Exception) {
                 val exitCode = io.github.xororz.localdream.utils.EngineExitInfo.lastExitCode
-                val engineDied = exitCode in setOf(137, 134, 139) ||
-                    (e.message ?: "").let { m ->
-                        m.contains("read interrupted", true) ||
-                            m.contains("connection reset", true) ||
-                            m.contains("broken pipe", true) ||
-                            m.contains("unexpected end", true)
-                    }
+                // et.44-patch: only a CONFIRMED hard process exit may count as the
+                // engine dying. read-interrupted / connection-reset / broken-pipe /
+                // unexpected-end are transport/pipeline errors — with et.44's per-request
+                // fresh TCP connection the engine process is actually still alive, and
+                // killing+restarting it on these is exactly what caused the dense
+                // start/143 churn and mid-generation interruptions.
+                val engineDied = exitCode in setOf(137, 134, 139)
                 if (engineDied && !safeOomRetryDone) {
                     safeOomRetryDone = true
                     io.github.xororz.localdream.cloud.LogHub.log(
@@ -816,6 +819,27 @@ class BackgroundGenerationService : Service() {
                         } catch (_: Exception) {}
                     }
                     updateState(GenerationState.Progress(0f))
+                    continue@attemptLoop
+                }
+                // et.44-patch: not a confirmed engine death. Treat as a transient
+                // transport/pipeline hiccup on the STILL-LIVE engine: reconnect once
+                // with a fresh connection (et.44 already uses ConnectionPool(0)+close).
+                // Never restart the process for this; after one retry, surface the error.
+                val msg = (e.message ?: "")
+                val transportHiccup = msg.contains(
+                    "read interrupted", true,
+                ) || msg.contains("connection reset", true) ||
+                    msg.contains("broken pipe", true) ||
+                    msg.contains("unexpected end", true) ||
+                    msg.contains("timeout", true)
+                if (transportHiccup && !connRetryDone && !cancelRequested) {
+                    connRetryDone = true
+                    io.github.xororz.localdream.cloud.LogHub.log(
+                        io.github.xororz.localdream.cloud.LogHub.Category.GENERATE,
+                        "Transport hiccup on live engine, reconnecting once: ${e.message}",
+                    )
+                    // Brief settle so the engine's accept loop is ready again.
+                    Thread.sleep(600)
                     continue@attemptLoop
                 }
                 throw e
