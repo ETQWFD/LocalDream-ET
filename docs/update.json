@@ -1,8 +1,8 @@
 {
-  "versionCode": 116,
-  "versionName": "3.0.0-et.42",
+  "versionCode": 117,
+  "versionName": "3.0.0-et.43",
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
-  "size": 153507523,
-  "sha256": "63f65337a42b95a8aa58c2b148e570de3f70a53f789640cfbff607fab2344e78",
-  "releaseNotes": "ET 定制版 v3.0.0-et.42（包名 etc.github.ai，可覆盖安装）。在 et.41 极低配档基础上，针对 32 位大小核机型（如 PowerVR GE8320，4×2.3G 大核+4×1.8G 小核）再做一处有确证的线程优化：\n• 经对原生引擎字符串实证：引擎是 Rust rayon 并行，实际读取 RAYON_NUM_THREADS / RAYON_RS_NUM_CPUS；此前 App 只设置了 OMP_NUM_THREADS（rayon 不识别），导致 8 个线程在大小核之间漂移抖动。现按 /sys 各核最大频率【动态判定大核组】（不写死核编号），把 rayon 与 OMP 线程数统一收敛到大核个数（该机约 4 个），减少跨核迁移与抖动；不做有风险的硬绑核。实际每步耗时需在该真机掐表对比，不承诺秒数。\n• 复核确认（不改）：出图前内存预检在启动引擎前即按可用内存选定 256/6 步极低配档，不是被杀后才降；224 尺寸因 native 不保证非 64 倍数对齐而不加；引擎 strings 证实无可命令行开启的 VAE 分块/注意力切片开关，不放假加速按钮，四个原生库字节保持权威值未重编；主动停止(exit 143)不误报崩溃。沿用 et.41 极低配 256/6 步与硬件地板诚实提示、et.40 三档与 API 连接、云上传修复、更新 sha256 校验。电脑服务端同步更新至 v1.1.7（模型后台加载不卡死）；聊天端 v1.0.2 沿用。开发者：ET，MIT License。"
+  "size": 153508611,
+  "sha256": "d730bbb93f6534f6e71d7dd24231cbc932120f6921397bc827aed8b09c40e5fd",
+  "releaseNotes": "ET 定制版 v3.0.0-et.43（包名 etc.github.ai，可覆盖安装）。本版修复【设置→API 连接】弹窗里看不到本机已下载模型、列表为空/全置灰的问题：\n• 根因：打开 API 连接弹窗时只做了“若已扫描就直接用缓存”，而 App 常在你授予“所有文件访问”权限之前就完成首次扫描——那时还读不到公共目录（/storage/emulated/0/LocalDreamET/models），模型被缓存成未下载；授权后再次打开弹窗仍用这份旧缓存、不会重扫，所以明明模型已就绪（如 anythingv5cpu，引擎也能正常启动）却不在可选列表。日志里的“Public model scan: 0”只统计自定义模型，内置模型本就不计入，属于误导信息。\n• 修复：每次打开 API 连接弹窗都强制重新扫描磁盘，已下载且可直接出图（含无需转换、CPU 直读权重）的模型正确列出并排在最前、默认选中第一个；未下载/不完整的置灰并给出中文原因。\n• 已核对：设置入口可见；单选就绪模型→确认后先启动前台服务+本机引擎+0.0.0.0 局域网 HTTP，成功才弹三行只读信息窗（点按即复制并提示“已复制”）；AI 地址取真实物理 WiFi 网卡 IPv4（过滤 127.0.0.1 与 172.17/docker/169.254 虚拟网卡，端口被占自动顺延并显示实际端口）、46 位 Key 持久化可重置（Bearer/X-API-Key 鉴权、错 key 401、/healthz 免 key）、模型名为所选真实 id；常驻通知带“停止服务”一键停止并释放引擎/WakeLock/WifiLock/端口；Android13 通知权限、Android14 前台服务类型正确；同一引擎复用不多开。沿用 et.42 大小核 rayon 线程收敛与 et.41 极低配档。电脑服务端/聊天端本轮无改动。开发者：ET，MIT License。"
 }

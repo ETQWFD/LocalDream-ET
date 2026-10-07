@@ -49,8 +49,8 @@ android {
         minSdk = 28
 //        minSdk = 31
         targetSdk = 36
-        versionCode = 116
-        versionName = "3.0.0-et.42"
+        versionCode = 117
+        versionName = "3.0.0-et.43"
 
         // et.26: GitHub OAuth Device Flow client_id. Empty => device-flow entry
         // is shown disabled (no request, no fake login). Device flow needs no secret.

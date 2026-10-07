@@ -64,8 +64,14 @@ fun ApiServerDialog(onDismiss: () -> Unit) {
         loading = true
         val list = withContext(Dispatchers.IO) {
             val repo = ModelRepository.getInstance(context)
-            runCatching { repo.ensureLoaded() }
-            repo.models.filter { it.id != "upscaler_anime" && it.id != "upscaler_realistic" }
+            // et.43: force a FRESH disk scan every time the dialog opens, not just
+            // ensureLoaded(). The app may have first scanned before "All files access"
+            // was granted, caching isDownloaded=false for models that are in fact present
+            // in the public models dir; ensureLoaded() short-circuits on that stale cache.
+            runCatching { repo.refreshAllModels() }
+            repo.models
+                .filter { it.id != "upscaler_anime" && it.id != "upscaler_realistic" }
+                .sortedWith(compareByDescending<Model> { it.isDownloaded }.thenBy { it.name.lowercase() })
         }
         models = list
         selected = list.firstOrNull { it.isDownloaded }?.id
