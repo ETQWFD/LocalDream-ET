@@ -1,21 +1,21 @@
 {
   "name": "Local Dream ET Server",
-  "version": "1.1.6",
-  "versionCode": 116,
-  "tag": "server-v1.1.6",
+  "version": "1.1.7",
+  "versionCode": 117,
+  "tag": "server-v1.1.7",
   "prerelease": true,
   "channel": "github",
   "platforms": {
     "windows": {
-      "file": "LocalDreamET-Server-Setup-1.1.6.exe",
-      "size": 11254447,
-      "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/server-v1.1.6/LocalDreamET-Server-Setup-1.1.6.exe"
+      "file": "LocalDreamET-Server-Setup-1.1.7.exe",
+      "size": 11252666,
+      "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/server-v1.1.7/LocalDreamET-Server-Setup-1.1.7.exe"
     },
     "linux-x86_64": {
-      "file": "LocalDreamET-Server-1.1.6-linux-x86_64.tar.gz",
-      "size": 16521789,
-      "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/server-v1.1.6/LocalDreamET-Server-1.1.6-linux-x86_64.tar.gz"
+      "file": "LocalDreamET-Server-1.1.7-linux-x86_64.tar.gz",
+      "size": 16520135,
+      "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/server-v1.1.7/LocalDreamET-Server-1.1.7-linux-x86_64.tar.gz"
     }
   },
-  "notes": "v1.1.6（性能/内存复查，基于引擎真实参数，不虚报速度）：①引擎单实例常驻、模型启动时仅加载一次，连续/批量出图复用同一进程不重启不重复 load；批量由引擎内部 batch_count 一次出多张。②线程默认按真实核数 min(max(核数,2),8)（保底2、上限8），并在控制台/GUI 显示。③经 --help/strings 核实引擎只支持 --model/--listen-ip/--listen-port/--threads/--mmap 等，无独立 --fp16，精度由模型文件决定，未臆加任何参数（引擎默认 mmap 复用权重）。④代理流式转发用 16KB 小块、注入临时缓冲配对释放，外壳 RSS 约 3.7MB；默认 20 步/长边不变。保留 v1.1.5：默认无内容过滤、魔搭+hf-mirror 源 Range 实测、46 位 Key 持久化与 Bearer/X-API-Key 鉴权、物理/虚拟网卡识别与防火墙提示、Unicode 新宋体、看门狗只报一次、免 UAC 用户级安装、未完整不就绪。版权归 etc（MIT）。"
+  "notes": "v1.1.7（模型加载慢/加载期界面卡死专项，区分加载慢与生成慢）：①启动改为【先绑定对外端口、引擎与模型在后台加载】，外壳端口秒级可连（旧版会阻塞等待最多约60秒才绑口，期间界面像卡死）；加载期间 GET /healthz 返回 503 且结构化给出 status=loading 与 load_elapsed_s（已用时秒），加载完成才 ready=200。②GUI 与控制台在加载期实时显示“正在加载模型 <名> … 已用时 Ns”，不阻塞消息循环、不刷屏（约1秒一刷）。③看门狗重写：引擎进程活着但仍在加载时耐心等待、不再误判为死亡而反复重启；只有进程真正退出才按 1→2→4…秒指数退避重启，且只报一次。④启动只加载向导选中的那 1 个模型，其余在 GUI 下拉切换时再加载，不预加载；模型加载一次后常驻，后续请求不重新 load。⑤引擎参数仅传 --help 实证存在的 --model/--listen-ip/--listen-port/--threads（--threads 按真实物理核 min(max(核,2),8)），--mmap 为引擎默认权重映射，未臆加 --fp16 等不存在的加速开关。保留 v1.1.6 全部：默认无内容过滤、魔搭+hf-mirror 源（Range 实测）、46位Key持久化与 Bearer/X-API-Key 鉴权、物理/虚拟网卡识别与防火墙提示、Unicode 新宋体、引擎缺失不刷屏、免UAC用户级安装、三滑杆透传、批量 batch_size/n 真出多张、未完整不就绪。Linux 无代理冒烟：外层端口0秒绑定、加载期 healthz=503 结构化 body、错Key=401、对Key=503、看门狗退避不重启不刷屏、外壳RSS约3.7MB。版权归 etc（MIT）。"
 }

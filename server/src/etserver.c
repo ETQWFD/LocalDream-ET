@@ -86,7 +86,7 @@
 
 /* ============================ 全局配置 ============================ */
 #define APP_NAME      "Local Dream ET Server"
-#define APP_VERSION   "1.1.6"
+#define APP_VERSION   "1.1.7"
 #define COPYRIGHT_STR "Copyright (C) 2026 etc"
 
 #define DEFAULT_PORT       8080      /* 对外监听端口 */
@@ -120,6 +120,9 @@ static volatile int g_running = 1;
 static volatile int g_restart_count = 0;
 static volatile int g_engine_ready = 0;  /* 仅由看门狗探测更新；/healthz 直接读，不阻塞请求线程 */
 static volatile int g_engine_missing = 0;/* 引擎可执行文件缺失(永久错误)：看门狗不再疯狂重启 */
+static volatile int g_engine_alive = 0;  /* 引擎进程是否在跑（不论是否就绪） */
+static volatile long g_load_start_ms = 0;/* 本轮引擎拉起时刻（用于“已用时 Ns”显示），0=无加载 */
+static volatile long g_last_load_log_s = -1; /* 上次打印加载进度的整秒，避免刷屏 */
 
 /* 前向声明（定义在后文） */
 static void mkdir_p(const char* base, const char* sub);
@@ -914,39 +917,55 @@ static void* watchdog_thread(void* arg) {
         if(!g_running) break;
 
         /* 未选择/下载模型时没有可运行的引擎：保持代理外壳，绝不空转重启 */
-        if(g_cfg.model_path[0]==0){ g_engine_ready=0; continue; }
+        if(g_cfg.model_path[0]==0){ g_engine_ready=0; g_engine_alive=0; continue; }
 
         /* 引擎文件缺失（多为被杀软隔离）：不刷屏、不累加重启次数；
            每 ~6s 轻量探测一次文件是否被还原，恢复后自动拉起。 */
         if(g_engine_missing){
-            g_engine_ready=0;
+            g_engine_ready=0; g_engine_alive=0;
             for(int w=0; g_running && w<6; w++) poll_sleep_ms(1000);
-            if(g_running && spawn_engine()==0)
-                log_line("检测到引擎已恢复，正在启动……");
+            if(g_running && spawn_engine()==0){
+                g_engine_alive=1; g_load_start_ms=(long)time(NULL); g_last_load_log_s=-1;
+                log_line("检测到引擎已恢复，正在后台加载模型……");
+            }
             continue;
         }
 
         int alive = child_alive();
-        int healthy = alive ? upstream_healthy() : 0;
-        g_engine_ready = healthy;   /* 更新全局就绪标志，供 /healthz 毫秒级读取 */
-        if(!alive || !healthy) {
-            g_restart_count++;
-            log_line("看门狗检测到引擎异常(alive=%d healthy=%d)，第 %d 次重启，退避 %ds",
-                     alive, healthy, g_restart_count, backoff);
-            kill_engine();
-            poll_sleep_ms(backoff*1000);
-            backoff = backoff<15 ? backoff*2 : 30; /* 指数退避，封顶 30s */
-            if(!g_running) break;
-            if(spawn_engine()==0){
-                /* 等待最多 30s 让模型加载并开始监听 */
-                int waited=0;
-                while(g_running && waited<30000){
-                    if(upstream_healthy()){ log_line("引擎已就绪(重启后)"); backoff=1; break; }
-                    poll_sleep_ms(1000); waited+=1000;
+        g_engine_alive = alive;
+
+        /* v1.1.7 关键：进程活着但还没就绪 = 模型正在后台加载（大模型可能数分钟）。
+           此时绝不当作崩溃重启，耐心等待；只在进程真正退出(alive=0)时才重启。 */
+        if(alive){
+            int healthy = upstream_healthy();
+            int was = g_engine_ready;
+            g_engine_ready = healthy;
+            if(healthy && !was) log_line("✅ 模型加载完成，引擎已就绪：%s", g_cfg.model_id);
+            if(!healthy){
+                /* 加载中：每秒打印一次“已用时 Ns”，不刷屏 */
+                long el = g_load_start_ms? (long)time(NULL)-g_load_start_ms : 0;
+                long s = el;
+                if(s != g_last_load_log_s){
+                    g_last_load_log_s = s;
+                    log_line("⏳ 正在后台加载模型 %s … 已用时 %lds（加载期间界面不卡死）",
+                             g_cfg.model_id, s);
                 }
             }
-            /* spawn 返回 -1 若是引擎缺失，spawn_engine 已置 g_engine_missing，
-               下一轮进入静默等待分支，不会继续刷退避日志。 */
+            continue;   /* 活着就绝不重启，避免打断加载/抢占权重 */
+        }
+
+        /* 走到这里：进程已退出(alive=0)。按退避重启。 */
+        g_engine_ready=0;
+        g_restart_count++;
+        log_line("看门狗：引擎进程已退出(alive=0)，第 %d 次重启，退避 %ds",
+                 g_restart_count, backoff);
+        kill_engine();
+        poll_sleep_ms(backoff*1000);
+        backoff = backoff<15 ? backoff*2 : 30;
+        if(!g_running) break;
+        if(spawn_engine()==0){
+            g_engine_alive=1; g_load_start_ms=(long)time(NULL); g_last_load_log_s=-1;
+            log_line("已重新拉起引擎，后台加载模型中……");
         }
     }
     return NULL;
@@ -1140,10 +1159,16 @@ static void* handle_conn(void* arg) {
     if(!strcmp(method,"GET") && !strcmp(path,"/healthz")){
         /* 直接读看门狗维护的全局标志，毫秒级返回，不做网络探测 */
         int ok = g_engine_ready;
-        char out[128]; snprintf(out,sizeof(out),
-            "{\"status\":\"%s\",\"engine_restarts\":%d,\"model\":\"%s\"}",
-            ok?"ready":"starting", g_restart_count, g_cfg.model_id);
-        send_json(c, ok?200:503, ok?"OK":"Starting", out);
+        long el = g_load_start_ms? (long)time(NULL)-g_load_start_ms : 0;
+        const char* st;
+        if(ok) st="ready";
+        else if(g_engine_missing) st="engine_missing";
+        else if(g_engine_alive) st="loading";   /* 进程活着、模型后台加载中 */
+        else st="starting";
+        char out[256]; snprintf(out,sizeof(out),
+            "{\"status\":\"%s\",\"engine_restarts\":%d,\"model\":\"%s\",\"load_elapsed_s\":%ld}",
+            st, g_restart_count, g_cfg.model_id, el);
+        send_json(c, ok?200:503, ok?"OK":"Service Unavailable", out);
         close_socket(c); return NULL;
     }
 
@@ -1386,11 +1411,12 @@ static void ui_refresh(HWND h){
     snprintf(buf,sizeof(buf),"当前模型（点击复制）: %s", g_cfg.model_id[0]?g_cfg.model_id:"(未选择)");
     ui_set_text(h,IDC_COPY_MODEL,buf);
     /* 门控：只有引擎就绪才是“可出图”，否则明确提示未就绪 */
-    const char* ready;
-    if(g_engine_ready)            ready="✅ 就绪 · 可出图";
-    else if(g_engine_missing)     ready="⛔ 引擎缺失（见控制台：杀软隔离/加白名单）";
-    else if(g_cfg.model_path[0]==0) ready="⏳ 未就绪：请先在控制台向导下载/选择模型";
-    else                          ready="⏳ 未就绪：引擎加载中，暂不能出图";
+    char ready[160];
+    if(g_engine_ready)            snprintf(ready,sizeof(ready),"✅ 就绪 · 可出图");
+    else if(g_engine_missing)     snprintf(ready,sizeof(ready),"⛔ 引擎缺失（见控制台：杀软隔离/加白名单）");
+    else if(g_cfg.model_path[0]==0) snprintf(ready,sizeof(ready),"⏳ 未就绪：请先在控制台向导下载/选择模型");
+    else { long el=g_load_start_ms?(long)time(NULL)-g_load_start_ms:0;
+           snprintf(ready,sizeof(ready),"⏳ 正在后台加载模型… 已用时 %lds（界面不卡死）", el); }
     snprintf(buf,sizeof(buf),"状态: %s\n看门狗重启次数: %d   内容限制: %s   数据目录: %s",
              ready, g_restart_count, g_cfg.content_filter?"有限制":"无限制", g_datadir);
     /* v1.1.4 Bug2：列出所有候选 IP，标注物理/虚拟，手机填“物理网卡”那个 */
@@ -1573,20 +1599,20 @@ int main(int argc, char** argv) {
         run_wizard();
     }
 
-    /* 拉起引擎 */
-    if (g_cfg.model_path[0] && spawn_engine()==0) {
-        /* 等待就绪 */
-        int waited=0;
-        while(waited<60000){
-            if(upstream_healthy()){ log_line("引擎首次健康检查 200，就绪"); break; }
-            poll_sleep_ms(1000); waited+=1000;
+    /* v1.1.7 先监听后加载：立即拉起引擎(非阻塞)并马上绑对外端口；
+       模型在后台加载，加载期间 /healthz=503(loading)，界面不卡死。 */
+    if (g_cfg.model_path[0]) {
+        if(spawn_engine()==0){
+            g_engine_alive=1; g_load_start_ms=(long)time(NULL); g_last_load_log_s=-1;
+            log_line("已拉起引擎，后台加载模型 %s 中（不阻塞界面）……", g_cfg.model_id);
+        } else {
+            log_line("引擎启动失败（缺失？见控制台诊断），看门狗将按退避处理。");
         }
-        if(waited>=60000) log_line("警告：引擎 60s 内未就绪，看门狗会持续重试");
     } else {
         log_line("未配置模型，仅启动代理外壳；下载模型后请在 config 里填 model_path 再重启。");
     }
 
-    /* 看门狗 + 对外监听 + 控制台 */
+    /* 看门狗 + 对外监听 + 控制台（对外端口此刻即绑定，不必等模型加载完） */
 #ifdef _WIN32
     _beginthreadex(NULL,0,(unsigned(__stdcall*)(void*))watchdog_thread,NULL,0,NULL);
     _beginthreadex(NULL,0,(unsigned(__stdcall*)(void*))listen_thread,NULL,0,NULL);

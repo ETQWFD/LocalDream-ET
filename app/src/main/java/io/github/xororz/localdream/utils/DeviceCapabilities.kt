@@ -251,6 +251,34 @@ object DeviceCapabilities {
     }
 
     /**
+     * et.42: count "big" CPU cores by reading each online cpu's max frequency from
+     * sysfs, and taking those at >=95% of the highest max freq found. We do NOT
+     * hardcode cpu0-3 — topology varies; on the test device cpu0-3@2.3GHz are the
+     * big cores and cpu4-7@1.8GHz the LITTLE ones. Falls back to a safe 4 when the
+     * sysfs values are unreadable. Used to set RAYON_NUM_THREADS (the engine is a
+     * rayon binary and ignores OMP_NUM_THREADS), avoiding 8-thread big.LITTLE thrash.
+     */
+    fun bigCoreCount(): Int {
+        return runCatching {
+            val freqs = mutableListOf<Int>()
+            var cpu = 0
+            while (cpu < 64) {
+                val f = runCatching {
+                    java.io.File("/sys/devices/system/cpu/cpu$cpu/cpufreq/cpu_max_freq")
+                        .readText().trim().toIntOrNull()
+                }.getOrNull()
+                if (f != null) freqs.add(f)
+                cpu++
+            }
+            if (freqs.size < 2) return@runCatching 4
+            val maxF = freqs.maxOrNull() ?: return@runCatching 4
+            val big = freqs.count { it >= (maxF * 0.95).toInt() }
+            // Sanity: at least 2, never more than half+2 of cores, leave headroom for UI.
+            big.coerceAtLeast(2).coerceAtMost((Runtime.getRuntime().availableProcessors() / 2 + 2).coerceAtLeast(4))
+        }.getOrDefault(4)
+    }
+
+    /**
      * SD1.5 long-edge ceiling adapts to total RAM (64-aligned):
      * ≤6 GB → 512; ≤10 GB → 640; >10 GB → 768. Kept conservative so the
      * MNN fp16 UNet does not OOM on mid-range phones.

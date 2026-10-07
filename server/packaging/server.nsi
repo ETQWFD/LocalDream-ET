@@ -6,7 +6,7 @@ ManifestDPIAware true
 !include "x64.nsh"
 
 Name "Local Dream ET Server"
-OutFile "LocalDreamET-Server-Setup-1.1.6.exe"
+OutFile "LocalDreamET-Server-Setup-1.1.7.exe"
 Unicode true
 RequestExecutionLevel user
 SetCompressor /SOLID lzma
@@ -15,7 +15,7 @@ ShowInstDetails show
 InstallDir "$LOCALAPPDATA\Programs\LocalDreamET-Server"
 InstallDirRegKey HKCU "Software\LocalDreamET-Server" "InstallDir"
 
-!define PRODUCT_VERSION "1.1.6"
+!define PRODUCT_VERSION "1.1.7"
 !define PRODUCT_PUBLISHER "etc"
 
 !insertmacro MUI_PAGE_WELCOME
