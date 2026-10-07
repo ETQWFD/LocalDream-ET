@@ -739,9 +739,19 @@ class ModelRepository private constructor(private val context: Context) {
             .sortedBy { it.name.lowercase() }
             .also { list ->
                 runCatching {
+                    // et.45: "0" was misleading. Reserved built-in models (e.g.
+                    // anythingv5cpu) are intentionally NOT added to the custom list, but
+                    // they ARE ready when their on-disk sd15cpu layout is complete. Count
+                    // them separately so the log reflects what is actually available.
+                    val builtInReady = run {
+                        val root = Model.getModelsDir(context)
+                        root.listFiles()?.count { d: File ->
+                            d.isDirectory && isReservedModelId(d.name) && Model.hasSd15CpuLayout(d)
+                        } ?: 0
+                    }
                     io.github.xororz.localdream.cloud.LogHub.log(
                         io.github.xororz.localdream.cloud.LogHub.Category.APP,
-                        "Public model scan: ${list.size} ready/imported models",
+                        "Public model scan: ${list.size} custom/imported + $builtInReady built-in ready",
                     )
                 }
             }

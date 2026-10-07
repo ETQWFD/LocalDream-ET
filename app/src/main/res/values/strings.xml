@@ -339,6 +339,7 @@
     <string name="mem_diag_refresh">Refresh</string>
     <string name="mem_diag_note">Diagnostic info; varies by device and runtime stage.</string>
     <string name="err_engine_oom_killed">Out of memory: the engine was killed by the system. We auto-retried at the safe 384 setting; if it still fails, please choose 384 or lower and close other background apps.</string>
+    <string name="err_extreme_low_oom">Already at the lowest 256/8-step tier and still killed by the system: please close other background apps / free memory and retry, or generate on the PC server instead.</string>
     <string name="gpu_unavailable_cpu">No usable GPU (OpenCL) detected on this device; running on CPU (slower).</string>
     <string name="qnn_unavailable_cpu">Hexagon NPU not supported on this device; using CPU/GPU instead.</string>
     <string name="upload_images_title">Upload generated images</string>

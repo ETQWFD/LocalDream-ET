@@ -372,6 +372,32 @@ class BackgroundGenerationService : Service() {
             var attemptSteps = steps
             var attemptWidth = width
             var attemptHeight = height
+            // et.45: HARD request-build-layer tier for extreme-low-end 32-bit devices
+            // (armeabi-v7a, ~2-3GB, no fp16/dotprod, e.g. PowerVR GE8320). Regardless of
+            // what the UI / saved speed_tier / custom fields say, the params actually sent
+            // to the engine are pinned to the only proven-stable profile: 256 long edge,
+            // <=8 steps, euler_a, batch 1. This is where S:25 in the log is overridden.
+            if (io.github.xororz.localdream.utils.DeviceCapabilities.extremeLowRam(this@BackgroundGenerationService)) {
+                val le = 256
+                val (cw, ch) = run {
+                    val lo = minOf(attemptWidth, attemptHeight)
+                    val hi = maxOf(attemptWidth, attemptHeight)
+                    val scale = le.toDouble() / hi
+                    var w = Math.round(attemptWidth * scale).toInt()
+                    var h = Math.round(attemptHeight * scale).toInt()
+                    w = (w / 8) * 8; h = (h / 8) * 8
+                    if (w < 8) w = 8; if (h < 8) h = 8
+                    w to h
+                }
+                attemptWidth = cw
+                attemptHeight = ch
+                attemptSteps = 8
+                attemptSampler = "euler_a"
+                io.github.xororz.localdream.cloud.LogHub.log(
+                    io.github.xororz.localdream.cloud.LogHub.Category.GENERATE,
+                    "Extreme-low-end device: pinned to 256/8/euler_a/batch1 (was ${width}x${height}/$steps/$scheduler)",
+                )
+            }
             var cpuRetryDone = false
             // et.30: independent OOM safe-step retry (384 long edge). Each flag
             // fires at most once so GPU->CPU and OOM->384 cannot loop.
@@ -752,17 +778,45 @@ class BackgroundGenerationService : Service() {
                 val engineDied = exitCode in setOf(137, 134, 139)
                 if (engineDied && !safeOomRetryDone) {
                     safeOomRetryDone = true
+                    // et.45-patch: tier-aware OOM retry. On extreme-low-end 32-bit devices we
+                    // never escalate to 384/20 (that just OOMs again). If we are ALREADY at
+                    // the minimum 256/8 tier and still got 137, give up cleanly with a clear
+                    // message — do NOT restart the engine in a loop.
+                    val extreme = io.github.xororz.localdream.utils.DeviceCapabilities
+                        .extremeLowRam(this@BackgroundGenerationService)
+                    val longEdge = maxOf(attemptWidth, attemptHeight)
+                    val alreadyLowest = longEdge <= 256 && attemptSteps <= 8
+                    if (extreme && alreadyLowest) {
+                        io.github.xororz.localdream.cloud.LogHub.log(
+                            io.github.xororz.localdream.cloud.LogHub.Category.GENERATE,
+                            "OOM at minimum 256/8 tier on extreme-low device; stopping.",
+                        )
+                        updateState(GenerationState.Error(getString(R.string.err_extreme_low_oom)))
+                        stopSelf()
+                        break@attemptLoop
+                    }
                     io.github.xororz.localdream.cloud.LogHub.log(
                         io.github.xororz.localdream.cloud.LogHub.Category.GENERATE,
-                        "Engine died mid-run (exit=$exitCode, err=${e.message}); auto retry at 384 safe step",
+                        "Engine died mid-run (exit=$exitCode, err=${e.message}); auto retry safe step",
                     )
                     val ratio = io.github.xororz.localdream.ui.screens.inferAspectRatioString(attemptWidth, attemptHeight)
-                    val (nw, nh) = io.github.xororz.localdream.ui.screens.sd15SizeForRatio(ratio, 384)
-                    attemptWidth = nw
-                    attemptHeight = nh
-                    attemptCfg = 7f
-                    attemptSampler = "dpm++2m"
-                    attemptSteps = 20
+                    if (extreme) {
+                        // et.45-patch: keep the extreme-low device pinned to the minimum tier
+                        // rather than jumping to 384/20.
+                        val scale = 256.0 / maxOf(attemptWidth, attemptHeight)
+                        attemptWidth = (Math.round(attemptWidth * scale).toInt() / 8) * 8
+                        attemptHeight = (Math.round(attemptHeight * scale).toInt() / 8) * 8
+                        attemptCfg = 7f
+                        attemptSampler = "euler_a"
+                        attemptSteps = 8
+                    } else {
+                        val (nw, nh) = io.github.xororz.localdream.ui.screens.sd15SizeForRatio(ratio, 384)
+                        attemptWidth = nw
+                        attemptHeight = nh
+                        attemptCfg = 7f
+                        attemptSampler = "dpm++2m"
+                        attemptSteps = 20
+                    }
                     // Restart the engine at the new safe resolution, then wait
                     // for 8081 to be ready before resending.
                     if (engineModelId != null) {

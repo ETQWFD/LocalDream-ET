@@ -329,6 +329,7 @@
     <string name="mem_diag_refresh">刷新</string>
     <string name="mem_diag_note">诊断信息，随机型/运行阶段波动。</string>
     <string name="err_engine_oom_killed">内存不足，引擎被系统结束：已自动降到 384 安全参数重试仍失败，请手动选 384 或更低、关闭后台其它应用。</string>
+    <string name="err_extreme_low_oom">已在最低 256/8 步可出图档仍被系统终止：请关闭其它后台应用/清理内存后重试，或改用电脑服务端出图。</string>
     <string name="gpu_unavailable_cpu">本机未检测到可用 GPU(OpenCL)，使用 CPU 运行（速度较慢）。</string>
     <string name="qnn_unavailable_cpu">本机不支持高通 Hexagon NPU，已自动使用 CPU/GPU 运行。</string>
     <string name="upload_images_title">上传生成图片</string>

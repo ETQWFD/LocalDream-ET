@@ -243,7 +243,12 @@ object ChinesePrompt {
     )
 
     private val CJK = Regex("[\\u4e00-\\u9fff]")
-    private val SPLIT = Regex("[\\s，,。.；;、！!？?（）()【】\\[\\]\"'“”‘’/\\\\]+")
+    // et.45: split ONLY on the user's own punctuation, never on whitespace. Splitting
+    // on spaces turned dictionary/MT multi-word phrases like "best quality" /
+    // "cat ears" / "Nacho Neko" into comma-separated single words, inflating CLIP
+    // token count thousands and wrecking the image. Multi-word English phrases stay
+    // whole inside one comma-delimited tag.
+    private val SPLIT = Regex("[，,。.；;、！!？?（）()【】\\[\\]\"'“”‘’/\\\\]+")
     private val QUALITY = "masterpiece, best quality"
     private val NEG_HINT = "lowres, bad anatomy, bad hands, text, error, missing fingers, cropped, worst quality, low quality, jpeg artifacts, watermark, signature"
 
@@ -363,7 +368,10 @@ object ChinesePrompt {
         )) {
             s = s.replace(w, ", ")
         }
-        val tags = s.split(",", " ")
+        // et.45: split on COMMAS ONLY, never on spaces. The stop-word replacements
+        // above already introduce the commas; splitting on whitespace would shred
+        // "best quality" / "cat ears" into single words.
+        val tags = s.split(",")
             .map { it.trim() }
             .filter { it.length >= 2 && it !in STOPWORDS }
             .distinct()
