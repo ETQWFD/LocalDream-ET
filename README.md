@@ -1,6 +1,6 @@
 <div align="center">
 
-# Local Dream ET <img src="./assets/icon.png" width="32" alt="Local Dream ET">
+# Local Dream ET <img src="./docs/icon.png" width="32" alt="Local Dream ET">
 
 **安卓本地 Stable Diffusion · 骁龙 NPU / CPU / GPU 加速**
 ### ET 定制版（开发者：ET）
