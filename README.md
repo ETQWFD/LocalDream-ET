@@ -79,9 +79,6 @@ RELEASE_KEY_PASSWORD=...
 发布新版本时：上传新 APK 到 Release（命名 `LocalDream-ET.apk`），
 并更新 `docs/update.json` 的 `versionCode / versionName / releaseNotes`。
 
-## 致谢
 
-感谢上游 [xororz/local-dream](https://github.com/xororz/local-dream) 及 README 中列出的
-MNN、stable-diffusion.cpp、Qualcomm QNN、xtensor、tokenizers-cpp 等所有开源项目与作者。
 
 <div align="center">定制版 © ET</div>
