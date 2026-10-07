@@ -97,6 +97,11 @@ class BackgroundGenerationService : Service() {
                 .writeTimeout(3600, TimeUnit.SECONDS)
                 .callTimeout(3600, TimeUnit.SECONDS)
                 .retryOnConnectionFailure(true)
+                // et.44: the engine (cpp-httplib, one generation per connection) does not
+                // reliably support keep-alive. Reusing a pooled connection for the 2nd
+                // /generate made the engine print "Req Rcvd" then never start UNET steps
+                // (half-open pooled socket). Force a brand-new TCP connection per request.
+                .connectionPool(okhttp3.ConnectionPool(0, 5, TimeUnit.MINUTES))
                 .build()
         }
 
@@ -410,6 +415,9 @@ class BackgroundGenerationService : Service() {
             val request = Request.Builder()
                 .url("http://$backendHost/generate")
                 .post(jsonObject.toString().toRequestBody("application/json".toMediaTypeOrNull()))
+                // et.44: tell the single-shot engine to close the socket after this
+                // response, so the next generation gets a clean accept.
+                .header("Connection", "close")
                 .build()
 
             val call = generationClient.newCall(request)

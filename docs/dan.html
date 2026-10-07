@@ -3,168 +3,322 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Local Dream ET · 站点数据后台</title>
+<title>Local Dream ET · 运维数据面板</title>
 <link rel="icon" href="icon.png" />
 <meta name="robots" content="noindex,nofollow" />
 <style>
-  :root{--bg:#0b1117;--card:#141e29;--line:#22303e;--txt:#e8eef4;--mut:#9fb0c0;--acc:#2dd4bf;--acc2:#38bdf8;--warn:#fbbf24;--bad:#f87171;}
+  :root{
+    --bg:#0a0e13; --panel:#10161d; --panel2:#0d131a; --line:#1d2731; --line2:#26333f;
+    --txt:#dfe7ee; --mut:#8296a7; --dim:#5f7180;
+    --ok:#34d399; --info:#4aa8ff; --warn:#e5a33d; --bad:#e5604f;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  }
   *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg)}
   body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;
-    background:radial-gradient(1000px 500px at 80% -10%,rgba(45,212,191,.12),transparent 60%),var(--bg);
-    color:var(--txt);line-height:1.6;padding:26px 16px 60px;-webkit-font-smoothing:antialiased}
-  .wrap{max-width:960px;margin:0 auto}
-  .top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:20px}
-  .top img{width:38px;height:38px;border-radius:10px}
-  h1{font-size:22px;font-weight:800}
-  .sub{color:var(--mut);font-size:13px}
-  .spacer{margin-left:auto}
-  a.back,.btn{color:#06281f;background:linear-gradient(90deg,var(--acc),var(--acc2));
-    padding:8px 14px;border-radius:999px;font-weight:700;font-size:13px;border:0;cursor:pointer;text-decoration:none;display:inline-block}
-  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin:18px 0 26px}
-  .stat{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
-  .stat .k{color:var(--mut);font-size:13px;margin-bottom:8px}
-  .stat .v{font-size:32px;font-weight:800;letter-spacing:.5px}
-  .stat .v.acc{color:var(--acc)} .stat .v.b2{color:var(--acc2)} .stat .v.w{color:var(--warn)}
-  .stat .note{color:var(--mut);font-size:11px;margin-top:6px}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:18px}
-  .card h2{font-size:16px;margin-bottom:4px}
-  .card .hint{color:var(--mut);font-size:12px;margin-bottom:12px}
-  table{width:100%;border-collapse:collapse;font-size:13px}
-  th,td{text-align:left;padding:9px 8px;border-bottom:1px solid var(--line)}
-  th{color:var(--mut);font-weight:600;font-size:12px}
-  td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+    color:var(--txt);line-height:1.5;padding:18px 14px 54px;-webkit-font-smoothing:antialiased;font-size:13px}
+  .wrap{max-width:1080px;margin:0 auto}
+  code{font-family:var(--mono);font-size:.92em;background:#0c1218;border:1px solid var(--line);border-radius:4px;padding:0 4px;color:#cdd9e4}
+  /* top bar */
+  .bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding-bottom:12px;border-bottom:1px solid var(--line);margin-bottom:14px}
+  .bar img{width:26px;height:26px;border-radius:6px}
+  .bar h1{font-size:15px;font-weight:700;letter-spacing:.3px}
+  .bar .meta{color:var(--dim);font-size:11px;font-family:var(--mono)}
+  .bar .right{margin-left:auto;display:flex;gap:8px;align-items:center}
+  .btn{background:#121a22;color:var(--txt);border:1px solid var(--line2);border-radius:6px;padding:6px 11px;font-size:12px;cursor:pointer}
+  .btn:hover{border-color:#345064;background:#16202a}
+  /* legend */
+  .legend{display:flex;gap:14px;flex-wrap:wrap;align-items:center;color:var(--mut);font-size:11px;margin-bottom:14px}
+  .lg{display:inline-flex;align-items:center;gap:5px}
+  .dot{width:7px;height:7px;border-radius:50%;display:inline-block}
+  .dot.ok{background:var(--ok)} .dot.tp{background:var(--info)} .dot.na{background:var(--dim)}
+  /* KPI grid */
+  .kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:10px;margin-bottom:16px}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:11px 12px;position:rem;min-height:86px;display:flex;flex-direction:column}
+  .kpi .k{display:flex;align-items:center;gap:6px;color:var(--mut);font-size:11px;margin-bottom:7px}
+  .kpi .v{font-family:var(--mono);font-size:23px;font-weight:700;letter-spacing:-.5px;line-height:1.15}
+  .kpi .v.small{font-size:14px;font-weight:600}
+  .kpi .sub{color:var(--dim);font-size:10.5px;margin-top:auto;padding-top:7px;font-family:var(--mono)}
+  .kpi .delta{font-size:10.5px;font-family:var(--mono);color:var(--ok)}
+  .kpi .delta.flat{color:var(--dim)}
+  .src{font-size:9.5px;padding:1px 5px;border-radius:3px;font-family:var(--mono);letter-spacing:.3px;white-space:nowrap}
+  .src.ok{color:var(--ok);border:1px solid #1d4a3c;background:#0e211b}
+  .src.tp{color:var(--info);border:1px solid #1d3c57;background:#0d1c29}
+  .src.na{color:var(--dim);border:1px solid #2a353f;background:#141b22}
+  .v.ok{color:var(--ok)} .v.info{color:var(--info)} .v.warn{color:var(--warn)} .v.bad{color:var(--bad)} .v.dim{color:var(--dim)}
+  /* sections */
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:8px;margin-bottom:14px;overflow:hidden}
+  .card > .hd{display:flex;align-items:baseline;gap:10px;padding:11px 14px;border-bottom:1px solid var(--line);background:var(--panel2)}
+  .card > .hd h2{font-size:13px;font-weight:700}
+  .card > .hd .d{color:var(--dim);font-size:11px}
+  .card > .bd{padding:12px 14px}
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line)}
+  th{color:var(--dim);font-weight:600;font-size:10.5px;text-transform:uppercase;letter-spacing:.4px}
+  td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;font-family:var(--mono)}
   tr:last-child td{border-bottom:0}
-  .tag{color:var(--acc2);font-weight:700}
-  .pill{font-size:11px;padding:2px 8px;border-radius:999px;background:#1d2c3b;color:var(--mut)}
-  .err{color:var(--bad);font-size:13px}
-  .muted{color:var(--mut)}
-  .loading{color:var(--mut);font-size:13px}
-  .updated{font-size:12px;color:var(--mut)}
+  tbody tr:hover{background:#0f1720}
+  .tag{color:var(--info);font-family:var(--mono);font-size:11.5px}
+  .pill{font-size:10px;padding:1px 6px;border-radius:3px;border:1px solid var(--line2);color:var(--mut);font-family:var(--mono)}
+  .pill.pre{color:var(--warn);border-color:#4a3718;background:#241a0c}
+  .bars{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+  .barrow{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:9px 10px}
+  .barrow .lab{display:flex;justify-content:space-between;font-size:11px;color:var(--mut);margin-bottom:6px}
+  .barrow .lab b{color:var(--txt);font-family:var(--mono)}
+  .track{height:6px;background:#0a1118;border-radius:3px;overflow:hidden}
+  .fill{height:100%;background:linear-gradient(90deg,#2b7fff,#34d399);border-radius:3px}
+  .note{color:var(--mut);font-size:11.5px}
+  .muted{color:var(--mut)} .dim{color:var(--dim)}
+  .mono{font-family:var(--mono)}
+  .load{color:var(--dim);font-size:12px;font-family:var(--mono)}
+  .err{color:var(--bad);font-size:12px}
+  .healthline{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+  .healthline input{flex:1;min-width:220px;background:#0a1118;border:1px solid var(--line2);color:var(--txt);border-radius:6px;padding:7px 9px;font-family:var(--mono);font-size:12px}
+  .status{font-family:var(--mono);font-size:12px}
+  ul.why{margin:6px 0 0 18px;color:var(--mut);font-size:11.5px}
+  ul.why li{margin:3px 0}
+  .foot{color:var(--dim);font-size:11px;margin-top:6px;line-height:1.7}
+  a{color:var(--info)}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <div class="top">
+
+  <div class="bar">
     <img src="icon.png" alt="" />
     <div>
-      <h1>Local Dream ET · 站点数据后台</h1>
-      <div class="sub">下载次数＝GitHub 官方 download_count（真实权威）；访问量/点击＝第三方计数（自 et.41 起埋点，仅量级）</div>
+      <h1>Local Dream ET · 运维数据面板</h1>
+      <div class="meta" id="clock">—</div>
     </div>
-    <div class="spacer"></div>
-    <a class="back" href="index.html">← 返回官网</a>
-    <button class="btn" id="refresh">刷新数据</button>
+    <div class="right">
+      <span class="meta" id="autoState">自动刷新 60s</span>
+      <button class="btn" id="refresh">立即刷新</button>
+      <a class="btn" href="index.html">返回官网</a>
+    </div>
   </div>
 
-  <div class="grid">
-    <div class="stat"><div class="k">官网访问量（第三方计数）</div><div class="v acc" id="visits">—</div><div class="note">自 v3.0.0-et.41 起在首页真实埋点；第三方计数，不去重/不防刷，仅反映量级，可能被广告拦截</div></div>
-    <div class="stat"><div class="k">下载点击量（第三方计数）</div><div class="v b2" id="clicks">—</div><div class="note">点击 APK / EXE / tar.gz 真实下载链接次数；同样自 et.41 起埋点、仅量级；实际文件下载以下方 GitHub 计数为准</div></div>
-    <div class="stat"><div class="k">GitHub 真实下载总量</div><div class="v w" id="ghTotal">—</div><div class="note">Releases 各资产官方 download_count 合计（权威，无法伪造）</div></div>
-    <div class="stat"><div class="k">发布版本数</div><div class="v" id="relCount">—</div><div class="note">GitHub Releases 数量</div></div>
+  <div class="legend">
+    <span class="lg"><span class="dot ok"></span>真实数据：GitHub 官方接口 / 本机探测，不可伪造</span>
+    <span class="lg"><span class="dot tp"></span>第三方计数：公开计数器，仅量级</span>
+    <span class="lg"><span class="dot na"></span>不可用：纯静态站点天然拿不到，需自建后端</span>
   </div>
 
+  <!-- KPI -->
+  <div class="kpis">
+    <div class="kpi"><div class="k">最新发布 <span class="src ok">真实</span></div><div class="v small" id="kLatest">—</div><div class="sub" id="kLatestSub">读取中…</div></div>
+    <div class="kpi"><div class="k">GitHub 下载总量 <span class="src ok">真实</span></div><div class="v" id="kDlTotal">—</div><div class="sub">全部 release 资产累计 <span class="delta flat" id="kDlDelta"></span></div></div>
+    <div class="kpi"><div class="k">手机端下载（最新版） <span class="src ok">真实</span></div><div class="v" id="kPhone">—</div><div class="sub" id="kPhoneSub">LocalDream-ET.apk</div></div>
+    <div class="kpi"><div class="k">服务端下载（最新版合计） <span class="src ok">真实</span></div><div class="v" id="kServer">—</div><div class="sub" id="kServerSub">EXE + tar.gz</div></div>
+    <div class="kpi"><div class="k">访问 PV（页面打开） <span class="src tp">第三方</span></div><div class="v info" id="kPV">—</div><div class="sub">自 et.41 起埋点·不去重</div></div>
+    <div class="kpi"><div class="k">下载点击 PV <span class="src tp">第三方</span></div><div class="v info" id="kClick">—</div><div class="sub">点击真实下载链接·不去重</div></div>
+    <div class="kpi"><div class="k">独立访客 UV <span class="src na">不可用</span></div><div class="v dim">N/A</div><div class="sub">静态页无服务端，无法去重</div></div>
+    <div class="kpi"><div class="k">来源 IP / 地域 <span class="src na">不可用</span></div><div class="v dim">N/A</div><div class="sub">需服务端访问日志，见下方说明</div></div>
+    <div class="kpi"><div class="k">出图服务健康 <span class="src ok" id="kHealthSrc">探测</span></div><div class="v dim small" id="kHealth">未接入</div><div class="sub" id="kHealthSub">在下方填入公网 healthz</div></div>
+  </div>
+
+  <!-- platform totals -->
   <div class="card">
-    <h2>各版本 / 各文件真实下载次数</h2>
-    <div class="hint">数据直接来自 GitHub 官方 Releases API（download_count 为 GitHub 统计，无法伪造）；浏览器匿名读取，偶发限流时稍后刷新即可。</div>
-    <div id="ghBody"><span class="loading">正在从 GitHub 读取…</span></div>
+    <div class="hd"><h2>各端真实下载（跨全部版本累计）</h2><span class="d">来源 GitHub Releases API · download_count</span></div>
+    <div class="bd"><div class="bars" id="platformBars"><span class="load">读取中…</span></div></div>
   </div>
 
-  <p class="updated" id="updated"></p>
-  <p class="muted" style="font-size:12px;margin-top:8px">数据口径（如实说明）：① <b>各版本/文件下载次数</b> 与 <b>GitHub 真实下载总量</b> 直接读取 GitHub 官方 Releases API 的 <code>download_count</code>，由 GitHub 统计、无法伪造，浏览器匿名读取（每 IP 每小时 60 次，偶发限流会自动重试或使用 2 分钟内缓存，稍后刷新即可）。② <b>官网访问量 / 下载点击量</b> 因 GitHub Pages 是纯静态、无自有后端，采用第三方计数器在首页真实埋点统计（自 <b>v3.0.0-et.41</b> 版本起才开始埋点，更早访问不计；不去重、不防刷、可能被浏览器广告拦截插件屏蔽），<b>仅反映量级</b>，精确流量以 GitHub 下载次数为准；如需去重/精确的独立访客统计，需另行部署计数后端（如 Cloudflare Worker / EdgeOne Pages Functions）或接入正式统计平台。本页不在官网前台展示入口。</p>
+  <!-- per release -->
+  <div class="card">
+    <div class="hd"><h2>版本 / 文件明细</h2><span class="d">GitHub 官方 download_count（累计值，GitHub 不提供历史曲线）</span></div>
+    <div class="bd" id="ghBody"><span class="load">正在从 GitHub 读取…</span></div>
+  </div>
+
+  <!-- visits -->
+  <div class="card">
+    <div class="hd"><h2>访问与点击计数</h2><span class="d">第三方公开计数器 Abacus · 仅反映量级</span></div>
+    <div class="bd">
+      <p class="note">访问 PV 与下载点击 PV 是首页真实埋点（<code>自 v3.0.0-et.41 起</code>才开始计数，更早访问无数据）。公开计数器<b>不去重、不防刷</b>，同一人刷新多次累加，也可能被浏览器广告拦截插件屏蔽，因此<b>只能看量级趋势，不能当独立访客数</b>。</p>
+      <ul class="why">
+        <li><b>独立访客 UV</b>：需要服务端用 Cookie/指纹去重，纯静态 GitHub Pages 做不到 → 显示 N/A，不估算、不伪造。</li>
+        <li><b>访问来源 IP / 地域 / Referer / 访问日志</b>：只有 HTTP 服务器（或 Worker/函数后端）能拿到并记录，静态托管拿不到 → 不显示假 IP、假地图。</li>
+        <li><b>网站压力（QPS/带宽/在线数）</b>：需服务器指标或 CDN 后台，Pages 无此数据 → 不展示。</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- health -->
+  <div class="card">
+    <div class="hd"><h2>出图服务健康探测</h2><span class="d">浏览器实时 GET 公网 healthz</span></div>
+    <div class="bd">
+      <div class="healthline">
+        <input id="healthUrl" type="text" placeholder="填入公网 healthz 地址，例如 https://节点:端口/healthz（地址保存在你本浏览器，不上传）" />
+        <button class="btn" id="healthGo">探测</button>
+      </div>
+      <div class="status" id="healthOut">未接入：当前没有稳定的公网 healthz 地址。待内网穿透（chmlfrp 等）建好后把地址填到这里，可定时看到 200 就绪 / 503 模型加载中。</div>
+      <p class="foot" id="healthFoot"></p>
+    </div>
+  </div>
+
+  <p class="foot">
+    数据口径：① 各版本/各文件下载次数、各端合计、最新版本，均实时读取 GitHub 官方 Releases API 的 <code>download_count</code>，由 GitHub 统计、无法伪造；浏览器匿名访问（每 IP 约 60 次/小时），限流时自动重试并使用 2 分钟会话缓存。GitHub 只提供“累计值”，不提供历史下载曲线，面板不画虚构趋势；“较上次 +N”来自本浏览器本地存储的上次读数。
+    ② 访问 PV / 点击 PV 为第三方计数器在首页的真实埋点，仅量级、不去重。
+    ③ 访问者真实 IP、地域、访问日志、UV 去重、服务端 QPS/带宽/压力，GitHub Pages 这类纯静态托管<b>天然无法获取</b>；若确实需要，应在自有后端（可在已常驻的 etserver 增加匿名上报/count 接口，或部署 Cloudflare Worker / EdgeOne 函数）采集——但沙箱环境非 7×24 在线，数据可能中断，故在没有稳定后端前<b>不启用、不虚构任何 IP 与压力数字</b>。
+    本页不在官网前台设置入口。刷新于 <span id="updated"></span>。
+  </p>
 </div>
 
 <script>
 (function(){
   "use strict";
-  var REPO = "ETQWFD/LocalDream-ET";
-  function num(id){ var el=document.getElementById(id); return function(v){ el.textContent = (v==null?"—":Number(v).toLocaleString("zh-CN")); }; }
-  var setVisits=num("visits"), setClicks=num("clicks"), setTotal=num("ghTotal"), setRels=num("relCount");
-
-  function getJSON(url){
-    return fetch(url,{cache:"no-store"}).then(function(r){ if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); });
-  }
-  function counter(key){
-    return getJSON("https://abacus.jasoncameron.dev/get/etld-et/"+key)
-      .then(function(j){ return (j && typeof j.value!=="undefined") ? j.value : null; })
-      .catch(function(){ return null; });
-  }
-  function fmtBytes(b){
-    if(b==null) return "";
-    if(b>=1073741824) return (b/1073741824).toFixed(2)+" GB";
-    if(b>=1048576) return (b/1048576).toFixed(1)+" MB";
-    return b+" B";
-  }
-  function fmtDate(s){ try{ return new Date(s).toLocaleString("zh-CN"); }catch(e){ return s||""; } }
-  function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];}); }
-
+  var REPO="ETQWFD/LocalDream-ET";
   var GH_URL="https://api.github.com/repos/"+REPO+"/releases?per_page=100";
-  var GH_CACHE="etld_gh_releases", CACHE_TTL_MS=120000;
-  function ghFromCache(){
-    try{ var raw=sessionStorage.getItem(GH_CACHE); if(!raw) return null;
-      var o=JSON.parse(raw); if(!o || (Date.now()-(o.t||0))>CACHE_TTL_MS) return null; return o.data; }catch(e){ return null; }
-  }
-  function ghToCache(data){ try{ sessionStorage.setItem(GH_CACHE,JSON.stringify({t:Date.now(),data:data})); }catch(e){} }
+  var GH_CACHE="etld_gh_releases", CACHE_TTL=120000;
+  var DL_SEEN="etld_dl_seen";
+
+  function $(id){return document.getElementById(id);}
+  function esc(s){return String(s==null?"":s).replace(/[&<>\"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c];});}
+  function int(v){return Number(v)||0;}
+  function fmt(n){return int(n).toLocaleString("zh-CN");}
+  function fmtBytes(b){ if(b==null)return""; if(b>=1073741824)return (b/1073741824).toFixed(2)+" GB"; if(b>=1048576)return (b/1048576).toFixed(1)+" MB"; return fmt(b)+" B"; }
+  function fmtDate(s){ try{return new Date(s).toLocaleString("zh-CN",{month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"});}catch(e){return s||"";} }
+  function relDate(s){ try{return new Date(s).toLocaleDateString("zh-CN");}catch(e){return "";} }
+
+  /* ---------- GitHub releases ---------- */
+  function ghFromCache(){ try{var raw=sessionStorage.getItem(GH_CACHE);if(!raw)return null;var o=JSON.parse(raw);return (o&&Date.now()-(o.t||0)<=CACHE_TTL_MS)?o.data:null;}catch(e){return null;} }
+  function ghToCache(d){ try{sessionStorage.setItem(GH_CACHE,JSON.stringify({t:Date.now(),data:d}));}catch(e){} }
   function ghFetch(attempt){
     return fetch(GH_URL,{cache:"no-store",headers:{Accept:"application/vnd.github+json"}})
-      .then(function(r){
-        if(r.status===403||r.status===429){ var err=new Error("RATE_LIMIT"); err.status=r.status; throw err; }
-        if(!r.ok) throw new Error("HTTP "+r.status);
-        return r.json();
-      })
-      .catch(function(err){
-        if(attempt>0 && (err.message==="RATE_LIMIT"||err.message==="Failed to fetch"||/NetworkError|load failed/i.test(err.message||""))){
-          return new Promise(function(res){ setTimeout(function(){ res(ghFetch(attempt-1)); }, 900); });
-        }
-        throw err;
-      });
+      .then(function(r){ if(r.status===403||r.status===429){var e=new Error("RATE_LIMIT");e.status=r.status;throw e;} if(!r.ok)throw new Error("HTTP "+r.status); return r.json(); })
+      .catch(function(e){ if(attempt>0&&(e.message==="RATE_LIMIT"||e.message==="Failed to fetch"||/NetworkError|load failed/i.test(e.message||""))){ return new Promise(function(res){setTimeout(function(){res(ghFetch(attempt-1));},900);}); } throw e; });
   }
-  function renderReleases(list){
+
+  function classify(name){
+    name=name||"";
+    if(/LocalDream-Chat-ET\.apk$/i.test(name)) return "chat";
+    if(/LocalDream-ET\.apk$/i.test(name)) return "phone";
+    if(/\.exe$/i.test(name)) return "win";
+    if(/\.tar\.gz$/i.test(name)) return "linux";
+    return "other";
+  }
+  var PLAT={phone:{label:"手机主端 APK",v:0},chat:{label:"聊天端 APK",v:0},win:{label:"服务端 Windows",v:0},linux:{label:"服务端 Linux",v:0},other:{label:"其它",v:0}};
+
+  function render(list){
     var total=0, rels=0, rows=[];
+    Object.keys(PLAT).forEach(function(k){PLAT[k].v=0;});
+    var latestStable=null;
     list.forEach(function(rel){
       if(rel.draft) return;
       rels++;
-      (rel.assets||[]).forEach(function(a){ total += (a.download_count||0); });
-      var assets = rel.assets||[];
+      if(!rel.prerelease && !latestStable) latestStable=rel;
+      var assets=rel.assets||[];
+      var relSum=0;
+      assets.forEach(function(a){
+        var c=classify(a.name); PLAT[c].v+=int(a.download_count); total+=int(a.download_count); relSum+=int(a.download_count);
+      });
       if(!assets.length){
-        rows.push('<tr><td><span class="tag">'+esc(rel.tag_name)+'</span></td>'+
-          '<td class="muted">（无附件，仅源码）</td><td class="n">—</td><td class="n muted">'+esc(fmtDate(rel.published_at))+'</td></tr>');
+        rows.push('<tr><td><span class="tag">'+esc(rel.tag_name)+'</span>'+(rel.prerelease?' <span class="pill pre">预览</span>':'')+'</td><td class="dim">仅源码</td><td class="n">—</td><td class="n dim">'+relDate(rel.published_at)+'</td></tr>');
       } else {
         assets.forEach(function(a,i){
           rows.push('<tr>'+
-            (i===0?'<td rowspan="'+assets.length+'"><span class="tag">'+esc(rel.tag_name)+'</span>'+(rel.prerelease?' <span class="pill">预览</span>':'')+'</td>':'')+
+            (i===0?'<td rowspan="'+assets.length+'"><span class="tag">'+esc(rel.tag_name)+'</span>'+(rel.prerelease?' <span class="pill pre">预览</span>':'')+'<div class="dim mono" style="font-size:10px;margin-top:2px">'+relDate(rel.published_at)+'</div></td>':'')+
             '<td>'+esc(a.name)+'</td>'+
-            '<td class="n"><b>'+Number(a.download_count||0).toLocaleString("zh-CN")+'</b></td>'+
-            '<td class="n muted">'+fmtBytes(a.size)+' · '+esc(fmtDate(a.updated_at))+'</td>'+
+            '<td class="n"><b>'+fmt(a.download_count)+'</b></td>'+
+            '<td class="n dim">'+fmtBytes(a.size)+'</td>'+
           '</tr>');
         });
       }
     });
-    setTotal(total); setRels(rels);
-    document.getElementById("ghBody").innerHTML =
-      '<table><thead><tr><th>版本</th><th>文件</th><th class="n">真实下载次数</th><th class="n">大小 / 更新时间</th></tr></thead><tbody>'+
-      rows.join("")+'</tbody></table>';
-  }
-  function load(){
-    document.getElementById("ghBody").innerHTML='<span class="loading">正在从 GitHub 读取…</span>';
-    counter("sitevisits").then(setVisits);
-    counter("dlclicks").then(setClicks);
 
-    ghFetch(3)
-      .then(function(list){ ghToCache(list); renderReleases(list); })
-      .catch(function(e){
-        var cached=ghFromCache();
-        if(cached){ renderReleases(cached); }
-        else if(e.message==="RATE_LIMIT"){
-          document.getElementById("ghBody").innerHTML =
-            '<span class="err">当前网络对 GitHub 匿名接口限流（每 IP 每小时 60 次）。此为浏览器直连 GitHub 的临时限制，不影响任何文件下载；稍后点“刷新数据”即可看到官方 download_count。</span>';
-        } else {
-          document.getElementById("ghBody").innerHTML =
-            '<span class="err">GitHub 数据读取失败：'+esc(e.message)+'。下载次数可在 GitHub Releases 页面核对，稍后重试。</span>';
-        }
-      });
-    document.getElementById("updated").textContent = "更新于 " + new Date().toLocaleString("zh-CN");
+    /* KPI: latest stable */
+    if(latestStable){
+      $("kLatest").textContent=latestStable.tag_name;
+      $("kLatestSub").textContent=(latestStable.prerelease?"预览 · ":"")+"发布 "+relDate(latestStable.published_at);
+      var phoneAsset=(latestStable.assets||[]).filter(function(a){return classify(a.name)==="phone";})[0];
+      var srvSum=(latestStable.assets||[]).filter(function(a){var c=classify(a.name);return c==="win"||c==="linux";}).reduce(function(s,a){return s+int(a.download_count);},0);
+      $("kPhone").textContent=phoneAsset?fmt(phoneAsset.download_count):"0";
+      $("kPhoneSub").textContent=phoneAsset?phoneAsset.name+" · "+relDate(latestStable.published_at):"该版本无 APK 资产";
+      $("kServer").textContent=fmt(srvSum);
+      var srvTag=(list.filter(function(r){return r.prerelease&&/server/i.test(r.tag_name);})[0]||{}).tag_name;
+      $("kServerSub").textContent=(srvTag?("最新服务端 "+srvTag+" · "):"")+"EXE+tar 合计";
+    }
+    $("kDlTotal").textContent=fmt(total);
+
+    /* delta vs last local view */
+    var delta="";
+    try{
+      var prev=parseInt(localStorage.getItem(DL_SEEN)||"",10);
+      if(!isNaN(prev)){ var d=total-prev; delta = d>0 ? ("较上次 +"+fmt(d)) : (d<0?("较上次 "+fmt(d)):"较上次无变化"); }
+      localStorage.setItem(DL_SEEN,String(total));
+    }catch(e){}
+    var de=$("kDlDelta"); if(delta){ de.textContent="· "+delta; de.className="delta"+(/无变化|^较上次 -/.test(delta)?"":""); }
+
+    /* platform bars */
+    var max=1; Object.keys(PLAT).forEach(function(k){max=Math.max(max,PLAT[k].v);});
+    var bh=Object.keys(PLAT).filter(function(k){return PLAT[k].v>0||k!=="other";}).map(function(k){
+      var p=PLAT[k]; var pct=Math.round(p.v/max*100);
+      return '<div class="barrow"><div class="lab"><span>'+p.label+'</span><b>'+fmt(p.v)+'</b></div><div class="track"><div class="fill" style="width:'+pct+'%"></div></div></div>';
+    }).join("");
+    $("platformBars").innerHTML=bh||'<span class="load">暂无下载数据</span>';
+
+    $("ghBody").innerHTML='<table><thead><tr><th>版本</th><th>文件</th><th class="n">下载次数</th><th class="n">大小</th></tr></thead><tbody>'+rows.join("")+'</tbody></table>';
   }
-  document.getElementById("refresh").addEventListener("click", load);
-  load();
+
+  function loadGH(){
+    $("ghBody").innerHTML='<span class="load">正在从 GitHub 读取…</span>';
+    return ghFetch(3).then(function(list){ghToCache(list);render(list);})
+      .catch(function(e){
+        var c=ghFromCache();
+        if(c){ render(c); return; }
+        $("ghBody").innerHTML = e.message==="RATE_LIMIT"
+          ? '<span class="err">GitHub 匿名接口限流（每 IP 约 60 次/小时）。不影响文件下载；使用 2 分钟缓存或稍后再刷新。</span>'
+          : '<span class="err">GitHub 数据读取失败：'+esc(e.message)+'。稍后重试。</span>';
+        $("platformBars").innerHTML='<span class="err">不可用</span>';
+      });
+  }
+
+  /* ---------- Abacus PV ---------- */
+  function getJSON(u){ return fetch(u,{cache:"no-store"}).then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json();}); }
+  function counter(k){ return getJSON("https://abacus.jasoncameron.dev/get/etld-et/"+k).then(function(j){return (j&&typeof j.value!=="undefined")?j.value:null;}).catch(function(){return null;}); }
+  function loadPV(){
+    counter("sitevisits").then(function(v){ $("kPV").textContent = v==null?"N/A":fmt(v); });
+    counter("dlclicks").then(function(v){ $("kClick").textContent = v==null?"N/A":fmt(v); });
+  }
+
+  /* ---------- healthz probe ---------- */
+  var HEALTH_KEY="etld_health_url", healthTimer=null;
+  function setHealth(state, text, cls){
+    var el=$("kHealth"); el.textContent=state; el.className="v small "+(cls||"dim");
+    $("kHealthSub").textContent=text;
+  }
+  function probe(){
+    var url=$("healthUrl").value.trim();
+    try{localStorage.setItem(HEALTH_KEY,url);}catch(e){}
+    var out=$("healthOut");
+    if(!url){ setHealth("未接入","在下方填入公网 healthz"); out.className="status dim"; out.textContent="未接入：没有可用的公网 healthz 地址。"; return; }
+    setHealth("探测中…","正在请求",); $("kHealth").className="v small warn";
+    var t0=Date.now();
+    fetch(url,{cache:"no-store",mode:"cors"}).then(function(r){
+      var ms=Date.now()-t0;
+      r.text().then(function(txt){
+        var body=""; try{body=txt;}catch(e){}
+        if(r.status===200){ setHealth("就绪 200","响应 "+ms+"ms","ok"); out.className="status ok"; out.textContent="200 就绪（"+ms+"ms）服务可出图。"; }
+        else if(r.status===503){ setHealth("未就绪 503","加载中/未就绪 "+ms+"ms","warn"); out.className="status warn"; out.textContent="503 服务在线但模型未就绪（可能正在加载）："+esc(body.slice(0,140)); }
+        else { setHealth("HTTP "+r.status,"非预期状态 "+ms+"ms","warn"); out.className="status warn"; out.textContent="HTTP "+r.status+"（"+ms+"ms）："+esc(body.slice(0,140)); }
+        $("healthFoot").textContent="探测 "+new Date().toLocaleTimeString("zh-CN");
+      });
+    }).catch(function(e){
+      setHealth("不可达","跨域受限或离线","bad");
+      out.className="status bad";
+      out.textContent="请求失败："+esc(e.message)+"。可能原因：服务离线、地址错误，或该 healthz 未返回 CORS 头（浏览器跨域探测会被拦，命令行 curl 可测）。这不代表服务一定宕机。";
+      $("healthFoot").textContent="探测 "+new Date().toLocaleTimeString("zh-CN");
+    });
+  }
+  $("healthGo").addEventListener("click",probe);
+  $("healthUrl").addEventListener("keydown",function(e){if(e.key==="Enter")probe();});
+  (function(){ var u=""; try{u=localStorage.getItem(HEALTH_KEY)||"";}catch(e){} if(u){ $("healthUrl").value=u; probe(); } })();
+
+  /* ---------- clock / auto refresh ---------- */
+  function tickClock(){ $("clock").textContent=new Date().toLocaleString("zh-CN"); $("updated").textContent=new Date().toLocaleTimeString("zh-CN"); }
+  function loadAll(){ loadGH(); loadPV(); tickClock(); if($("healthUrl").value.trim()) probe(); }
+  $("refresh").addEventListener("click",loadAll);
+  tickClock(); setInterval(tickClock,1000);
+  loadAll();
+  healthTimer=setInterval(function(){ loadGH(); loadPV(); if($("healthUrl").value.trim()) probe(); },60000);
 })();
 </script>
 </body>

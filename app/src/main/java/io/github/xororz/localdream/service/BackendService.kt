@@ -276,6 +276,13 @@ class BackendService : Service() {
         idleStopJob?.cancel()
         idleStopJob = serviceScope.launch {
             delay(IDLE_GRACE_MS)
+            // et.44: never tear down the resident engine while the LAN "API
+            // connection" service (LanImageService) is live — external chat clients
+            // depend on it. It stops the backend explicitly when the user stops it.
+            if (io.github.xororz.localdream.service.LanImageService.isRunning.value) {
+                Log.i(TAG, "idle stop skipped: LanImageService active")
+                return@launch
+            }
             // A re-entry during the delay normally cancels us. The startId guard
             // closes the remaining edge where a new command's onStartCommand
             // raced in just as the grace fired: stopSelfResult() refuses to stop

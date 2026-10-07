@@ -494,6 +494,22 @@ data class Model(
         fun hasConvertedSd15Outputs(modelDir: File): Boolean {
             return hasCompleteSdPackage(modelDir, qnn = false)
         }
+
+        // et.44: the engine's direct-load sd15cpu layout (main.cpp:418-442). Used to
+        // recognize prebuilt/imported CPU packages that have no on-device "finished"
+        // marker but whose weights the engine loads directly. Every listed file must be
+        // a non-empty regular file, or it is treated as incomplete (never half-ready).
+        private val SD15CPU_LAYOUT = listOf(
+            "tokenizer.json", "clip_v2.mnn", "unet.mnn",
+            "vae_decoder.mnn", "pos_emb.bin", "token_emb.bin",
+        )
+
+        fun hasSd15CpuLayout(modelDir: File): Boolean {
+            if (!modelDir.isDirectory) return false
+            return SD15CPU_LAYOUT.all { name ->
+                File(modelDir, name).let { it.isFile && it.length() > 0L }
+            }
+        }
     }
 }
 
@@ -694,6 +710,16 @@ class ModelRepository private constructor(private val context: Context) {
                     // power-loss can never be listed as a usable model; the user
                     // can then clean it and re-convert.
                     finishedFile.exists() && Model.hasConvertedSd15Outputs(dir) ->
+                        customModels.add(createCustomModel(dir, isNpu = false))
+
+                    // et.44: prebuilt/imported sd15cpu package with NO "finished" marker
+                    // but the engine's direct-load CPU layout is complete. main.cpp sd15cpu
+                    // required set (verified in app/src/main/cpp/src/main.cpp:418-442):
+                    // tokenizer.json, clip_v2.mnn, unet.mnn, vae_decoder.mnn, pos_emb.bin,
+                    // token_emb.bin. The engine loads the .mnn graph directly; it does NOT
+                    // require the on-device-converted .mnn.weight sidecars, so a package that
+                    // starts fine on the native CLI was wrongly judged "not ready" here.
+                    Model.hasSd15CpuLayout(dir) ->
                         customModels.add(createCustomModel(dir, isNpu = false))
 
                     npuCustomFile.exists() ->
