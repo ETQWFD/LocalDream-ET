@@ -79,7 +79,7 @@
   <h1>Local Dream ET</h1>
   <p class="tagline">在手机与电脑本地运行 Stable Diffusion 的离线推理 App，无需联网、不上传图片。</p>
   <div class="badges">
-    <span class="badge b">v3.0.0-et.46 / build 120「最后一舞」</span>
+    <span class="badge b">v3.0.0-et.47 / build 121「最后一舞」</span>
     <span class="badge">三 ABI：arm64-v8a · armeabi-v7a · x86_64</span>
     <span class="badge">包名 etc.github.ai</span>
     <span class="badge">签名 CN=ET</span>
@@ -89,8 +89,8 @@
 
 <!-- 最后一舞 版本说明 -->
 <div class="swansong">
-  <h2>🩰 最后一舞 <span class="ver">v3.0.0-et.46 / build 120</span></h2>
-  <p>本版为一次集中收尾：重编全部原生库、加入「强制出图」模式（不自动降档，低配机可能崩溃/极慢，需自行承担），并完善官网图标、评论区与评分。</p>
+  <h2>🩰 最后一舞 <span class="ver">v3.0.0-et.47 / build 121</span></h2>
+  <p>本版为一次集中收尾：加入「强制出图」模式（不自动降档，低配机可能崩溃/极慢，需自行承担）、设置内一键「联系作者」，并完善官网图标、评论区与评分。原生引擎经源码核实 sd15cpu 已开启 MNN 最低工作内存（Memory_Low）与 32 位线程限制，上游新增提交均为其他机型（Qwen/DiT），合入反而会回退 OOM 防护，故本版<strong>不重编原生库</strong>、四个 .so 保持权威字节一致，不放假加速开关。</p>
   <p><strong>坦白说明：作者即将继续上学、面临考试，之后可能无法及时修复问题。</strong>如遇 Bug，请先看帮助页与日志；能等就等，实在着急可自行用源码二次开发（MIT）。</p>
   <p>联系邮箱（点击可复制/发邮件）：<a href="mailto:2416444244@qq.com" style="color:var(--accent)">2416444244@qq.com</a></p>
   <div class="contactrow">
@@ -183,6 +183,7 @@
   <h2>更新机制与安装</h2>
   <ul>
     <li>检测更新读取 update.json，GitHub 主通道优先，失败自动回退镜像通道。</li>
+    <li>「发现新版本」弹窗标题与更新内容由 update.json 的 <code>title</code> / <code>releaseNotes</code> 下发，本版标题即显示「发现新版本 v3.0.0-et.47『最后一舞』」，更新说明首行为联系作者说明，支持换行。</li>
     <li>下载走前台服务并显示进度通知；断点续传校验 206/Content-Range，不盲目删 .part。</li>
     <li>安装优先 PackageInstaller，失败回退系统安装器并引导“未知来源”。</li>
   </ul>

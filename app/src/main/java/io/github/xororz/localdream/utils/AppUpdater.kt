@@ -48,6 +48,9 @@ object AppUpdater {
         val apkUrl: String,
         val sizeBytes: Long,
         val sha256: String = "",
+        // et.47: optional server-driven dialog title (e.g. an edition name such as
+        // 「最后一舞」). Blank -> client falls back to the default "new version" title.
+        val title: String = "",
     )
 
     // Edit these two constants to retarget the update channel.
@@ -121,6 +124,7 @@ object AppUpdater {
             apkUrl = url,
             sizeBytes = json.optLong("size", 0L),
             sha256 = json.optString("sha256", "").trim().lowercase(),
+            title = json.optString("title").ifBlank { json.optString("name") },
         ).takeIf { it.versionCode > BuildConfig.VERSION_CODE }
     }
 
@@ -145,6 +149,7 @@ object AppUpdater {
             releaseNotes = json.optString("body"),
             apkUrl = asset.optString("browser_download_url"),
             sizeBytes = asset.optLong("size", 0L),
+            title = json.optString("name"),
         ).takeIf { it.versionCode > BuildConfig.VERSION_CODE && it.apkUrl.isNotBlank() }
     }
 

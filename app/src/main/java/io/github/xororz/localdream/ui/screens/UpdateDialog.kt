@@ -154,7 +154,8 @@ internal fun UpdateDialog(
     val title = when (phase) {
         UpdatePhase.CHECKING -> stringResource(R.string.update_checking)
         UpdatePhase.UP_TO_DATE -> stringResource(R.string.update_up_to_date_title)
-        UpdatePhase.AVAILABLE -> stringResource(R.string.update_available_title)
+        UpdatePhase.AVAILABLE -> info?.title?.takeIf { it.isNotBlank() }
+            ?: stringResource(R.string.update_available_title)
         UpdatePhase.DOWNLOADING -> stringResource(R.string.update_downloading_title)
         UpdatePhase.READY -> stringResource(R.string.update_ready_title)
         UpdatePhase.ERROR -> stringResource(R.string.error_title)
