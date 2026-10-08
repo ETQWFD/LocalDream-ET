@@ -1,0 +1,11 @@
+# Cloudflare Worker 部署配置（评分/评论写票网关）
+# 部署：见 cloudflare/DEPLOY.md
+# 密钥不要写进本文件，用：
+#   wrangler secret put GITHUB_TOKEN
+#   wrangler secret put ADMIN_KEY
+name = "et-ratings"
+main = "et-ratings-worker.js"
+compatibility_date = "2026-10-01"
+
+# workers.dev 免费路由：部署后得到 https://et-ratings.<你的子域>.workers.dev
+# 该地址填入官网前端常量 RATING_API（docs/index.html / docs/dan.html）。
