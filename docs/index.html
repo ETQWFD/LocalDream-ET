@@ -69,6 +69,23 @@
     color:var(--text);border-radius:8px;padding:9px 11px;font:inherit;margin:5px 0}
   .cmtnote{color:var(--muted);font-size:12px;background:var(--panel);border:1px dashed var(--line);
     border-radius:8px;padding:10px 12px;margin:8px 0}
+  .dist{margin:10px 0;max-width:420px}
+  .distrow{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);margin:3px 0}
+  .distrow .lab{width:26px}
+  .distrow .track{flex:1;height:8px;background:#0c1017;border-radius:4px;overflow:hidden}
+  .distrow .fill{height:100%;background:linear-gradient(90deg,#f5b942,#4f8cff)}
+  .distrow .n{width:38px;text-align:right;font-family:ui-monospace,monospace}
+  .stars.voted{cursor:default}
+  .stars.voted span{cursor:default}
+  .ratenote{font-size:11px;color:var(--dim);margin-top:6px}
+  /* 6 步教程折叠 */
+  details.step{border:1px solid var(--line);border-radius:10px;padding:0;margin:8px 0;background:var(--panel)}
+  details.step summary{cursor:pointer;padding:12px 14px;font-weight:600;font-size:14px;list-style:none}
+  details.step summary::-webkit-details-marker{display:none}
+  details.step summary::before{content:"▸ ";color:var(--accent)}
+  details.step[open] summary::before{content:"▾ "}
+  details.step .bd{padding:0 14px 12px;font-size:13.5px;color:var(--text)}
+  .warn{background:#241a0c;border:1px solid #4a3718;color:#e5a33d;border-radius:8px;padding:8px 11px;font-size:12.5px;margin:8px 0}
 </style>
 </head>
 <body>
@@ -119,9 +136,39 @@
     <button class="btn ghost" type="button" id="srvBtn" style="cursor:pointer">下载服务端（Windows / Linux）</button>
     <a class="btn ghost" href="https://github.com/ETQWFD/LocalDream-ET/releases/tag/desktop-v3.0.1">旧电脑图形版 v3.0.1</a>
   </div>
-  <p class="muted">手机版 v3.0.0-et.45，约 153 MB，含 arm64-v8a / armeabi-v7a / x86_64 三套原生引擎，包名 <code>etc.github.ai</code>，签名 <code>CN=ET</code>。<strong>et.45 专为 32 位 / 2–3GB 低端机（PowerVR GE8320，无半精度，约 164 秒/步）“想生成就内存不足/无法出图”做根因修复</strong>：①低配机强制“可出图档”——<strong>在真正发给引擎的请求层</strong>（不是只改界面）无视历史/自定义参数（哪怕存了 25 步/384），一律钉为 <strong>长边256、8步、euler_a、单张</strong>，手选高参数自动回退并中文提示；若 256/8 最低档仍被系统杀(137)，不再疯狂重启，直接中文提示关后台/清内存或改用电脑服务端；<strong>诚实结论：该机 384/多步物理上不可行（384×25步约70分钟必被杀），256/8步是可用档，目标几分钟出完一张，不承诺数量级提速</strong>；②普通生成全程保活——前台服务+常驻通知+WakeLock/WifiLock，一张图没跑完前切页/内存回收/超时都不杀引擎，读取超时覆盖单张最长耗时、靠真实进度刷新；多张同一引擎顺序复用、每张立即落盘再出下一张，第二张不重启不丢；③<strong>修复提示词被逐词加逗号</strong>——旧逻辑把 best quality、sharp focus、Nacho Neko、cat ears 等多词短语按空格拆成单词，CLIP 输入暴涨几千 token（首次编码慢约 400 倍）且毁图，现英文保留原始逗号短语、中文译出的英文短语整体保留，不再逐词加逗号；④模型扫描——anythingv5cpu 等内置但公共目录已就绪的模型正确计入就绪（此前日志恒为 0 是只统计自定义、内置被跳过的计数误导），授权“所有文件访问”后可识别。<strong>安装后在“关于/版本”看到 build 119 即新版</strong>。以下为历史版本说明：et.44 修两个导致“无法生成 / 第二张不出 / 弹窗没模型”的根因（据 32 位真机日志）：①模型就绪判定——对照原生引擎加载代码确认 sd15cpu 必需文件集（tokenizer.json、clip_v2.mnn、unet.mnn、vae_decoder.mnn、pos_emb.bin、token_emb.bin），此前只认“转换标记/.weight 侧车”，把无标记但引擎能直读的预构建 CPU 包漏掉（故一直 scan:0、anythingv5cpu 不显示），现按引擎真实文件集判定，齐全即就绪、缺一置灰；②第二张卡死——引擎“一连接出一图”，旧网络层复用被半关的连接导致第二张只 Req Rcvd 不推进，现每张用干净新连接（连接池不复用 + Connection: close），连续/批量逐张串行、每张立即落盘入历史不丢图；③引擎不再被误杀——切页/内存回收只清界面与图片缓存、不杀正在生成或 API 服务中的引擎，开 API 连接时常驻，143 主动停不误报崩溃、仅 137 OOM 降档重试；低端 batch=1/384（极低配 256）/极速档，出完整批空闲后卸载引擎还内存。无半精度 armv7 约 164 秒/步是硬件地板，不做假提速。<strong>安装后在“关于/版本”看到 build 118 才是本新版</strong>，<strong>最新安装包 153,510,171 字节</strong>（153,507,523 是旧 et.42；若你已装过同 build118 的早期包，请按此字节数重装一次）。<strong>et.44 补丁（按真机密集 code=143 日志再修）</strong>：经代码与 git 考古确认，本机并“没有”定时探活看门狗（/health 只是进页面一次性被动就绪门，从不杀进程），真正误杀出图中引擎的是两处——④改尺寸/自动降档也发 ACTION_RESTART：sd15cpu 的宽高本就随每次请求传入、无需重启，现仅 NPU（启动要按分辨率选 patch）才重启，CPU 引擎常驻复用；⑤生成异常把 read interrupted/连接重置/broken pipe/超时等连接层错误当成引擎死亡而 SIGTERM 强杀重拉：现只认确证的硬退出（137/134/139）才降档重启一次，连接层错误对存活引擎只原地重连重发一次、绝不静默反复重启。回退后同一模型出图期间引擎持续复用，不中途被杀、不丢第一张。<strong>et.43 修复【设置→API 连接】弹窗看不到本机已下载模型（列表为空/全置灰）</strong>：根因是打开弹窗只在“尚未扫描”时才扫盘，而 App 常在授予“所有文件访问”权限前已首扫（当时读不到公共目录 models），模型被缓存成未下载，授权后仍用旧缓存不重扫——所以模型明明已就绪（如 anythingv5cpu，引擎也能启动）却不在列表（日志的“Public model scan: 0”只统计自定义模型，内置模型不计入，是误导）；现每次打开弹窗都强制重扫磁盘，已下载且可直接出图（含无需转换/CPU 直读权重）的模型正确列出并排最前、默认选中，未就绪置灰并中文说明。三行只读信息（真实物理 WiFi IP+实际端口，过滤 127.0.0.1/172.17/docker/169.254；46 位 Key 可复制可重置；模型名）、常驻通知一键停止、Bearer/X-API-Key 鉴权、/healthz 免 key、Android14 前台服务类型均已核对。<strong>et.42 针对 32 位大小核机型再做一处有确证的线程优化</strong>：经原生引擎字符串实证，引擎为 Rust rayon 并行、实际读取 <code>RAYON_NUM_THREADS</code>/<code>RAYON_RS_NUM_CPUS</code>，此前 App 只设了 rayon 不识别的 <code>OMP_NUM_THREADS</code>，导致 8 个线程在大小核间漂移抖动；现按 <code>/sys</code> 各核最大频率<strong>动态判定大核组</strong>（不写死核号），把 rayon/OMP 线程数统一收敛到大核个数（如 GE8320 的 4 个 2.3G 大核），减少跨核迁移；不做高风险硬绑核，每步实际耗时仍需真机掐表（不承诺秒数）。同时复核确认：出图前内存预检在启动引擎前即选定 256/6 步极低配档；224 因 native 不保证非 64 倍数对齐而<strong>不加</strong>；strings 证实无可命令行开启的 VAE 分块/注意力切片开关，不放假按钮、四个原生库未重编；主动停止(143)不误报崩溃。<strong>et.41 针对 32 位 / 2–3GB 内存低端机（据一手引擎日志）</strong>：①云上传部分旧图反复 FAIL null——历史记录指向已被改名/移动的旧文件，现上传前按真实文件系统解析最终文件并校验存在/非空，文件已不存在或 0B 直接中文提示并置灰、不空转重试，同一文件幂等去重（同时只传一次），网络错误退避最多 3 次，保留 GitHub→Gitee 回退；②新增<strong>极低配自动档</strong>：32 位且无半精度(fp16)/可用内存很低时默认长边 <strong>256</strong>、<strong>6 步</strong>、euler_a、单张，修图同步降，出图前做可用内存预检不足再降一档，主动停止(exit 143)不再误报崩溃、仅系统杀(137)才降档且只重试一次，修正引擎峰值内存/线程日志显示 0 的问题；③<strong>诚实告知算力地板</strong>：该类 armv7 机无半精度/dotprod、约 164 秒/步是硬件极限，软件无法快一个数量级，即便 6 步也可能十几分钟，建议换 64 位新机或用电脑服务端出图（已 strings 实证引擎无可命令行开启的 OpenCL/tile-VAE 开关，不放假加速按钮）。<strong>et.40 重点：大幅提速 + “API 连接”加固</strong>：①出图页新增【极速 / 均衡 / 质量】三档——<strong>极速</strong> 8 步 + 快速采样器 euler_a + 低配机 384 长边（理论计算量约为原来 512²×20 的 1/4），32 位/低内存/≤4GB 设备首次进入自动默认极速档并中文提示，其余默认<strong>均衡</strong>（16 步/dpm），<strong>质量</strong> 28 步/dpm_karras；进度回调节流、位图后台解码，生成时界面不卡可取消（实际耗时请真机掐表，嫌慢选“极速”）；②【设置→API 连接】端到端加固：修复 Android14 前台服务类型（specialUse 显式声明，防启动崩溃）、补齐 WiFi 锁权限（此前 WifiLock 未真正生效）、重置 Key 后运行中的服务立即生效、三行信息点按复制即时刷新；就绪模型弹窗、物理网卡 IP（过滤 172.17/docker/169.254）、端口顺延、0.0.0.0 端点与 Bearer/X-API-Key 鉴权、通知/App 内停止释放全部自查通过，外部请求未带步数时按当前速度档出图。<strong>et.39 修复（内存与卡顿/速度）</strong>：①连续生成/修图后运行内存只涨不清、手机变卡甚至 code=137——结果图被界面取走后立即释放进程级缓存的全尺寸位图与修图参考大图，“API 连接”服务每次请求位图用完即回收、批量每张即收即放，新增 onTrimMemory 内存紧张自动清缓存；低端机（32 位/低内存/≤4GB）默认长边降到 384、20 步、批量 1；结果一律落盘按需加载不堆内存；修图相册/相机原图按目标尺寸采样解码（inSampleSize）且在后台线程；②速度基于真实瓶颈：引擎单实例常驻、权重 mmap 只读复用，批量/连续生成不重新加载模型，线程按真实核数限定 2–4 避免大小核抖动（不承诺固定秒数，真机耗时以设备为准）。<strong>et.38 修复</strong>：①云上传到仓库 png/ 仍然失败的真正根因——上传前无条件“自动建库”，fine-grained 令牌建库返回 403，还没传到文件就失败；现绑定自有仓库时不再建库，PUT <code>contents/png/</code> 成功后校验返回路径、重名自动加序号、超时/5xx 自动重试、GitHub 不通自动回退 Gitee，401/403(令牌权限)/404(仓库) 分别给准确中文引导，日志上传走同一可靠路径，未登录点云按钮弹登录；②内容限制开关<strong>默认改为关闭（无限制）</strong>，关闭后正/反向提示词都不拦截、不注入负面词、不改写，手机 API 连接服务模式同样受该开关控制，仅主动开启才检测；③应用内更新下载后“安装包未签名/解析失败”——下载完成先校验字节大小与官方 <code>sha256</code>（update.json 已带），不符自动删包重下，校验通过再走系统 PackageInstaller 安装，杜绝残缺包。<strong>et.37 新功能：设置里新增“API 连接（本地出图服务）”</strong>——选一个本机已下载就绪的模型后，手机即变成一台局域网出图服务器（前台服务 + 常驻通知，可在通知里停止）：同一 WiFi 下，让“ET 聊天画师”或其它软件填这台手机的 <code>http://物理网卡IP:8082</code>、46 位密钥与模型名，就能通过 <code>/sdapi/v1/txt2img</code>、<code>/sdapi/v1/img2img</code>、<code>/v1/images/generations</code>（免 key 的 <code>/healthz</code>）调本机引擎出图，Bearer / X-API-Key 鉴权；地址/密钥/模型名三行点按复制、密钥可重置、端口被占自动顺延，WakeLock/WifiLock 保活（停止即释放），单引擎复用不多开、批量 n 真出 n 张（国产 ROM 建议加电池白名单/自启动）。et.36 修复：云上传不再误报“当前无网络…:?”——取消会误杀的联网预判定，直接以真实上传 HTTP 结果为准，超时/连不上/令牌无效/仓库无权限分别给可操作中文提示（历史每张图旁“云”按钮同路径，未登录引导登录）；修复批量生成多张时进度归零、前一张丢失只剩最后一张——批量 n 张全部累积保留、独立存盘（时间戳+序号）并都进历史，总进度按“已完成张数/总张数”连续推进；默认 20 步、长边≤512（32 位更小）、推理线程按核数 2–4、批量时引擎常驻复用。et.34：历史每张图“云”上传、“设置→上传图片”能读到历史图、修图清重绘度+按钮禁用+真实进度条、应用内更新与模型下载真实字节进度不再提前跳 99%。</p>
-  <p class="muted">服务端 v1.1.7：把普通电脑变成本地出图 HTTP API（SD1.5）。本版专项修<strong>“加载模型慢 / 加载期间窗口像卡死”</strong>（注意区分加载慢与生成慢）：<strong>启动先秒级绑定对外端口、引擎与模型在后台加载</strong>，不再像旧版那样阻塞等待最多约 60 秒；加载期界面与控制台实时显示“正在加载模型 xx … 已用时 Ns”，<code>/healthz</code> 返回 503 并带 <code>status=loading</code>/<code>load_elapsed_s</code>，加载完成才 ready；<strong>看门狗能识别“正常加载中”</strong>，进程活着就耐心等待、不误判死亡反复重启，仅进程真正退出才按 1→2→4…秒退避重启且只报一次；<strong>启动只加载向导选中的 1 个模型</strong>，其余下拉切换时再加载，模型加载一次后常驻、后续请求不重新 load。引擎参数仅传 <code>--help</code> 实证存在的 <code>--model/--listen-*/--threads</code>（<code>--threads</code> 按真实物理核 min(max(核,2),8)），未臆加 <code>--fp16</code> 等假开关，代理 16KB 流式转发、外壳常驻仅数 MB。保留 v1.1.6 全部：引擎单实例常驻、默认无内容过滤、魔搭+hf-mirror 源 Range 实测可下、引擎直读 safetensors/GGUF 无需转换、.part 续传完整校验、46 位 Key 持久化与 Bearer/X-API-Key 鉴权、物理/虚拟网卡识别与防火墙提示、Unicode 新宋体无乱码、引擎缺失只报一次、免 UAC 用户级安装、三滑杆透传、批量真出多张、未完整不就绪。提供 Windows 安装程序与 Linux 包（见上方“下载服务端”）。</p>
-  <p class="muted">et.33：彻底消除“Prepare runtime dir failed: Failed to prepare QNN libraries”致命错误——NPU/DiT 加速库改为尽力准备，32 位/非骁龙/缺库一律跳过，即使骁龙高端机磁盘满或复制失败也只回退 CPU/GPU 继续出图，绝不崩溃；sd15npu 在不支持或加速库未就绪时自动改用 CPU；三架构引擎与已验证版本逐字节一致。et.32：在非高通 / 32 位 / x86_64 机型上自动改用 CPU/GPU 出图（高通 NPU 仅骁龙高端可用）；设置新增“上传图片”，可多选本机已生成图片批量上传到自己的仓库；日志上传改为完整聚合（应用事件 + app.log + engine/convert 日志，超长保留头尾）。et.31：修图弹窗真实列出本机已就绪模型；卸载/重装后自动扫描 <code>LocalDreamET/models</code> 找回模型；内容限制开关（默认开启，可关）；每张结果可单独云上传 PNG。et.30：降低内存占用，32 位默认 384 分辨率、被系统结束(137)自动降档重试，不支持 OpenCL 时回退 CPU。</p>
+  <p class="muted">手机版当前 v3.0.0-et.47，约 153 MB，含 arm64-v8a / armeabi-v7a / x86_64 三套原生引擎，包名 <code>etc.github.ai</code>，签名 <code>CN=ET</code>。装完在「关于/版本」看到 build 121 即新版。更早版本的逐条修复见 GitHub Release 说明。按下面 6 步使用：</p>
+
+<details class="step" open>
+  <summary>① 下载安装 App</summary>
+  <div class="bd">点上方「手机 APK」下载固定名 <code>LocalDream-ET.apk</code>，允许安装未知来源。安装后在「关于/版本」核对 build 号；三架构引擎已内置。</div>
+</details>
+<details class="step">
+  <summary>② 授予「所有文件访问」权限</summary>
+  <div class="bd">首次使用请在系统设置里给 App「所有文件 / 管理所有文件」权限，否则读不到公共目录里的模型，模型列表会是空的。</div>
+</details>
+<details class="step">
+  <summary>③ 下载 / 选择模型</summary>
+  <div class="bd">把模型放到公共目录 <code>LocalDreamET/models</code>；带转换流程的模型会自动转换一次，<code>anythingv5cpu</code> 等 CPU 直读模型无需转换。文件齐全即就绪、缺文件置灰。</div>
+</details>
+<details class="step">
+  <summary>④ 本地出图 / 修图</summary>
+  <div class="bd">输入提示词 → 选模型 → 出图；修图在「修图」里上传整图、设重绘强度（0.3–0.7，默认 0.45）。英文提示逐词透传。
+    <div class="warn">低端机（32 位 / 无半精度 / 2–3GB，如 PowerVR GE8320）默认强制安全档：长边 256、8 步、euler_a、单张；约 164 秒/步是硬件地板，软件无法快一个数量级，不承诺秒出。<br>「设置 → 强制出图」默认关；打开后不再自动降档、按你选的分辨率/步数硬跑——低配机可能崩溃或极慢，需自行承担风险。</div>
+  </div>
+</details>
+<details class="step">
+  <summary>⑤ 可选：API 连接 / 用电脑服务端出图</summary>
+  <div class="bd">手机「设置 → API 连接」选一个就绪模型，手机即变成局域网出图服务器（前台服务常驻、WakeLock 保活），其它设备可连 <code>http://手机IP:8082</code>。也可用上方「下载服务端」在 Windows/Linux 跑 v1.1.7：启动即先绑定端口、引擎后台加载，<code>/healthz</code> 就绪后对外提供 SD1.5 的 txt2img/img2img，默认无内容限制。聊天客户端「ET 聊天画师」v1.0.2 连接服务端出图。</div>
+</details>
+<details class="step">
+  <summary>⑥ 常见问题：内存不足 / 太慢怎么办</summary>
+  <div class="bd"><ul>
+    <li>std::bad_alloc 内存不足：降分辨率/步数；低端机保持 256/8 安全档，或改用电脑服务端。</li>
+    <li>8081 启动失败：模型未下完、未转换完成或 ABI 不匹配。</li>
+    <li>x86 模拟器跑不了 ARM 原生引擎，出图需真机；模拟器只能验证 UI。</li>
+    <li>连续/多张出图引擎复用、每张立即落盘，第二张不重启不丢图。</li>
+  </ul></div>
+</details>
 
   <p class="muted">本站已启用 HTTPS。但微信/QQ 可能对未在中国大陆 ICP 备案的第三方域名（含 github.io 及本自定义域）直接安全拦截（“已停止访问”），这是平台侧限制、网页无法解除；被拦截时请用系统浏览器打开，或到 GitHub Release 页下载。如需在微信内稳定访问需自备已 ICP 备案域名（本版不提供）。</p>
 </section>
@@ -219,6 +266,8 @@
     <div class="stars" id="stars" title="点击打分"></div>
     <div class="rateavg" id="rateAvg">读取中…</div>
   </div>
+  <div class="dist" id="distBox"></div>
+  <div class="ratenote" id="rateNote"></div>
   <div id="cmtList"></div>
   <div id="cmtFormWrap">
     <div class="cmtform">
@@ -297,62 +346,74 @@
 })();
 </script>
 
-<!-- 评分与评论：调用同源 /api；未部署时诚实降级，不出现能填不能存的假框 -->
+<!-- 评分与评论：数字直读公开仓库（匿名，已上线）；写票走同源边缘函数，未部署则禁用输入但保留真实展示 -->
 <script>
 (function(){
   "use strict";
   var API = window.ET_API_BASE || "";
+  var RAW = "https://raw.githubusercontent.com/ETQWFD/LocalDream-ET-ratings/main";
+  var GHAPI = "https://api.github.com/repos/ETQWFD/LocalDream-ET-ratings/contents";
   function $(id){return document.getElementById(id);}
   function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
-  function jget(u,opt){return fetch(API+u,opt).then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json();});}
+  function getJSON(url,opt){return fetch(url,opt).then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json();});}
 
-  function degraded(msg){
-    var av=$("rateAvg"); if(av)av.textContent="—";
-    var st=$("stars"); if(st)st.innerHTML="";
-    var cl=$("cmtList"); if(cl)cl.innerHTML="";
-    var fw=$("cmtFormWrap"); if(fw)fw.style.display="none";
-    var n=$("cmtNote"); if(n){n.style.display="block";n.textContent=msg;}
+  /* 稳定设备指纹 sha256（64 hex），只发哈希 */
+  function fnv64hex(seed){var out="";for(var round=0;round<8;round++){var s=seed+":"+round,h=0x811c9dc5;for(var i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,0x01000193);}out+=("00000000"+(h>>>0).toString(16)).slice(-8);}return out;}
+  function deviceSeed(){var r="";try{r=localStorage.getItem("etld_fpseed")||"";if(!r){r=Math.random().toString(36).slice(2)+Date.now().toString(36);localStorage.setItem("etld_fpseed",r);}}catch(e){r="r"+Date.now();}var n=navigator,s=screen;return[r,s.width+"x"+s.height,s.colorDepth,new Date().getTimezoneOffset(),n.hardwareConcurrency,n.maxTouchPoints,n.userAgent].join("|");}
+  function getFp(){try{if(window.crypto&&crypto.subtle){var data=new TextEncoder().encode(deviceSeed());return crypto.subtle.digest("SHA-256",data).then(function(buf){return Array.prototype.map.call(new Uint8Array(buf),function(b){return("00"+b.toString(16)).slice(-2);}).join("");});}}catch(e){}return Promise.resolve(fnv64hex(deviceSeed()));}
+
+  var MYFP="";
+  function paintStars(avg,voted){var base=(voted!=null)?voted:Math.round(avg);var html="";for(var i=1;i<=5;i++){html+='<span data-v="'+i+'" class="'+(i<=base?"on":"")+'">★</span>';}$("stars").innerHTML=html;$("stars").classList.toggle("voted",voted!=null);}
+  function paintDist(dist){dist=dist||{};var total=0;for(var k=1;k<=5;k++)total+=(dist[k]||0);var html="";for(var s=5;s>=1;s--){var c=dist[s]||0,pct=total?Math.round(c/total*100):0;html+='<div class="distrow"><span class="lab">'+s+'★</span><span class="track"><span class="fill" style="width:'+pct+'%"></span></span><span class="n">'+c+'</span></div>';}$("distBox").innerHTML=html;}
+
+  function loadSummary(){
+    try{var c=sessionStorage.getItem("etld_sum");if(c){var o=JSON.parse(c);if(Date.now()-o.t<60000)return Promise.resolve(o.d);}}catch(e){}
+    return getJSON(RAW+"/summary.json?_="+Date.now()).then(function(d){try{sessionStorage.setItem("etld_sum",JSON.stringify({t:Date.now(),d:d}));}catch(e){}return d;});
   }
-  function paintStars(avg){
-    var html="",r=Math.round(avg);
-    for(var i=1;i<=5;i++){html+='<span data-v="'+i+'" class="'+(i<=r?"on":"")+'">★</span>';}
-    $("stars").innerHTML=html;
-  }
-  function loadRating(){
-    return jget("/api/rating").then(function(j){
-      if(!j||!j.ok) throw new Error("bad");
-      paintStars(j.avg||0);
-      $("rateAvg").textContent = j.count>0 ? (Number(j.avg).toFixed(1)+"★ 共 "+j.count+" 人评分") : "还没人评分，来做第一个";
-    });
+  function alreadyVoted(){return getJSON(RAW+"/ratings/"+MYFP+".json").then(function(d){return d?Number(d.score):null;}).catch(function(){return null;});}
+  function paintSummary(sum,voted){
+    paintStars(sum.avg||0,voted); paintDist(sum.dist||{});
+    $("rateAvg").textContent=(sum.count>0)?(Number(sum.avg).toFixed(1)+" / 5.0 · 共 "+sum.count+" 人 · 最高 "+(sum.highest||0)+"★"):"还没人评分，来做第一个";
+    $("rateNote").textContent=voted!=null?("你已投过 "+voted+" 星（每设备一票）。评分匿名记录地区与机型。"):"评分匿名记录地区与机型。";
   }
   function loadComments(){
-    return jget("/api/comments").then(function(j){
-      if(!j||!j.ok) throw new Error("bad");
-      var list=j.comments||[];
-      if(!list.length){ $("cmtList").innerHTML='<p class="muted">还没有评论，来第一条。</p>'; return; }
-      $("cmtList").innerHTML = list.slice(0,50).map(function(c){
-        var d=new Date(c.ts).toLocaleDateString("zh-CN");
-        return '<div class="cmt"><span class="t">'+esc(d)+'</span><span class="n">'+esc(c.nick)+'</span><div class="x">'+esc(c.text)+'</div></div>';
-      }).join("");
-    });
+    return getJSON(GHAPI+"/comments").then(function(arr){
+      if(!Array.isArray(arr)){$("cmtList").innerHTML="";return;}
+      var files=arr.filter(function(f){return /\.json$/.test(f.name);}).slice(0,50);
+      return Promise.all(files.map(function(f){return getJSON(RAW+"/comments/"+f.name).catch(function(){return null;});}));
+    }).then(function(list){
+      list=(list||[]).filter(Boolean).sort(function(a,b){return(b.ts||0)-(a.ts||0);});
+      if(!list.length){$("cmtList").innerHTML='<p class="muted">还没有评论，来第一条。</p>';return;}
+      $("cmtList").innerHTML=list.map(function(c){var d=new Date(c.ts).toLocaleDateString("zh-CN");return '<div class="cmt"><span class="t">'+esc(d)+'</span><span class="n">'+esc(c.nick)+'</span><div class="x">'+esc(c.text)+'</div></div>';}).join("");
+    }).catch(function(){$("cmtList").innerHTML='<p class="muted">评论读取失败（仓库或网络不可达）。</p>';});
+  }
+
+  function setWriteState(ok,msg){
+    $("stars").style.opacity=ok?1:.4; $("stars").style.pointerEvents=ok?"auto":"none"; $("cmtSubmit").disabled=!ok;
+    var n=$("cmtNote");
+    if(!ok){n.style.display="block";n.textContent=msg;} else {n.style.display="none";}
   }
   $("stars").addEventListener("click",function(e){
-    var v=e.target.getAttribute&&e.target.getAttribute("data-v");
-    if(!v) return;
-    jget("/api/rating",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({score:Number(v)})})
-      .then(loadRating).catch(function(err){alert("评分失败："+(err.message||"网络错误")+"（服务可能尚未部署）");});
+    if($("stars").classList.contains("voted")){alert("每设备一票，感谢！");return;}
+    var v=e.target.getAttribute&&e.target.getAttribute("data-v"); if(!v)return;
+    getJSON(API+"/api/rating",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({score:Number(v),fp:MYFP})})
+      .then(function(){sessionStorage.removeItem("etld_sum");boot();})
+      .catch(function(err){alert("提交失败："+(err.message||"")+"（写票服务待部署，见 COMMENT-BACKEND.md）");});
   });
   $("cmtSubmit").addEventListener("click",function(){
-    var nick=$("cmtNick").value.trim(), text=$("cmtText").value.trim();
+    var nick=$("cmtNick").value.trim(),text=$("cmtText").value.trim();
     if(!text){alert("评论内容不能为空");return;}
-    jget("/api/comments",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({nick:nick,text:text})})
+    getJSON(API+"/api/comments",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({nick:nick,text:text})})
       .then(function(){$("cmtText").value="";loadComments();})
-      .catch(function(err){alert("发表失败："+(err.message||"")+"（可能含被禁内容，或服务尚未部署）");});
+      .catch(function(err){alert("发表失败："+(err.message||"")+"（可能含被禁内容，或写票服务待部署）");});
   });
-  // 初始化探测：连不上就诚实降级
-  loadRating().then(loadComments).catch(function(){
-    degraded("评论 / 评分服务尚未部署。本站为静态托管、无数据库，需按 docs/COMMENT-BACKEND.md 部署边缘函数（EdgeOne Pages Functions + KV）后才会出现真实评论与评分；在此之前不显示可提交的假输入框。");
-  });
+
+  function boot(){return Promise.all([loadSummary(),alreadyVoted()]).then(function(r){paintSummary(r[0],r[1]);});}
+  function probeWrite(){
+    return getJSON(API+"/api/rating?fp="+encodeURIComponent(MYFP)).then(function(){setWriteState(true,"");})
+      .catch(function(){setWriteState(false,"评分/评论提交服务维护中（写票后端待部署，见 COMMENT-BACKEND.md）。上方评分数字仍是公开仓库的真实数据。");});
+  }
+  getFp().then(function(fp){MYFP=fp||"";return boot().then(loadComments).then(probeWrite);});
 })();
 </script>
 </body>

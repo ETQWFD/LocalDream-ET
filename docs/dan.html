@@ -168,6 +168,25 @@
     </div>
   </div>
 
+  <!-- 评分统计 / 管理（同管理口令） -->
+  <div class="card">
+    <div class="hd"><h2>评分统计 / 管理</h2><span class="d">同源后端 /api/admin/ratings · 删除后服务端重建聚合</span></div>
+    <div class="bd">
+      <div class="healthline">
+        <select class="adminkey" id="rtScore" style="max-width:120px">
+          <option value="">分数：全部</option>
+          <option value="5">5 星</option><option value="4">4 星</option>
+          <option value="3">3 星</option><option value="2">2 星</option><option value="1">1 星</option>
+        </select>
+        <input class="adminkey" id="rtRegion" placeholder="省份/国家关键词（如 Hebei / CN）" />
+        <input class="adminkey" id="rtDevice" placeholder="机型关键词（如 Android / iPhone）" />
+        <button class="btn" id="rtLoad">查询评分</button>
+      </div>
+      <div class="status" id="rtSummary">—</div>
+      <div id="rtTable" style="margin-top:10px"></div>
+    </div>
+  </div>
+
   <p class="foot">
     数据口径：① 各版本/各文件下载次数、各端合计、最新版本，均实时读取 GitHub 官方 Releases API 的 <code>download_count</code>，由 GitHub 统计、无法伪造；浏览器匿名访问（每 IP 约 60 次/小时），限流时自动重试并使用 2 分钟会话缓存。GitHub 只提供“累计值”，不提供历史下载曲线，面板不画虚构趋势；“较上次 +N”来自本浏览器本地存储的上次读数。
     ② 访问 PV / 点击 PV 为第三方计数器在首页的真实埋点，仅量级、不去重。
@@ -312,35 +331,107 @@
   beat().then(loadOnline).catch(function(){ $("kOnline").textContent="N/A"; $("kOnlineSub").textContent="后端未部署，无在线数"; });
   setInterval(function(){ beat().then(loadOnline).catch(function(){}); },30000);
 
-  /* ---------- admin：评论删除 / 评分清零 ---------- */
+  /* ---------- 公开仓库匿名直读 + 仅写操作走函数 ---------- */
+  var REPO_RAW="https://raw.githubusercontent.com/ETQWFD/LocalDream-ET-ratings/main";
+  var REPO_API="https://api.github.com/repos/ETQWFD/LocalDream-ET-ratings/contents";
+  function ghGet(url){return fetch(url,{cache:"no-store"}).then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json();});}
+  var writeOk=false;
+  function probeWrite(){return fetch(API+"/api/rating").then(function(r){writeOk=!!r.ok;}).catch(function(){writeOk=false;});}
+  probeWrite();
+
   function adminHeaders(){ return {"Content-Type":"application/json","X-Admin-Key":($("adminkey").value||"")}; }
+
+  /* 评论列表：直读仓库 comments/ */
   function renderAdminComments(list){
     var box=$("cmtAdminList");
     if(!list||!list.length){ box.innerHTML='<div class="note">暂无评论。</div>'; return; }
     box.innerHTML = list.map(function(c){
       var d=new Date(c.ts).toLocaleString("zh-CN");
-      return '<div class="cmtrow"><div class="body"><div><b>'+esc(c.nick)+'</b> <span class="meta">'+esc(d)+'</span></div><div>'+esc(c.text)+'</div></div><button class="btn" data-del="'+esc(c.id)+'">删除</button></div>';
+      return '<div class="cmtrow"><div class="body"><div><b>'+esc(c.nick)+'</b> <span class="meta">'+esc(d)+'</span></div><div>'+esc(c.text)+'</div></div><button class="btn cdel" data-del="'+esc(c.id)+'">删除</button></div>';
     }).join("");
-    Array.prototype.forEach.call(box.querySelectorAll("[data-del]"),function(btn){
+    Array.prototype.forEach.call(box.querySelectorAll(".cdel"),function(btn){
       btn.addEventListener("click",function(){
+        if(!writeOk){alert("写操作后端待部署（见 COMMENT-BACKEND.md）。");return;}
         if(!confirm("删除该评论？")) return;
         apiJSON("/api/admin",{method:"POST",headers:adminHeaders(),body:JSON.stringify({action:"delete_comment",id:btn.getAttribute("data-del")})})
-          .then(function(j){ $("cmtStatus").textContent="已删除 "+(j.removed||0)+" 条"; loadAdminComments(); })
+          .then(function(){ $("cmtStatus").textContent="已删除评论。"; loadAdminComments(); })
           .catch(function(e){ $("cmtStatus").textContent="删除失败："+e.message; });
       });
     });
   }
   function loadAdminComments(){
-    return apiJSON("/api/comments").then(function(j){ renderAdminComments(j.comments||[]); $("cmtStatus").textContent="已连接后端，共 "+(j.comments||[]).length+" 条评论；普通用户无法改他人评论。"; })
-      .catch(function(e){ renderAdminComments([]); $("cmtStatus").textContent="后端未部署："+e.message; });
+    $("cmtStatus").textContent="正在直读公开仓库…";
+    ghGet(REPO_API+"/comments").then(function(arr){
+      var files=(Array.isArray(arr)?arr:[]).filter(function(f){return /\.json$/.test(f.name);});
+      return Promise.all(files.map(function(f){
+        return ghGet(REPO_RAW+"/comments/"+f.name).then(function(c){c.id=f.name.replace(/\.json$/,"");return c;}).catch(function(){return null;});
+      }));
+    }).then(function(list){
+      list=(list||[]).filter(Boolean).sort(function(a,b){return(b.ts||0)-(a.ts||0);});
+      renderAdminComments(list);
+      $("cmtStatus").textContent="直读公开仓库，共 "+list.length+" 条评论（删除需写函数在线）。";
+    }).catch(function(e){ renderAdminComments([]); $("cmtStatus").textContent="GitHub 匿名限流，稍后再试："+e.message; });
   }
   $("cmtLoad").addEventListener("click",loadAdminComments);
   $("ratingReset").addEventListener("click",function(){
-    if(!confirm("清零全部评分（sum/count 归 0）？")) return;
+    if(!writeOk){alert("写操作后端待部署（见 COMMENT-BACKEND.md）。");return;}
+    if(!confirm("清零全部评分？")) return;
     apiJSON("/api/admin",{method:"POST",headers:adminHeaders(),body:JSON.stringify({action:"reset_rating"})})
-      .then(function(){$("cmtStatus").textContent="评分已清零。";})
+      .then(function(){$("cmtStatus").textContent="评分已清零。";loadRatings();})
       .catch(function(e){$("cmtStatus").textContent="清零失败："+e.message;});
   });
+
+  /* 评分概览+明细：直读公开仓库，筛选在前端；删除才走函数 */
+  var RT_SUMMARY=null, RT_ITEMS=[];
+  function loadRtSummary(){
+    try{var c=sessionStorage.getItem("etld_rt_sum");if(c){var o=JSON.parse(c);if(Date.now()-o.t<60000)return Promise.resolve(o.d);}}catch(e){}
+    return ghGet(REPO_RAW+"/summary.json?_="+Date.now()).then(function(d){try{sessionStorage.setItem("etld_rt_sum",JSON.stringify({t:Date.now(),d:d}));}catch(e){}return d;});
+  }
+  function renderRt(){
+    var s=RT_SUMMARY||{};
+    $("rtSummary").textContent=(s.count>0)?("平均分 "+Number(s.avg).toFixed(1)+" / 5.0 · 共 "+s.count+" 人 · 最高 "+(s.highest||0)+"★ · 分布 "+JSON.stringify(s.dist)):"暂无评分（直读公开仓库）";
+    var fs=$("rtScore").value, fr=$("rtRegion").value.trim().toLowerCase(), fd=$("rtDevice").value.trim().toLowerCase();
+    var items=RT_ITEMS.filter(function(it){
+      if(fs&&String(it.score)!==fs)return false;
+      if(fr&&String(it.country+" "+(it.prov||"")).toLowerCase().indexOf(fr)<0)return false;
+      if(fd&&String(it.model||"").toLowerCase().indexOf(fd)<0)return false;
+      return true;
+    });
+    if(!items.length){$("rtTable").innerHTML='<div class="note">无符合条件的评分记录。</div>';return;}
+    var html='<table><thead><tr><th>分数</th><th>国家-省份</th><th>机型</th><th>时间</th><th></th></tr></thead><tbody>';
+    items.forEach(function(it){
+      var d=new Date(it.ts).toLocaleString("zh-CN");
+      html+='<tr><td class="n">'+it.score+'★</td><td>'+esc(it.country)+(it.prov?'-'+esc(it.prov):'')+'</td><td title="'+esc(it.ua)+'">'+esc(it.model)+'</td><td class="dim">'+esc(d)+'</td><td><button class="btn rdel" data-del="'+esc(it.id)+'"'+(writeOk?"":" disabled")+'>删除</button></td></tr>';
+    });
+    html+='</tbody></table>';
+    $("rtTable").innerHTML=html;
+    Array.prototype.forEach.call($("rtTable").querySelectorAll(".rdel"),function(btn){
+      btn.addEventListener("click",function(){
+        if(!writeOk){alert("写操作后端待部署（见 COMMENT-BACKEND.md）。");return;}
+        if(!confirm("删除这条评分？删除后会按剩余记录重建平均分与分布。")) return;
+        apiJSON("/api/admin/ratings",{method:"POST",headers:adminHeaders(),body:JSON.stringify({action:"delete",id:btn.getAttribute("data-del")})})
+          .then(function(){ $("cmtStatus").textContent="已删除评分。"; loadRatings(); })
+          .catch(function(e){ $("cmtStatus").textContent="删除失败："+e.message; });
+      });
+    });
+  }
+  function loadRatings(){
+    renderRt();
+    loadRtSummary().then(function(s){RT_SUMMARY=s;renderRt();}).catch(function(){});
+    ghGet(REPO_API+"/ratings").then(function(arr){
+      var files=(Array.isArray(arr)?arr:[]).filter(function(f){return /\.json$/.test(f.name);});
+      return Promise.all(files.map(function(f){
+        return ghGet(REPO_RAW+"/ratings/"+f.name).then(function(c){c.id=f.name.replace(/\.json$/,"");return c;}).catch(function(){return null;});
+      }));
+    }).then(function(list){
+      RT_ITEMS=(list||[]).filter(Boolean).sort(function(a,b){return(b.ts||0)-(a.ts||0);});
+      renderRt();
+    }).catch(function(e){
+      RT_ITEMS=[]; renderRt();
+      var note=document.createElement("div"); note.className="note"; note.textContent="GitHub 匿名限流，稍后再试（概览走 raw 不受影响）。"; $("rtTable").appendChild(note);
+    });
+  }
+  $("rtLoad").addEventListener("click",loadRatings);
 
   /* ---------- clock / auto refresh ---------- */
   function tickClock(){ $("clock").textContent=new Date().toLocaleString("zh-CN"); $("updated").textContent=new Date().toLocaleTimeString("zh-CN"); }
@@ -349,6 +440,9 @@
   tickClock(); setInterval(tickClock,1000);
   loadAll();
   setInterval(function(){ loadGH(); loadPV(); },60000);
+  /* 筛选在前端对已拉明细做；进入页面即直读公开仓库 */
+  ["rtScore","rtRegion","rtDevice"].forEach(function(id){ var el=$(id); if(el) el.addEventListener("input",renderRt); });
+  loadRatings(); loadAdminComments();
 })();
 </script>
 </body>

@@ -1,58 +1,47 @@
-// GET  /api/comments  → {ok:true, comments:[{id,nick,text,ts}]}
-// POST /api/comments  body {nick, text}  匿名、服务端校验、持久化到 Edge KV
-import { json, corsHeaders, hasForbidden, clientIp, ipHash, rateLimit, readBody } from "./_lib.js";
+// GET  /api/comments            → 列 comments/ 目录（前端通常直读 api.github.com/raw）
+// POST /api/comments {nick,text} 写 comments/<id>.json 到公开仓库；违禁词/URL/媒体/频率沿用 _lib。
+import {
+  json, corsHeaders, hasForbidden, extractClientIp, ipHash, readBody,
+  ghList, ghGetJSON, ghPut,
+} from "./_lib.js";
 
-const K = "comments:list";
-const MAX = 200; // 最多保留最新 200 条
 const NICK_MAX = 20, TEXT_MAX = 300;
 
 export async function onGet(context) {
-  const kv = context.env.ET_KV;
-  if (!kv) return json({ ok: false, error: "KV 未绑定" }, 500, context.request);
   try {
-    const raw = await kv.get(K);
-    const list = raw ? JSON.parse(raw) : [];
-    return json({ ok: true, comments: Array.isArray(list) ? list : [] }, 200, context.request);
+    const files = await ghList(context.env, "contents/comments");
+    const items = await Promise.all(files.map((f) => ghGetJSON(context.env, "contents/comments/" + f.name).then((c) => c).catch(() => null)));
+    const list = items.filter(Boolean).sort((a, b) => (b.ts || 0) - (a.ts || 0));
+    return json({ ok: true, comments: list }, 200, context.request);
   } catch (e) {
     return json({ ok: false, error: "读取失败" }, 500, context.request);
   }
 }
 
 export async function onPost(context) {
-  const kv = context.env.ET_KV;
-  if (!kv) return json({ ok: false, error: "KV 未绑定" }, 500, context.request);
+  const env = context.env;
+  if (!env.GITHUB_TOKEN) return json({ ok: false, error: "写评论服务未配置 GITHUB_TOKEN" }, 500, context.request);
   const body = await readBody(context.request);
   let nick = String(body.nick || "").trim().slice(0, NICK_MAX);
   const text = String(body.text || "").trim().slice(0, TEXT_MAX);
   if (!nick) nick = "匿名网友" + Math.floor(1000 + Math.random() * 9000);
-
   if (!text) return json({ ok: false, error: "评论内容为空" }, 400, context.request);
   if (text.length > TEXT_MAX) return json({ ok: false, error: "评论过长（≤300字）" }, 400, context.request);
-
   const bad = hasForbidden(nick + " " + text);
   if (bad) return json({ ok: false, error: bad }, 400, context.request);
 
-  // 频率限制：同 IP 15 秒一条
-  const ip = clientIp(context.request);
-  const rl = await rateLimit(kv, "rl:cm:" + ipHash(ip), 15);
-  if (rl.blocked) return json({ ok: false, error: "发言太快，请 " + rl.waitSec + " 秒后再试" }, 429, context.request);
+  // 频率：同 IP 15s
+  const ip = extractClientIp(context.request);
+  const rlPath = "contents/limits/cmt-" + ipHash(ip) + ".json";
+  let last = 0;
+  try { last = Number((await ghGetJSON(env, rlPath)) || 0); } catch (e) {}
+  const now = Date.now();
+  if (now - last < 15000) return json({ ok: false, error: "发言太快，请稍后再试" }, 429, context.request);
 
-  const list = [];
-  try {
-    const raw = await kv.get(K);
-    if (raw) { const arr = JSON.parse(raw); if (Array.isArray(arr)) list.push(...arr); }
-  } catch (e) {}
-  const comment = {
-    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-    nick, text, ts: Date.now(),
-  };
-  list.unshift(comment);
-  while (list.length > MAX) list.pop();
-  try {
-    await kv.put(K, JSON.stringify(list));
-  } catch (e) {
-    return json({ ok: false, error: "保存失败" }, 500, context.request);
-  }
+  const id = now.toString(36) + "-" + Math.random().toString(36).slice(2, 8);
+  const comment = { id, nick, text, ts: now };
+  await ghPut(env, "contents/comments/" + id + ".json", comment, "comment");
+  await ghPut(env, rlPath, now, "cmt-rate");
   return json({ ok: true, comment }, 200, context.request);
 }
 

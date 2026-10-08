@@ -1,71 +1,53 @@
-# 评论 / 评分 / 在线数 后端部署说明（COMMENT-BACKEND）
+# 评论 / 评分 后端部署说明（GitHub 仓库存储版）
 
-> 本文件由 et.46「最后一舞」随站提供。**当前沙箱内没有任何已登录的 serverless CLI
-> （已探测：`edgeone` / `wrangler` / `vercel` / `netlify` 均未安装或未登录），
-> 因此函数尚未真正上线。** 下列源码已写好、可一键部署；在你完成部署前，
-> 官网评论区/评分与后台在线数会诚实显示“服务尚未部署 / N/A”，不会出现能填不能存的假输入框。
+> 存储不再使用 Edge KV。**读 = 公开仓库匿名直读（已上线，立即可用）**；**写 = 一个无服务器函数持有令牌写仓库（需用户部署）**。
+> 本运行时无已登录的 EdgeOne / Cloudflare CLI，函数未替你部署；下列代码已写好、可一键上线。
 
-## 0. 实际采用的方案
+## 0. 存储位置（已由作者建好）
+- 公开仓库：`ETQWFD/LocalDream-ET-ratings`（public，分支 main）。
+- `summary.json`：`{avg, count, highest, dist:{"1".."5"}, updatedAt}`，raw 直链
+  `https://raw.githubusercontent.com/ETQWFD/LocalDream-ET-ratings/main/summary.json`（已实测 `Access-Control-Allow-Origin: *`、max-age=300）。
+- 每票：`ratings/<fpHash>.json` = `{score, country, prov, model, ua, ts}`；评论：`comments/<id>.json` = `{nick, text, ts}`。
+- 列目录：`https://api.github.com/repos/ETQWFD/LocalDream-ET-ratings/contents/ratings`（数组，过滤 `.gitkeep`）。
+- **跨设备持久化**：所有读写都在这个公开仓库，任何设备刷新即见同一份数据，不是 localStorage。
 
-- **运行时**：腾讯云 **EdgeOne Pages Functions**（首选；免费额度足够个人站）。
-  本目录代码为 Web 标准 ESM，**同构可直接搬到 Cloudflare Pages Functions**（见第 4 节），无需改逻辑。
-- **存储**：**Edge KV（边缘键值）**，不依赖 GitHub Issues、不需要把 PAT 放进前端。
-  - `comments:list`：评论数组 JSON，最多保留最新 200 条。
-  - `rating:meta`：`{sum, count}`，服务端实时聚合平均分。
-  - `online:<id>`：后台在线心跳，**TTL 120 秒**自动过期，进后台每 30s 上报一次。
-- **跨设备持久化**：评论/评分存在边缘 KV，任何设备刷新、换设备都读到同一份数据，**不是 localStorage 假历史**。
-- **密钥**：`ADMIN_KEY` 只配置在函数运行环境变量里，**绝不出现在前端 JS / 仓库 / 包内**；
-  前台 `dan.html` 在页面里临时输入后随请求头 `X-Admin-Key` 发给函数比对。
-
-## 1. 端点清单（全部同源 `/api/*`）
-
-| 方法 | 路径 | 作用 |
+## 1. 端点（函数代码在 docs/functions/api/）
+| 方法 | 路径 | 说明 |
 |---|---|---|
-| GET | `/api/comments` | 拉取评论列表 `{ok, comments:[{id,nick,text,ts}]}` |
-| POST | `/api/comments` | 提交 `{nick,text}`，服务端校验后写 KV |
-| GET | `/api/rating` | 聚合 `{ok, avg, count}`（avg 保留 1 位小数，0–5） |
-| POST | `/api/rating` | 提交 `{score:1..5}`，服务端累加 sum/count |
-| POST | `/api/online` | 后台心跳 `{id}`，写 `online:<id>`（TTL 120s） |
-| GET | `/api/online` | 列出未过期心跳键数 `{ok, online:N}` |
-| POST | `/api/admin` | `X-Admin-Key` 校验后：`{action:"delete_comment",id}` 删评论 / `{action:"reset_rating"}` 清零评分 |
+| GET | `/api/rating` | 代理仓库 summary（前端通常直读 raw，此端点保留兼容） |
+| POST | `/api/rating` | body `{score:1..5, fp:sha256hex}`：幂等写票 + 读改写 summary |
+| GET | `/api/comments` | 列 comments/（前端通常直读仓库） |
+| POST | `/api/comments` | body `{nick,text}`：违禁词/URL/媒体校验后写 comments/ |
+| POST | `/api/admin` | `X-Admin-Key` 校验后：`delete_comment` / `reset_rating` |
+| GET/POST | `/api/admin/ratings` | 列票（可筛 score/region/device）；`{action:"delete",id}` 删票后从目录**重算** summary |
 
-## 2. 服务端安全实现位置（源码在 `docs/functions/api/`）
+## 2. 数据模型与限频
+- 指纹：前端 `localStorage` 随机种子 + 屏幕宽高×色深 + 时区 + `hardwareConcurrency` + `maxTouchPoints` + UA，做 **SHA-256**（64 hex）。后端 `ratings/<fp>.json` 已存在即幂等返回旧分，不新增。
+- **边界**：清浏览器缓存 / 换浏览器 / 换设备会生成新指纹、被视为新设备（这是匿名投票的固有取舍，前端已在评分区小字说明）。
+- 限频：`limits/rate-<sha(ip)>-<日期>.json` 存当日时间戳数组；同 IP 30s 内≤1 票、当日≤20 票，超限返回中文 429。评论 `limits/cmt-<sha(ip)>.json` 记最后时间戳，15s 内≤1 条。
+- 聚合：投票时按 `avg = (旧avg×旧count + score)/(旧count+1)` 增量更新 `dist[score]++`、`count++`、`highest=max`；管理员删票后**从目录现存票全量重算** summary（不做易错的增减），保证聚合与明细一致。
 
-- **拒绝 URL / 裸域名 / www**：`_lib.js` 的 `RE_URL / RE_WWW / RE_BARE_DOMAIN`。
-- **拒绝图片/视频标识**：`_lib.js` 的 `RE_MEDIA / RE_IMGTAG`。
-- **辱骂违禁词词库**：`_lib.js` 的 `BAD_WORDS`（含“傻逼/他妈的/fuck/shit…”，可自行扩充）。
-  命中即 **400 拒绝保存**，前台不可见。
-- **长度限制**：昵称 ≤20、内容 ≤300（`comments.js`）。
-- **频率限制**：同 IP 评论 15s 一条、评分 30s 一条（`_lib.js` 的 `rateLimit`，KV 记时间戳）。
-- **管理口令**：`_lib.js` 的 `checkAdmin`，恒定时间比对 `env.ADMIN_KEY`；普通用户无法删改他人数据。
+## 3. 服务端采集（geo / UA）
+- IP：依次读 `cf-connecting-ip` → `x-real-ip` → `x-forwarded-for` 首段。
+- 地区（函数在边缘平台取，不编造）：
+  - **Cloudflare Pages Functions**：`request.cf.country` / `request.cf.regionCode` / `request.cf.city`，或响应头 `cf-ipcountry`。
+    出处：https://developers.cloudflare.com/workers/runtime-apis/request/
+  - **EdgeOne Pages Functions**：`request.eo.geo`。出处：https://edgeone.cloud.tencent.com/pages/document/162936866445025280
+    （扁平字段 `countryCodeAlpha2/regionName/cityName` 见 Makers 中间件 GeoProperties：https://cloud.tencent.com/document/product/1552/127609 ；嵌套示例 https://functions-geolocation.edgeone.app/ ）
+  - 拿不到省份只记国家，再没有记 `unknown`。
+- UA 机型（纯函数 `parseUa`）：Android 取 `; <Model> Build/`；iPhone/iPad 识别标识；PC 记系统+浏览器；否则“未知设备”。
 
-## 3. 一键部署：EdgeOne Pages
+## 4. 用户在控制台要做的精确动作
+1. 建一个 **fine-grained Personal Access Token**：
+   - Repository access → 仅选 `ETQWFD/LocalDream-ET-ratings`；
+   - Permissions → **Contents: Read and write**、Metadata: Read-only。
+2. 部署 `docs/functions/` 到 **EdgeOne Pages**（首选）或 **Cloudflare Pages Functions**：
+   - 构建输出目录 = `docs/`（这样 `/functions/api/*` 路由到 `/api/*`）；
+   - 环境变量两个：`GITHUB_TOKEN` = 上面的细粒度令牌（**只在服务端，绝不进前端**）；`ADMIN_KEY` = 你自设的管理口令（dan.html 临时输入，不落本地存储）。
+3. 绑域：把 `etc.tw.kg` 迁到 EdgeOne Pages / Cloudflare Pages（**GitHub Pages 本身不跑函数**），静态页与 `/api/*` 同源。若静态页仍留 GitHub Pages，则函数单独部署到函数域名并在 `index.html`/`dan.html` 设 `window.ET_API_BASE="https://函数域名"`；函数已放行 `https://etc.tw.kg` 与 `.edgeone.app` / `.pages.dev` 的 CORS。
 
-1. 把本仓库导入 **腾讯云 EdgeOne Pages**（关联 GitHub 仓库）。
-   - 构建命令留空；**输出根目录填 `docs/`**（与 GitHub Pages 同一目录）。
-   - 这样 `docs/functions/api/*` 会被识别为边缘函数，路由到 `/api/*`。
-2. 新建一个 **Edge KV 命名空间**，在项目「函数 → 环境变量/绑定」里：
-   - 绑定名 **`ET_KV`** → 选刚建的 KV 命名空间。
-   - 环境变量 **`ADMIN_KEY`** = 你自己设一串强口令（仅服务端可见）。
-3. 部署后访问 `https://<你的项目>.edgeone.app/api/rating`，返回 `{"ok":true,...}` 即成功。
-4. **域名**：在 EdgeOne Pages 绑定自定义域 `etc.tw.kg`（DNS 按 EdgeOne 提示改 CNAME）。
-   - 绑定后官网与 `/api/*` **同源**，前端相对路径直接可用，无需 CORS 特例。
-   - 若你仍想把静态页留在 GitHub Pages、函数单独托管，则把函数部署到独立函数域名，
-     并在 `index.html`/`dan.html` 的前端脚本里设置 `window.ET_API_BASE="https://函数域名"`；
-     本函数已对 `.edgeone.app` / `.pages.dev` / `https://etc.tw.kg` 放行 CORS。
-
-## 4. 迁移到 Cloudflare Pages Functions（等价方案）
-
-- 把 `docs/functions/` 整个放到 Cloudflare 项目的 `functions/` 目录（构建输出根仍指向 `docs/` 内容）。
-- 建一个 **KV namespace**，绑定变量名同样叫 **`ET_KV`**。
-- 在项目 Settings → Environment variables 加 **`ADMIN_KEY`**。
-- Cloudflare Pages Functions 的 `onGet/onPost/onRequest` 签名与 KV API（get/put/list）与本代码一致，**无需改动**。
-
-## 5. 部署后如何确认“真持久化”
-
-- A 设备发一条评论 → B 设备浏览器打开 `/api/comments` 能看到同一条。
-- 连续打两次评分 → `/api/rating` 的 `count` 与 `avg` 随之变化（非写死）。
-- 关掉后台页面 2 分钟后再查 `/api/online`，该心跳消失（TTL 生效）。
-- 不带 `X-Admin-Key` 调 `/api/admin` → 401。
-
-> 在你（有账号的人）完成上述部署前，以上端点不存在；前端已做诚实降级，不会伪造任何评论/评分/在线数。
+## 5. 前后端降级（诚实）
+- 评分数字 / 评论列表：前端**直读公开仓库**，写函数没部署也照样真实展示。
+- 写票（点星、发表评论）：初始化探测 `GET /api/rating`，不可达/404 时，禁用打分与提交按钮，显示“评分/评论提交服务维护中（写票后端待部署，见本文件）”——不会出现点了没反应、也不只存 localStorage。
+- 管理员删票/删评论：需口令 + 函数在线；dan.html 接不上时显示后端未部署。
+- 在线数：仓库版未做心跳写放大，未部署后端时 dan.html 在线数显 **N/A**（不假造）。

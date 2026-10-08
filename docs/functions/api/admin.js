@@ -1,30 +1,23 @@
-// POST /api/admin  body {action:"delete_comment"|"reset_rating", id?}
-// 必须带请求头 X-Admin-Key，与环境变量 ADMIN_KEY 完全一致才放行。
-// ADMIN_KEY 只存在于函数运行环境变量，绝不写进前端仓库。
-import { json, corsHeaders, checkAdmin, readBody } from "./_lib.js";
+// POST /api/admin  {action:"delete_comment"|"reset_rating", id?}
+// 鉴权：请求头 X-Admin-Key 与环境变量 ADMIN_KEY 恒定时间比对；ADMIN_KEY 不进前端。
+import { json, corsHeaders, checkAdmin, readBody, ghDelete, ghPut } from "./_lib.js";
 
 export async function onPost(context) {
-  const kv = context.env.ET_KV;
-  if (!kv) return json({ ok: false, error: "KV 未绑定" }, 500, context.request);
-  if (!checkAdmin(context.request, context.env)) {
-    return json({ ok: false, error: "管理口令无效或未配置 ADMIN_KEY" }, 401, context.request);
-  }
+  const env = context.env;
+  if (!checkAdmin(context.request, env)) return json({ ok: false, error: "管理口令无效或未配置 ADMIN_KEY" }, 401, context.request);
+  if (!env.GITHUB_TOKEN) return json({ ok: false, error: "写操作未配置 GITHUB_TOKEN" }, 500, context.request);
   const body = await readBody(context.request);
-  const action = body.action;
 
-  if (action === "delete_comment") {
+  if (body.action === "delete_comment") {
     const id = String(body.id || "");
     if (!id) return json({ ok: false, error: "缺少评论 id" }, 400, context.request);
-    let list = [];
-    try { const raw = await kv.get("comments:list"); if (raw) list = JSON.parse(raw); } catch (e) {}
-    const before = list.length;
-    list = list.filter(function (c) { return String(c.id) !== id; });
-    await kv.put("comments:list", JSON.stringify(list));
-    return json({ ok: true, removed: before - list.length }, 200, context.request);
+    const r = await ghDelete(env, "contents/comments/" + id + ".json");
+    return json({ ok: r.ok, deleted: r.ok }, r.ok ? 200 : 500, context.request);
   }
 
-  if (action === "reset_rating") {
-    await kv.put("rating:meta", JSON.stringify({ sum: 0, count: 0 }));
+  if (body.action === "reset_rating") {
+    const empty = { avg: 0, count: 0, highest: 0, dist: { "1": 0, "2": 0, "3": 0, "4": 0, "5": 0 }, updatedAt: new Date().toISOString() };
+    await ghPut(env, "contents/summary.json", empty, "reset rating");
     return json({ ok: true, reset: true }, 200, context.request);
   }
 

@@ -118,3 +118,133 @@ export function checkAdmin(request, env) {
 export async function readBody(request) {
   try { return await request.json(); } catch (e) { return {}; }
 }
+
+// ---------- 客户端 IP（多平台候选） ----------
+// 来源：EdgeOne Pages Functions request.eo（官方 https://edgeone.cloud.tencent.com/pages/document/162936866445025280 ）；
+// Cloudflare Pages Functions 用 cf-connecting-ip / request.cf。
+export function extractClientIp(request) {
+  try { if (request.eo && request.eo.ip) return String(request.eo.ip); } catch (e) {}
+  const cf = request.headers.get("cf-connecting-ip") || request.headers.get("x-real-ip") || "";
+  if (cf) return cf.trim();
+  const xff = request.headers.get("x-forwarded-for") || "";
+  if (xff) return xff.split(",")[0].trim();
+  return "0.0.0.0";
+}
+
+// ---------- 地理位置（服务端取，绝不编造） ----------
+// 依次尝试：EdgeOne Pages 的 request.eo.geo（扁平与嵌套两种已知形状）、
+// Cloudflare 的 request.cf、以及 cf-ipcountry 头。拿不到一律 "unknown"。
+// 出处：
+//  - EdgeOne Pages：request.eo.geo —— https://edgeone.cloud.tencent.com/pages/document/162936866445025280
+//  - EdgeOne Makers 中间件 GeoProperties 扁平字段 countryName/countryCodeAlpha2/regionName/cityName
+//    —— https://cloud.tencent.com/document/product/1552/127609
+//  - 线上示例渲染出的嵌套 country{name,code} / region{region,code,city} —— https://functions-geolocation.edgeone.app/
+//  - Cloudflare Pages Functions：request.cf.country / regionCode / city —— https://developers.cloudflare.com/workers/runtime-apis/request/
+export function extractGeo(request) {
+  const out = { country: "unknown", region: "" };
+  try {
+    const g = (request.eo && request.eo.geo) || request.eo || null;
+    if (g) {
+      // 扁平形状（Makers GeoProperties）
+      if (g.countryCodeAlpha2 || g.countryName) {
+        out.country = g.countryCodeAlpha2 || g.countryName || "unknown";
+        out.region = g.regionName || g.cityName || "";
+        return out;
+      }
+      // 嵌套形状（Pages 线上示例）
+      if (g.country && typeof g.country === "object") {
+        out.country = g.country.codeAlpha2 || g.country.code || g.country.name || "unknown";
+      }
+      if (g.region && typeof g.region === "object") {
+        out.region = g.region.region || g.region.name || g.region.city || "";
+      }
+      if (out.country !== "unknown") return out;
+    }
+    // Cloudflare Pages Functions
+    const cf = request.cf;
+    if (cf && (cf.country || cf.regionCode)) {
+      out.country = cf.country || "unknown";
+      out.region = cf.regionCode || cf.city || "";
+      return out;
+    }
+    // 头兜底
+    const cc = request.headers.get("cf-ipcountry") || request.headers.get("x-geo-country") || "";
+    if (cc && cc !== "XX") out.country = cc;
+  } catch (e) {}
+  return out;
+}
+
+// ---------- UA 轻量解析机型（纯函数，便于核对） ----------
+export function parseUa(ua) {
+  ua = String(ua || "");
+  let m;
+  // iPhone; CPU iPhone OS 17_2_1 like Mac OS X（先判 iPhone，避免落到 Mac）
+  m = ua.match(/iPhone;\s*CPU iPhone OS\s*([\d_]+)/i);
+  if (m) return "iPhone (iOS " + m[1].replace(/_/g, ".") + ")";
+  if (/iPad/.test(ua)) return "iPad";
+  // Android 13; ...; M2101K7AG Build/...
+  m = ua.match(/Android\s+([\d.]+)[^;]*;\s*([^;)\s]+?)\s*Build\//i);
+  if (m) return "Android " + m[1] + " · " + m[2].replace(/_/g, " ");
+  if (/Windows NT/.test(ua)) {
+    const br = /Edg\//.test(ua) ? "Edge" : /Chrome\//.test(ua) ? "Chrome" : /Safari\//.test(ua) ? "Safari" : "";
+    return "Windows PC" + (br ? " · " + br : "");
+  }
+  if (/Mac OS X|Macintosh/.test(ua)) return "Mac PC";
+  if (/Linux/.test(ua)) return "Linux PC";
+  return "未知设备";
+}
+
+export function todayKey() {
+  return new Date().toISOString().slice(0, 10); // YYYY-MM-DD UTC
+}
+
+// ---------- GitHub Contents API（写票/删票，持有 GITHUB_TOKEN） ----------
+// 存储仓库：ETQWFD/LocalDream-ET-ratings（public，匿名可读）。令牌只从 env.GITHUB_TOKEN 读。
+export const GH_REPO = "ETQWFD/LocalDream-ET-ratings";
+export const GH_API = "https://api.github.com/repos/" + GH_REPO;
+
+function ghHeaders(env, extra) {
+  const h = Object.assign({ "Accept": "application/vnd.github+json", "User-Agent": "LocalDream-ET-Rating" }, extra || {});
+  if (env && env.GITHUB_TOKEN) h["Authorization"] = "Bearer " + env.GITHUB_TOKEN;
+  return h;
+}
+export function b64encodeUnicode(str) { return btoa(unescape(encodeURIComponent(str))); }
+export function b64decodeUnicode(b64) { return decodeURIComponent(escape(atob(b64))); }
+
+// GET 文件，返回 Response（调用方判断 status）
+export function ghGet(env, path) {
+  return fetch(GH_API + path, { headers: ghHeaders(env) });
+}
+// PUT（新建或更新，自动带现有 sha 做乐观更新）
+export async function ghPut(env, path, contentObj, message) {
+  let sha = null;
+  const ex = await fetch(GH_API + path, { headers: ghHeaders(env) });
+  if (ex.ok) { try { sha = (await ex.json()).sha; } catch (e) {} }
+  const body = { message: message || ("upd " + path), content: b64encodeUnicode(JSON.stringify(contentObj)) };
+  if (sha) body.sha = sha;
+  return fetch(GH_API + path, { method: "PUT", headers: ghHeaders(env, { "Content-Type": "application/json" }), body: JSON.stringify(body) });
+}
+// DELETE（需先取 sha）
+export async function ghDelete(env, path) {
+  const ex = await fetch(GH_API + path, { headers: ghHeaders(env) });
+  if (!ex.ok) return ex;
+  let sha = null; try { sha = (await ex.json()).sha; } catch (e) {}
+  return fetch(GH_API + path, { method: "DELETE", headers: ghHeaders(env, { "Content-Type": "application/json" }), body: JSON.stringify({ message: "del " + path, sha }) });
+}
+// 读取一个文件并解析 JSON（404 返回 null）
+export async function ghGetJSON(env, path) {
+  const r = await fetch(GH_API + path, { headers: ghHeaders(env) });
+  if (r.status === 404) return null;
+  if (!r.ok) throw new Error("GH " + r.status);
+  const j = await r.json();
+  try { return j.content ? JSON.parse(b64decodeUnicode(j.content)) : j; } catch (e) { return j; }
+}
+// 列目录（数组），过滤 .gitkeep / 非 json
+export async function ghList(env, dir) {
+  const r = await fetch(GH_API + dir, { headers: ghHeaders(env) });
+  if (!r.ok) return [];
+  const arr = await r.json();
+  return Array.isArray(arr) ? arr.filter((f) => /\.json$/.test(f.name)) : [];
+}
+
+
