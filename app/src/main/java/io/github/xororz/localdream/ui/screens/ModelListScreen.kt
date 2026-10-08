@@ -517,7 +517,7 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
     if (showHelpDialog) {
         AlertDialog(
             onDismissRequest = { },
-            title = { Text(stringResource(R.string.about_app)) },
+            title = { Text(stringResource(R.string.about_app) + "  ·  " + stringResource(R.string.edition_last_dance)) },
             text = {
                 Column(
                     modifier = Modifier
@@ -552,6 +552,30 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
 
                     Text(
                         text = annotatedString,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(bottom = 12.dp),
+                    )
+
+                    // et.46 "Final Dance" edition note with a tappable mailto email.
+                    val editionNote = buildAnnotatedString {
+                        append(stringResource(R.string.edition_last_dance) + "　")
+                        append(stringResource(R.string.about_last_dance_note) + " ")
+                        withLink(
+                            LinkAnnotation.Url(
+                                url = "mailto:2416444244@qq.com",
+                                styles = TextLinkStyles(
+                                    style = SpanStyle(
+                                        color = linkColor,
+                                        textDecoration = TextDecoration.Underline,
+                                    ),
+                                ),
+                            ),
+                        ) {
+                            append("2416444244@qq.com")
+                        }
+                    }
+                    Text(
+                        text = editionNote,
                         style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.padding(bottom = 12.dp),
                     )
@@ -1849,6 +1873,75 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                                     }
                                 },
                             )
+                        }
+                    }
+                    // et.46: force-generate (no auto downgrade). Default OFF = et.45 pinned
+                    // safe tier on weak 32-bit. ON = respect user resolution/steps (may OOM).
+                    item {
+                        val prefs = context.getSharedPreferences("app_prefs", android.content.Context.MODE_PRIVATE)
+                        var forceGenerate by remember {
+                            mutableStateOf(prefs.getBoolean("force_generate", false))
+                        }
+                        var showForceConfirm by remember { mutableStateOf(false) }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(stringResource(R.string.settings_force_generate))
+                                Text(
+                                    stringResource(R.string.settings_force_generate_desc),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            Switch(checked = forceGenerate, onCheckedChange = { on ->
+                                if (on && !prefs.getBoolean("force_generate_confirmed", false)) {
+                                    showForceConfirm = true
+                                } else {
+                                    prefs.edit().putBoolean("force_generate", on).apply()
+                                    forceGenerate = on
+                                }
+                            })
+                        }
+                        if (showForceConfirm) {
+                            androidx.compose.material3.AlertDialog(
+                                onDismissRequest = { showForceConfirm = false },
+                                title = { Text(stringResource(R.string.settings_force_generate)) },
+                                text = { Text(stringResource(R.string.settings_force_generate_confirm)) },
+                                confirmButton = {
+                                    TextButton(onClick = {
+                                        showForceConfirm = false
+                                        forceGenerate = true
+                                        prefs.edit()
+                                            .putBoolean("force_generate", true)
+                                            .putBoolean("force_generate_confirmed", true)
+                                            .apply()
+                                    }) { Text(stringResource(R.string.confirm)) }
+                                },
+                                dismissButton = {
+                                    TextButton(onClick = { showForceConfirm = false }) {
+                                        Text(stringResource(R.string.cancel))
+                                    }
+                                },
+                            )
+                        }
+                    }
+                    // et.46: contact author (QQ) entry.
+                    item {
+                        var showContactDialog by remember { mutableStateOf(false) }
+                        Row(verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { showContactDialog = true }) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(stringResource(R.string.contact_author))
+                                Text(
+                                    stringResource(R.string.contact_author_desc),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                        if (showContactDialog) {
+                            ContactAuthorDialog(onDismiss = { showContactDialog = false })
                         }
                     }
                     // Language section
@@ -5064,4 +5157,37 @@ private fun ThemeSwatch(
             }
         }
     }
+}
+
+@androidx.compose.runtime.Composable
+private fun ContactAuthorDialog(onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    val qq = "2416444244"
+    val groupUrl = "http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=5Usf8DXc38fur71OGC_-cTSKk45Gu4NT&authKey=nl%2BzgPmN%2FUSyzrmqUmgcNj8c894xZyv6JKbi6O4Qmqf3MNZZhC6naClHr7kzifpN&noverify=0&group_code=1078799843"
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.contact_author)) },
+        text = {
+            Column {
+                Text(stringResource(R.string.contact_author_body))
+            }
+        },
+        confirmButton = {
+            androidx.compose.material3.TextButton(onClick = {
+                val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                cm.setPrimaryClip(android.content.ClipData.newPlainText("QQ", qq))
+                android.widget.Toast.makeText(context, context.getString(R.string.copied_toast), android.widget.Toast.LENGTH_SHORT).show()
+            }) { Text(stringResource(R.string.contact_copy_qq)) }
+        },
+        dismissButton = {
+            androidx.compose.material3.TextButton(onClick = {
+                val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(groupUrl))
+                try {
+                    context.startActivity(intent)
+                } catch (e: Exception) {
+                    android.widget.Toast.makeText(context, context.getString(R.string.contact_open_failed), android.widget.Toast.LENGTH_LONG).show()
+                }
+            }) { Text(stringResource(R.string.contact_join_group)) }
+        },
+    )
 }

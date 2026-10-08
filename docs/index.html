@@ -5,7 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="description" content="Local Dream ET — 在手机与电脑本地运行 Stable Diffusion 的离线推理 App。">
-<link rel="icon" href="icon.png" />
+<link rel="icon" href="assets/favicon.ico" sizes="any" />
+<link rel="icon" href="assets/icon-192.png" type="image/png" />
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
+<link rel="manifest" href="site.webmanifest" />
+<meta name="theme-color" content="#0f1115" />
 <title>Local Dream ET — 本地 Stable Diffusion 推理</title>
 <style>
   :root{
@@ -44,6 +48,27 @@
   code{background:var(--panel);padding:2px 6px;border-radius:4px;font-size:13px}
   footer{padding:28px 0 48px;color:var(--muted);font-size:13px}
   footer a{color:var(--muted)}
+  /* 最后一舞横幅 */
+  .swansong{background:linear-gradient(180deg,#1a2233,#141a26);border:1px solid #2c3a55;
+    border-radius:12px;padding:18px 20px;margin:20px 0 4px}
+  .swansong h2{margin:0 0 8px;font-size:19px;color:#fff}
+  .swansong .ver{color:var(--accent);font-weight:600}
+  .swansong p{margin:6px 0;font-size:14px}
+  .contactrow{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+  /* 评分与评论 */
+  .ratebox{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0}
+  .stars{font-size:22px;letter-spacing:3px;cursor:pointer;user-select:none}
+  .stars span{color:#3a4250}
+  .stars span.on{color:#f5b942}
+  .rateavg{font-size:14px;color:var(--muted)}
+  .cmt{border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:8px 0;background:var(--panel)}
+  .cmt .n{font-weight:600;font-size:13px}
+  .cmt .t{color:var(--muted);font-size:11px;float:right}
+  .cmt .x{font-size:14px;margin-top:4px}
+  .cmtform input,.cmtform textarea{width:100%;background:#0c1017;border:1px solid var(--line);
+    color:var(--text);border-radius:8px;padding:9px 11px;font:inherit;margin:5px 0}
+  .cmtnote{color:var(--muted);font-size:12px;background:var(--panel);border:1px dashed var(--line);
+    border-radius:8px;padding:10px 12px;margin:8px 0}
 </style>
 </head>
 <body>
@@ -54,13 +79,24 @@
   <h1>Local Dream ET</h1>
   <p class="tagline">在手机与电脑本地运行 Stable Diffusion 的离线推理 App，无需联网、不上传图片。</p>
   <div class="badges">
-    <span class="badge b">v3.0.0-et.45 / build 119</span>
+    <span class="badge b">v3.0.0-et.46 / build 120「最后一舞」</span>
     <span class="badge">三 ABI：arm64-v8a · armeabi-v7a · x86_64</span>
     <span class="badge">包名 etc.github.ai</span>
     <span class="badge">签名 CN=ET</span>
     <span class="badge b">聊天式客户端 etc.github.ai.chat v1.0.2</span>
   </div>
 </header>
+
+<!-- 最后一舞 版本说明 -->
+<div class="swansong">
+  <h2>🩰 最后一舞 <span class="ver">v3.0.0-et.46 / build 120</span></h2>
+  <p>本版为一次集中收尾：重编全部原生库、加入「强制出图」模式（不自动降档，低配机可能崩溃/极慢，需自行承担），并完善官网图标、评论区与评分。</p>
+  <p><strong>坦白说明：作者即将继续上学、面临考试，之后可能无法及时修复问题。</strong>如遇 Bug，请先看帮助页与日志；能等就等，实在着急可自行用源码二次开发（MIT）。</p>
+  <p>联系邮箱（点击可复制/发邮件）：<a href="mailto:2416444244@qq.com" style="color:var(--accent)">2416444244@qq.com</a></p>
+  <div class="contactrow">
+    <a class="btn primary" href="http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=5Usf8DXc38fur71OGC_-cTSKk45Gu4NT&authKey=nl%2BzgPmN%2FUSyzrmqUmgcNj8c894xZyv6JKbi6O4Qmqf3MNZZhC6naClHr7kzifpN&noverify=0&group_code=1078799843" target="_blank" rel="noopener">加入 QQ 交流群（1078799843）</a>
+  </div>
+</div>
 
 <nav>
   <a href="#download">下载</a>
@@ -176,6 +212,23 @@
   </ul>
 </section>
 
+<section id="feedback">
+  <h2>评分与用户评论</h2>
+  <div class="ratebox">
+    <div class="stars" id="stars" title="点击打分"></div>
+    <div class="rateavg" id="rateAvg">读取中…</div>
+  </div>
+  <div id="cmtList"></div>
+  <div id="cmtFormWrap">
+    <div class="cmtform">
+      <input id="cmtNick" maxlength="20" placeholder="昵称（不填则匿名）" />
+      <textarea id="cmtText" maxlength="300" rows="3" placeholder="留下你的使用反馈（禁止贴链接 / 图片 / 辱骂内容）"></textarea>
+      <button class="btn primary" id="cmtSubmit" type="button">发表评论</button>
+    </div>
+  </div>
+  <div class="cmtnote" id="cmtNote" style="display:none"></div>
+</section>
+
 <footer>
   <p>源码：<a href="https://github.com/ETQWFD/LocalDream-ET" target="_blank" rel="noopener">github.com/ETQWFD/LocalDream-ET</a> · License MIT · Copyright © 2026 ET</p>
 </footer>
@@ -240,6 +293,65 @@
       if(a && /releases\/download|\.apk(\?|$)|\.exe(\?|$)|\.tar\.gz(\?|$)/i.test(a.href)) hit("dlclicks");
     },true);
   }catch(_){}
+})();
+</script>
+
+<!-- 评分与评论：调用同源 /api；未部署时诚实降级，不出现能填不能存的假框 -->
+<script>
+(function(){
+  "use strict";
+  var API = window.ET_API_BASE || "";
+  function $(id){return document.getElementById(id);}
+  function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
+  function jget(u,opt){return fetch(API+u,opt).then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json();});}
+
+  function degraded(msg){
+    var av=$("rateAvg"); if(av)av.textContent="—";
+    var st=$("stars"); if(st)st.innerHTML="";
+    var cl=$("cmtList"); if(cl)cl.innerHTML="";
+    var fw=$("cmtFormWrap"); if(fw)fw.style.display="none";
+    var n=$("cmtNote"); if(n){n.style.display="block";n.textContent=msg;}
+  }
+  function paintStars(avg){
+    var html="",r=Math.round(avg);
+    for(var i=1;i<=5;i++){html+='<span data-v="'+i+'" class="'+(i<=r?"on":"")+'">★</span>';}
+    $("stars").innerHTML=html;
+  }
+  function loadRating(){
+    return jget("/api/rating").then(function(j){
+      if(!j||!j.ok) throw new Error("bad");
+      paintStars(j.avg||0);
+      $("rateAvg").textContent = j.count>0 ? (Number(j.avg).toFixed(1)+"★ 共 "+j.count+" 人评分") : "还没人评分，来做第一个";
+    });
+  }
+  function loadComments(){
+    return jget("/api/comments").then(function(j){
+      if(!j||!j.ok) throw new Error("bad");
+      var list=j.comments||[];
+      if(!list.length){ $("cmtList").innerHTML='<p class="muted">还没有评论，来第一条。</p>'; return; }
+      $("cmtList").innerHTML = list.slice(0,50).map(function(c){
+        var d=new Date(c.ts).toLocaleDateString("zh-CN");
+        return '<div class="cmt"><span class="t">'+esc(d)+'</span><span class="n">'+esc(c.nick)+'</span><div class="x">'+esc(c.text)+'</div></div>';
+      }).join("");
+    });
+  }
+  $("stars").addEventListener("click",function(e){
+    var v=e.target.getAttribute&&e.target.getAttribute("data-v");
+    if(!v) return;
+    jget("/api/rating",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({score:Number(v)})})
+      .then(loadRating).catch(function(err){alert("评分失败："+(err.message||"网络错误")+"（服务可能尚未部署）");});
+  });
+  $("cmtSubmit").addEventListener("click",function(){
+    var nick=$("cmtNick").value.trim(), text=$("cmtText").value.trim();
+    if(!text){alert("评论内容不能为空");return;}
+    jget("/api/comments",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({nick:nick,text:text})})
+      .then(function(){$("cmtText").value="";loadComments();})
+      .catch(function(err){alert("发表失败："+(err.message||"")+"（可能含被禁内容，或服务尚未部署）");});
+  });
+  // 初始化探测：连不上就诚实降级
+  loadRating().then(loadComments).catch(function(){
+    degraded("评论 / 评分服务尚未部署。本站为静态托管、无数据库，需按 docs/COMMENT-BACKEND.md 部署边缘函数（EdgeOne Pages Functions + KV）后才会出现真实评论与评分；在此之前不显示可提交的假输入框。");
+  });
 })();
 </script>
 </body>

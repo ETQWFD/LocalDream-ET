@@ -4,7 +4,9 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Local Dream ET · 运维数据面板</title>
-<link rel="icon" href="icon.png" />
+<link rel="icon" href="assets/favicon.ico" sizes="any" />
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
+<meta name="theme-color" content="#0a0e13" />
 <meta name="robots" content="noindex,nofollow" />
 <style>
   :root{
@@ -79,13 +81,24 @@
   ul.why li{margin:3px 0}
   .foot{color:var(--dim);font-size:11px;margin-top:6px;line-height:1.7}
   a{color:var(--info)}
+  /* 底部固定 etc 面板 */
+  .etcbar{position:fixed;left:0;right:0;bottom:0;z-index:50;
+    background:#0a0e13;border-top:1px solid var(--line2);
+    text-align:center;font-family:var(--mono);font-size:11px;color:var(--dim);
+    padding:7px 10px;letter-spacing:.5px}
+  .etcbar b{color:var(--mut);font-weight:600}
+  .adminkey{flex:1;min-width:200px;background:#0a1118;border:1px solid var(--line2);color:var(--txt);border-radius:6px;padding:7px 9px;font-family:var(--mono);font-size:12px}
+  .cmtrow{display:flex;align-items:flex-start;gap:8px;padding:7px 0;border-bottom:1px solid var(--line)}
+  .cmtrow:last-child{border-bottom:0}
+  .cmtrow .body{flex:1}
+  .cmtrow .meta{color:var(--dim);font-size:10.5px;font-family:var(--mono)}
 </style>
 </head>
 <body>
 <div class="wrap">
 
   <div class="bar">
-    <img src="icon.png" alt="" />
+    <img src="assets/icon-192.png" alt="" />
     <div>
       <h1>Local Dream ET · 运维数据面板</h1>
       <div class="meta" id="clock">—</div>
@@ -113,6 +126,7 @@
     <div class="kpi"><div class="k">下载点击 PV <span class="src tp">第三方</span></div><div class="v info" id="kClick">—</div><div class="sub">点击真实下载链接·不去重</div></div>
     <div class="kpi"><div class="k">独立访客 UV <span class="src na">不可用</span></div><div class="v dim">N/A</div><div class="sub">静态页无服务端，无法去重</div></div>
     <div class="kpi"><div class="k">来源 IP / 地域 <span class="src na">不可用</span></div><div class="v dim">N/A</div><div class="sub">需服务端访问日志，见下方说明</div></div>
+    <div class="kpi"><div class="k">当前在线管理员 <span class="src tp">后端心跳</span></div><div class="v info" id="kOnline">—</div><div class="sub" id="kOnlineSub">进页面心跳·需后端部署</div></div>
   </div>
 
   <!-- platform totals -->
@@ -140,6 +154,20 @@
     </div>
   </div>
 
+  <!-- 评论/评分管理（需后端 + 管理口令） -->
+  <div class="card">
+    <div class="hd"><h2>评论 / 评分管理</h2><span class="d">同源后端 /api · 口令仅随请求头发往函数，不落本地存储</span></div>
+    <div class="bd">
+      <div class="healthline">
+        <input class="adminkey" id="adminkey" type="password" placeholder="管理口令（X-Admin-Key，对应函数环境变量 ADMIN_KEY）" />
+        <button class="btn" id="cmtLoad">刷新评论</button>
+        <button class="btn" id="ratingReset">清零评分</button>
+      </div>
+      <div class="status" id="cmtStatus">未连接后端</div>
+      <div id="cmtAdminList" style="margin-top:10px"></div>
+    </div>
+  </div>
+
   <p class="foot">
     数据口径：① 各版本/各文件下载次数、各端合计、最新版本，均实时读取 GitHub 官方 Releases API 的 <code>download_count</code>，由 GitHub 统计、无法伪造；浏览器匿名访问（每 IP 约 60 次/小时），限流时自动重试并使用 2 分钟会话缓存。GitHub 只提供“累计值”，不提供历史下载曲线，面板不画虚构趋势；“较上次 +N”来自本浏览器本地存储的上次读数。
     ② 访问 PV / 点击 PV 为第三方计数器在首页的真实埋点，仅量级、不去重。
@@ -147,6 +175,8 @@
     本页不在官网前台设置入口。刷新于 <span id="updated"></span>。
   </p>
 </div>
+
+<div class="etcbar"><b>etc 面板</b> · Local Dream ET · Copyright (C) 2026 etc · 数据仅取自 GitHub API / 第三方计数 / 已部署后端，无写死数字</div>
 
 <script>
 (function(){
@@ -264,6 +294,53 @@
     counter("sitevisits").then(function(v){ $("kPV").textContent = v==null?"N/A":fmt(v); });
     counter("dlclicks").then(function(v){ $("kClick").textContent = v==null?"N/A":fmt(v); });
   }
+
+  /* ---------- online heartbeat（真实后端；连不上显 N/A） ---------- */
+  var API = window.ET_API_BASE || "";
+  var mySid = "";
+  try{ mySid = localStorage.getItem("etld_sid") || ("s"+Math.random().toString(36).slice(2,14)); localStorage.setItem("etld_sid", mySid); }catch(e){}
+  function apiJSON(u,opt){ return fetch(API+u,opt).then(function(r){
+    if(!r.ok){ return r.json().then(function(j){throw new Error(j.error||("HTTP "+r.status));}, function(){throw new Error("HTTP "+r.status);}); }
+    return r.json();
+  }); }
+  function beat(){ return apiJSON("/api/online",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:mySid})}); }
+  function loadOnline(){
+    return apiJSON("/api/online").then(function(j){
+      if(j&&j.ok){ $("kOnline").textContent=String(j.online); $("kOnlineSub").textContent="后端心跳实时值（TTL 120s）"; }
+    }).catch(function(){ $("kOnline").textContent="N/A"; $("kOnlineSub").textContent="后端未部署，无在线数"; });
+  }
+  beat().then(loadOnline).catch(function(){ $("kOnline").textContent="N/A"; $("kOnlineSub").textContent="后端未部署，无在线数"; });
+  setInterval(function(){ beat().then(loadOnline).catch(function(){}); },30000);
+
+  /* ---------- admin：评论删除 / 评分清零 ---------- */
+  function adminHeaders(){ return {"Content-Type":"application/json","X-Admin-Key":($("adminkey").value||"")}; }
+  function renderAdminComments(list){
+    var box=$("cmtAdminList");
+    if(!list||!list.length){ box.innerHTML='<div class="note">暂无评论。</div>'; return; }
+    box.innerHTML = list.map(function(c){
+      var d=new Date(c.ts).toLocaleString("zh-CN");
+      return '<div class="cmtrow"><div class="body"><div><b>'+esc(c.nick)+'</b> <span class="meta">'+esc(d)+'</span></div><div>'+esc(c.text)+'</div></div><button class="btn" data-del="'+esc(c.id)+'">删除</button></div>';
+    }).join("");
+    Array.prototype.forEach.call(box.querySelectorAll("[data-del]"),function(btn){
+      btn.addEventListener("click",function(){
+        if(!confirm("删除该评论？")) return;
+        apiJSON("/api/admin",{method:"POST",headers:adminHeaders(),body:JSON.stringify({action:"delete_comment",id:btn.getAttribute("data-del")})})
+          .then(function(j){ $("cmtStatus").textContent="已删除 "+(j.removed||0)+" 条"; loadAdminComments(); })
+          .catch(function(e){ $("cmtStatus").textContent="删除失败："+e.message; });
+      });
+    });
+  }
+  function loadAdminComments(){
+    return apiJSON("/api/comments").then(function(j){ renderAdminComments(j.comments||[]); $("cmtStatus").textContent="已连接后端，共 "+(j.comments||[]).length+" 条评论；普通用户无法改他人评论。"; })
+      .catch(function(e){ renderAdminComments([]); $("cmtStatus").textContent="后端未部署："+e.message; });
+  }
+  $("cmtLoad").addEventListener("click",loadAdminComments);
+  $("ratingReset").addEventListener("click",function(){
+    if(!confirm("清零全部评分（sum/count 归 0）？")) return;
+    apiJSON("/api/admin",{method:"POST",headers:adminHeaders(),body:JSON.stringify({action:"reset_rating"})})
+      .then(function(){$("cmtStatus").textContent="评分已清零。";})
+      .catch(function(e){$("cmtStatus").textContent="清零失败："+e.message;});
+  });
 
   /* ---------- clock / auto refresh ---------- */
   function tickClock(){ $("clock").textContent=new Date().toLocaleString("zh-CN"); $("updated").textContent=new Date().toLocaleTimeString("zh-CN"); }

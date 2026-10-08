@@ -1,0 +1,15 @@
+{
+  "name": "LocalDream ET",
+  "short_name": "LocalDream ET",
+  "description": "在手机与电脑本地运行 Stable Diffusion 的离线推理 App",
+  "lang": "zh-CN",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0f1115",
+  "theme_color": "#0f1115",
+  "icons": [
+    { "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

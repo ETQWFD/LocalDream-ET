@@ -378,6 +378,11 @@ class BackgroundGenerationService : Service() {
             // to the engine are pinned to the only proven-stable profile: 256 long edge,
             // <=8 steps, euler_a, batch 1. This is where S:25 in the log is overridden.
             if (io.github.xororz.localdream.utils.DeviceCapabilities.extremeLowRam(this@BackgroundGenerationService)) {
+                // et.46: user can opt out of the auto pin via "force_generate" (Settings).
+                val forceDraw = applicationContext
+                    .getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+                    .getBoolean("force_generate", false)
+                if (!forceDraw) {
                 val le = 256
                 val (cw, ch) = run {
                     val lo = minOf(attemptWidth, attemptHeight)
@@ -397,6 +402,7 @@ class BackgroundGenerationService : Service() {
                     io.github.xororz.localdream.cloud.LogHub.Category.GENERATE,
                     "Extreme-low-end device: pinned to 256/8/euler_a/batch1 (was ${width}x${height}/$steps/$scheduler)",
                 )
+                }
             }
             var cpuRetryDone = false
             // et.30: independent OOM safe-step retry (384 long edge). Each flag
