@@ -328,7 +328,13 @@ class BackendService : Service() {
         } else {
             serving = null
             updateServing(null)
-            updateState(BackendState.Error("Backend start failed", want.modelId))
+            // et.48: never a generic English/OOM string. The real reason (missing weight
+            // files, pre-flight failure, or native crash) is already surfaced by the
+            // start-backend / monitor error state; if none was set, report plainly.
+            val current = backendState.value
+            val msg = (current as? BackendState.Error)?.message?.takeIf { it.isNotBlank() }
+                ?: "引擎启动失败（请查看日志末行真因）"
+            updateState(BackendState.Error(msg, want.modelId))
         }
     }
 
@@ -557,11 +563,19 @@ class BackendService : Service() {
             val nativeDir = applicationInfo.nativeLibraryDir
             val modelsDir = File(Model.getModelsDir(this), modelId)
 
-            if (backendType == "sd15cpu" && !Model.hasConvertedSd15Outputs(modelsDir)) {
+            // et.48: sd15cpu accepts BOTH on-device-converted outputs (*.mnn.weight
+            // sidecars) AND a prebuilt/imported package the engine loads directly
+            // (clip_v2.mnn/unet.mnn/vae_*.mnn/pos_emb.bin/token_emb.bin). A custom
+            // model like HyperSpireV5 uses the latter; requiring the sidecars made it
+            // fail pre-flight with a misleading "Backend start failed".
+            if (backendType == "sd15cpu" &&
+                !Model.hasConvertedSd15Outputs(modelsDir) &&
+                !Model.hasSd15CpuLayout(modelsDir)
+            ) {
                 Log.e(TAG, "pre-flight failed: SD1.5 products missing in $modelsDir")
                 updateState(
                     BackendState.Error(
-                        "Model incomplete: missing converted weight files in $modelId",
+                        "模型不完整：$modelId 缺少引擎必需权重文件（请重新下载/转换）",
                         modelId,
                     ),
                 )
@@ -574,7 +588,7 @@ class BackendService : Service() {
                 Log.e(TAG, "pre-flight failed: QNN products missing in $modelsDir")
                 updateState(
                     BackendState.Error(
-                        "Model incomplete: missing QNN weight files in $modelId",
+                        "模型不完整：$modelId 缺少 NPU 权重文件",
                         modelId,
                     ),
                 )
@@ -900,16 +914,18 @@ class BackendService : Service() {
             // exiting is expected and must not poison the shared backendState.
             if (isLiveCrash(proc)) {
                 val detail = tail.joinToString(" / ").takeLast(600)
-                updateState(
-                    BackendState.Error(
-                        if (detail.isBlank()) {
-                            "Backend process exited with code: $exitCode"
-                        } else {
-                            "Backend exited ($exitCode): $detail"
-                        },
-                        servingModelId.value,
-                    ),
-                )
+                val reason = when (exitCode) {
+                    137 -> "被系统内存不足终止(SIGKILL/OOM)"
+                    134 -> "原生崩溃(SIGABRT)"
+                    139 -> "原生非法访问(SIGSEGV)"
+                    else -> "进程异常退出"
+                }
+                val msg = if (detail.isBlank()) {
+                    "引擎启动后退出 code=$exitCode（$reason），未见日志输出"
+                } else {
+                    "引擎异常退出 code=$exitCode（$reason）；日志末行：$detail"
+                }
+                updateState(BackendState.Error(msg, servingModelId.value))
             } else {
                 Log.i(TAG, "backend exit ($exitCode) was intentional/stale, not reporting")
             }
