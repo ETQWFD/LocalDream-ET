@@ -161,6 +161,11 @@ class BackgroundGenerationService : Service() {
 
         startForeground(NOTIFICATION_ID, createNotification(0f))
         acquireWakeLock()
+        // et.50: optional overlay keep-alive; no-op without SYSTEM_ALERT_WINDOW.
+        io.github.xororz.localdream.utils.OverlayKeepAlive.show(this) {
+            cancelRequested = true
+            activeCall?.cancel()
+        }
 
         when (intent?.action) {
             ACTION_STOP -> {
@@ -1018,6 +1023,7 @@ class BackgroundGenerationService : Service() {
         activeCall?.cancel()
         serviceScope.cancel()
         releaseWakeLock()
+        io.github.xororz.localdream.utils.OverlayKeepAlive.hide(this)
 
         if (_generationState.value is GenerationState.Error) {
             resetState()

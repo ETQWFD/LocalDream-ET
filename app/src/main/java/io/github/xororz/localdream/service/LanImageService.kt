@@ -75,6 +75,10 @@ class LanImageService : Service() {
         } else {
             startForeground(NOTIFICATION_ID, buildNotification())
         }
+        // et.50: optional overlay keep-alive; no-op without overlay permission.
+        io.github.xororz.localdream.utils.OverlayKeepAlive.show(this, "LocalDream ET API 服务运行中") {
+            stopSelf()
+        }
 
         val chosenModel = intent?.getStringExtra(EXTRA_MODEL_ID)
         if (chosenModel != null && server == null) {
@@ -142,6 +146,7 @@ class LanImageService : Service() {
         server?.shutdown()
         server = null
         releaseLocks()
+        io.github.xororz.localdream.utils.OverlayKeepAlive.hide(this)
         updateRunning(false)
         // Leave the backend up only while we serve; stop it with us.
         try {
