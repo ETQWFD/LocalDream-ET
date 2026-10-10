@@ -658,7 +658,7 @@ class ModelRepository private constructor(private val context: Context) {
         refreshAllModels()
     }
 
-    private fun scanCustomModels(): List<Model> {
+    private fun scanCustomModels(): List<Model> = runCatching {
         val modelsDir = Model.getModelsDir(context)
         val customModels = mutableListOf<Model>()
         // Link-imported models are provided by initializeModels() (with their
@@ -755,6 +755,11 @@ class ModelRepository private constructor(private val context: Context) {
                     )
                 }
             }
+    }.getOrElse { e ->
+        // et.49: a missing model dir / permission denial / corrupt config must never
+        // crash the model list; degrade to empty list with a log line instead.
+        Log.w("ModelRepository", "scanCustomModels degraded to empty", e)
+        emptyList()
     }
 
     private fun createCustomModel(
