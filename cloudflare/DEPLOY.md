@@ -30,18 +30,21 @@ wrangler deploy            # 让密钥生效（再部署一次）
 
 ## 3. 接线官网
 把部署得到的地址填入 `docs/index.html` 与 `docs/dan.html` 的写票常量
-（当前为同源 `/api/rating`，未部署时自动降级、不显示假框）：
+（已预置为规划地址，部署后若不同再改）：
 ```js
-var RATING_API = "https://et-ratings.<你的子域>.workers.dev";
+var WORKER_BASE = "https://et-ratings.etqwf.workers.dev";
 ```
-提交推 main 即可。评分 GET、评论 GET 仍直读公开仓库；POST 走该 Worker。
+读侧评分 GET、评论 GET 仍匿名直读公开仓库；POST 投票/评论、后台删除、下载日志走该 Worker。
+官网下载链接已加“Worker 在线时经 `/log-download?to=` 记录再 302”的跳转；Worker 未部署时直接下载原资产，不破坏下载。
 
 ## 端点
 - `GET  /healthz` → `{ok, configured}`
 - `GET  /rating`  → `{avg,count,highest,dist,updatedAt}`
 - `POST /rating`  body `{score:1-5, fp:64hex}`；同指纹返回 `{voted:true,score:旧分}`
 - `GET  /comments` / `POST /comments` body `{nick?,text,fp}`（链接/图片/脏词拒绝）
-- `POST /admin` header `X-Admin-Key`，body `{action:delete_rating|delete_comment|reset_ratings,id}`
+- `POST /admin` header `X-Admin-Key`，body `{action:delete_rating|delete_comment|reset_ratings|clear_logs,id?}`
+- `GET  /log-download?to=<https://github.com...资产URL>`：记录一条下载（ts/国家/省/机型/UA）后 302 到资产；非 github.com/objects.githubusercontent.com 的 to 会被拒并重定向回首页
+- `GET  /admin/logs?page=N&size=30` header `X-Admin-Key`：分页返回下载日志 `{total,page,items:[{ts,country,prov,model,ua,to}]}`
 
 ## 数据与口径
 - 评分：`ratings/<sha256(fp)>.json = {score,country,prov,model,ua,ts}`，一票一设备。
@@ -50,6 +53,11 @@ var RATING_API = "https://et-ratings.<你的子域>.workers.dev";
 - 地区：Cloudflare `request.cf.country`（免费档稳定给到国家；regionCode/city 多为企业版能力，
   拿不到省份则省份留空，绝不编造）。机型：User-Agent 轻量解析。
 - 限频：同 IP 评分 30 秒≤1、每天≤20；评论 15 秒≤1、每天≤30（存 `limits/`）。
+- 下载日志：`logs/index.json` 为最多保留 300 条的数组，新事件在前；`action:clear_logs` 清空。
+
+> 注：本仓库不写任何真实密钥。`GITHUB_TOKEN` 与 `ADMIN_KEY` 的具体值由部署者在
+> `wrangler secret put` 时输入；`ADMIN_KEY` 生成一次后请自行保存（本流程在部署完成时
+> 会单独告知一次，绝不提交进 git）。
 
 ## 安全
 - `GITHUB_TOKEN`、`ADMIN_KEY` 只作为 Worker Secret，存在 Cloudflare，**不在任何仓库/前端**。

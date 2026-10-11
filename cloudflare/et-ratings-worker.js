@@ -305,7 +305,48 @@ async function handleAdmin(request, env) {
     await ghUpdateFile(env, "/contents/summary.json", async () => z, "admin reset");
     return json(request, { ok: true, summary: z });
   }
+  if (body.action === "clear_logs") {
+    await ghUpdateFile(env, "/contents/logs/index.json", async () => [], "clear logs");
+    return json(request, { ok: true });
+  }
   return json(request, { ok: false, error: "未知操作" }, 400);
+}
+
+// 下载日志：GET /log-download?to=<资产URL> 记录一条后 302 到资产
+function safeAssetUrl(to) {
+  try {
+    const u = new URL(to);
+    if (u.protocol !== "https:") return "";
+    const h = u.hostname;
+    if (h === "github.com" || h.endsWith(".github.com") || h === "objects.githubusercontent.com") return to;
+  } catch (e) {}
+  return "";
+}
+async function handleLogDownload(request, env) {
+  const url = new URL(request.url);
+  const to = safeAssetUrl(url.searchParams.get("to") || "");
+  const geo = extractGeo(request);
+  const ua = request.headers.get("user-agent") || "";
+  const ev = { ts: Date.now(), country: geo.country, prov: geo.prov, model: parseUa(ua), ua, to: to || "blocked" };
+  if (env.GITHUB_TOKEN) {
+    await ghUpdateFile(env, "/contents/logs/index.json", async (cur) => {
+      const arr = Array.isArray(cur) ? cur.slice() : [];
+      arr.unshift(ev);
+      return arr.slice(0, 300);
+    }, "dl-log").catch(() => {});
+  }
+  return Response.redirect(to || "https://etc.tw.kg/", 302);
+}
+
+// 后台读取下载日志（需 X-Admin-Key），分页
+async function handleLogsList(request, env) {
+  if (!checkAdmin(request, env)) return json(request, { ok: false, error: "管理员口令错误" }, 401);
+  const arr = (await ghGetJSON(env, "/contents/logs/index.json")) || [];
+  const u = new URL(request.url);
+  const page = Math.max(1, parseInt(u.searchParams.get("page") || "1", 10) || 1);
+  const size = Math.min(100, Math.max(10, parseInt(u.searchParams.get("size") || "30", 10) || 30));
+  const start = (page - 1) * size;
+  return json(request, { ok: true, total: arr.length, page, size, items: arr.slice(start, start + size) });
 }
 
 function json(request, data, status) {
@@ -333,6 +374,10 @@ export default {
         return handleCommentPost(request, env);
       if (url.pathname === "/admin" && request.method === "POST")
         return handleAdmin(request, env);
+      if (url.pathname === "/log-download")
+        return handleLogDownload(request, env);
+      if (url.pathname === "/admin/logs" && request.method === "GET")
+        return handleLogsList(request, env);
       return json(request, { ok: false, error: "Not Found" }, 404);
     } catch (e) {
       return json(request, { ok: false, error: "服务异常" }, 500);

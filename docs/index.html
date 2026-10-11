@@ -340,9 +340,19 @@
   try{
     function hit(k){ var i=new Image(); i.referrerPolicy="no-referrer"; i.src="https://abacus.jasoncameron.dev/hit/etld-et/"+k+"?t="+Date.now(); }
     hit("sitevisits"); /* 每次真实打开首页 +1（自 et.41 起埋点） */
+
+    /* 下载跳转记录：Worker 在线时，下载链接先过 /log-download?to= 记录再 302 到资产；
+       Worker 未部署则直接走原资产链接，下载不受影响。 */
+    var DL_WORKER = "https://et-ratings.etqwf.workers.dev";
+    var dlLog = false;
+    fetch(DL_WORKER+"/healthz",{cache:"no-store"}).then(function(r){ if(r.ok) dlLog=true; }).catch(function(){});
     document.addEventListener("click",function(e){
       var a=(e.target && e.target.closest)?e.target.closest("a[href]"):null;
-      if(a && /releases\/download|\.apk(\?|$)|\.exe(\?|$)|\.tar\.gz(\?|$)/i.test(a.href)) hit("dlclicks");
+      if(!a) return;
+      if(/releases\/download|\.apk(\?|$)|\.exe(\?|$)|\.tar\.gz(\?|$)/i.test(a.href)){
+        hit("dlclicks");
+        if(dlLog){ e.preventDefault(); window.location.href = DL_WORKER+"/log-download?to="+encodeURIComponent(a.href); }
+      }
     },true);
   }catch(_){}
 })();
@@ -352,7 +362,9 @@
 <script>
 (function(){
   "use strict";
-  var API = window.ET_API_BASE || "";
+  /* 写票后端：Cloudflare Worker。规划地址，部署后如不同请改这里。
+     读侧评分/评论仍匿名直读公开仓库（下方 RAW/GHAPI），不依赖本 Worker。 */
+  var WORKER_BASE = "https://et-ratings.etqwf.workers.dev";
   var RAW = "https://raw.githubusercontent.com/ETQWFD/LocalDream-ET-ratings/main";
   var GHAPI = "https://api.github.com/repos/ETQWFD/LocalDream-ET-ratings/contents";
   function $(id){return document.getElementById(id);}
@@ -398,21 +410,21 @@
   $("stars").addEventListener("click",function(e){
     if($("stars").classList.contains("voted")){alert("每设备一票，感谢！");return;}
     var v=e.target.getAttribute&&e.target.getAttribute("data-v"); if(!v)return;
-    getJSON(API+"/api/rating",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({score:Number(v),fp:MYFP})})
+    getJSON(WORKER_BASE+"/rating",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({score:Number(v),fp:MYFP})})
       .then(function(){sessionStorage.removeItem("etld_sum");boot();})
       .catch(function(err){alert("提交失败："+(err.message||"")+"（写票服务待部署，见 COMMENT-BACKEND.md）");});
   });
   $("cmtSubmit").addEventListener("click",function(){
     var nick=$("cmtNick").value.trim(),text=$("cmtText").value.trim();
     if(!text){alert("评论内容不能为空");return;}
-    getJSON(API+"/api/comments",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({nick:nick,text:text})})
+    getJSON(WORKER_BASE+"/comments",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({nick:nick,text:text})})
       .then(function(){$("cmtText").value="";loadComments();})
       .catch(function(err){alert("发表失败："+(err.message||"")+"（可能含被禁内容，或写票服务待部署）");});
   });
 
   function boot(){return Promise.all([loadSummary(),alreadyVoted()]).then(function(r){paintSummary(r[0],r[1]);});}
   function probeWrite(){
-    return getJSON(API+"/api/rating?fp="+encodeURIComponent(MYFP)).then(function(){setWriteState(true,"");})
+    return getJSON(WORKER_BASE+"/healthz").then(function(){setWriteState(true,"");})
       .catch(function(){setWriteState(false,"评分/评论提交服务维护中（写票后端待部署，见 COMMENT-BACKEND.md）。上方评分数字仍是公开仓库的真实数据。");});
   }
   getFp().then(function(fp){MYFP=fp||"";return boot().then(loadComments).then(probeWrite);});

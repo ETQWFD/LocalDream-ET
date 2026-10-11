@@ -156,7 +156,7 @@
 
   <!-- 评论/评分管理（需后端 + 管理口令） -->
   <div class="card">
-    <div class="hd"><h2>评论 / 评分管理</h2><span class="d">同源后端 /api · 口令仅随请求头发往函数，不落本地存储</span></div>
+    <div class="hd"><h2>评论 / 评分管理</h2><span class="d">Worker /admin · 口令仅随请求头发往函数，不落本地存储</span></div>
     <div class="bd">
       <div class="healthline">
         <input class="adminkey" id="adminkey" type="password" placeholder="管理口令（X-Admin-Key，对应函数环境变量 ADMIN_KEY）" />
@@ -170,7 +170,7 @@
 
   <!-- 评分统计 / 管理（同管理口令） -->
   <div class="card">
-    <div class="hd"><h2>评分统计 / 管理</h2><span class="d">同源后端 /api/admin/ratings · 删除后服务端重建聚合</span></div>
+    <div class="hd"><h2>评分统计 / 管理</h2><span class="d">读=公开仓库直读 · 删除走 Worker /admin，删后服务端重建聚合</span></div>
     <div class="bd">
       <div class="healthline">
         <select class="adminkey" id="rtScore" style="max-width:120px">
@@ -184,6 +184,23 @@
       </div>
       <div class="status" id="rtSummary">—</div>
       <div id="rtTable" style="margin-top:10px"></div>
+    </div>
+  </div>
+
+  <!-- 历史下载日志（Worker /admin/logs，需管理口令） -->
+  <div class="card">
+    <div class="hd"><h2>历史下载日志</h2><span class="d">Worker /log-download 跳转记录 · 时间到秒 / 国家-省 / 机型(UA) · 无后端时 N/A，不造假</span></div>
+    <div class="bd">
+      <div class="healthline">
+        <button class="btn" id="logLoad">拉取下载日志</button>
+        <span class="status" id="logStatus">未拉取</span>
+      </div>
+      <div id="logTable" style="margin-top:10px"></div>
+      <div class="healthline" style="margin-top:8px">
+        <button class="btn" id="logPrev">上一页</button>
+        <span class="status" id="logPage">第 1 页</span>
+        <button class="btn" id="logNext">下一页</button>
+      </div>
     </div>
   </div>
 
@@ -331,12 +348,13 @@
   beat().then(loadOnline).catch(function(){ $("kOnline").textContent="N/A"; $("kOnlineSub").textContent="后端未部署，无在线数"; });
   setInterval(function(){ beat().then(loadOnline).catch(function(){}); },30000);
 
-  /* ---------- 公开仓库匿名直读 + 仅写操作走函数 ---------- */
+  /* ---------- 公开仓库匿名直读 + 写操作走 Worker ---------- */
+  var WORKER_BASE="https://et-ratings.etqwf.workers.dev"; /* 规划地址，部署后如不同改这里 */
   var REPO_RAW="https://raw.githubusercontent.com/ETQWFD/LocalDream-ET-ratings/main";
   var REPO_API="https://api.github.com/repos/ETQWFD/LocalDream-ET-ratings/contents";
   function ghGet(url){return fetch(url,{cache:"no-store"}).then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json();});}
   var writeOk=false;
-  function probeWrite(){return fetch(API+"/api/rating").then(function(r){writeOk=!!r.ok;}).catch(function(){writeOk=false;});}
+  function probeWrite(){return fetch(WORKER_BASE+"/healthz").then(function(r){writeOk=!!r.ok;}).catch(function(){writeOk=false;});}
   probeWrite();
 
   function adminHeaders(){ return {"Content-Type":"application/json","X-Admin-Key":($("adminkey").value||"")}; }
@@ -353,7 +371,7 @@
       btn.addEventListener("click",function(){
         if(!writeOk){alert("写操作后端待部署（见 COMMENT-BACKEND.md）。");return;}
         if(!confirm("删除该评论？")) return;
-        apiJSON("/api/admin",{method:"POST",headers:adminHeaders(),body:JSON.stringify({action:"delete_comment",id:btn.getAttribute("data-del")})})
+        apiJSON(WORKER_BASE+"/admin",{method:"POST",headers:adminHeaders(),body:JSON.stringify({action:"delete_comment",id:btn.getAttribute("data-del")})})
           .then(function(){ $("cmtStatus").textContent="已删除评论。"; loadAdminComments(); })
           .catch(function(e){ $("cmtStatus").textContent="删除失败："+e.message; });
       });
@@ -376,7 +394,7 @@
   $("ratingReset").addEventListener("click",function(){
     if(!writeOk){alert("写操作后端待部署（见 COMMENT-BACKEND.md）。");return;}
     if(!confirm("清零全部评分？")) return;
-    apiJSON("/api/admin",{method:"POST",headers:adminHeaders(),body:JSON.stringify({action:"reset_rating"})})
+    apiJSON(WORKER_BASE+"/admin",{method:"POST",headers:adminHeaders(),body:JSON.stringify({action:"reset_ratings"})})
       .then(function(){$("cmtStatus").textContent="评分已清零。";loadRatings();})
       .catch(function(e){$("cmtStatus").textContent="清零失败："+e.message;});
   });
@@ -409,7 +427,7 @@
       btn.addEventListener("click",function(){
         if(!writeOk){alert("写操作后端待部署（见 COMMENT-BACKEND.md）。");return;}
         if(!confirm("删除这条评分？删除后会按剩余记录重建平均分与分布。")) return;
-        apiJSON("/api/admin/ratings",{method:"POST",headers:adminHeaders(),body:JSON.stringify({action:"delete",id:btn.getAttribute("data-del")})})
+        apiJSON(WORKER_BASE+"/admin",{method:"POST",headers:adminHeaders(),body:JSON.stringify({action:"delete_rating",id:btn.getAttribute("data-del")})})
           .then(function(){ $("cmtStatus").textContent="已删除评分。"; loadRatings(); })
           .catch(function(e){ $("cmtStatus").textContent="删除失败："+e.message; });
       });
@@ -432,6 +450,39 @@
     });
   }
   $("rtLoad").addEventListener("click",loadRatings);
+
+  /* ---------- 历史下载日志（Worker /admin/logs，需管理口令） ---------- */
+  var LOG_PAGE=1, LOG_TOTAL=0;
+  function renderLog(items){
+    if(!items||!items.length){ $("logTable").innerHTML='<div class="note">该页无下载记录。</div>'; return; }
+    var html='<table><thead><tr><th>下载时间</th><th>国家-省份</th><th>机型 / UA</th><th>资产</th></tr></thead><tbody>';
+    items.forEach(function(it){
+      var d=new Date(it.ts).toLocaleString("zh-CN",{hour12:false});
+      var asset=it.to||""; try{asset=asset.split("/").pop();}catch(e){}
+      html+='<tr><td class="dim">'+esc(d)+'</td><td>'+esc(it.country)+(it.prov?'-'+esc(it.prov):'')+'</td><td title="'+esc(it.ua)+'">'+esc(it.model)+'</td><td class="dim">'+esc(asset)+'</td></tr>';
+    });
+    html+='</tbody></table>';
+    $("logTable").innerHTML=html;
+  }
+  function loadLogs(page){
+    page=page||1; LOG_PAGE=page;
+    if(!writeOk){ $("logStatus").textContent="后端未部署：下载日志服务待上线（N/A，不造假）。"; return; }
+    var key=($("adminkey").value||"").trim();
+    if(!key){ $("logStatus").textContent="请先输入管理口令再拉取下载日志。"; return; }
+    $("logStatus").textContent="拉取第 "+page+" 页…";
+    fetch(WORKER_BASE+"/admin/logs?page="+page+"&size=30",{headers:{"X-Admin-Key":key}})
+      .then(function(r){ if(r.status===401){throw new Error("管理口令错误 (401)");} if(!r.ok){throw new Error("HTTP "+r.status);} return r.json(); })
+      .then(function(j){
+        LOG_TOTAL=j.total||0;
+        renderLog(j.items||[]);
+        $("logPage").textContent="第 "+(j.page||page)+" 页 · 共 "+LOG_TOTAL+" 条";
+        $("logStatus").textContent="已拉取（Worker 实时数据）。";
+      })
+      .catch(function(e){ $("logStatus").textContent="下载日志拉取失败："+e.message; });
+  }
+  $("logLoad").addEventListener("click",function(){loadLogs(1);});
+  $("logPrev").addEventListener("click",function(){ if(LOG_PAGE>1) loadLogs(LOG_PAGE-1); });
+  $("logNext").addEventListener("click",function(){ if(LOG_PAGE*30<LOG_TOTAL) loadLogs(LOG_PAGE+1); });
 
   /* ---------- clock / auto refresh ---------- */
   function tickClock(){ $("clock").textContent=new Date().toLocaleString("zh-CN"); $("updated").textContent=new Date().toLocaleTimeString("zh-CN"); }
