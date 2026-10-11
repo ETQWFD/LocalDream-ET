@@ -563,37 +563,15 @@ class BackendService : Service() {
             val nativeDir = applicationInfo.nativeLibraryDir
             val modelsDir = File(Model.getModelsDir(this), modelId)
 
-            // et.48: sd15cpu accepts BOTH on-device-converted outputs (*.mnn.weight
-            // sidecars) AND a prebuilt/imported package the engine loads directly
-            // (clip_v2.mnn/unet.mnn/vae_*.mnn/pos_emb.bin/token_emb.bin). A custom
-            // model like HyperSpireV5 uses the latter; requiring the sidecars made it
-            // fail pre-flight with a misleading "Backend start failed".
-            if (backendType == "sd15cpu" &&
-                !Model.hasConvertedSd15Outputs(modelsDir) &&
-                !Model.hasSd15CpuLayout(modelsDir)
-            ) {
-                Log.e(TAG, "pre-flight failed: SD1.5 products missing in $modelsDir")
-                updateState(
-                    BackendState.Error(
-                        "模型不完整：$modelId 缺少引擎必需权重文件（请重新下载/转换）",
-                        modelId,
-                    ),
-                )
-                return false
-            }
-            // et.29: QNN NPU packages use the flattened QNN manifest (no .weight
-            // sidecars). Pre-flight with the correct required set so a bad QNN
-            // download fails fast instead of crashing inside native.
-            if (backendType == "sd15npu" && !Model.hasCompleteSdPackage(modelsDir, qnn = true)) {
-                Log.e(TAG, "pre-flight failed: QNN products missing in $modelsDir")
-                updateState(
-                    BackendState.Error(
-                        "模型不完整：$modelId 缺少 NPU 权重文件",
-                        modelId,
-                    ),
-                )
-                return false
-            }
+            // et.52: aligned with upstream xororz/local-dream — the upstream
+            // BackendService has NO sd15cpu/sd15npu preflight gate; it lets the
+            // engine launch and the engine itself decides whether the weight set is
+            // usable. Our earlier pre-flight (hasConvertedSd15Outputs / hasSd15CpuLayout /
+            // hasCompleteSdPackage) wrongly blocked layouts the upstream engine starts
+            // fine (AnythingV5 sidecar package, HyperSpireV5 direct-load, etc.). Removed
+            // to match upstream: if the weight files are missing the engine now exits and
+            // we surface the real exit code + engine log tail (et.48/et.51 classification)
+            // instead of a pre-launch "model incomplete" gate.
 
             val executableFile = File(nativeDir, EXECUTABLE_NAME)
 

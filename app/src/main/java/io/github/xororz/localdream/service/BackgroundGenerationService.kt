@@ -372,7 +372,10 @@ class BackgroundGenerationService : Service() {
             // generation attempt may be retried exactly once on CPU with safe
             // params when the GPU output fails the structural health check.
             var attemptOpenCL = useOpenCL && !preferences.getBoolean("gpu_unstable", false)
-            var attemptCfg = cfg
+            // et.52: any reasonable CFG (1..15) must submit; clamp + round to 1 decimal
+            // instead of rejecting. Upstream passes cfg raw; we only guard against
+            // out-of-range / fractional edge values that could trip the engine.
+            var attemptCfg = Math.round(cfg.coerceIn(1f, 15f) * 10f) / 10f
             var attemptSampler = scheduler
             var attemptSteps = steps
             var attemptWidth = width

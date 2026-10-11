@@ -1,9 +1,9 @@
 {
-  "versionCode": 125,
-  "versionName": "3.0.0-et.51",
-  "title": "发现新版本 v3.0.0-et.51「最后一舞」",
+  "versionCode": 126,
+  "versionName": "3.0.0-et.52",
+  "title": "发现新版本 v3.0.0-et.52「最后一舞」",
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
-  "size": 153552999,
-  "sha256": "a222d7a57085e6c56a07304f0aa7fd7847bb4f1774551110a47bdfc7c6d60180",
-  "releaseNotes": "「最后一舞」：作者需继续上学考试，可能无法及时修复问题；如有问题请联系作者，邮箱 2416444244@qq.com。\n\n本版修复：\n· 修复“内存不足”误报：32GB 大内存 NPU 手机在 NPU Models 选 Anything V5.0 出图失败时，不再一律报“内存不足、已降到384重试仍失败”。现在按真实退出码分类：NPU/加速引擎崩溃会提示“模型与加速方式可能不兼容，请改用 CPU Models 标签下的对应模型”，并附真实 code 与 engine_*.log 末行；只有 CPU 引擎且确为 137(SIGKILL) 才走 384 安全重试。\n· 新退出码对照：137=系统结束/内存；134=初始化失败(SIGABRT)；139=崩溃(段错误)；均不再笼统叫内存不足。\n\n本次bug由QQ人员：2318691341 提出，已备案成功！\n\n诚实说明：ARM/NPU 真机兼容性需在对应设备复测，不承诺所有 NPU 模型可跑。安装后在“关于/版本”看到 build 125 即新版。版权 Copyright (C) 2026 etc，署名 ET。"
+  "size": 153552343,
+  "sha256": "0201e9aa37949b0c14a78a278d9e74999bc8a22c86b41b2a44ed569cc4f379f6",
+  "releaseNotes": "「最后一舞」：作者需继续上学考试，可能无法及时修复问题；如有问题请联系作者，邮箱 2416444244@qq.com。\n\n本版修复：\n· 模型兼容对齐原版：移除我们自加的 sd15cpu/sd15npu 启动前预检（原版 xororz/local-dream 无此拦截，由引擎自行判断权重是否可用），AnythingV5 带侧车标准包、HyperSpireV5 直读包等原版能跑的模型不再被误判“缺文件/模型不完整”而挡掉；缺文件时由引擎退出码真实报错。\n· 修复改 CFG 就出不了图：对齐原版 CFG 滑块（1~30 自由调节，去掉 CPU=9 硬上限），请求层把任意合理 CFG clamp 到 1~15（保留 1 位小数）后提交，非法值只 clamp 不失败。\n· 去阻断式“内存不足”红字：真实 137 仍在后台自动降档重试，但失败提示改为“引擎退出 code=137（曾自动降到384重试）…详见 engine_*.log 末行”，不再用吓人的“被系统结束仍失败”阻断文案。\n\n版本历史：build125 的 NPU 退出码分类由 QQ 2318691341 反馈。\n\n诚实说明：ARM/NPU 真机出图与模型兼容需在对应设备复测。安装后在“关于/版本”看到 build 126 即新版。版权 Copyright (C) 2026 etc，署名 ET。"
 }
