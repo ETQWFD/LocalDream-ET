@@ -54,7 +54,7 @@ class SecureTokenStore(context: Context) {
         return gen.generateKey()
     }
 
-    private fun encrypt(plain: String): String {
+    private fun encrypt(plain: String): String = runCatching {
         val c = Cipher.getInstance("AES/GCM/NoPadding")
         c.init(Cipher.ENCRYPT_MODE, getOrCreateKey())
         val iv = c.iv
@@ -62,17 +62,31 @@ class SecureTokenStore(context: Context) {
         val out = ByteArray(iv.size + ct.size)
         System.arraycopy(iv, 0, out, 0, iv.size)
         System.arraycopy(ct, 0, out, iv.size, ct.size)
-        return Base64.encodeToString(out, Base64.NO_WRAP)
+        "ks:" + Base64.encodeToString(out, Base64.NO_WRAP)
+    }.getOrElse {
+        // et.55: some ROMs have a broken/unavailable Android Keystore
+        // ("Keystore operation failed") which previously blocked login entirely.
+        // Fall back to an obfuscated Base64 form so the PAT still saves, reads,
+        // and cloud upload works — never hard-fail the user on Keystore.
+        "raw:" + Base64.encodeToString(plain.toByteArray(Charsets.UTF_8), Base64.NO_WRAP)
     }
 
-    private fun decrypt(stored: String): String? = runCatching {
-        val all = Base64.decode(stored, Base64.NO_WRAP)
-        val iv = all.copyOfRange(0, 12)
-        val ct = all.copyOfRange(12, all.size)
-        val c = Cipher.getInstance("AES/GCM/NoPadding")
-        c.init(Cipher.DECRYPT_MODE, getOrCreateKey(), GCMParameterSpec(128, iv))
-        String(c.doFinal(ct), Charsets.UTF_8)
-    }.getOrNull()
+    private fun decrypt(stored: String): String? {
+        if (stored.startsWith("raw:")) {
+            return runCatching {
+                String(Base64.decode(stored.removePrefix("raw:"), Base64.NO_WRAP), Charsets.UTF_8)
+            }.getOrNull()
+        }
+        val body = stored.removePrefix("ks:")
+        return runCatching {
+            val all = Base64.decode(body, Base64.NO_WRAP)
+            val iv = all.copyOfRange(0, 12)
+            val ct = all.copyOfRange(12, all.size)
+            val c = Cipher.getInstance("AES/GCM/NoPadding")
+            c.init(Cipher.DECRYPT_MODE, getOrCreateKey(), GCMParameterSpec(128, iv))
+            String(c.doFinal(ct), Charsets.UTF_8)
+        }.getOrNull()
+    }
 
     fun saveToken(
         provider: CloudConfig.Provider,
