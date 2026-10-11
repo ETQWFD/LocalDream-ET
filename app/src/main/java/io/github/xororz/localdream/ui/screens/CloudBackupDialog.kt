@@ -202,10 +202,24 @@ fun CloudBackupDialog(onDismiss: () -> Unit) {
                         Toast.makeText(context, tokenPageUrl, Toast.LENGTH_LONG).show()
                     }) { Text(stringResource(R.string.cloud_backup_copy_token_url)) }
 
-                    // Device flow entry: disabled when no client_id configured.
-                    val deviceClientId = BuildConfig.GITHUB_OAUTH_CLIENT_ID
-                    TextButton(enabled = deviceClientId.isNotBlank(), onClick = {
-                        Toast.makeText(context, R.string.cloud_backup_device_disabled, Toast.LENGTH_LONG).show()
+                    // et.57: browser login — open the provider's authorization/token page
+                    // in the browser. Full device-code redirect callback needs a configured
+                    // OAuth client_id (currently blank); until then the user authorizes in
+                    // the browser and pastes the resulting PAT below. Coexists with PAT input.
+                    TextButton(onClick = {
+                        val url = when (provider) {
+                            CloudConfig.Provider.GITHUB -> "https://github.com/login/device"
+                            CloudConfig.Provider.GITEE -> "https://gitee.com/oauth/authorize"
+                        }
+                        runCatching {
+                            val i = android.content.Intent(
+                                android.content.Intent.ACTION_VIEW,
+                                android.net.Uri.parse(url),
+                            ).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                            context.startActivity(i)
+                        }.onFailure {
+                            Toast.makeText(context, "无法打开浏览器：$url", Toast.LENGTH_LONG).show()
+                        }
                     }) { Text(stringResource(R.string.cloud_backup_device_login)) }
 
                     if (showExisting) {

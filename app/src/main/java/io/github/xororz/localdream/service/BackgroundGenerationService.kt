@@ -468,6 +468,8 @@ class BackgroundGenerationService : Service() {
             // BackendService must NOT close the engine pipe or destroy the process —
             // fixes "Req Rcvd ... -> read interrupted by close() -> engine exited 143".
             io.github.xororz.localdream.service.BackendService.notifyGenerationStarted()
+            // et.57: optional background music while generating.
+            io.github.xororz.localdream.utils.BgmManager.start(this@BackgroundGenerationService)
             val call = generationClient.newCall(request)
             activeCall = call
             call.execute().use { response ->
@@ -1022,9 +1024,22 @@ class BackgroundGenerationService : Service() {
             stopSelf()
         } finally {
             activeCall = null
-            // et.53: release the generation-in-flight guard; flushes any teardown
-            // that stopBackend() deferred while this request was running.
+            io.github.xororz.localdream.utils.BgmManager.stop(this@BackgroundGenerationService)
             io.github.xororz.localdream.service.BackendService.notifyGenerationEnded()
+            // et.57: release the idle engine when the LAN "API 连接" service is NOT running,
+            // so the engine does not keep holding memory after a normal local generation.
+            // (If the user regenerates within the idle grace window, requestStart cancels
+            // the stop and reuses the resident engine.)
+            if (!io.github.xororz.localdream.service.LanImageService.isRunning.value) {
+                runCatching {
+                    startService(
+                        android.content.Intent(
+                            this@BackgroundGenerationService,
+                            io.github.xororz.localdream.service.BackendService::class.java,
+                        ).apply { action = io.github.xororz.localdream.service.BackendService.ACTION_STOP }
+                    )
+                }
+            }
         }
     }
 
