@@ -1012,12 +1012,14 @@ class BackgroundGenerationService : Service() {
                     code in setOf(134, 139) -> {
                         val why = when (code) {
                             134 -> "NPU/加速引擎初始化失败(SIGABRT)"
-                            else -> "NPU/加速引擎崩溃(段错误)"
+                            else -> "NPU/加速引擎崩溃(段错误 code=139)"
                         }
-                        "$why(code=$code)，模型与加速方式可能不兼容；请改用 CPU Models 标签下的对应模型，详见 engine_*.log。"
+                        "$why，模型与加速方式可能不兼容；请改用 CPU Models 标签下的对应模型，详见 engine_*.log。"
                     }
+                    code == 0 && (e.message ?: "").contains("bad_alloc", true) ->
+                        "引擎内存分配失败(bad_alloc，常见于 NPU 包与本机芯片/驱动不匹配)，已自动降档仍失败；请改用 CPU Models 标签下的对应模型，详见 engine_*.log。"
                     else ->
-                        "生成失败：${e.message ?: "未知错误"}（exit=$code），详见 engine_*.log 末行。"
+                        "生成失败(exit=$code)：${e.message ?: "原生退出"}，详见 engine_*.log 末行。"
                 }
                 updateState(GenerationState.Error(msg))
             }

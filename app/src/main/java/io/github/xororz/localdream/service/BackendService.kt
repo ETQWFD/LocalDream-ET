@@ -362,6 +362,11 @@ class BackendService : Service() {
         // finally) or on a real stop.
         notifyGenerationStarted()
         stopBackend()
+        // et.60: after a bad_alloc / resolution downgrade the old QNN process must be
+        // fully gone before we exec a fresh one. QNN graphs do NOT support hot resize
+        // ("model buffer has been released, can't resize session"); racing a new exec
+        // while the old pipe/HTP pool is still tearing down produced SIGSEGV(139).
+        runCatching { Thread.sleep(500) }
         if (startBackend(want)) {
             serving = want
             updateServing(want)

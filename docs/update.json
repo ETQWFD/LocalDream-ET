@@ -1,9 +1,9 @@
 {
-  "versionCode": 133,
-  "versionName": "3.0.0-et.59",
-  "title": "发现新版本 v3.0.0-et.59「最后一舞」",
+  "versionCode": 134,
+  "versionName": "3.0.0-et.60",
+  "title": "发现新版本 v3.0.0-et.60「最后一舞」",
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
-  "size": 156020831,
-  "sha256": "0cc01175ed5f1485eb40c86791fb75d3316c3c7201533c6812bd4b24c4b21152",
-  "releaseNotes": "「最后一舞」：作者因上学中，可能无法及时修复问题；如有问题请联系作者，邮箱 2416444244@qq.com。\n\n本版修复背景音设置：\n· 默认改为“关闭”——不再默认出图就循环播《黎明进行曲》，只有主动选“黎明进行曲”或“自定义”才在出图时播放、结束自动停。\n· 弹窗右下按钮改为“关闭”（原误显示“已复制”）。\n· 选“自定义（导入本地音频）”会打开系统文件选择器(audio/*)，导入后落盘到 App 私有目录并显示文件名、自动选中；失败给中文提示不崩。\n\n安装后在“关于/版本”看到 build 133 即新版。版权 Copyright (C) 2026 etc，署名 ET。"
+  "size": 156021067,
+  "sha256": "d133e0070806e4b1adddf8cbc7952bd0b2214926ef1f925125df60453e8f78fa",
+  "releaseNotes": "「最后一舞」：作者因上学中，可能无法及时修复问题；如有问题请联系作者，邮箱 2416444244@qq.com。\n\n本版修复 NPU 段错误真根因：\n· bad_alloc 自动降档(512→384→256)时，不再在旧 QNN 进程内改分辨率（QNN graph 不支持热 resize）：先完整销毁旧引擎进程、等待约500ms，再用新分辨率全新 exec 拉起子进程（新建 QNN context/graph）后重发请求。\n· 全新重启后仍段错误(139)或连续 bad_alloc：判定该 NPU 包与本机 NPU 不兼容，自动中文提示并引导切到 CPU Models(anythingv5cpu MNN)。\n· 退出码文案补全：137=被系统结束/内存、139=原生段错误(NPU包与芯片不兼容，建议换CPU)、134=abort、其它=真实 code+engine log 末行，不再显示“未知错误(exit=0)”。\n· CPU anythingv5cpu 64位兜底路径保留。\n\n安装后在“关于/版本”看到 build 134 即新版。8 Elite/Android17 真机 NPU 出图需在对应设备复测。版权 Copyright (C) 2026 etc，署名 ET。"
 }
