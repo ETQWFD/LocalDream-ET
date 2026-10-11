@@ -1,9 +1,9 @@
 {
-  "versionCode": 124,
-  "versionName": "3.0.0-et.50",
-  "title": "发现新版本 v3.0.0-et.50「最后一舞」",
+  "versionCode": 125,
+  "versionName": "3.0.0-et.51",
+  "title": "发现新版本 v3.0.0-et.51「最后一舞」",
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
-  "size": 153551523,
-  "sha256": "864c36fabcc0130b2c29d576b54a8a7b90a516d9113e8029af36f54ea56a9c86",
-  "releaseNotes": "「最后一舞」：作者需继续上学考试，可能无法及时修复问题；如有问题请联系作者，邮箱 2416444244@qq.com。\n\n本版更新：\n· 新增悬浮窗保活（可选）：出图/API 服务运行时，若已授权悬浮窗权限，会在屏幕边角显示一个可拖动的小窗（显示“LocalDream ET 推理中”），单击返回 App、点“停止”可中断，结束自动消失，降低被系统后台清理概率。\n· 未授权悬浮窗时不阻断主流程，自动降级为普通前台服务（保活较弱）；可在系统弹窗里跳到本应用“显示在其他应用上层”设置页授权。\n· 兼容既有 WakeLock/WifiLock/前台通知，无权限也不崩溃。\n\n诚实说明：32 位 PowerVR GE8320（无半精度，约 164 秒/步）硬件地板，256/8 步/euler_a 是低配可用档，不承诺秒级；国产 ROM 仍建议加电池白名单/允许后台自启动。安装后在“关于/版本”看到 build 124 即新版。版权 Copyright (C) 2026 etc，署名 ET。"
+  "size": 153552999,
+  "sha256": "a222d7a57085e6c56a07304f0aa7fd7847bb4f1774551110a47bdfc7c6d60180",
+  "releaseNotes": "「最后一舞」：作者需继续上学考试，可能无法及时修复问题；如有问题请联系作者，邮箱 2416444244@qq.com。\n\n本版修复：\n· 修复“内存不足”误报：32GB 大内存 NPU 手机在 NPU Models 选 Anything V5.0 出图失败时，不再一律报“内存不足、已降到384重试仍失败”。现在按真实退出码分类：NPU/加速引擎崩溃会提示“模型与加速方式可能不兼容，请改用 CPU Models 标签下的对应模型”，并附真实 code 与 engine_*.log 末行；只有 CPU 引擎且确为 137(SIGKILL) 才走 384 安全重试。\n· 新退出码对照：137=系统结束/内存；134=初始化失败(SIGABRT)；139=崩溃(段错误)；均不再笼统叫内存不足。\n\n本次bug由QQ人员：2318691341 提出，已备案成功！\n\n诚实说明：ARM/NPU 真机兼容性需在对应设备复测，不承诺所有 NPU 模型可跑。安装后在“关于/版本”看到 build 125 即新版。版权 Copyright (C) 2026 etc，署名 ET。"
 }

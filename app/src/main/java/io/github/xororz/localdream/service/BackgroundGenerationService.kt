@@ -787,6 +787,31 @@ class BackgroundGenerationService : Service() {
                 // killing+restarting it on these is exactly what caused the dense
                 // start/143 churn and mid-generation interruptions.
                 val engineDied = exitCode in setOf(137, 134, 139)
+                // et.51: the CPU "降到384安全参数重试" must ONLY run on the CPU engine
+                // (sd15cpu) where 137 is plausibly memory pressure. On NPU/DiT backends a
+                // crash is NOT OOM (a 32GB NPU phone reported "内存不足" running Anything V5
+                // NPU) — applying the CPU 384 downgrade there is meaningless and misleading.
+                val isCpuBackend = engineBackendType == "sd15cpu"
+                if (engineDied && !isCpuBackend) {
+                    // NPU / DiT / other accelerator: report the REAL reason, never "内存不足".
+                    val reason = when (exitCode) {
+                        137 -> "NPU 引擎被系统结束(code=137)，可能是 NPU 驱动/模型不匹配"
+                        134 -> "NPU/加速引擎初始化失败(code=134 SIGABRT)，模型与加速方式可能不兼容"
+                        139 -> "NPU/加速引擎崩溃(code=139 段错误)，模型与加速方式可能不兼容"
+                        else -> "加速引擎退出(code=$exitCode)"
+                    }
+                    io.github.xororz.localdream.cloud.LogHub.log(
+                        io.github.xororz.localdream.cloud.LogHub.Category.GENERATE,
+                        "Accelerator backend ($engineBackendType) died exit=$exitCode; not a CPU OOM retry.",
+                    )
+                    updateState(
+                        GenerationState.Error(
+                            "$reason。请改用 CPU Models 标签下的对应模型；详见 engine_*.log 末行。",
+                        ),
+                    )
+                    stopSelf()
+                    break@attemptLoop
+                }
                 if (engineDied && !safeOomRetryDone) {
                     safeOomRetryDone = true
                     // et.45-patch: tier-aware OOM retry. On extreme-low-end 32-bit devices we
@@ -922,11 +947,23 @@ class BackgroundGenerationService : Service() {
                 updateState(GenerationState.Idle)
             } else {
                 Log.e("GenerationService", "generation error", e)
-                updateState(
-                    GenerationState.Error(
-                        getString(R.string.err_engine_oom_killed),
-                    ),
-                )
+                // et.51: do NOT blanket "内存不足". Use the real exit code / backend.
+                val code = io.github.xororz.localdream.utils.EngineExitInfo.lastExitCode
+                val msg = when {
+                    code == 137 && engineBackendType == "sd15cpu" ->
+                        getString(R.string.err_engine_oom_killed)
+                    code in setOf(137, 134, 139) -> {
+                        val why = when (code) {
+                            134 -> "NPU/加速引擎初始化失败(SIGABRT)"
+                            139 -> "NPU/加速引擎崩溃(段错误)"
+                            else -> "NPU/加速引擎被系统结束"
+                        }
+                        "$why(code=$code)，模型与加速方式可能不兼容；请改用 CPU Models 标签下的对应模型，详见 engine_*.log。"
+                    }
+                    else ->
+                        "生成失败：${e.message ?: "未知错误"}（exit=$code），详见 engine_*.log 末行。"
+                }
+                updateState(GenerationState.Error(msg))
             }
             stopSelf()
         } finally {
