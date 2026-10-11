@@ -463,6 +463,10 @@ class BackgroundGenerationService : Service() {
                 .header("Connection", "close")
                 .build()
 
+            // et.53: mark a generation request as in flight. While this is true the
+            // BackendService must NOT close the engine pipe or destroy the process —
+            // fixes "Req Rcvd ... -> read interrupted by close() -> engine exited 143".
+            io.github.xororz.localdream.service.BackendService.notifyGenerationStarted()
             val call = generationClient.newCall(request)
             activeCall = call
             call.execute().use { response ->
@@ -971,6 +975,9 @@ class BackgroundGenerationService : Service() {
             stopSelf()
         } finally {
             activeCall = null
+            // et.53: release the generation-in-flight guard; flushes any teardown
+            // that stopBackend() deferred while this request was running.
+            io.github.xororz.localdream.service.BackendService.notifyGenerationEnded()
         }
     }
 

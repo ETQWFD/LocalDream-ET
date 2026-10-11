@@ -81,6 +81,39 @@ class BackendService : Service() {
         const val ACTION_STOP = "io.github.xororz.localdream.STOP_GENERATION"
         const val ACTION_RESTART = "io.github.xororz.localdream.RESTART_BACKEND"
 
+        // et.53: generation-in-flight guard. While BackgroundGenerationService has a
+        // /generate request to the live engine, NO thread may close the engine stdout
+        // pipe or destroy/kill the process. Real log evidence (Adreno 830 NPU):
+        // "Req Rcvd ... S:8 ..." then "monitor error: read interrupted by close() on
+        // another thread" then "engine exited code=143" 6-20s after start — the App
+        // itself SIGTERM'd the healthy engine. Any stop/restart requested during
+        // generation is deferred until generation ends.
+        @Volatile
+        var generating = false
+            private set
+        @Volatile
+        private var stopDeferred = false
+        @Volatile
+        private var instance: BackendService? = null
+
+        fun notifyGenerationStarted() { generating = true; stopDeferred = false }
+
+        // Called by BackgroundGenerationService when the /generate request completes
+        // (success / error / cancel). Releases the guard and flushes any teardown
+        // that was blocked mid-generation.
+        fun notifyGenerationEnded() {
+            generating = false
+            val svc = instance
+            if (stopDeferred) {
+                stopDeferred = false
+                if (svc != null) {
+                    svc.serviceScope.launch {
+                        if (svc.desired == null) svc.stopBackend()
+                    }
+                }
+            }
+        }
+
         // Brings the service up as a foreground service without touching any
         // backend process. Sent when host mode starts (while the app is still
         // in the foreground) so later remote /select commands are plain
@@ -177,6 +210,7 @@ class BackendService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        instance = this
         createNotificationChannel()
         // et.28: the engine holds a native child process; keep CPU/WiFi alive
         // for the whole engine lifetime so screen-off does not stall inference.
@@ -948,6 +982,14 @@ class BackendService : Service() {
 
     private fun stopBackend() {
         Log.i(TAG, "to stop backend")
+        // et.53: never destroy the engine while a generation request is in flight.
+        // If a stop/restart lands mid-generation, mark it deferred and bail — the
+        // teardown runs after notifyGenerationEnded().
+        if (generating && process?.isAlive == true) {
+            Log.w(TAG, "stopBackend deferred: generation in flight")
+            stopDeferred = true
+            return
+        }
         // Mark the upcoming exit as intentional before destroy() so the monitor
         // thread (which wakes the instant the process dies) won't race ahead and
         // report it as a crash.
