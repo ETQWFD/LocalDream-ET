@@ -138,29 +138,29 @@
   <p class="muted">手机版当前 v3.0.0-et.59，约 153 MB，含 arm64-v8a / armeabi-v7a / x86_64 三套原生引擎，包名 <code>etc.github.ai</code>，签名 <code>CN=ET</code>。装完在「关于/版本」看到 build 133 即新版。更早版本的逐条修复见 GitHub Release 说明。按下面 6 步使用：</p>
 
 <details class="step" open>
-  <summary>① 下载安装 App</summary>
+  <summary data-i18n-t="step1">① 下载安装 App</summary>
   <div class="bd">点上方「手机 APK」下载固定名 <code>LocalDream-ET.apk</code>，允许安装未知来源。安装后在「关于/版本」核对 build 号；三架构引擎已内置。</div>
 </details>
 <details class="step">
-  <summary>② 授予「所有文件访问」权限</summary>
+  <summary data-i18n-t="step2">② 授予「所有文件访问」权限</summary>
   <div class="bd">首次使用请在系统设置里给 App「所有文件 / 管理所有文件」权限，否则读不到公共目录里的模型，模型列表会是空的。</div>
 </details>
 <details class="step">
-  <summary>③ 下载 / 选择模型</summary>
+  <summary data-i18n-t="step3">③ 下载 / 选择模型</summary>
   <div class="bd">把模型放到公共目录 <code>LocalDreamET/models</code>；带转换流程的模型会自动转换一次，<code>anythingv5cpu</code> 等 CPU 直读模型无需转换。文件齐全即就绪、缺文件置灰。</div>
 </details>
 <details class="step">
-  <summary>④ 本地出图 / 修图</summary>
+  <summary data-i18n-t="step4">④ 本地出图 / 修图</summary>
   <div class="bd">输入提示词 → 选模型 → 出图；修图在「修图」里上传整图、设重绘强度（0.3–0.7，默认 0.45）。英文提示逐词透传。
     <div class="warn">低端机（32 位 / 无半精度 / 2–3GB，如 PowerVR GE8320）默认强制安全档：长边 256、8 步、euler_a、单张；约 164 秒/步是硬件地板，软件无法快一个数量级，不承诺秒出。<br>「设置 → 强制出图」默认关；打开后不再自动降档、按你选的分辨率/步数硬跑——低配机可能崩溃或极慢，需自行承担风险。</div>
   </div>
 </details>
 <details class="step">
-  <summary>⑤ 可选：API 连接 / 用电脑服务端出图</summary>
+  <summary data-i18n-t="step5">⑤ 可选：API 连接 / 用电脑服务端出图</summary>
   <div class="bd">手机「设置 → API 连接」选一个就绪模型，手机即变成局域网出图服务器（前台服务常驻、WakeLock 保活），其它设备可连 <code>http://手机IP:8082</code>。也可用上方「下载服务端」在 Windows/Linux 跑 v1.1.7：启动即先绑定端口、引擎后台加载，<code>/healthz</code> 就绪后对外提供 SD1.5 的 txt2img/img2img，默认无内容限制。聊天客户端「ET 聊天画师」v1.0.2 连接服务端出图。</div>
 </details>
 <details class="step">
-  <summary>⑥ 常见问题：内存不足 / 太慢怎么办</summary>
+  <summary data-i18n-t="step6">⑥ 常见问题：内存不足 / 太慢怎么办</summary>
   <div class="bd"><ul>
     <li>std::bad_alloc 内存不足：降分辨率/步数；低端机保持 256/8 安全档，或改用电脑服务端。</li>
     <li>8081 启动失败：模型未下完、未转换完成或 ABI 不匹配。</li>
@@ -342,7 +342,7 @@
 
     /* 下载跳转记录：Worker 在线时，下载链接先过 /log-download?to= 记录再 302 到资产；
        Worker 未部署则直接走原资产链接，下载不受影响。 */
-    var DL_WORKER = "https://et-ratings.etqwf.workers.dev";
+    var DL_WORKER = "https://et-ratings.daily-podium.workers.dev";
     var dlLog = false;
     fetch(DL_WORKER+"/healthz",{cache:"no-store"}).then(function(r){ if(r.ok) dlLog=true; }).catch(function(){});
     document.addEventListener("click",function(e){
@@ -363,7 +363,7 @@
   "use strict";
   /* 写票后端：Cloudflare Worker。规划地址，部署后如不同请改这里。
      读侧评分/评论仍匿名直读公开仓库（下方 RAW/GHAPI），不依赖本 Worker。 */
-  var WORKER_BASE = "https://et-ratings.etqwf.workers.dev";
+  var WORKER_BASE = "https://et-ratings.daily-podium.workers.dev";
   var RAW = "https://raw.githubusercontent.com/ETQWFD/LocalDream-ET-ratings/main";
   var GHAPI = "https://api.github.com/repos/ETQWFD/LocalDream-ET-ratings/contents";
   function $(id){return document.getElementById(id);}
@@ -438,7 +438,13 @@
       "nav.download":"Download","nav.chat":"Chat client","nav.features":"Features","nav.models":"Models & devices",
       "nav.restore":"Img2img","nav.cloud":"Cloud backup","nav.help":"Help","nav.feedback":"Rating",
       "h2.download":"Download","h2.chat":"Chat-style image client","h2.features":"Features",
-      "h2.models":"Models & device compatibility","h2.restore":"Img2img mode","h2.feedback":"Rating & feedback"
+      "h2.models":"Models & device compatibility","h2.restore":"Img2img mode","h2.feedback":"Rating & feedback",
+      "step1":"1. Download & install the app",
+      "step2":"2. Grant \"All files access\" permission",
+      "step3":"3. Download / pick a model",
+      "step4":"4. Generate / edit locally",
+      "step5":"5. Optional: API mode / desktop server",
+      "step6":"6. FAQ: out of memory / too slow"
     }
   };
   function apply(lang){
