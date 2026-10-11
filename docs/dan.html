@@ -349,7 +349,7 @@
   setInterval(function(){ beat().then(loadOnline).catch(function(){}); },30000);
 
   /* ---------- 公开仓库匿名直读 + 写操作走 Worker ---------- */
-  var WORKER_BASE="https://et-ratings.daily-podium.workers.dev"; /* 规划地址，部署后如不同改这里 */
+  var WORKER_BASE="https://et-ratings.diligent-flat.workers.dev"; /* 规划地址，部署后如不同改这里 */
   var REPO_RAW="https://raw.githubusercontent.com/ETQWFD/LocalDream-ET-ratings/main";
   var REPO_API="https://api.github.com/repos/ETQWFD/LocalDream-ET-ratings/contents";
   function ghGet(url){return fetch(url,{cache:"no-store"}).then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json();});}

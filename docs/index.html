@@ -342,7 +342,7 @@
 
     /* 下载跳转记录：Worker 在线时，下载链接先过 /log-download?to= 记录再 302 到资产；
        Worker 未部署则直接走原资产链接，下载不受影响。 */
-    var DL_WORKER = "https://et-ratings.daily-podium.workers.dev";
+    var DL_WORKER = "https://et-ratings.diligent-flat.workers.dev";
     var dlLog = false;
     fetch(DL_WORKER+"/healthz",{cache:"no-store"}).then(function(r){ if(r.ok) dlLog=true; }).catch(function(){});
     document.addEventListener("click",function(e){
@@ -363,7 +363,7 @@
   "use strict";
   /* 写票后端：Cloudflare Worker。规划地址，部署后如不同请改这里。
      读侧评分/评论仍匿名直读公开仓库（下方 RAW/GHAPI），不依赖本 Worker。 */
-  var WORKER_BASE = "https://et-ratings.daily-podium.workers.dev";
+  var WORKER_BASE = "https://et-ratings.diligent-flat.workers.dev";
   var RAW = "https://raw.githubusercontent.com/ETQWFD/LocalDream-ET-ratings/main";
   var GHAPI = "https://api.github.com/repos/ETQWFD/LocalDream-ET-ratings/contents";
   function $(id){return document.getElementById(id);}
