@@ -353,6 +353,7 @@
     <string name="bgm_dawn">Default: Dawn March (built-in)</string>
     <string name="bgm_off">Off</string>
     <string name="bgm_custom">Custom (import audio)</string>
+    <string name="bgm_close">Close</string>
 
     <string name="contact_copy_qq">Copy QQ</string>
     <string name="contact_join_group">Join QQ group</string>

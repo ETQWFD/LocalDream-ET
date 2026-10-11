@@ -343,6 +343,8 @@
     <string name="bgm_dawn">默认：黎明进行曲（内置）</string>
     <string name="bgm_off">关闭</string>
     <string name="bgm_custom">自定义（导入本地音频）</string>
+    <string name="bgm_close">关闭</string>
+
 
     <string name="contact_copy_qq">复制 QQ</string>
     <string name="contact_join_group">加入 QQ 群</string>

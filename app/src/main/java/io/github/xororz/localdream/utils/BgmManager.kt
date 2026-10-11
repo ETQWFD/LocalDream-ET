@@ -25,16 +25,17 @@ object BgmManager {
     private const val PREF = "bgm_prefs"
     private const val KEY_MODE = "mode"
     private const val KEY_CUSTOM_URI = "custom_uri"
+    private const val KEY_CUSTOM_NAME = "custom_name"
 
     private var player: MediaPlayer? = null
 
     fun mode(ctx: Context): Mode = runCatching {
-        when (prefs(ctx).getString(KEY_MODE, Mode.DAWN.name) ?: Mode.DAWN.name) {
-            Mode.OFF.name -> Mode.OFF
+        when (prefs(ctx).getString(KEY_MODE, Mode.OFF.name) ?: Mode.OFF.name) {
+            Mode.DAWN.name -> Mode.DAWN
             Mode.CUSTOM.name -> Mode.CUSTOM
-            else -> Mode.DAWN
+            else -> Mode.OFF
         }
-    }.getOrDefault(Mode.DAWN)
+    }.getOrDefault(Mode.OFF)
 
     fun setMode(ctx: Context, mode: Mode) {
         prefs(ctx).edit().putString(KEY_MODE, mode.name).apply()
@@ -46,6 +47,28 @@ object BgmManager {
     }
 
     fun customUri(ctx: Context): String? = prefs(ctx).getString(KEY_CUSTOM_URI, null)
+
+    fun customName(ctx: Context): String? = prefs(ctx).getString(KEY_CUSTOM_NAME, null)
+
+    /**
+     * et.59: copy a user-picked audio Uri into app-private storage so it survives
+     * reboots and MediaPlayer can read it. (Direct MediaPlayer playback of common
+     * mp3/m4a/ogg/wav; we do not re-encode — wrapped in runCatching, failure is
+     * reported in the UI.) Returns the stored display name on success.
+     */
+    fun importCustom(ctx: Context, src: Uri, displayName: String): Boolean = runCatching {
+        val app = ctx.applicationContext
+        val out = java.io.File(app.filesDir, "bgm_custom_audio.dat")
+        app.contentResolver.openInputStream(src)?.use { input ->
+            java.io.FileOutputStream(out).use { fos -> input.copyTo(fos) }
+        } ?: return@runCatching false
+        prefs(ctx).edit()
+            .putString(KEY_CUSTOM_URI, Uri.fromFile(out).toString())
+            .putString(KEY_CUSTOM_NAME, displayName)
+            .putString(KEY_MODE, Mode.CUSTOM.name)
+            .apply()
+        true
+    }.getOrDefault(false)
 
     fun isPlaying(): Boolean = runCatching { player?.isPlaying == true }.getOrDefault(false)
 

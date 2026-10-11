@@ -5213,12 +5213,42 @@ private fun ContactAuthorDialog(onDismiss: () -> Unit) {
     )
 }
 
-/** et.58: background-music settings dialog. Three modes persisted via BgmManager. */
+/** et.58/et.59: background-music settings dialog. Default OFF. */
 @androidx.compose.runtime.Composable
 private fun BgmSettingsDialog(onDismiss: () -> Unit) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     var mode by androidx.compose.runtime.remember {
         androidx.compose.runtime.mutableStateOf(io.github.xororz.localdream.utils.BgmManager.mode(ctx))
+    }
+    var customName by androidx.compose.runtime.remember {
+        androidx.compose.runtime.mutableStateOf(
+            io.github.xororz.localdream.utils.BgmManager.customName(ctx),
+        )
+    }
+    val picker = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.GetContent(),
+    ) { uri ->
+        if (uri != null) {
+            // read display name from content resolver
+            var name = "导入的音频"
+            runCatching {
+                ctx.contentResolver.query(uri, null, null, null, null)?.use { c ->
+                    val idx = c.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                    if (idx >= 0 && c.moveToFirst()) name = c.getString(idx) ?: name
+                }
+            }
+            val ok = io.github.xororz.localdream.utils.BgmManager.importCustom(ctx, uri, name)
+            android.widget.Toast.makeText(
+                ctx,
+                if (ok) "已选用自定义背景音：$name" else "导入失败，请换 mp3/m4a/ogg/wav 重试",
+                android.widget.Toast.LENGTH_LONG,
+            ).show()
+            if (ok) {
+                customName = name
+                mode = io.github.xororz.localdream.utils.BgmManager.Mode.CUSTOM
+                io.github.xororz.localdream.utils.BgmManager.start(ctx)
+            }
+        }
     }
     androidx.compose.material3.AlertDialog(
         onDismissRequest = onDismiss,
@@ -5226,17 +5256,6 @@ private fun BgmSettingsDialog(onDismiss: () -> Unit) {
         text = {
             Column {
                 Text(stringResource(R.string.bgm_desc))
-                androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                    androidx.compose.material3.RadioButton(
-                        selected = mode == io.github.xororz.localdream.utils.BgmManager.Mode.DAWN,
-                        onClick = {
-                            mode = io.github.xororz.localdream.utils.BgmManager.Mode.DAWN
-                            io.github.xororz.localdream.utils.BgmManager.setMode(ctx, mode)
-                            io.github.xororz.localdream.utils.BgmManager.start(ctx)
-                        },
-                    )
-                    Text(stringResource(R.string.bgm_dawn))
-                }
                 androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                     androidx.compose.material3.RadioButton(
                         selected = mode == io.github.xororz.localdream.utils.BgmManager.Mode.OFF,
@@ -5250,20 +5269,33 @@ private fun BgmSettingsDialog(onDismiss: () -> Unit) {
                 }
                 androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                     androidx.compose.material3.RadioButton(
-                        selected = mode == io.github.xororz.localdream.utils.BgmManager.Mode.CUSTOM,
+                        selected = mode == io.github.xororz.localdream.utils.BgmManager.Mode.DAWN,
                         onClick = {
-                            mode = io.github.xororz.localdream.utils.BgmManager.Mode.CUSTOM
+                            mode = io.github.xororz.localdream.utils.BgmManager.Mode.DAWN
                             io.github.xororz.localdream.utils.BgmManager.setMode(ctx, mode)
                             io.github.xororz.localdream.utils.BgmManager.start(ctx)
                         },
                     )
+                    Text(stringResource(R.string.bgm_dawn))
+                }
+                androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    androidx.compose.material3.RadioButton(
+                        selected = mode == io.github.xororz.localdream.utils.BgmManager.Mode.CUSTOM,
+                        onClick = {
+                            // et.59: tapping Custom opens the system audio picker.
+                            runCatching { picker.launch("audio/*") }
+                        },
+                    )
                     Text(stringResource(R.string.bgm_custom))
+                }
+                if (mode == io.github.xororz.localdream.utils.BgmManager.Mode.CUSTOM && customName != null) {
+                    Text("当前：$customName", style = androidx.compose.material3.MaterialTheme.typography.bodySmall)
                 }
             }
         },
         confirmButton = {
             androidx.compose.material3.TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.copied_toast))
+                Text(stringResource(R.string.bgm_close))
             }
         },
     )
