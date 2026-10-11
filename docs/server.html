@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="description" content="Local Dream ET Server — 把普通电脑变成本地 Stable Diffusion 出图 HTTP API，与手机聊天画师配套。">
+<link rel="icon" href="assets/favicon.ico" sizes="any" />
+<link rel="icon" href="assets/icon-192.png" type="image/png" />
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
+<link rel="manifest" href="site.webmanifest" />
+<meta name="theme-color" content="#0f1115" />
+<title>Local Dream ET Server v1.2.0 — 电脑本地出图 API</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --line:#262b36; --text:#e6e9ef;
+    --muted:#9aa3b2; --accent:#4f8cff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font:15px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif}
+  .wrap{max-width:860px;margin:0 auto;padding:0 20px}
+  header{padding:48px 0 24px;border-bottom:1px solid var(--line)}
+  h1{margin:0 0 6px;font-size:26px;font-weight:650}
+  .tagline{color:var(--muted);margin:0 0 16px}
+  .badges{display:flex;flex-wrap:wrap;gap:8px}
+  .badge{font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:3px 10px}
+  .badge.b{color:var(--accent);border-color:var(--accent)}
+  nav{position:sticky;top:0;background:var(--bg);border-bottom:1px solid var(--line);padding:10px 0;margin-top:24px}
+  nav a{color:var(--muted);text-decoration:none;margin-right:16px;font-size:13px}
+  nav a:hover{color:var(--text)}
+  section{padding:28px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:18px;margin:0 0 14px;font-weight:600}
+  p{margin:8px 0}
+  .muted{color:var(--muted);font-size:13px}
+  .btns{display:flex;flex-wrap:wrap;gap:12px;margin:16px 0}
+  .btn{display:inline-block;padding:11px 18px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;border:1px solid var(--line)}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .btn.ghost{background:transparent;color:var(--text)}
+  table{width:100%;border-collapse:collapse;margin:12px 0;font-size:14px}
+  th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+  th{background:var(--panel);color:var(--muted);font-weight:500}
+  ul{margin:8px 0;padding-left:20px}
+  li{margin:4px 0}
+  code{background:var(--panel);padding:2px 6px;border-radius:4px;font-size:13px}
+  pre{background:#0c1017;border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow:auto;font-size:12.5px;line-height:1.55}
+  pre code{background:transparent;padding:0}
+  footer{padding:28px 0 48px;color:var(--muted);font-size:13px}
+  footer a{color:var(--muted)}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin:12px 0}
+  .card .meta{color:var(--muted);font-size:12.5px;margin-top:6px;word-break:break-all}
+  .warn{background:#241a0c;border:1px solid #4a3718;color:#e5a33d;border-radius:8px;padding:8px 11px;font-size:12.5px;margin:8px 0}
+  .honest{background:#101a14;border:1px solid #234030;color:#7fd0a0;border-radius:8px;padding:10px 12px;font-size:12.5px;margin:10px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Local Dream ET Server</h1>
+  <p class="tagline">把普通 Windows / Linux 电脑变成本地出图 HTTP API（SD1.5），与手机「ET 聊天画师」配套。</p>
+  <div class="badges">
+    <span class="badge b">v1.2.0（预览 · 非 latest）</span>
+    <span class="badge">x86_64</span>
+    <span class="badge">A1111 / OpenAI 兼容</span>
+    <span class="badge">默认 steps=30 · batch=6</span>
+  </div>
+</header>
+
+<nav>
+  <a href="index.html">← 返回官网</a>
+  <a href="#download">下载</a>
+  <a href="#quick">快速上手</a>
+  <a href="#port">自动端口</a>
+  <a href="#ghost">ghost.txt</a>
+  <a href="#tip">tip.txt</a>
+  <a href="#api">API 速查</a>
+  <a href="https://github.com/ETQWFD/LocalDream-ET/releases/tag/server-v1.2.0" target="_blank" rel="noopener">Release</a>
+</nav>
+
+<!-- 下载 -->
+<section id="download">
+  <h2>下载（v1.2.0）</h2>
+  <div class="card">
+    <strong>Windows 安装包</strong> · <code>LocalDreamET-Server-Setup-1.2.0.exe</code>
+    <div class="btns" style="margin:10px 0 4px">
+      <a class="btn primary" href="https://github.com/ETQWFD/LocalDream-ET/releases/download/server-v1.2.0/LocalDreamET-Server-Setup-1.2.0.exe">下载 EXE</a>
+    </div>
+    <div class="meta">大小 11,255,621 字节 · sha256 <code>11faf7a06e8cb800cc446e91b8cdc6a0a1d9b905ac1f6a8100c72ca791e54960</code></div>
+  </div>
+  <div class="card">
+    <strong>Linux x86_64 便携包</strong> · <code>LocalDreamET-Server-1.2.0-linux-x86_64.tar.gz</code>
+    <div class="btns" style="margin:10px 0 4px">
+      <a class="btn primary" href="https://github.com/ETQWFD/LocalDream-ET/releases/download/server-v1.2.0/LocalDreamET-Server-1.2.0-linux-x86_64.tar.gz">下载 tar.gz</a>
+    </div>
+    <div class="meta">大小 16,521,768 字节 · sha256 <code>30e0ecfb7d68b0e482f61fc8fff00a2bc539fbe2765aead017c0413540ed5cf2</code></div>
+  </div>
+  <p class="muted">发布为 <strong>Pre-release</strong>，不会覆盖手机端的 latest（当前手机 latest 为 et.55）。校验示例：<code>sha256sum LocalDreamET-Server-Setup-1.2.0.exe</code>。</p>
+</section>
+
+<!-- 快速上手 -->
+<section id="quick">
+  <h2>快速上手</h2>
+  <ul>
+    <li><strong>Windows</strong>：双击 EXE 安装，运行 <code>etserver</code>（或开始菜单快捷方式）。</li>
+    <li><strong>Linux</strong>：<code>tar xzf LocalDreamET-Server-1.2.0-linux-x86_64.tar.gz && cd 解压目录 && ./etserver</code>。</li>
+    <li>启动后控制台会打印四样关键信息，把它们填进手机「ET 聊天画师 → 设置」即可连：
+      <ul>
+        <li><code>[服务地址] http://&lt;局域网IP&gt;:&lt;实际端口&gt;</code></li>
+        <li><code>[API Key]</code>：固定 <strong>46 位</strong>字母数字串（首次启动随机生成，写入 <code>config/etserver.conf</code> 的 <code>api_key=</code>）</li>
+        <li><code>[模型名]</code>：当前加载的模型 id（如 <code>sd15-anythingv5</code>）</li>
+        <li><code>[云备份状态]</code>：是否已配置 ghost.txt</li>
+      </ul>
+    </li>
+    <li>外壳<strong>先绑定端口、再后台加载模型</strong>：启动后立刻可用 <code>GET /healthz</code> 探测；返回 <code>200 ready</code> 才出图，<code>503</code> 表示模型还在加载，手机端会显示「模型加载中」，不会卡死。</li>
+  </ul>
+</section>
+
+<!-- 自动端口 -->
+<section id="port">
+  <h2>自动选端口</h2>
+  <p>默认监听 <code>0.0.0.0:8080</code>。若 8080 被占用，外壳会<strong>自动顺延探测下一个可用端口</strong>，实际端口以启动 banner 为准（也可在 <code>/healthz</code> 返回里看到）。内部推理引擎固定在 <code>127.0.0.1:17860+</code>，不对外。</p>
+  <p class="muted">同一局域网即可访问；手机与电脑需在同一 WiFi / 物理网卡网段。防火墙请放行实际端口。</p>
+</section>
+
+<!-- ghost.txt -->
+<section id="ghost">
+  <h2>ghost.txt（出图自动云备份）</h2>
+  <p>首次启动会在程序目录生成模板 <code>ghost.txt</code>，内容形如：</p>
+  <pre><code>gh:ghp_你的GitHub令牌</code></pre>
+  <ul>
+    <li>把上面这一行换成你自己的 <code>ghp_</code> 开头 GitHub 令牌，保存后重启服务端。</li>
+    <li>此后每次生成的图，会经 <code>curl</code> 自动上传到你的私有仓库 <code>LocalDreamET-Upload</code>；<strong>该仓库不存在时会自动创建</strong>（私有）。</li>
+    <li>换号 / 换令牌就只改这一行；令牌<strong>只从该文件读取，不进程序日志、不进接口响应</strong>。</li>
+    <li>不填或删掉这行 = 关闭云备份，图只落在本地。</li>
+  </ul>
+</section>
+
+<!-- tip.txt -->
+<section id="tip">
+  <h2>tip.txt（默认出图参数模板）</h2>
+  <p>首次启动在程序目录生成 <code>tip.txt</code>，用于给手机 / API 提供默认的尺寸与提示词模板：</p>
+  <pre><code>512x512
+正向提示词，例如：masterpiece, best quality, 1girl
+反向提示词，例如：lowres, bad anatomy, watermark</code></pre>
+  <ul>
+    <li>第一行是尺寸 <code>宽x高</code>（SD1.5 建议 512）。</li>
+    <li>其后为正向 / 反向提示词模板；不改就一直用这份，改完即生效。</li>
+    <li>API 请求里若自带 <code>width/height/prompt</code> 等字段，以请求为准，本模板不覆盖。</li>
+  </ul>
+</section>
+
+<!-- 默认参数 -->
+<section id="params">
+  <h2>默认参数（v1.2.0）</h2>
+  <table>
+    <tr><th>项</th><th>默认</th><th>说明</th></tr>
+    <tr><td>steps</td><td><code>30</code></td><td>采样步数，客户端请求自带则不覆盖</td></tr>
+    <tr><td>batch / n</td><td><code>6</code></td><td>一次出几张，引擎内部 batch 一次出齐、不重启</td></tr>
+    <tr><td>cfg_scale</td><td><code>7.0</code></td><td>引导系数</td></tr>
+    <tr><td>尺寸</td><td><code>512x512</code></td><td>受 tip.txt 模板影响</td></tr>
+    <tr><td>threads</td><td>自动</td><td>取本机逻辑核，保底 2、上限 8（config 可改）</td></tr>
+    <tr><td>content_filter</td><td><code>0</code></td><td>默认无关键词拦截 / 不注入负面词</td></tr>
+  </table>
+  <p class="muted">引擎单实例常驻，模型启动时加载一次，出图请求经反代转发，不在每次请求时重载。</p>
+</section>
+
+<!-- API 速查 -->
+<section id="api">
+  <h2>API 速查</h2>
+  <p>除 <code>/healthz</code> 外，所有请求必须带 46 位 Key，三选一：<code>Authorization: Bearer &lt;key&gt;</code>、<code>X-API-Key: &lt;key&gt;</code>、或 <code>?api_key=&lt;key&gt;</code>。</p>
+  <table>
+    <tr><th>端点</th><th>用途</th></tr>
+    <tr><td><code>GET /healthz</code></td><td>免 Key 探活：<code>200 ready</code> 可出图 / <code>503 loading</code> 加载中</td></tr>
+    <tr><td><code>POST /sdapi/v1/txt2img</code></td><td>A1111 文生图，返回 <code>images[]</code> base64</td></tr>
+    <tr><td><code>POST /sdapi/v1/img2img</code></td><td>图生图，<code>init_images</code> 传 base64 data URI</td></tr>
+    <tr><td><code>POST /v1/images/generations</code></td><td>OpenAI 风格，返回 <code>data[].b64_json</code></td></tr>
+    <tr><td><code>GET /sdapi/v1/sd-models</code> 等</td><td>模型 / 采样器等列表，原样透传</td></tr>
+  </table>
+  <p><strong>Linux 保活示例：</strong></p>
+  <pre><code># nohup 后台运行
+nohup ./etserver &gt; etserver.log 2&gt;&amp;1 &amp;
+
+# systemd（/etc/systemd/system/etserver.service）
+[Unit]
+Description=Local Dream ET Server
+After=network.target
+[Service]
+WorkingDirectory=/opt/etserver
+ExecStart=/opt/etserver/etserver
+Restart=on-failure
+[Install]
+WantedBy=multi-user.target</code></pre>
+  <pre><code># 快速自测（替换端口与 key）
+curl http://127.0.0.1:8080/healthz
+curl -X POST http://127.0.0.1:8080/sdapi/v1/txt2img \
+  -H "Authorization: Bearer &lt;46位key&gt;" -H "Content-Type: application/json" \
+  -d '{"prompt":"a cat, best quality","steps":30,"batch_size":6}'</code></pre>
+</section>
+
+<!-- 诚实声明 -->
+<div class="honest">
+  诚实说明：服务端要真出图，仍需自行运行包内附带的 <code>download-cpu-model.sh</code> 下载 CPU 大模型（SD1.5，约 1.6–4.3GB 视模型），并在 ghost.txt 填入真实 <code>ghp_</code> 令牌才能云备份。本发布包与官网页面<strong>未在沙箱内端到端跑图</strong>；上述 API 字段与默认值来自代码契约（SERVER-API.md v1.2.0）。
+</div>
+
+<footer>
+  <p>Local Dream ET Server · Copyright (C) 2026 etc · 署名 ET</p>
+  <p>联系：<a href="mailto:2416444244@qq.com">2416444244@qq.com</a> ·
+     <a href="index.html">返回官网</a> ·
+     <a href="https://github.com/ETQWFD/LocalDream-ET/releases/tag/server-v1.2.0" target="_blank" rel="noopener">v1.2.0 Release</a></p>
+</footer>
+
+</div>
+</body>
+</html>
