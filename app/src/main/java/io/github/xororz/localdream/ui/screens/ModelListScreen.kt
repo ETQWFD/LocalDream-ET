@@ -311,6 +311,7 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
     var showRestoreModelPicker by remember { mutableStateOf(false) }
     var showCloudBackupDialog by remember { mutableStateOf(false) }
     var showApiServerDialog by remember { mutableStateOf(false) }
+    var showBgmDialog by remember { mutableStateOf(false) }
     var showCustomNpuModelDialog by remember { mutableStateOf(false) }
     var isConverting by remember { mutableStateOf(false) }
     var conversionProgress by remember { mutableStateOf("") }
@@ -795,6 +796,10 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
 
     if (showApiServerDialog) {
         ApiServerDialog(onDismiss = { showApiServerDialog = false })
+    }
+
+    if (showBgmDialog) {
+        BgmSettingsDialog(onDismiss = { showBgmDialog = false })
     }
 
     LaunchedEffect(showSettingsDialog) {
@@ -1362,6 +1367,16 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                                 onClick = {
                                     menuExpanded = false
                                     showApiServerDialog = true
+                                },
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.bgm_title)) },
+                                leadingIcon = {
+                                    Icon(Icons.Default.MusicNote, contentDescription = null)
+                                },
+                                onClick = {
+                                    menuExpanded = false
+                                    showBgmDialog = true
                                 },
                             )
                             DropdownMenuItem(
@@ -5163,7 +5178,7 @@ private fun ThemeSwatch(
 private fun ContactAuthorDialog(onDismiss: () -> Unit) {
     val context = LocalContext.current
     val qq = "2416444244"
-    val groupUrl = "http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=5Usf8DXc38fur71OGC_-cTSKk45Gu4NT&authKey=nl%2BzgPmN%2FUSyzrmqUmgcNj8c894xZyv6JKbi6O4Qmqf3MNZZhC6naClHr7kzifpN&noverify=0&group_code=1078799843"
+    val groupUrl = "http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=FEhaN_bPJIhurqBLoRhqkhmHnkRz17bu&authKey=hYuEEJTFOcfkPr85OD8vyrhHH56GhhUKRYuIfEpEDIkdclfxVTEKMV0IMYrz5HFB&noverify=0&group_code=1078799843"
     androidx.compose.material3.AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.contact_author)) },
@@ -5181,13 +5196,75 @@ private fun ContactAuthorDialog(onDismiss: () -> Unit) {
         },
         dismissButton = {
             androidx.compose.material3.TextButton(onClick = {
-                val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(groupUrl))
+                val intent = android.content.Intent(
+                    android.content.Intent.ACTION_VIEW,
+                    android.net.Uri.parse(groupUrl),
+                ).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
                 try {
                     context.startActivity(intent)
                 } catch (e: Exception) {
-                    android.widget.Toast.makeText(context, context.getString(R.string.contact_open_failed), android.widget.Toast.LENGTH_LONG).show()
+                    // No QQ / browser handler: copy the link and toast instead.
+                    val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                    cm.setPrimaryClip(android.content.ClipData.newPlainText("qq_group", groupUrl))
+                    android.widget.Toast.makeText(context, "已复制加群链接，请在浏览器打开", android.widget.Toast.LENGTH_LONG).show()
                 }
             }) { Text(stringResource(R.string.contact_join_group)) }
+        },
+    )
+}
+
+/** et.58: background-music settings dialog. Three modes persisted via BgmManager. */
+@androidx.compose.runtime.Composable
+private fun BgmSettingsDialog(onDismiss: () -> Unit) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    var mode by androidx.compose.runtime.remember {
+        androidx.compose.runtime.mutableStateOf(io.github.xororz.localdream.utils.BgmManager.mode(ctx))
+    }
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.bgm_title)) },
+        text = {
+            Column {
+                Text(stringResource(R.string.bgm_desc))
+                androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    androidx.compose.material3.RadioButton(
+                        selected = mode == io.github.xororz.localdream.utils.BgmManager.Mode.DAWN,
+                        onClick = {
+                            mode = io.github.xororz.localdream.utils.BgmManager.Mode.DAWN
+                            io.github.xororz.localdream.utils.BgmManager.setMode(ctx, mode)
+                            io.github.xororz.localdream.utils.BgmManager.start(ctx)
+                        },
+                    )
+                    Text(stringResource(R.string.bgm_dawn))
+                }
+                androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    androidx.compose.material3.RadioButton(
+                        selected = mode == io.github.xororz.localdream.utils.BgmManager.Mode.OFF,
+                        onClick = {
+                            mode = io.github.xororz.localdream.utils.BgmManager.Mode.OFF
+                            io.github.xororz.localdream.utils.BgmManager.setMode(ctx, mode)
+                            io.github.xororz.localdream.utils.BgmManager.stop(ctx)
+                        },
+                    )
+                    Text(stringResource(R.string.bgm_off))
+                }
+                androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    androidx.compose.material3.RadioButton(
+                        selected = mode == io.github.xororz.localdream.utils.BgmManager.Mode.CUSTOM,
+                        onClick = {
+                            mode = io.github.xororz.localdream.utils.BgmManager.Mode.CUSTOM
+                            io.github.xororz.localdream.utils.BgmManager.setMode(ctx, mode)
+                            io.github.xororz.localdream.utils.BgmManager.start(ctx)
+                        },
+                    )
+                    Text(stringResource(R.string.bgm_custom))
+                }
+            }
+        },
+        confirmButton = {
+            androidx.compose.material3.TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.copied_toast))
+            }
         },
     )
 }
