@@ -959,11 +959,14 @@ class BackgroundGenerationService : Service() {
                 val msg = when {
                     code == 137 && engineBackendType == "sd15cpu" ->
                         getString(R.string.err_engine_oom_killed)
-                    code in setOf(137, 134, 139) -> {
+                    code == 137 && engineBackendType != "sd15cpu" ->
+                        // et.54: 137 on an accelerator after backgrounding is usually the
+                        // system pausing/killing the app, not a NPU-phone OOM.
+                        "引擎被系统结束(code=137)：切后台会暂停 NPU 生成，请保持 App 在前台、关闭电池优化/加锁后重试；详见 engine_*.log 末行。"
+                    code in setOf(134, 139) -> {
                         val why = when (code) {
                             134 -> "NPU/加速引擎初始化失败(SIGABRT)"
-                            139 -> "NPU/加速引擎崩溃(段错误)"
-                            else -> "NPU/加速引擎被系统结束"
+                            else -> "NPU/加速引擎崩溃(段错误)"
                         }
                         "$why(code=$code)，模型与加速方式可能不兼容；请改用 CPU Models 标签下的对应模型，详见 engine_*.log。"
                     }

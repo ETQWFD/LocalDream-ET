@@ -1,9 +1,9 @@
 {
-  "versionCode": 127,
-  "versionName": "3.0.0-et.53",
-  "title": "发现新版本 v3.0.0-et.53「最后一舞」",
+  "versionCode": 128,
+  "versionName": "3.0.0-et.54",
+  "title": "发现新版本 v3.0.0-et.54「最后一舞」",
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
-  "size": 153554131,
-  "sha256": "b97e482fadce7292cf6a96214cb255b3b983e84e6a4f961cf3c80b28962bf37b",
-  "releaseNotes": "「最后一舞」：作者需继续上学考试，可能无法及时修复问题；如有问题请联系作者，邮箱 2416444244@qq.com。\n\n本版修复（NPU 引擎生成中被 App 误杀）：\n· 真因：日志显示 NPU(AnythingV5 QNN) 已初始化成功、已监听 8081、已收到请求 Req Rcvd ... S:8 CFG:4.5，却在 6~20 秒后报 monitor error: read interrupted by close() on another thread 并 code=143(SIGTERM)。引擎没崩、没 OOM——是 App 其它线程主动关闭引擎管道并杀进程。\n· 修复：新增生成中保护标志，出图请求进行期间任何线程不得关闭引擎 stdout/stderr 管道、不得 destroy/kill 引擎、不因 onTrimMemory 或前台超时杀引擎；请求完成（成功/失败/取消）后才允许回收。\n· read interrupted 从杀引擎改为只记录不杀：活引擎原地重连一次，绝不重启正在跑的引擎；HTTP 读超时已为 NPU 首图（含首次 VAE/UNET 编译）留足时间（3600s），不再 6~20 秒判超时杀进程。\n· 引擎类型稳定：下了 qnn/NPU 包就固定走 NPU，不再 cpu/npu 来回切换导致重复起停。\n\n安装后在“关于/版本”看到 build 127 即新版。ARM/NPU 真机兼容性需在对应设备复测。版权 Copyright (C) 2026 etc，署名 ET。"
+  "size": 153555359,
+  "sha256": "d4044de057a99ab57dec09dad15bab9dbbf54350aa0e8c53a85392ed19f24e87",
+  "releaseNotes": "「最后一舞」：作者需继续上学考试，可能无法及时修复问题；如有问题请联系作者，邮箱 2416444244@qq.com。\n\n本版修复（模型加载/切后台不再杀引擎，前台保活前移）：\n· 现象：选 Anything V5.0(NPU) 点生成→“模型加载中”→切后台/多任务→切回进度10%失败。build127 已能从“6~20 秒秒死”进步到跑到 10%，但失败发生在 QNN 模型加载阶段 + 切后台。\n· 修复1 保护前移：et.53 只在“发请求后”保护；本版改为从“决定启动后端/引擎那一刻（含‘模型加载中’弹窗、QNN VAE/UNET 初始化、监听 8081）”就进入生成中保护，整段禁止 onTrimMemory 杀引擎、禁止 idle 回收、禁止任何路径 close+destroy。\n· 修复2 前台保活前移：startForeground + PARTIAL_WAKE_LOCK + WifiLock(HIGH_PERF) 在服务启动/引擎拉起时即提升优先级，切后台期间 NPU 推理不被系统挂起；出图时引导关闭电池优化（拒绝不阻断）。\n· 修复3 文案区分：NPU/加速引擎被系统结束(code=137)不再一律报“内存不足”，改为“切后台会暂停 NPU 生成，请保持 App 在前台、关闭电池优化/加锁后重试”；只有 CPU 引擎前台运行也 137 才说内存。\n· 模型加载弹窗期间按返回/手势不销毁引擎，引擎继续在前台服务里跑。\n\n安装后在“关于/版本”看到 build 128 即新版。ARM/NPU 真机出图与切后台保活需在对应设备复测。版权 Copyright (C) 2026 etc，署名 ET。"
 }

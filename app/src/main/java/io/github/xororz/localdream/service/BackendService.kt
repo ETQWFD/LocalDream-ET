@@ -354,6 +354,13 @@ class BackendService : Service() {
             updateState(BackendState.Running)
             return
         }
+        // et.54: protection starts at ENGINE STARTUP (model/QNN loading), not only
+        // after the HTTP /generate request. Spawning the process + QNN VAE/UNET init
+        // can take 10-12s and previously had NO guard, so an onTrimMemory / idle teardown
+        // could close the pipe mid-load ("加载中" then a 10% failure). Mark in-flight
+        // now; the guard is cleared when the generation finishes (BackgroundGenerationService
+        // finally) or on a real stop.
+        notifyGenerationStarted()
         stopBackend()
         if (startBackend(want)) {
             serving = want
