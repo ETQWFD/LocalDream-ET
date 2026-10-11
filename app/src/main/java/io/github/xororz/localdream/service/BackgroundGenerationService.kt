@@ -416,6 +416,7 @@ class BackgroundGenerationService : Service() {
             // et.30: independent OOM safe-step retry (384 long edge). Each flag
             // fires at most once so GPU->CPU and OOM->384 cannot loop.
             var safeOomRetryDone = false
+            var badAllocRetryDone = false
             // et.44-patch: a transport hiccup on an otherwise-live engine gets exactly
             // one in-place reconnect (fresh connection, same params) — no process restart.
             var connRetryDone = false
@@ -787,6 +788,49 @@ class BackgroundGenerationService : Service() {
             break@attemptLoop
             } catch (e: Exception) {
                 val exitCode = io.github.xororz.localdream.utils.EngineExitInfo.lastExitCode
+                // et.56: engine threw std::bad_alloc mid-generation (e.g. QNN package
+                // built for 8gen2 running on 8 Elite / Android 17, HTP pool mismatch).
+                // This is NOT a 143/OOM-killer — the process is alive, just failed a big
+                // allocation. Auto-downgrade resolution 512->384->256 once and resend.
+                val msgLc = (e.message ?: "").lowercase()
+                val isBadAlloc = msgLc.contains("bad_alloc") || msgLc.contains("image generation error")
+                if (isBadAlloc && !badAllocRetryDone) {
+                    badAllocRetryDone = true
+                    val longEdge = maxOf(attemptWidth, attemptHeight)
+                    val target = when {
+                        longEdge > 448 -> 384
+                        else -> 256
+                    }
+                    val scale = target.toDouble() / longEdge
+                    attemptWidth = (Math.round(attemptWidth * scale).toInt() / 8) * 8
+                    attemptHeight = (Math.round(attemptHeight * scale).toInt() / 8) * 8
+                    io.github.xororz.localdream.cloud.LogHub.log(
+                        io.github.xororz.localdream.cloud.LogHub.Category.GENERATE,
+                        "engine bad_alloc; auto-downgrade to ${attemptWidth}x${attemptHeight}",
+                    )
+                    if (engineModelId != null) {
+                        runCatching {
+                            val ri = android.content.Intent(
+                                this@BackgroundGenerationService,
+                                io.github.xororz.localdream.service.BackendService::class.java,
+                            ).apply {
+                                setAction(io.github.xororz.localdream.service.BackendService.ACTION_RESTART)
+                                putExtra("modelId", engineModelId)
+                                putExtra("backendType", engineBackendType)
+                                putExtra("width", attemptWidth)
+                                putExtra("height", attemptHeight)
+                            }
+                            startService(ri)
+                            var waited = 0L
+                            while (waited < 45_000L) {
+                                try { java.net.Socket("127.0.0.1", 8081).use { break } }
+                                catch (_: Exception) { Thread.sleep(400); waited += 400 }
+                            }
+                        }
+                    }
+                    updateState(GenerationState.Progress(0f))
+                    continue@attemptLoop
+                }
                 // et.44-patch: only a CONFIRMED hard process exit may count as the
                 // engine dying. read-interrupted / connection-reset / broken-pipe /
                 // unexpected-end are transport/pipeline errors — with et.44's per-request

@@ -8,7 +8,6 @@ import android.provider.Settings
 import android.view.Gravity
 import android.view.View
 import android.view.WindowManager
-import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
@@ -55,24 +54,18 @@ object OverlayKeepAlive {
             removeLocked(wm) // avoid duplicate after rotation / double-start
             val ll = LinearLayout(ctx).apply {
                 orientation = LinearLayout.VERTICAL
-                setPadding(28, 20, 28, 20)
+                setPadding(24, 18, 24, 18)
                 setBackgroundColor(0xCC222222.toInt())
             }
+            // et.56: pure floating ball — no "停止" button (a mis-tap must never
+            // interrupt generation). Stop is only from the notification or by
+            // returning to the app. The ball shows a compact status line.
             val tv = TextView(ctx).apply {
                 text = statusText
                 setTextColor(0xFFFFFFFF.toInt())
-                textSize = 13f
-            }
-            val stop = Button(ctx).apply {
-                text = "停止"
-                setTextColor(0xFFFFFFFF.toInt())
-                setOnClickListener {
-                    onStop?.invoke()
-                    hide(service)
-                }
+                textSize = 12f
             }
             ll.addView(tv)
-            ll.addView(stop)
 
             val type = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY

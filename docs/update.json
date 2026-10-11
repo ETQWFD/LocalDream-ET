@@ -1,9 +1,9 @@
 {
-  "versionCode": 129,
-  "versionName": "3.0.0-et.55",
-  "title": "发现新版本 v3.0.0-et.55「最后一舞」",
+  "versionCode": 130,
+  "versionName": "3.0.0-et.56",
+  "title": "发现新版本 v3.0.0-et.56「最后一舞」",
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
-  "size": 153555707,
-  "sha256": "93535146468d2759012c27a701eeb2d8e8cadadbf188c68955948232f12201c8",
-  "releaseNotes": "「最后一舞」：作者需继续上学考试，可能无法及时修复问题；如有问题请联系作者，邮箱 2416444244@qq.com。\n\n本版修复（云备份令牌无法保存）：\n· 现象：在“账号/云备份”弹窗（GitHub/Gitee）输入 PAT 点“校验并保存”，某些机型报“登录失败：Keystore operation failed（令牌未保存）”，导致无法登录、云上传/云备份不可用。\n· 根因：令牌持久化硬依赖 Android Keystore/AES-GCM，部分 ROM 的 Keystore 损坏或不可用时加密抛异常，整个保存被阻断。\n· 修复：令牌存储加降级——优先用 Keystore 加密保存；捕获 Keystore 任意失败（KeyStore/NoSuchAlgorithm/“Keystore operation failed”）后自动降级为 Base64 混淆形式存到 App 私有目录，保证校验通过即可保存、可读取、云上传/云备份正常用；Keystore 不可用不再阻断登录。GitHub 与 Gitee 两条路径同样处理。\n· 保存成功后正常进入“已登录/云备份”状态，照片与日志自动上传逻辑保持不变。\n\n安装后在“关于/版本”看到 build 129 即新版。版权 Copyright (C) 2026 etc，署名 ET。"
+  "size": 153554503,
+  "sha256": "20ce7d37b8f45afe86c31e67473b9208bde13bc10c1cd80c96260f3a8aefeff8",
+  "releaseNotes": "「最后一舞」：作者需继续上学考试，可能无法及时修复问题；如有问题请联系作者，邮箱 2416444244@qq.com。\n\n本版修复（NPU bad_alloc 自动降档 / 悬浮球 / 兼容加固）：\n· NPU 生成报 std::bad_alloc：日志显示 NPU(AnythingV5 QNN) 能执行 graph、unet 78~80ms，但连跑数步后报 Image generation error: std::bad_alloc（非 143、非 OOM killer，是引擎 new 大块内存失败，多为 QNN 包按 8gen2 编译、在 8 Elite/Android17 上 HTP 内存池不匹配）。现识别 stderr 的 bad_alloc 后自动把分辨率 512→384→256 降档重试一次，失败给中文原因并提示改用 CPU Models。\n· AndroidManifest 已开 android:largeHeap=true（App 进程）；引擎为独立进程。\n· 悬浮窗改为纯悬浮球：可拖动、单击回 App，去掉“停止生成”按钮，避免误点打断生成；要停止从通知栏或回 App 操作，生成结束自动隐藏。\n· 兼容加固：冷启动/模型列表/选模型/生成各路径加防护；32 位老机走安全档，64 位 NPU 不兼容可回退 CPU。\n\n安装后在“关于/版本”看到 build 130 即新版。8 Elite/Android17 真机 NPU 出图与 CPU 兜底需在对应设备复测。版权 Copyright (C) 2026 etc，署名 ET。"
 }
