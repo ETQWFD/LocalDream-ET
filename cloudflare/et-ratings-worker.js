@@ -338,6 +338,43 @@ async function handleLogDownload(request, env) {
   return Response.redirect(to || "https://etc.tw.kg/", 302);
 }
 
+// 小E AI客服：代理到 hcnsec OpenAI 兼容接口，key 只放 Secret OPENAI_KEY
+const CHAT_SYSTEM = `你是“小E”，LocalDream ET（本地 Stable Diffusion 安卓 App，包名 etc.github.ai，官网 etc.tw.kg，作者 ET，QQ 2416444244，邮箱 2416444244@qq.com，QQ群 1078799843）的官方AI客服。
+功能：手机本地离线出图、NPU(Qualcomm)+CPU(MNN) 双后端、模型下载与转换、图生图修图、云备份、Windows/Linux 服务端。
+解答使用问题与常见报错：std::bad_alloc 内存不足就降分辨率/步数、低端机默认 256/8步/euler_a 安全档、NPU 段错误(exit=139)说明该 NPU 包不兼容请切 CPU Models(anythingv5cpu MNN)、x86 模拟器跑不了 ARM 引擎需真机。
+需要联系作者就给出邮箱与QQ群。语气友好、简洁、用中文。`;
+async function handleChat(request, env) {
+  if (!env.OPENAI_KEY) return json(request, { ok: false, error: "客服服务未配置 OPENAI_KEY" }, 500);
+  let body;
+  try { body = await request.json(); } catch (e) { return json(request, { ok: false, error: "请求格式错误" }, 400); }
+  const q = String(body && body.q || "").trim().slice(0, 800);
+  if (!q) return json(request, { ok: false, error: "请输入问题" }, 400);
+  try {
+    const r = await fetch("https://api.hcnsec.cn/v1/chat/completions", {
+      method: "POST",
+      headers: { "Authorization": "Bearer " + env.OPENAI_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "glm-5.3-flash",
+        messages: [
+          { role: "system", content: CHAT_SYSTEM },
+          { role: "user", content: q }
+        ],
+        temperature: 0.7,
+        max_tokens: 600
+      })
+    });
+    if (!r.ok) {
+      const t = await r.text().catch(() => "");
+      return json(request, { ok: false, error: "客服暂忙(" + r.status + ")" }, 502);
+    }
+    const j = await r.json();
+    const reply = (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || "（暂无回复）";
+    return json(request, { ok: true, reply }, 200);
+  } catch (e) {
+    return json(request, { ok: false, error: "客服网络异常，请稍后再试" }, 502);
+  }
+}
+
 // 后台读取下载日志（需 X-Admin-Key），分页
 async function handleLogsList(request, env) {
   if (!checkAdmin(request, env)) return json(request, { ok: false, error: "管理员口令错误" }, 401);
@@ -378,6 +415,8 @@ export default {
         return handleLogDownload(request, env);
       if (url.pathname === "/admin/logs" && request.method === "GET")
         return handleLogsList(request, env);
+      if (url.pathname === "/api/chat" && request.method === "POST")
+        return handleChat(request, env);
       return json(request, { ok: false, error: "Not Found" }, 404);
     } catch (e) {
       return json(request, { ok: false, error: "服务异常" }, 500);
