@@ -1,9 +1,9 @@
 {
-  "versionCode": 134,
-  "versionName": "3.0.0-et.60",
-  "title": "发现新版本 v3.0.0-et.60「最后一舞」",
+  "versionCode": 135,
+  "versionName": "3.0.0-et.61",
+  "title": "发现新版本 v3.0.0-et.61「最后一舞」",
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
-  "size": 156021067,
-  "sha256": "d133e0070806e4b1adddf8cbc7952bd0b2214926ef1f925125df60453e8f78fa",
-  "releaseNotes": "「最后一舞」：作者因上学中，可能无法及时修复问题；如有问题请联系作者，邮箱 2416444244@qq.com。\n\n本版修复 NPU 段错误真根因：\n· bad_alloc 自动降档(512→384→256)时，不再在旧 QNN 进程内改分辨率（QNN graph 不支持热 resize）：先完整销毁旧引擎进程、等待约500ms，再用新分辨率全新 exec 拉起子进程（新建 QNN context/graph）后重发请求。\n· 全新重启后仍段错误(139)或连续 bad_alloc：判定该 NPU 包与本机 NPU 不兼容，自动中文提示并引导切到 CPU Models(anythingv5cpu MNN)。\n· 退出码文案补全：137=被系统结束/内存、139=原生段错误(NPU包与芯片不兼容，建议换CPU)、134=abort、其它=真实 code+engine log 末行，不再显示“未知错误(exit=0)”。\n· CPU anythingv5cpu 64位兜底路径保留。\n\n安装后在“关于/版本”看到 build 134 即新版。8 Elite/Android17 真机 NPU 出图需在对应设备复测。版权 Copyright (C) 2026 etc，署名 ET。"
+  "size": 156021283,
+  "sha256": "8e7bc24cc34432a7fa4e3d26736289db958bf3980b1410d2685b222230c92bb1",
+  "releaseNotes": "「最后一舞」：作者因上学中，可能无法及时修复问题；如有问题请联系作者，邮箱 2416444244@qq.com。\n\n本版：\n· 统一内置负向提示词默认值（lowres/bad anatomy/worst quality/watermark 等），出图与修图(img2img)共用；修图默认低重绘 denoise≈0.45 不大改人物（沿用既有 img2img 路径）。\n· 模型列表已含常用模型：Anything V5(CPU/NPU)、Counterfeit、MeinaMix、Realistic Vision、DreamShaper（CPU 标签），按已下载/未下载状态显示；无可靠公开下载源的仅列 UI 项、不写假链接。\n· 背景音默认“关闭”，选了才播并记住；自定义导入音频落私有目录、下次不用重导，出图时播、结束自动停（et.59 已实现）。\n· 引擎空闲回收：普通出图结束且未开“API 连接”时主动回收引擎进程，不长期空占。\n\n说明：修图页/中文 CLIP/悬浮窗进度/真机 NPU 出图需在对应设备复测。安装后在“关于/版本”看到 build 135 即新版。版权 Copyright (C) 2026 etc，署名 ET。"
 }

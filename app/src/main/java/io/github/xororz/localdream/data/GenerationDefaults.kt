@@ -13,7 +13,8 @@ import androidx.compose.runtime.Immutable
 @Immutable
 data class GenerationDefaults(
     val prompt: String = "",
-    val negativePrompt: String = "",
+    // et.61: standard SD1.5 negative prompt, reused for txt2img and img2img/修图.
+    val negativePrompt: String = "lowres, bad anatomy, bad hands, missing fingers, extra fingers, extra limbs, deformed, disfigured, blood, gore, amputee, extra arms, extra legs, extra eyes, mutated hands, ugly, worst quality, watermark",
     // et.40: default steps lowered 20 -> 16 for the fast default. dpm is the
     // engine's fast multistep scheduler (already the default) so 16 steps still
     // converge on SD1.5 while cutting ~20% of compute. Users can raise the on-screen
