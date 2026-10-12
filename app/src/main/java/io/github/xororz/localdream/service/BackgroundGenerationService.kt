@@ -254,10 +254,13 @@ class BackgroundGenerationService : Service() {
         } else if (data.getBooleanExtra("has_image", false)) {
             try {
                 val tmpFile = File(applicationContext.filesDir, "tmp.txt")
-                if (tmpFile.exists()) {
+                if (tmpFile.exists() && tmpFile.length() > 0) {
                     tmpFile.readText()
                 } else {
-                    null
+                    // et.63: don't silently fall through to txt2img when the caller
+                    // intended img2img but the base image is missing/empty. Surface a
+                    // clear error instead of "出成了文生图、没传底图".
+                    throw java.io.IOException("未读取到上传底图(tmp.txt 为空或不存在)，请在出图页重新选择图片")
                 }
             } catch (e: Exception) {
                 Log.e("GenerationService", "Failed to read image data", e)
@@ -265,6 +268,15 @@ class BackgroundGenerationService : Service() {
             }
         } else {
             null
+        }
+        // et.63: intended img2img but no base image was available -> hard error,
+        // never silently run txt2img without the init image.
+        if (data.getBooleanExtra("has_image", false) && image.isNullOrBlank()) {
+            updateState(
+                GenerationState.Error("未读取到底图，请重新上传图片后再修图"),
+            )
+            stopSelf()
+            return START_NOT_STICKY
         }
         retryImage = image
         val mask = if (data.getBooleanExtra("has_mask", false)) {
