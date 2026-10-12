@@ -1310,6 +1310,23 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                                 )
                             }
                             DropdownMenuItem(
+                                text = { Text(stringResource(R.string.edit_photo_title)) },
+                                leadingIcon = {
+                                    Icon(Icons.Default.Edit, contentDescription = null)
+                                },
+                                onClick = {
+                                    menuExpanded = false
+                                    // et.62: 修图 = the proven image-to-image flow on the run page.
+                                    // Pick a downloaded model below, then on the run page upload an
+                                    // image; denoise defaults to 0.45 and negative prompt is preset.
+                                    android.widget.Toast.makeText(
+                                        context,
+                                        "选一个已下载模型进入，在出图页上传图片即可修图（重绘强度默认0.45）",
+                                        android.widget.Toast.LENGTH_LONG,
+                                    ).show()
+                                },
+                            )
+                            DropdownMenuItem(
                                 text = { Text(stringResource(R.string.remote_link)) },
                                 leadingIcon = {
                                     Icon(Icons.Default.Devices, contentDescription = null)
