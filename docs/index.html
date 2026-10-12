@@ -229,7 +229,7 @@
   <h2>更新机制与安装</h2>
   <ul>
     <li>检测更新读取 update.json，GitHub 主通道优先，失败自动回退镜像通道。</li>
-    <li>「发现新版本」弹窗标题与更新内容由 update.json 的 <code>title</code> / <code>releaseNotes</code> 下发，本版标题即显示「发现新版本 v3.0.0-et.52『最后一舞』」，更新说明首行为联系作者说明，支持换行。</li>
+    <li>「发现新版本」弹窗标题与更新内容由 update.json 的 <code>title</code> / <code>releaseNotes</code> 下发，更新说明首行为联系作者说明，支持换行。</li>
     <li>下载走前台服务并显示进度通知；断点续传校验 206/Content-Range，不盲目删 .part。</li>
     <li>安装优先 PackageInstaller，失败回退系统安装器并引导“未知来源”。</li>
   </ul>
