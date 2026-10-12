@@ -402,16 +402,18 @@
   }
 
   function setWriteState(ok,msg){
-    $("stars").style.opacity=ok?1:.4; $("stars").style.pointerEvents=ok?"auto":"none"; $("cmtSubmit").disabled=!ok;
+    /* Worker 慢/不可达时不禁用星星（仍可点，失败给“稍后重试”），只显示软提示 */
+    $("stars").style.opacity=1; $("stars").style.pointerEvents="auto";
     var n=$("cmtNote");
     if(!ok){n.style.display="block";n.textContent=msg;} else {n.style.display="none";}
   }
   $("stars").addEventListener("click",function(e){
     if($("stars").classList.contains("voted")){alert("每设备一票，感谢！");return;}
     var v=e.target.getAttribute&&e.target.getAttribute("data-v"); if(!v)return;
+    var note=$("rateNote"); var old=note.textContent; note.textContent="提交中…";
     getJSON(WORKER_BASE+"/rating",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({score:Number(v),fp:MYFP})})
       .then(function(){sessionStorage.removeItem("etld_sum");boot();})
-      .catch(function(err){alert("提交失败："+(err.message||"")+"（写票服务待部署，见 COMMENT-BACKEND.md）");});
+      .catch(function(err){note.textContent="提交失败："+(err.message||"")+"，请稍后重试。上方评分仍是公开真实数据。";});
   });
   $("cmtSubmit").addEventListener("click",function(){
     var nick=$("cmtNick").value.trim(),text=$("cmtText").value.trim();

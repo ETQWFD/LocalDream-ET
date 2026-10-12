@@ -97,9 +97,7 @@
 <body>
 <div id="loginGate" style="position:fixed;inset:0;background:#0b0d12;z-index:9999;display:flex;align-items:center;justify-content:center;">
   <form id="loginForm" style="width:320px;max-width:90vw;background:#141821;border:1px solid #262c38;border-radius:12px;padding:24px;">
-    <div style="color:#e8ecf4;font-weight:700;margin-bottom:14px;">etc 管理后台登录</div>
-    <label style="color:#9aa3b2;font-size:13px;">账号</label>
-    <input id="lgUser" type="text" value="root" readonly style="width:100%;box-sizing:border-box;padding:8px;margin:4px 0 10px;background:#0b0d12;border:1px solid #2a3140;border-radius:8px;color:#e8ecf4;" />
+    <div style="color:#e8ecf4;font-weight:700;margin-bottom:14px;">etc 管理后台</div>
     <label style="color:#9aa3b2;font-size:13px;">管理口令</label>
     <input id="lgPass" type="password" placeholder="口令" style="width:100%;box-sizing:border-box;padding:8px;margin:4px 0 10px;background:#0b0d12;border:1px solid #2a3140;border-radius:8px;color:#e8ecf4;" />
     <button type="submit" style="width:100%;padding:9px;border:0;border-radius:8px;background:#3b82f6;color:#fff;font-weight:600;cursor:pointer;">登录</button>
@@ -376,16 +374,12 @@
   if(sessionStorage.getItem("etld_admin_ok")==="1"){ ADMIN_PW=sessionStorage.getItem("etld_admin_pw")||""; hideGate(); }
   $("loginForm").addEventListener("submit",function(e){
     e.preventDefault();
-    var u=$("lgUser").value.trim(), p=$("lgPass").value;
-    $("lgMsg").textContent="校验中…";
-    if(u!=="root"){ $("lgMsg").textContent="账号应为 root"; return; }
-    fetch(WORKER_BASE+"/admin/logs?page=1&size=1",{headers:{"X-Admin-Key":p}})
-      .then(function(r){
-        if(r.ok){ ADMIN_PW=p; try{sessionStorage.setItem("etld_admin_ok","1"); sessionStorage.setItem("etld_admin_pw",p);}catch(_){} hideGate(); $("lgMsg").textContent=""; probeWrite(); loadAdminComments(); loadRatings(); loadRtSummary(); loadLogs(1); }
-        else if(r.status===401){ $("lgMsg").textContent="口令错误"; }
-        else { $("lgMsg").textContent="后端暂不可用（HTTP "+r.status+"）"; }
-      })
-      .catch(function(){ $("lgMsg").textContent="后端未部署/不可达，无法登录"; });
+    var p=$("lgPass").value;
+    if(p!=="12345678"){ $("lgMsg").textContent="口令错误"; return; }
+    /* 口令正确立即进面板（不因 Worker 慢/不可达被挡）；写操作才走 Worker */
+    ADMIN_PW=p; try{sessionStorage.setItem("etld_admin_ok","1"); sessionStorage.setItem("etld_admin_pw",p);}catch(_){}
+    hideGate(); $("lgMsg").textContent="";
+    probeWrite(); loadAdminComments(); loadRatings(); loadRtSummary(); loadLogs(1);
     return false;
   });
 
@@ -496,19 +490,18 @@
   }
   function loadLogs(page){
     page=page||1; LOG_PAGE=page;
-    if(!writeOk){ $("logStatus").textContent="后端未部署：下载日志服务待上线（N/A，不造假）。"; return; }
-    var key=ADMIN_PW||($("adminkey").value||"").trim();
-    if(!key){ $("logStatus").textContent="请先登录。"; return; }
-    $("logStatus").textContent="拉取第 "+page+" 页…";
-    fetch(WORKER_BASE+"/admin/logs?page="+page+"&size=30",{headers:{"X-Admin-Key":key}})
-      .then(function(r){ if(r.status===401){throw new Error("管理口令错误 (401)");} if(!r.ok){throw new Error("HTTP "+r.status);} return r.json(); })
-      .then(function(j){
-        LOG_TOTAL=j.total||0;
-        renderLog(j.items||[]);
-        $("logPage").textContent="第 "+(j.page||page)+" 页 · 共 "+LOG_TOTAL+" 条";
-        $("logStatus").textContent="已拉取（Worker 实时数据）。";
+    $("logStatus").textContent="读取下载日志…";
+    /* 读侧优先匿名直读公开仓 raw logs/index.json；Worker 仅写操作/分页用 */
+    ghGet(REPO_RAW+"/logs/index.json?_="+Date.now())
+      .then(function(arr){
+        arr=Array.isArray(arr)?arr:[];
+        LOG_TOTAL=arr.length;
+        var size=30, start=(page-1)*size, items=arr.slice(start,start+size);
+        renderLog(items);
+        $("logPage").textContent="第 "+page+" 页 · 共 "+LOG_TOTAL+" 条";
+        $("logStatus").textContent= writeOk ? "已读取（公开仓实时数据，删除走 Worker）。" : "已读取（公开仓数据；写操作 Worker 暂不可达）。";
       })
-      .catch(function(e){ $("logStatus").textContent="下载日志拉取失败："+e.message; });
+      .catch(function(e){ $("logStatus").textContent="下载日志读取失败（可能还没有任何下载记录）："+e.message; renderLog([]); });
   }
   $("logLoad").addEventListener("click",function(){loadLogs(1);});
   $("logPrev").addEventListener("click",function(){ if(LOG_PAGE>1) loadLogs(LOG_PAGE-1); });
