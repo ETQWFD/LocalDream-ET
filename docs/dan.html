@@ -95,6 +95,17 @@
 </style>
 </head>
 <body>
+<div id="loginGate" style="position:fixed;inset:0;background:#0b0d12;z-index:9999;display:flex;align-items:center;justify-content:center;">
+  <form id="loginForm" style="width:320px;max-width:90vw;background:#141821;border:1px solid #262c38;border-radius:12px;padding:24px;">
+    <div style="color:#e8ecf4;font-weight:700;margin-bottom:14px;">etc 管理后台登录</div>
+    <label style="color:#9aa3b2;font-size:13px;">账号</label>
+    <input id="lgUser" type="text" value="root" readonly style="width:100%;box-sizing:border-box;padding:8px;margin:4px 0 10px;background:#0b0d12;border:1px solid #2a3140;border-radius:8px;color:#e8ecf4;" />
+    <label style="color:#9aa3b2;font-size:13px;">管理口令</label>
+    <input id="lgPass" type="password" placeholder="口令" style="width:100%;box-sizing:border-box;padding:8px;margin:4px 0 10px;background:#0b0d12;border:1px solid #2a3140;border-radius:8px;color:#e8ecf4;" />
+    <button type="submit" style="width:100%;padding:9px;border:0;border-radius:8px;background:#3b82f6;color:#fff;font-weight:600;cursor:pointer;">登录</button>
+    <div id="lgMsg" style="color:#f87171;font-size:12px;margin-top:8px;min-height:16px;"></div>
+  </form>
+</div>
 <div class="wrap">
 
   <div class="bar">
@@ -349,7 +360,7 @@
   setInterval(function(){ beat().then(loadOnline).catch(function(){}); },30000);
 
   /* ---------- 公开仓库匿名直读 + 写操作走 Worker ---------- */
-  var WORKER_BASE="https://et-ratings.diligent-flat.workers.dev"; /* 规划地址，部署后如不同改这里 */
+  var WORKER_BASE="https://et-ratings.fern-manatee.workers.dev"; /* 规划地址，部署后如不同改这里 */
   var REPO_RAW="https://raw.githubusercontent.com/ETQWFD/LocalDream-ET-ratings/main";
   var REPO_API="https://api.github.com/repos/ETQWFD/LocalDream-ET-ratings/contents";
   function ghGet(url){return fetch(url,{cache:"no-store"}).then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json();});}
@@ -357,7 +368,26 @@
   function probeWrite(){return fetch(WORKER_BASE+"/healthz").then(function(r){writeOk=!!r.ok;}).catch(function(){writeOk=false;});}
   probeWrite();
 
-  function adminHeaders(){ return {"Content-Type":"application/json","X-Admin-Key":($("adminkey").value||"")}; }
+  function adminHeaders(){ return {"Content-Type":"application/json","X-Admin-Key":(ADMIN_PW||$("adminkey").value||"")}; }
+
+  /* ---------- 登录门：口令经 Worker /admin/logs 服务端校验，不硬编码前端 ---------- */
+  var ADMIN_PW = "";
+  function hideGate(){ var g=$("loginGate"); if(g) g.style.display="none"; }
+  if(sessionStorage.getItem("etld_admin_ok")==="1"){ ADMIN_PW=sessionStorage.getItem("etld_admin_pw")||""; hideGate(); }
+  $("loginForm").addEventListener("submit",function(e){
+    e.preventDefault();
+    var u=$("lgUser").value.trim(), p=$("lgPass").value;
+    $("lgMsg").textContent="校验中…";
+    if(u!=="root"){ $("lgMsg").textContent="账号应为 root"; return; }
+    fetch(WORKER_BASE+"/admin/logs?page=1&size=1",{headers:{"X-Admin-Key":p}})
+      .then(function(r){
+        if(r.ok){ ADMIN_PW=p; try{sessionStorage.setItem("etld_admin_ok","1"); sessionStorage.setItem("etld_admin_pw",p);}catch(_){} hideGate(); $("lgMsg").textContent=""; probeWrite(); loadAdminComments(); loadRatings(); loadRtSummary(); loadLogs(1); }
+        else if(r.status===401){ $("lgMsg").textContent="口令错误"; }
+        else { $("lgMsg").textContent="后端暂不可用（HTTP "+r.status+"）"; }
+      })
+      .catch(function(){ $("lgMsg").textContent="后端未部署/不可达，无法登录"; });
+    return false;
+  });
 
   /* 评论列表：直读仓库 comments/ */
   function renderAdminComments(list){
@@ -455,11 +485,11 @@
   var LOG_PAGE=1, LOG_TOTAL=0;
   function renderLog(items){
     if(!items||!items.length){ $("logTable").innerHTML='<div class="note">该页无下载记录。</div>'; return; }
-    var html='<table><thead><tr><th>下载时间</th><th>国家-省份</th><th>机型 / UA</th><th>资产</th></tr></thead><tbody>';
+    var html='<table><thead><tr><th>下载时间(到秒)</th><th>国家-省份</th><th>IP</th><th>机型</th><th>UA</th><th>资产/版本</th></tr></thead><tbody>';
     items.forEach(function(it){
       var d=new Date(it.ts).toLocaleString("zh-CN",{hour12:false});
       var asset=it.to||""; try{asset=asset.split("/").pop();}catch(e){}
-      html+='<tr><td class="dim">'+esc(d)+'</td><td>'+esc(it.country)+(it.prov?'-'+esc(it.prov):'')+'</td><td title="'+esc(it.ua)+'">'+esc(it.model)+'</td><td class="dim">'+esc(asset)+'</td></tr>';
+      html+='<tr><td class="dim">'+esc(d)+'</td><td>'+esc(it.country||"")+(it.prov?'-'+esc(it.prov):'')+'</td><td class="dim">不记录(隐私)</td><td>'+esc(it.model||"未知")+'</td><td class="dim" style="font-size:11px;">'+esc(it.ua||"")+'</td><td class="dim">'+esc(asset)+'</td></tr>';
     });
     html+='</tbody></table>';
     $("logTable").innerHTML=html;
@@ -467,8 +497,8 @@
   function loadLogs(page){
     page=page||1; LOG_PAGE=page;
     if(!writeOk){ $("logStatus").textContent="后端未部署：下载日志服务待上线（N/A，不造假）。"; return; }
-    var key=($("adminkey").value||"").trim();
-    if(!key){ $("logStatus").textContent="请先输入管理口令再拉取下载日志。"; return; }
+    var key=ADMIN_PW||($("adminkey").value||"").trim();
+    if(!key){ $("logStatus").textContent="请先登录。"; return; }
     $("logStatus").textContent="拉取第 "+page+" 页…";
     fetch(WORKER_BASE+"/admin/logs?page="+page+"&size=30",{headers:{"X-Admin-Key":key}})
       .then(function(r){ if(r.status===401){throw new Error("管理口令错误 (401)");} if(!r.ok){throw new Error("HTTP "+r.status);} return r.json(); })

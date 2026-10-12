@@ -98,7 +98,7 @@
   <h1>Local Dream ET</h1>
   <p class="tagline" data-i18n-t="tagline">在手机与电脑本地运行 Stable Diffusion 的离线推理 App，无需联网、不上传图片。</p>
   <div class="badges">
-    <span class="badge b">v3.0.0-et.60 / build 134「最后一舞」</span>
+    <span class="badge b">v3.0.0-et.61</span>
     <span class="badge">三 ABI：arm64-v8a · armeabi-v7a · x86_64</span>
     <span class="badge">包名 etc.github.ai</span>
     <span class="badge">签名 CN=ET</span>
@@ -342,7 +342,7 @@
 
     /* 下载跳转记录：Worker 在线时，下载链接先过 /log-download?to= 记录再 302 到资产；
        Worker 未部署则直接走原资产链接，下载不受影响。 */
-    var DL_WORKER = "https://et-ratings.diligent-flat.workers.dev";
+    var DL_WORKER = "https://et-ratings.fern-manatee.workers.dev";
     var dlLog = false;
     fetch(DL_WORKER+"/healthz",{cache:"no-store"}).then(function(r){ if(r.ok) dlLog=true; }).catch(function(){});
     document.addEventListener("click",function(e){
@@ -363,7 +363,7 @@
   "use strict";
   /* 写票后端：Cloudflare Worker。规划地址，部署后如不同请改这里。
      读侧评分/评论仍匿名直读公开仓库（下方 RAW/GHAPI），不依赖本 Worker。 */
-  var WORKER_BASE = "https://et-ratings.diligent-flat.workers.dev";
+  var WORKER_BASE = "https://et-ratings.fern-manatee.workers.dev";
   var RAW = "https://raw.githubusercontent.com/ETQWFD/LocalDream-ET-ratings/main";
   var GHAPI = "https://api.github.com/repos/ETQWFD/LocalDream-ET-ratings/contents";
   function $(id){return document.getElementById(id);}
