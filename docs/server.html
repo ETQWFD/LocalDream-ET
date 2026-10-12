@@ -10,7 +10,7 @@
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
 <link rel="manifest" href="site.webmanifest" />
 <meta name="theme-color" content="#0f1115" />
-<title>Local Dream ET Server v1.2.0 — 电脑本地出图 API</title>
+<title>Local Dream ET Server v1.3.0 — 电脑本地出图 API</title>
 <style>
   :root{
     --bg:#0f1115; --panel:#171a21; --line:#262b36; --text:#e6e9ef;
@@ -60,7 +60,7 @@
   <h1>Local Dream ET Server</h1>
   <p class="tagline">把普通 Windows / Linux 电脑变成本地出图 HTTP API（SD1.5），与手机「ET 聊天画师」配套。</p>
   <div class="badges">
-    <span class="badge b">v1.2.0（预览 · 非 latest）</span>
+    <span class="badge b">v1.3.0（预览 · 非 latest）</span>
     <span class="badge">x86_64</span>
     <span class="badge">A1111 / OpenAI 兼容</span>
     <span class="badge">默认 steps=30 · batch=6</span>
@@ -75,27 +75,27 @@
   <a href="#ghost">ghost.txt</a>
   <a href="#tip">tip.txt</a>
   <a href="#api">API 速查</a>
-  <a href="https://github.com/ETQWFD/LocalDream-ET/releases/tag/server-v1.2.0" target="_blank" rel="noopener">Release</a>
+  <a href="https://github.com/ETQWFD/LocalDream-ET/releases/tag/server-v1.3.0" target="_blank" rel="noopener">Release</a>
 </nav>
 
 <!-- 下载 -->
 <section id="download">
-  <h2>下载（v1.2.0）</h2>
+  <h2>下载（v1.3.0）</h2>
   <div class="card">
-    <strong>Windows 安装包</strong> · <code>LocalDreamET-Server-Setup-1.2.0.exe</code>
+    <strong>Windows 安装包</strong> · <code>LocalDreamET-Server-Setup-1.3.0.exe</code>
     <div class="btns" style="margin:10px 0 4px">
-      <a class="btn primary" href="https://github.com/ETQWFD/LocalDream-ET/releases/download/server-v1.2.0/LocalDreamET-Server-Setup-1.2.0.exe">下载 EXE</a>
+      <a class="btn primary" href="https://github.com/ETQWFD/LocalDream-ET/releases/download/server-v1.3.0/LocalDreamET-Server-Setup-1.3.0.exe">下载 EXE</a>
     </div>
     <div class="meta">大小 11,255,621 字节 · sha256 <code>11faf7a06e8cb800cc446e91b8cdc6a0a1d9b905ac1f6a8100c72ca791e54960</code></div>
   </div>
   <div class="card">
-    <strong>Linux x86_64 便携包</strong> · <code>LocalDreamET-Server-1.2.0-linux-x86_64.tar.gz</code>
+    <strong>Linux x86_64 便携包</strong> · <code>LocalDreamET-Server-1.3.0-linux-x86_64.tar.gz</code>
     <div class="btns" style="margin:10px 0 4px">
-      <a class="btn primary" href="https://github.com/ETQWFD/LocalDream-ET/releases/download/server-v1.2.0/LocalDreamET-Server-1.2.0-linux-x86_64.tar.gz">下载 tar.gz</a>
+      <a class="btn primary" href="https://github.com/ETQWFD/LocalDream-ET/releases/download/server-v1.3.0/LocalDreamET-Server-1.3.0-linux-x86_64.tar.gz">下载 tar.gz</a>
     </div>
     <div class="meta">大小 16,521,768 字节 · sha256 <code>30e0ecfb7d68b0e482f61fc8fff00a2bc539fbe2765aead017c0413540ed5cf2</code></div>
   </div>
-  <p class="muted">发布为 <strong>Pre-release</strong>，不会覆盖手机端的 latest（当前手机 latest 为 et.55）。校验示例：<code>sha256sum LocalDreamET-Server-Setup-1.2.0.exe</code>。</p>
+  <p class="muted">发布为 <strong>Pre-release</strong>，不会覆盖手机端的 latest（当前手机 latest 为 et.55）。校验示例：<code>sha256sum LocalDreamET-Server-Setup-1.3.0.exe</code>。</p>
 </section>
 
 <!-- 快速上手 -->
@@ -103,7 +103,7 @@
   <h2>快速上手</h2>
   <ul>
     <li><strong>Windows</strong>：双击 EXE 安装，运行 <code>etserver</code>（或开始菜单快捷方式）。</li>
-    <li><strong>Linux</strong>：<code>tar xzf LocalDreamET-Server-1.2.0-linux-x86_64.tar.gz && cd 解压目录 && ./etserver</code>。</li>
+    <li><strong>Linux</strong>：<code>tar xzf LocalDreamET-Server-1.3.0-linux-x86_64.tar.gz && cd 解压目录 && ./etserver</code>。</li>
     <li>启动后控制台会打印四样关键信息，把它们填进手机「ET 聊天画师 → 设置」即可连：
       <ul>
         <li><code>[服务地址] http://&lt;局域网IP&gt;:&lt;实际端口&gt;</code></li>
@@ -152,7 +152,7 @@
 
 <!-- 默认参数 -->
 <section id="params">
-  <h2>默认参数（v1.2.0）</h2>
+  <h2>默认参数（v1.3.0）</h2>
   <table>
     <tr><th>项</th><th>默认</th><th>说明</th></tr>
     <tr><td>steps</td><td><code>30</code></td><td>采样步数，客户端请求自带则不覆盖</td></tr>
@@ -200,14 +200,14 @@ curl -X POST http://127.0.0.1:8080/sdapi/v1/txt2img \
 
 <!-- 诚实声明 -->
 <div class="honest">
-  诚实说明：服务端要真出图，仍需自行运行包内附带的 <code>download-cpu-model.sh</code> 下载 CPU 大模型（SD1.5，约 1.6–4.3GB 视模型），并在 ghost.txt 填入真实 <code>ghp_</code> 令牌才能云备份。本发布包与官网页面<strong>未在沙箱内端到端跑图</strong>；上述 API 字段与默认值来自代码契约（SERVER-API.md v1.2.0）。
+  诚实说明：服务端要真出图，仍需自行运行包内附带的 <code>download-cpu-model.sh</code> 下载 CPU 大模型（SD1.5，约 1.6–4.3GB 视模型），并在 ghost.txt 填入真实 <code>ghp_</code> 令牌才能云备份。本发布包与官网页面<strong>未在沙箱内端到端跑图</strong>；上述 API 字段与默认值来自代码契约（SERVER-API.md v1.3.0）。
 </div>
 
 <footer>
   <p>Local Dream ET Server · Copyright (C) 2026 etc · 署名 ET</p>
   <p>联系：<a href="mailto:2416444244@qq.com">2416444244@qq.com</a> ·
      <a href="index.html">返回官网</a> ·
-     <a href="https://github.com/ETQWFD/LocalDream-ET/releases/tag/server-v1.2.0" target="_blank" rel="noopener">v1.2.0 Release</a></p>
+     <a href="https://github.com/ETQWFD/LocalDream-ET/releases/tag/server-v1.3.0" target="_blank" rel="noopener">v1.3.0 Release</a></p>
 </footer>
 
 </div>
