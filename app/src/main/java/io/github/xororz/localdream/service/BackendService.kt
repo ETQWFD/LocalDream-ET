@@ -861,7 +861,13 @@ class BackendService : Service() {
                 io.github.xororz.localdream.cloud.LogHub.Category.ENGINE,
                 "Engine start FAILED: ${e.message}",
             )
-            updateState(BackendState.Error("backend start failed: ${e.message}", config.modelId))
+            // et.69: 给出可操作的中文原因，而不是笼统“无法连接8081”。
+            val causeHint = when {
+                e.message?.contains("Permission") == true -> "引擎无执行权限，模型可能未下载完整"
+                e.message?.contains("Cannot run") == true || e.message?.contains("exec") == true -> "当前CPU/架构无法运行该引擎(SO缺失或架构不匹配)"
+                else -> "引擎未能在8081启动：模型可能未下载完整、SO缺失或架构不匹配，请检查模型文件"
+            }
+            updateState(BackendState.Error("引擎启动失败：$causeHint（${e.message}）", config.modelId))
             return false
         }
     }
