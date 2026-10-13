@@ -488,6 +488,23 @@ class BackgroundGenerationService : Service() {
             // BackendService must NOT close the engine pipe or destroy the process —
             // fixes "Req Rcvd ... -> read interrupted by close() -> engine exited 143".
             io.github.xororz.localdream.service.BackendService.notifyGenerationStarted()
+            // et.72: engine startup can take 10-12s; don't give up after the
+            // first connection refused. Wait up to ~10s (2 tries x 5s) for
+            // 8081 to come alive before surfacing "无法连接8081".
+            run {
+                var ok = false
+                repeat(2) { tryNo ->
+                    if (ok) return@repeat
+                    runCatching {
+                        java.net.Socket().use { it.connect(java.net.InetSocketAddress("127.0.0.1", 8081), 2000); ok = true }
+                    }
+                    if (!ok) {
+                        Log.w("BgGenService", "8081 not ready (try $tryNo), wait 5s")
+                        runCatching { Thread.sleep(5000) }
+                    }
+                }
+                if (!ok) throw IOException("引擎8081未就绪（连不上），请确认引擎已启动或模型下载完整")
+            }
             // et.57: optional background music while generating.
             io.github.xororz.localdream.utils.BgmManager.start(this@BackgroundGenerationService)
             val call = generationClient.newCall(request)

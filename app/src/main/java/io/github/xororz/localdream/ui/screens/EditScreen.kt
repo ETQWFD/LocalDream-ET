@@ -12,10 +12,13 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -129,22 +132,39 @@ fun EditScreen(
                 modifier = Modifier.fillMaxWidth(),
             ) { Text(if (sourceBitmap == null) "选择图片" else "重新选择") }
 
-            OutlinedTextField(
-                value = positive,
-                onValueChange = { positive = it },
-                label = { Text("提示词（中文也可）") },
-                enabled = !working,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            OutlinedTextField(
-                value = negative,
-                onValueChange = { negative = it },
-                label = { Text("负向提示词") },
-                enabled = !working,
-                modifier = Modifier.fillMaxWidth(),
-                minLines = 2,
-                maxLines = 4,
-            )
+            // et.72: collapsible prompt boxes to save screen space.
+            var posOpen by remember { mutableStateOf(true) }
+            var negOpen by remember { mutableStateOf(false) }
+            Row(verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth().clickable { posOpen = !posOpen }) {
+                Text("提示词（中文也可）", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                Icon(if (posOpen) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = null)
+            }
+            if (posOpen) {
+                OutlinedTextField(
+                    value = positive,
+                    onValueChange = { positive = it },
+                    label = { Text("提示词（中文也可）") },
+                    enabled = !working,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            Row(verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth().clickable { negOpen = !negOpen }) {
+                Text("负向提示词（默认已加防畸形词）", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                Icon(if (negOpen) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = null)
+            }
+            if (negOpen) {
+                OutlinedTextField(
+                    value = negative,
+                    onValueChange = { negative = it },
+                    label = { Text("负向提示词") },
+                    enabled = !working,
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 2,
+                    maxLines = 4,
+                )
+            }
 
             Text("重绘强度：%.2f".format(denoise))
             Slider(

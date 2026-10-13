@@ -1,9 +1,9 @@
 {
-  "versionCode": 145,
-  "versionName": "3.0.0-et.71",
-  "title": "发现新版本 v3.0.0-et.71「最后一舞」",
+  "versionCode": 146,
+  "versionName": "3.0.0-et.72",
+  "title": "发现新版本 v3.0.0-et.72「最后一舞」",
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
-  "size": 159616379,
-  "sha256": "6eeeab675d842449899a6001519d45da0be61de1968c10498fcc71e3285a15a9",
-  "releaseNotes": "「最后一舞」：作者因上学中，可能无法及时修复问题；如有问题请联系作者，邮箱 2416444244@qq.com。\n\n本版：\n· 去掉主页顶部平级“生成/修图”Tab（更简洁）；修图改为主页右上角铅笔图标入口：点它弹已下载模型选择(NPU/CPU)→进独立全屏修图页。\n· 背景音新增两首内置：《与神明》《青春走的太快了》（设置-背景音中可选），自定义导入仍保留。\n\n回归：图生图真发 init_image base64（tmp.txt 非空即 put image）、默认防畸形负向词自动追加、生成中 onTrimMemory 不杀引擎。无KVM沙箱无法模拟器截图，修图与背景音乐需真机复测。安装后在“关于/版本”看到 build 145 即新版。版权 Copyright (C) 2026 etc，署名 ET。"
+  "size": 159622127,
+  "sha256": "848ddaeca1cb5f37e6224d5ba26f643759de7615603df19df3d10bcef0e97351",
+  "releaseNotes": "「最后一舞」：作者因上学中，可能无法及时修复问题；如有问题请联系作者，邮箱 2416444244@qq.com。\n\n本版：\n· 修图页正/负提示词框改为可折叠（点标题栏箭头展开/收起，负向默认折叠），省屏幕空间。\n· 出图/修图前对 8081 做连接等待重试（最多等约10s：2次×5s），引擎启动慢时不再立刻报“连不上8081”。\n\n说明：onTrimMemory(level=20) 在本App只清理已完成状态、不杀引擎；引擎8秒退出 code=143 多为系统/RAM压力，仍需真机日志进一步定位。无KVM沙箱无法模拟器截图。安装后在“关于/版本”看到 build 146 即新版。版权 Copyright (C) 2026 etc，署名 ET。"
 }
