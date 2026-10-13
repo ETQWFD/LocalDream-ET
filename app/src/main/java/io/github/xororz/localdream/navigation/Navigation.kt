@@ -20,6 +20,11 @@ sealed class Screen(val route: String) {
 
     object Upscale : Screen("upscale")
 
+    object Edit : Screen("edit/{modelId}?modelName={modelName}&backendType={backendType}") {
+        fun createRoute(modelId: String, modelName: String, backendType: String) =
+            "edit/$modelId?modelName=$modelName&backendType=$backendType"
+    }
+
     object History : Screen("history")
 
     object RemoteLink : Screen("remote_link")

@@ -258,5 +258,26 @@ private fun AppContent() {
         composable(Screen.RemoteLink.route) {
             RemoteScreen(navController)
         }
+        composable(
+            route = Screen.Edit.route,
+            arguments = listOf(
+                androidx.navigation.navArgument("modelId") { type = androidx.navigation.NavType.StringType },
+                androidx.navigation.navArgument("modelName") {
+                    type = androidx.navigation.NavType.StringType
+                    defaultValue = "Model"
+                },
+                androidx.navigation.navArgument("backendType") {
+                    type = androidx.navigation.NavType.StringType
+                    defaultValue = "sd15cpu"
+                },
+            ),
+        ) { entry ->
+            io.github.xororz.localdream.ui.screens.EditScreen(
+                navController = navController,
+                modelId = entry.arguments?.getString("modelId").orEmpty(),
+                modelName = entry.arguments?.getString("modelName") ?: "Model",
+                backendType = entry.arguments?.getString("backendType") ?: "sd15cpu",
+            )
+        }
     }
 }

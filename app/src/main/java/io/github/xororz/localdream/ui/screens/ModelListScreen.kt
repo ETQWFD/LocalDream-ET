@@ -807,7 +807,11 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                             androidx.compose.material3.TextButton(
                                 onClick = {
                                     showEditPicker = false
-                                    navController.navigate(Screen.ModelRun.createRoute(m.id))
+                                    navController.navigate(
+                                        io.github.xororz.localdream.navigation.Screen.Edit.createRoute(
+                                            m.id, m.name, m.backendType,
+                                        ),
+                                    )
                                 },
                             ) { Text(if (m.runOnCpu) "${m.name}（CPU）" else "${m.name}（NPU）") }
                         }
