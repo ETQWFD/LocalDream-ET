@@ -1985,6 +1985,29 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                             )
                         }
                     }
+                    // et.68: master enable switch (default OFF) gates a/b timers.
+                    item {
+                        val mp = context.getSharedPreferences("app_prefs", android.content.Context.MODE_PRIVATE)
+                        var autoExitMaster by remember {
+                            mutableStateOf(mp.getBoolean("auto_exit_master", false))
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("自动退出/省电（总开关）")
+                                Text("开启后下方按时长/每日定时才生效；关闭即取消所有定时",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            Switch(checked = autoExitMaster, onCheckedChange = { on ->
+                                mp.edit().putBoolean("auto_exit_master", on).apply()
+                                autoExitMaster = on
+                                if (!on) {
+                                    io.github.xororz.localdream.service.AutoExitScheduler.cancelDuration(context)
+                                    io.github.xororz.localdream.service.AutoExitScheduler.cancelDailyEnd(context)
+                                }
+                            })
+                        }
+                    }
                     // et.65: power mode — auto release engine after current image.
                     item {
                         val prefs2 = context.getSharedPreferences("app_prefs", android.content.Context.MODE_PRIVATE)

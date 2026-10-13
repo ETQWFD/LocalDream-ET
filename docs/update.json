@@ -1,9 +1,9 @@
 {
-  "versionCode": 141,
-  "versionName": "3.0.0-et.67",
-  "title": "发现新版本 v3.0.0-et.67",
+  "versionCode": 142,
+  "versionName": "3.0.0-et.68",
+  "title": "发现新版本 v3.0.0-et.68「最后一舞」",
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
-  "size": 156099195,
-  "sha256": "f25fb7197894f3a953227393e13e6911aab06374af6cea6ce149d044baa06f2e",
-  "releaseNotes": "：维护中，不定时维护，有空就维护。作者因上学中，可能无法及时修复问题；如有问题请联系作者，邮箱 2416444244@qq.com。\n\n本版自动退出/省电三项（设置页明显位置）：\n· a) 定时退出（按时长）：可选 0.5/1/2/3/8 小时，开启后计时，到点自动停止生成、释放引擎、清后台；关闭即取消。\n· b) 每日定时退出：滑块选择退出小时(0-23)，每天到点自动退出清后台；可临时关闭。\n· c) 生成完当前图自动退出（沿用，开着 API 连接时不生效）。\n· 独立修图页（就地进度/禁用控件/返回确认）沿用。\n\n说明：真机闹钟到时是否被国产 ROM 杀掉、悬浮球一并移除的效果需实测。安装后在“关于/版本”看到 build 141 即新版。版权 Copyright (C) 2026 etc，署名 ET。"
+  "size": 156103187,
+  "sha256": "67fe14baaa6dc0c4f84361a4b05ba0bfa47985daa7c11b52a51cae869c0f36fd",
+  "releaseNotes": "「最后一舞」：作者因上学中，可能无法及时修复问题；如有问题请联系作者，邮箱 2416444244@qq.com。\n\n本版：\n· 确认图生图字段与引擎两侧一致：引擎 RequestParser 解析 image(base64) + denoise_strength，App 修图页正是发这两个字段，底图作为 init_image 真传入；引擎日志打印 received image 与 denoise。\n· 独立修图页（就地进度条/生成中禁用控件/返回确认弹窗）沿用。\n· 自动退出新增“总开关”(默认关)：开了按时长/每日定时才生效，关闭即取消所有定时。\n\n说明：本沙箱无 /dev/kvm、新版 emulator 已移除纯软件回退，无法在此启动安卓模拟器做 UI 截图，修图页状态机需真机实测。安装后在“关于/版本”看到 build 142 即新版。版权 Copyright (C) 2026 etc，署名 ET。"
 }
