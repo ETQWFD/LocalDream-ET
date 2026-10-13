@@ -20,7 +20,7 @@ import android.os.Looper
  */
 object BgmManager {
 
-    enum class Mode { OFF, DAWN, CUSTOM }
+    enum class Mode { OFF, DAWN, SONG1, SONG2, CUSTOM }
 
     private const val PREF = "bgm_prefs"
     private const val KEY_MODE = "mode"
@@ -32,6 +32,8 @@ object BgmManager {
     fun mode(ctx: Context): Mode = runCatching {
         when (prefs(ctx).getString(KEY_MODE, Mode.OFF.name) ?: Mode.OFF.name) {
             Mode.DAWN.name -> Mode.DAWN
+            Mode.SONG1.name -> Mode.SONG1
+            Mode.SONG2.name -> Mode.SONG2
             Mode.CUSTOM.name -> Mode.CUSTOM
             else -> Mode.OFF
         }
@@ -90,6 +92,12 @@ object BgmManager {
                 Mode.CUSTOM -> {
                     val u = customUri(app) ?: return@runCatching
                     mp.setDataSource(app, Uri.parse(u))
+                }
+                Mode.SONG1, Mode.SONG2 -> {
+                    val name = if (m == Mode.SONG1) "与神明.mp3" else "青春走的太快了.mp3"
+                    val af = app.assets.openFd("bgm/$name")
+                    mp.setDataSource(af.fileDescriptor, af.startOffset, af.length)
+                    af.close()
                 }
                 else -> return@runCatching
             }

@@ -1296,6 +1296,12 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                         // bar's title from being squeezed by multiple action
                         // icons competing for width.
                         var menuExpanded by remember { mutableStateOf(false) }
+                        IconButton(onClick = { showEditPicker = true }) {
+                            Icon(
+                                Icons.Default.Edit,
+                                contentDescription = stringResource(R.string.edit_photo_title),
+                            )
+                        }
                         IconButton(onClick = { menuExpanded = true }) {
                             Icon(
                                 Icons.Default.MoreVert,
@@ -1459,24 +1465,6 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                     onRefresh = { scope.launch { remoteRepository.refresh() } },
                     onDisconnect = { remoteRepository.disconnect() },
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                )
-            }
-            // et.70: top-level parallel tabs 生成 / 修图.
-            TabRow(selectedTabIndex = homeTab, modifier = Modifier.fillMaxWidth()) {
-                Tab(selected = homeTab == 0, onClick = { homeTab = 0 },
-                    text = { Text("生成", style = MaterialTheme.typography.titleSmall) })
-                Tab(selected = homeTab == 1, onClick = {
-                    homeTab = 1
-                    showEditPicker = true
-                }, text = { Text("修图", style = MaterialTheme.typography.titleSmall) })
-            }
-            if (homeTab == 1) {
-                // 修图 tab：进入已下载模型选择（选中后跳独立修图页）；回到此 tab 即生成页。
-                Text(
-                    "点上方“修图”选择已下载模型进入修图页",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(12.dp),
                 )
             }
             PrimaryTabRow(
@@ -5464,6 +5452,28 @@ private fun BgmSettingsDialog(onDismiss: () -> Unit) {
                         },
                     )
                     Text(stringResource(R.string.bgm_dawn))
+                }
+                androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    androidx.compose.material3.RadioButton(
+                        selected = mode == io.github.xororz.localdream.utils.BgmManager.Mode.SONG1,
+                        onClick = {
+                            mode = io.github.xororz.localdream.utils.BgmManager.Mode.SONG1
+                            io.github.xororz.localdream.utils.BgmManager.setMode(ctx, mode)
+                            io.github.xororz.localdream.utils.BgmManager.start(ctx)
+                        },
+                    )
+                    Text("与神明")
+                }
+                androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    androidx.compose.material3.RadioButton(
+                        selected = mode == io.github.xororz.localdream.utils.BgmManager.Mode.SONG2,
+                        onClick = {
+                            mode = io.github.xororz.localdream.utils.BgmManager.Mode.SONG2
+                            io.github.xororz.localdream.utils.BgmManager.setMode(ctx, mode)
+                            io.github.xororz.localdream.utils.BgmManager.start(ctx)
+                        },
+                    )
+                    Text("青春走的太快了")
                 }
                 androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                     androidx.compose.material3.RadioButton(
