@@ -310,6 +310,7 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
     var restoreUseOpenCL by remember { mutableStateOf(false) }
     var showRestoreModelPicker by remember { mutableStateOf(false) }
     var showCloudBackupDialog by remember { mutableStateOf(false) }
+    var showEditPicker by remember { mutableStateOf(false) }
     var showApiServerDialog by remember { mutableStateOf(false) }
     var showBgmDialog by remember { mutableStateOf(false) }
     var showCustomNpuModelDialog by remember { mutableStateOf(false) }
@@ -784,6 +785,37 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
             },
             dismissButton = {
                 androidx.compose.material3.TextButton(onClick = { showRestoreModelPicker = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
+        )
+    }
+
+    if (showEditPicker) {
+        // et.64: 修图入口——只列已下载模型（CPU+NPU），选中进入出图页（该页已支持上传图 img2img）。
+        val downloaded = (cpuModels + npuModels).filter { it.isDownloaded }
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showEditPicker = false },
+            title = { Text(stringResource(R.string.edit_photo_title) + " · " + stringResource(R.string.select_model)) },
+            text = {
+                if (downloaded.isEmpty()) {
+                    Text("还没有已下载的模型，请先在列表下载一个模型。")
+                } else {
+                    androidx.compose.foundation.lazy.LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        items(downloaded.size) { idx ->
+                            val m = downloaded[idx]
+                            androidx.compose.material3.TextButton(
+                                onClick = {
+                                    showEditPicker = false
+                                    navController.navigate(Screen.ModelRun.createRoute(m.id))
+                                },
+                            ) { Text(if (m.runOnCpu) "${m.name}（CPU）" else "${m.name}（NPU）") }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = { showEditPicker = false }) {
                     Text(stringResource(R.string.cancel))
                 }
             },
@@ -1316,14 +1348,7 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                                 },
                                 onClick = {
                                     menuExpanded = false
-                                    // et.62: 修图 = the proven image-to-image flow on the run page.
-                                    // Pick a downloaded model below, then on the run page upload an
-                                    // image; denoise defaults to 0.45 and negative prompt is preset.
-                                    android.widget.Toast.makeText(
-                                        context,
-                                        "选一个已下载模型进入，在出图页上传图片即可修图（重绘强度默认0.45）",
-                                        android.widget.Toast.LENGTH_LONG,
-                                    ).show()
+                                    showEditPicker = true
                                 },
                             )
                             DropdownMenuItem(

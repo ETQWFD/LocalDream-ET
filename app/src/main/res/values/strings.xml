@@ -355,6 +355,7 @@
     <string name="bgm_custom">Custom (import audio)</string>
     <string name="bgm_close">Close</string>
     <string name="edit_photo_title">Edit Photo</string>
+    <string name="select_model">Select Model</string>
 
     <string name="contact_copy_qq">Copy QQ</string>
     <string name="contact_join_group">Join QQ group</string>
