@@ -132,6 +132,10 @@
             android:name=".service.UpdateInstallReceiver"
             android:enabled="true"
             android:exported="false" />
+        <receiver
+            android:name=".service.AutoExitReceiver"
+            android:enabled="true"
+            android:exported="false" />
 
 
         <!-- Shares downloaded update APKs with the system package installer. -->

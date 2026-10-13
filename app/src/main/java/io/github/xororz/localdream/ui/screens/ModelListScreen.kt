@@ -2006,6 +2006,83 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                             })
                         }
                     }
+                    // et.67: a) duration-based auto exit (N hours after enabling).
+                    item {
+                        val ap = context.getSharedPreferences("app_prefs", android.content.Context.MODE_PRIVATE)
+                        var durOn by remember { mutableStateOf(ap.getBoolean("auto_exit_dur_on", false)) }
+                        var durHours by remember { mutableStateOf(ap.getString("auto_exit_dur_h", "1") ?: "1") }
+                        var durMenu by remember { mutableStateOf(false) }
+                        Column {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text("定时退出（按时长）")
+                                    Text("开启后 $durHours 小时自动退出清后台",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                                Switch(checked = durOn, onCheckedChange = { on ->
+                                    ap.edit().putBoolean("auto_exit_dur_on", on).apply()
+                                    durOn = on
+                                    if (on) {
+                                        val h = durHours.toDoubleOrNull() ?: 1.0
+                                        io.github.xororz.localdream.service.AutoExitScheduler.scheduleDuration(context, h)
+                                    } else {
+                                        io.github.xororz.localdream.service.AutoExitScheduler.cancelDuration(context)
+                                    }
+                                })
+                            }
+                            Box {
+                                OutlinedButton(onClick = { durMenu = true }) {
+                                    Text("时长：$durHours 小时")
+                                }
+                                DropdownMenu(expanded = durMenu, onDismissRequest = { durMenu = false }) {
+                                    listOf("0.5", "1", "2", "3", "8").forEach { h ->
+                                        DropdownMenuItem(text = { Text("$h 小时") }, onClick = {
+                                            durMenu = false
+                                            durHours = h
+                                            ap.edit().putString("auto_exit_dur_h", h).apply()
+                                            if (durOn) {
+                                                io.github.xororz.localdream.service.AutoExitScheduler.scheduleDuration(context, h.toDoubleOrNull() ?: 1.0)
+                                            }
+                                        })
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    // et.67: b) daily end-time auto exit.
+                    item {
+                        val ap = context.getSharedPreferences("app_prefs", android.content.Context.MODE_PRIVATE)
+                        var dailyOn by remember { mutableStateOf(ap.getBoolean("auto_exit_daily_on", false)) }
+                        var endHour by remember { mutableStateOf(ap.getInt("auto_exit_end_h", 22)) }
+                        Column {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text("每日定时退出")
+                                    Text("每天 ${String.format("%02d:00", endHour)} 自动退出清后台",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                                Switch(checked = dailyOn, onCheckedChange = { on ->
+                                    ap.edit().putBoolean("auto_exit_daily_on", on).apply()
+                                    dailyOn = on
+                                    if (on) {
+                                        io.github.xororz.localdream.service.AutoExitScheduler.scheduleDailyEnd(context, endHour, 0)
+                                    } else {
+                                        io.github.xororz.localdream.service.AutoExitScheduler.cancelDailyEnd(context)
+                                    }
+                                })
+                            }
+                            Text("退出小时（0-23）：$endHour")
+                            Slider(value = endHour.toFloat(), onValueChange = { v ->
+                                endHour = v.toInt().coerceIn(0, 23)
+                                ap.edit().putInt("auto_exit_end_h", endHour).apply()
+                                if (dailyOn) {
+                                    io.github.xororz.localdream.service.AutoExitScheduler.scheduleDailyEnd(context, endHour, 0)
+                                }
+                            }, valueRange = 0f..23f)
+                        }
+                    }
                     // et.46: contact author (QQ) entry.
                     item {
                         var showContactDialog by remember { mutableStateOf(false) }
