@@ -310,6 +310,8 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
     var restoreUseOpenCL by remember { mutableStateOf(false) }
     var showRestoreModelPicker by remember { mutableStateOf(false) }
     var showCloudBackupDialog by remember { mutableStateOf(false) }
+    // et.70: top-level parallel tabs — 生成(0) / 修图(1).
+    var homeTab by remember { mutableStateOf(0) }
     var showEditPicker by remember { mutableStateOf(false) }
     var showApiServerDialog by remember { mutableStateOf(false) }
     var showBgmDialog by remember { mutableStateOf(false) }
@@ -1457,6 +1459,24 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                     onRefresh = { scope.launch { remoteRepository.refresh() } },
                     onDisconnect = { remoteRepository.disconnect() },
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                )
+            }
+            // et.70: top-level parallel tabs 生成 / 修图.
+            TabRow(selectedTabIndex = homeTab, modifier = Modifier.fillMaxWidth()) {
+                Tab(selected = homeTab == 0, onClick = { homeTab = 0 },
+                    text = { Text("生成", style = MaterialTheme.typography.titleSmall) })
+                Tab(selected = homeTab == 1, onClick = {
+                    homeTab = 1
+                    showEditPicker = true
+                }, text = { Text("修图", style = MaterialTheme.typography.titleSmall) })
+            }
+            if (homeTab == 1) {
+                // 修图 tab：进入已下载模型选择（选中后跳独立修图页）；回到此 tab 即生成页。
+                Text(
+                    "点上方“修图”选择已下载模型进入修图页",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(12.dp),
                 )
             }
             PrimaryTabRow(

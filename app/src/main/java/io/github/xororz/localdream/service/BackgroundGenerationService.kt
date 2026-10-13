@@ -435,9 +435,17 @@ class BackgroundGenerationService : Service() {
 
             attemptLoop@ while (true) {
             try {
+            val defaultNeg = "lowres, bad anatomy, bad hands, missing fingers, extra fingers, extra limbs, deformed, disfigured, mutated hands, extra arms, extra legs, extra eyes, ugly, worst quality"
+            val effNegative = if (negativePrompt.contains("bad anatomy")) negativePrompt
+                else if (negativePrompt.isBlank()) defaultNeg
+                else "$negativePrompt, $defaultNeg"
+            Log.d(
+                "GenerationService",
+                "InitImg:${if (retryImage.isNullOrBlank()) "none" else "${attemptWidth}x${attemptHeight} bytes=${retryImage?.length}"} denoise=$denoiseStrength",
+            )
             val jsonObject = JSONObject().apply {
                 put("prompt", prompt)
-                put("negative_prompt", negativePrompt)
+                put("negative_prompt", effNegative)
                 put("steps", attemptSteps)
                 put("cfg", attemptCfg)
                 // Per-step previews come back as base64 JPEG (tiny) instead of
