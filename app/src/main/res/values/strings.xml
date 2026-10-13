@@ -356,6 +356,8 @@
     <string name="bgm_close">Close</string>
     <string name="edit_photo_title">Edit Photo</string>
     <string name="select_model">Select Model</string>
+    <string name="settings_auto_exit">Auto-exit after current image</string>
+    <string name="settings_auto_exit_desc">Release engine and remove notification once the current image finishes (disabled while API server is on)</string>
 
     <string name="contact_copy_qq">Copy QQ</string>
     <string name="contact_join_group">Join QQ group</string>

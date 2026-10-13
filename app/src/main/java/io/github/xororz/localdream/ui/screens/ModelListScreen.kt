@@ -1981,6 +1981,27 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                             )
                         }
                     }
+                    // et.65: power mode — auto release engine after current image.
+                    item {
+                        val prefs2 = context.getSharedPreferences("app_prefs", android.content.Context.MODE_PRIVATE)
+                        var autoExit by remember {
+                            mutableStateOf(prefs2.getBoolean("auto_exit_after_gen", false))
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(stringResource(R.string.settings_auto_exit))
+                                Text(
+                                    stringResource(R.string.settings_auto_exit_desc),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            Switch(checked = autoExit, onCheckedChange = { on ->
+                                prefs2.edit().putBoolean("auto_exit_after_gen", on).apply()
+                                autoExit = on
+                            })
+                        }
+                    }
                     // et.46: contact author (QQ) entry.
                     item {
                         var showContactDialog by remember { mutableStateOf(false) }

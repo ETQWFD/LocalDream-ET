@@ -774,6 +774,32 @@ class BackgroundGenerationService : Service() {
                                     // recycle the native bitmap here — the UI still uses it.)
                                     _generationState.value = GenerationState.Idle
                                     retryImage = null
+                                    // et.65: optional "auto exit after current image" power mode.
+                                    // Only honored when the API/LAN server is NOT running (it
+                                    // may need the engine resident). Stops the engine process,
+                                    // removes the foreground notification and any overlay ball.
+                                    val autoExit = applicationContext
+                                        .getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+                                        .getBoolean("auto_exit_after_gen", false)
+                                    val apiRunning = try {
+                                        applicationContext
+                                            .getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+                                            .getBoolean("api_server_running", false)
+                                    } catch (e: Exception) { false }
+                                    if (autoExit && !apiRunning) {
+                                        try {
+                                            startService(
+                                                android.content.Intent(
+                                                    this@BackgroundGenerationService,
+                                                    io.github.xororz.localdream.service.BackendService::class.java,
+                                                ).apply {
+                                                    action = io.github.xororz.localdream.service.BackendService.ACTION_STOP
+                                                },
+                                            )
+                                        } catch (e: Exception) {
+                                            Log.w("BgGenService", "auto_exit stop engine failed", e)
+                                        }
+                                    }
                                     stopSelf()
                                     // The stream carries nothing after complete; leaving
                                     // the loop here avoids a blocked readLine() racing the

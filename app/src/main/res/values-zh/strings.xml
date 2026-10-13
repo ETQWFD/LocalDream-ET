@@ -346,6 +346,8 @@
     <string name="bgm_close">关闭</string>
     <string name="edit_photo_title">修图</string>
     <string name="select_model">选择模型</string>
+    <string name="settings_auto_exit">生成完自动退出清后台</string>
+    <string name="settings_auto_exit_desc">当前图片出完后释放引擎进程、移除通知（开启API连接时不生效）</string>
 
 
     <string name="contact_copy_qq">复制 QQ</string>
