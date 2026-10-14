@@ -1354,16 +1354,6 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                                 )
                             }
                             DropdownMenuItem(
-                                text = { Text(stringResource(R.string.edit_photo_title)) },
-                                leadingIcon = {
-                                    Icon(Icons.Default.Edit, contentDescription = null)
-                                },
-                                onClick = {
-                                    menuExpanded = false
-                                    showEditPicker = true
-                                },
-                            )
-                            DropdownMenuItem(
                                 text = { Text(stringResource(R.string.remote_link)) },
                                 leadingIcon = {
                                     Icon(Icons.Default.Devices, contentDescription = null)

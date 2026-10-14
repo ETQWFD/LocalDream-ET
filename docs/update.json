@@ -1,9 +1,9 @@
 {
-  "versionCode": 159,
-  "versionName": "3.0.0-et.85",
-  "title": "发现新版本 v3.0.0-et.85（维护中，不定时更新）",
+  "versionCode": 160,
+  "versionName": "3.0.0-et.86",
+  "title": "发现新版本 v3.0.0-et.86（维护中，不定时更新）",
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
-  "size": 159644787,
-  "sha256": "23fb1206fe6fb7ed1d00ab3d9a673c243094d58add17a05d78a89ff80f459b90",
-  "releaseNotes": "维护中，不定时更新；作者上学中，联系邮箱 2416444244@qq.com。\n\n本版：\n· 修图走 CPU 后端(sd15cpu)，不再调 OpenCL/GPU，避免老机 OpenCL 内核崩溃。\n· 云备份页新增“批量上传图片”，多选相册图逐个传到备份仓 png/，显示已传 x/y 与成功/失败数。\n\n安装后在“关于/版本”看到 build 159 即新版。版权 Copyright (C) 2026 etc，署名 ET。"
+  "size": 159642383,
+  "sha256": "a6da4db461d13d0ddcc51ac6d905f6edd1f4fe51c8d262fcf3d5e57af40f11d1",
+  "releaseNotes": "维护中，不定时更新；作者上学中，联系邮箱 2416444244@qq.com。\n\n本版：去掉重复的修图入口，只保留右上角铅笔图标进入修图。\n\n安装后在“关于/版本”看到 build 160 即新版。版权 Copyright (C) 2026 etc，署名 ET。"
 }
