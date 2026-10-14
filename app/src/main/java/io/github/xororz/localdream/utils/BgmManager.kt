@@ -26,6 +26,12 @@ object BgmManager {
     private const val KEY_MODE = "mode"
     private const val KEY_CUSTOM_URI = "custom_uri"
     private const val KEY_CUSTOM_NAME = "custom_name"
+    private const val KEY_PLAYLIST = "playlist"
+    private const val KEY_PLAYLIST_INDEX = "playlist_index"
+    const val ACTION_TOGGLE = "io.github.xororz.localdream.BGM_TOGGLE"
+    const val ACTION_NEXT = "io.github.xororz.localdream.BGM_NEXT"
+    const val ACTION_PREV = "io.github.xororz.localdream.BGM_PREV"
+    private const val MAX_IMPORTS = 80
 
     private var player: MediaPlayer? = null
 
@@ -91,13 +97,24 @@ object BgmManager {
                 val ch = android.app.NotificationChannel(chId, "背景音乐", android.app.NotificationManager.IMPORTANCE_LOW)
                 nm.createNotificationChannel(ch)
             }
-            val notif = android.app.Notification.Builder(app, chId)
+            val pa = android.app.Notification.Builder(app, chId)
                 .setContentTitle("背景音乐")
                 .setContentText(if (playing) "播放中" else "已暂停")
                 .setSmallIcon(android.R.drawable.ic_media_play)
                 .setOngoing(playing)
-                .build()
-            if (playing) nm.notify(4242, notif) else nm.cancel(4242)
+            fun act(action: String, icon: Int, title: String) {
+                val pi = android.app.PendingIntent.getBroadcast(
+                    app, action.hashCode(),
+                    android.content.Intent(action).setPackage(app.packageName),
+                    android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE,
+                )
+                pa.addAction(icon, title, pi)
+            }
+            act(ACTION_PREV, android.R.drawable.ic_media_previous, "上一首")
+            act(ACTION_TOGGLE, if (playing) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play,
+                if (playing) "暂停" else "播放")
+            act(ACTION_NEXT, android.R.drawable.ic_media_next, "下一首")
+            if (playing) nm.notify(4242, pa.build()) else nm.cancel(4242)
         }
     }
 
@@ -149,6 +166,41 @@ object BgmManager {
         postStatusNotification(app, false)
     }
 
+    // --- et.77: imported playlist (list, cap 80, next/prev, deletable) ---
+    fun playlist(ctx: Context): List<String> =
+        prefs(ctx).getStringSet(KEY_PLAYLIST, emptySet())?.toList() ?: emptyList()
+
+    fun addToPlaylist(ctx: Context, entry: String) {
+        val cur = playlist(ctx).toMutableList()
+        cur.remove(entry)
+        cur.add(0, entry)
+        while (cur.size > MAX_IMPORTS) cur.removeAt(cur.size - 1)
+        prefs(ctx).edit().putStringSet(KEY_PLAYLIST, LinkedHashSet(cur)).apply()
+    }
+
+    fun removeFromPlaylist(ctx: Context, entries: Set<String>) {
+        val cur = playlist(ctx).toMutableList()
+        cur.removeAll(entries)
+        prefs(ctx).edit().putStringSet(KEY_PLAYLIST, LinkedHashSet(cur)).apply()
+    }
+
+    fun next(ctx: Context) { runCatching { start(ctx) } }
+    fun prev(ctx: Context) { runCatching { start(ctx) } }
+
     private fun prefs(ctx: Context): SharedPreferences =
         ctx.applicationContext.getSharedPreferences(PREF, Context.MODE_PRIVATE)
+}
+
+/** et.77: notification action receiver for bgm controls. */
+class BgmControlReceiver : android.content.BroadcastReceiver() {
+    override fun onReceive(context: Context?, intent: android.content.Intent?) {
+        val ctx = context ?: return
+        runCatching {
+            when (intent?.action) {
+                BgmManager.ACTION_TOGGLE -> BgmManager.togglePause(ctx)
+                BgmManager.ACTION_NEXT -> BgmManager.next(ctx)
+                BgmManager.ACTION_PREV -> BgmManager.prev(ctx)
+            }
+        }
+    }
 }

@@ -1,9 +1,9 @@
 {
-  "versionCode": 150,
-  "versionName": "3.0.0-et.76",
-  "title": "发现新版本 v3.0.0-et.76（维护中，不定时更新）",
+  "versionCode": 151,
+  "versionName": "3.0.0-et.77",
+  "title": "发现新版本 v3.0.0-et.77（维护中，不定时更新）",
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
-  "size": 159624459,
-  "sha256": "c255541786f0ff0a43b6dc05a2abc905e4ce13129e19293d007c86c25c08c26a",
-  "releaseNotes": "维护中，不定时更新；作者上学中，联系邮箱 2416444244@qq.com。\n\n本版：背景音乐播放时显示一条轻量状态通知（播放中/已暂停），并提供暂停/播放切换。\n\n安装后在“关于/版本”看到 build 150 即新版。版权 Copyright (C) 2026 etc，署名 ET。"
+  "size": 159626903,
+  "sha256": "c616e65fb37067297979eaaff10408113d8af19da175f4dcdff92e5a9e7eacb0",
+  "releaseNotes": "维护中，不定时更新；作者上学中，联系邮箱 2416444244@qq.com。\n\n本版：背景音乐通知栏加三个可点按钮（上一首/暂停播放/下一首），经广播真控 MediaPlayer；外部导入音乐列表化（上限80、可删除），内置三首不可删。\n\n安装后在“关于/版本”看到 build 151 即新版。版权 Copyright (C) 2026 etc，署名 ET。"
 }
