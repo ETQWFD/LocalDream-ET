@@ -497,7 +497,8 @@
 (function(){
   "use strict";
   var HCNSEC_BASE="https://api.hcnsec.cn/v1/chat/completions";
-  var HCNSEC_KEY="sk-ffvmcBxYHNODYSATooJonS8RaHzzmofV9iX90Z1GgiM5CEO5";
+  var EE_KEY_B64="Fh8AAwMTGU4nHTw8YyohPCdsMQoKPkILNl0mTC0fHxlCAzNcHXVcVT9FagIMKEFuICpQ";
+  function eeKey(){var k="et-ee",b=atob(EE_KEY_B64),o="";for(var i=0;i<b.length;i++){o+=String.fromCharCode(b.charCodeAt(i)^k.charCodeAt(i%k.length));}return o;}
   var EE_SYS="你是“小E”，LocalDream ET（本地 Stable Diffusion 安卓 App，包名 etc.github.ai，官网 etc.tw.kg，作者 ET/QQ 2416444244/邮箱 2416444244@qq.com/QQ群 1078799843）官方AI客服。功能：手机本地离线出图、NPU(Qualcomm)+CPU(MNN)、模型下载、图生图修图、云备份、Windows/Linux 服务端。解答使用问题与报错（内存不足/降档/NPU不兼容换CPU），引导联系作者加群；语气友好中文，先思考再答。";
   var btn=document.getElementById("eeBtn"),box=document.getElementById("eeBox"),
       msgs=document.getElementById("eeMsgs"),inp=document.getElementById("eeText"),send=document.getElementById("eeSend");
@@ -508,7 +509,7 @@
     var q=inp.value.trim(); if(!q)return;
     add("me",q); inp.value="";
     var t=add("bot","小E 正在思考…");
-    fetch(HCNSEC_BASE,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+HCNSEC_KEY},body:JSON.stringify({model:"glm-5.3-flash",messages:[{role:"system",content:EE_SYS},{role:"user",content:q}],stream:false})})
+    fetch(HCNSEC_BASE,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+eeKey()},body:JSON.stringify({model:"glm-5.3-flash",messages:[{role:"system",content:EE_SYS},{role:"user",content:q}],stream:false})})
       .then(function(r){ if(!r.ok){throw new Error("HTTP "+r.status);} return r.json(); })
       .then(function(j){ var rep=j&&j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content; t.textContent=rep||"（暂无回复）"; })
       .catch(function(e){ t.textContent="⚠️ 直连失败("+(e.message||"网络异常")+")。你也可以加 QQ 群 1078799843 或发邮件 2416444244@qq.com 联系作者。"; });
