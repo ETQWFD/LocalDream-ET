@@ -73,6 +73,8 @@ class BackgroundGenerationService : Service() {
     // the generation instead of computing a result nobody will read.
     @Volatile
     private var activeCall: okhttp3.Call? = null
+    // et.74: whether this run is img2img (set in onStartCommand, read in coroutine).
+    private var hasInitImageField: Boolean = false
     // et.30: mutable init-image copy for OOM safe-step rescale.
     private var retryImage: String? = null
     // et.30: engine context for OOM auto-restart.
@@ -226,6 +228,7 @@ class BackgroundGenerationService : Service() {
             .coerceIn(0.3f, 0.7f)
         val useOpenCL = data.getBooleanExtra("use_opencl", false)
         val hasInitImage = data.getBooleanExtra("has_image", false)
+        hasInitImageField = hasInitImage
         val scheduler = data.getStringExtra("scheduler") ?: "dpm"
         val aspectRatio = data.getStringExtra("aspect_ratio") ?: "1:1"
         // Ultrafix: tiled img2img repair over an upscaled image. Uses its own
@@ -251,7 +254,7 @@ class BackgroundGenerationService : Service() {
                 Log.e("GenerationService", "Failed to read ultrafix image data", e)
                 null
             }
-        } else if (data.getBooleanExtra("has_image", false)) {
+        } else if (hasInitImage) {
             try {
                 val tmpFile = File(applicationContext.filesDir, "tmp.txt")
                 if (tmpFile.exists() && tmpFile.length() > 0) {
@@ -271,7 +274,7 @@ class BackgroundGenerationService : Service() {
         }
         // et.63: intended img2img but no base image was available -> hard error,
         // never silently run txt2img without the init image.
-        if (data.getBooleanExtra("has_image", false) && image.isNullOrBlank()) {
+        if (hasInitImage && image.isNullOrBlank()) {
             updateState(
                 GenerationState.Error("未读取到底图，请重新上传图片后再修图"),
             )
@@ -376,7 +379,9 @@ class BackgroundGenerationService : Service() {
 
             val preferences =
                 applicationContext.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
-            val showProcess = preferences.getBoolean("show_diffusion_process", false)
+            // et.74: old/slow devices need per-step progress on by default.
+            val wantProcess = hasInitImageField
+            val showProcess = preferences.getBoolean("show_diffusion_process", false) || wantProcess
             val showStride = preferences.getInt("show_diffusion_stride", 1)
 
             // et.25: GPU -> CPU auto-recovery. If this device's GPU fp16 has
@@ -471,7 +476,24 @@ class BackgroundGenerationService : Service() {
                     put("aspect_ratio", aspectRatio)
                 }
                 seed?.let { put("seed", it) }
-                retryImage?.let { put("image", it) }
+                // et.74: never send an img2img request without the base image.
+                // Re-read tmp.txt defensively so the engine sees image ->
+                // Img2Img:1 (instead of silently txt2img).
+                if (hasInitImageField) {
+                    var img = retryImage
+                    if (img.isNullOrBlank()) {
+                        runCatching {
+                            val f = File(applicationContext.filesDir, "tmp.txt")
+                            if (f.exists() && f.length() > 0) img = f.readText()
+                        }
+                        retryImage = img
+                    }
+                    if (!img.isNullOrBlank()) {
+                        put("image", img)
+                        put("img2img", true)
+                    }
+                }
+                retryImage?.let { if (!hasInitImageField) put("image", it) }
                 mask?.let { put("mask", it) }
                 referenceImages?.let { put("reference_images", it) }
             }

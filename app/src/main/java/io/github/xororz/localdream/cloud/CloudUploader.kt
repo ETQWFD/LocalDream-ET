@@ -81,6 +81,11 @@ object CloudUploader {
      * upload and the log upload so both get the same retry / fallback / error mapping.
      */
     suspend fun uploadBytes(context: Context, bytes: ByteArray, destPath: String): String {
+        // et.74: skip null/empty payloads or blank paths instead of retrying and
+        // spamming "[UPLOAD] FAIL png/xxx.png: null" dozens of times on startup.
+        if (bytes.isEmpty() || destPath.isBlank()) {
+            throw IllegalArgumentException("空内容或路径为空，跳过上传")
+        }
         val store = SecureTokenStore(context)
         val logins = store.loggedInProviders()
         if (logins.isEmpty()) throw NotLoggedInException()
