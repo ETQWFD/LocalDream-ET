@@ -334,7 +334,7 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
             is io.github.xororz.localdream.service.ConvertManager.UiState.Success -> {
                 modelRepository.refreshAllModels()
                 io.github.xororz.localdream.service.ConvertManager.idle()
-                snackbarHostState.showSnackbar("模型转换完成")
+                snackbarHostState.showSnackbar("模型转换完成，可开始生成")
             }
             is io.github.xororz.localdream.service.ConvertManager.UiState.Failed -> {
                 io.github.xororz.localdream.service.ConvertManager.idle()

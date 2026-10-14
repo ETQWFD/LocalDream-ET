@@ -1,9 +1,9 @@
 {
-  "versionCode": 155,
-  "versionName": "3.0.0-et.81",
-  "title": "发现新版本 v3.0.0-et.81（维护中，不定时更新）",
+  "versionCode": 156,
+  "versionName": "3.0.0-et.82",
+  "title": "发现新版本 v3.0.0-et.82（维护中，不定时更新）",
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
-  "size": 159635631,
-  "sha256": "1676da2fcec41968ba94ed9fe06dc02089aa91359bd79a629f6761bf17d434c8",
-  "releaseNotes": "维护中，不定时更新；作者上学中，联系邮箱 2416444244@qq.com。\n\n本版：默认生成步数 16（老机更快，24仍可选）；主菜单加“电池不优化/后台运行”入口，跳转系统设置防止生成中被杀。\n\n安装后在“关于/版本”看到 build 155 即新版。版权 Copyright (C) 2026 etc，署名 ET。"
+  "size": 159635647,
+  "sha256": "72cf8cf2dcd3b5358651922150093d0f81ed2a905b48794c102e8d6691ae258e",
+  "releaseNotes": "维护中，不定时更新；作者上学中，联系邮箱 2416444244@qq.com。\n\n本版：模型转换完成后提示“模型转换完成，可开始生成”并自动刷新模型列表标为已就绪。\n\n安装后在“关于/版本”看到 build 156 即新版。版权 Copyright (C) 2026 etc，署名 ET。"
 }
