@@ -279,6 +279,19 @@ private fun startEdit(
         val b64 = Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP)
         FileOutputStream(File(context.filesDir, "tmp.txt")).use { it.write(b64.toByteArray()) }
 
+        // et.73: like txt2img, first converge the engine for this model
+        // (startBackend launches the child process + binds 8081). Without
+        // this we only hit 8081 and fail with "引擎8081未就绪".
+        runCatching {
+            val beIntent = Intent(context, io.github.xororz.localdream.service.BackendService::class.java).apply {
+                putExtra("modelId", modelId)
+                putExtra("backendType", backendType)
+                putExtra("width", w)
+                putExtra("height", h)
+            }
+            context.startForegroundService(beIntent)
+        }
+
         val intent = Intent(context, BackgroundGenerationService::class.java).apply {
             putExtra("prompt", positive)
             putExtra("negative_prompt", negative)
