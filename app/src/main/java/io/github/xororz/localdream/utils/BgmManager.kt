@@ -184,8 +184,25 @@ object BgmManager {
         prefs(ctx).edit().putStringSet(KEY_PLAYLIST, LinkedHashSet(cur)).apply()
     }
 
-    fun next(ctx: Context) { runCatching { start(ctx) } }
-    fun prev(ctx: Context) { runCatching { start(ctx) } }
+    // et.80: real track switching by playlist index.
+    private fun pickEntry(ctx: Context, dir: Int) {
+        val pl = playlist(ctx)
+        if (pl.isEmpty()) return
+        val cur = prefs(ctx).getInt(KEY_PLAYLIST_INDEX, 0)
+        val idx = ((cur + dir) % pl.size + pl.size) % pl.size
+        prefs(ctx).edit().putInt(KEY_PLAYLIST_INDEX, idx).apply()
+        val entry = pl[idx]
+        val uri = entry.substringBefore("|", entry)
+        val name = entry.substringAfter("|", entry)
+        prefs(ctx).edit()
+            .putString(KEY_CUSTOM_URI, uri)
+            .putString(KEY_CUSTOM_NAME, name)
+            .putString(KEY_MODE, Mode.CUSTOM.name)
+            .apply()
+    }
+
+    fun next(ctx: Context) { runCatching { pickEntry(ctx, 1); start(ctx) } }
+    fun prev(ctx: Context) { runCatching { pickEntry(ctx, -1); start(ctx) } }
 
     private fun prefs(ctx: Context): SharedPreferences =
         ctx.applicationContext.getSharedPreferences(PREF, Context.MODE_PRIVATE)
