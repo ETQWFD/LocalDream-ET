@@ -472,7 +472,7 @@
 })();
 </script>
 
-<!-- 小E AI客服（前端只调自家 Worker /api/chat，不直连第三方） -->
+<!-- 小E AI客服（前端直连 hcnsec，CORS 已放行 *） -->
 <style>
   #eeBtn{position:fixed;right:18px;bottom:18px;z-index:9000;width:56px;height:56px;border-radius:50%;border:0;background:linear-gradient(135deg,#3b82f6,#6366f1);color:#fff;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 6px 18px rgba(59,130,246,.45);}
   #eeBox{position:fixed;right:18px;bottom:84px;z-index:9001;width:330px;max-width:92vw;height:440px;max-height:70vh;background:#141821;border:1px solid #2a3140;border-radius:14px;display:none;flex-direction:column;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.5);}
@@ -496,7 +496,9 @@
 <script>
 (function(){
   "use strict";
-  var EE_BASE="https://et-ratings.fern-manatee.workers.dev";
+  var HCNSEC_BASE="https://api.hcnsec.cn/v1/chat/completions";
+  var HCNSEC_KEY="sk-ffvmcBxYHNODYSATooJonS8RaHzzmofV9iX90Z1GgiM5CEO5";
+  var EE_SYS="你是“小E”，LocalDream ET（本地 Stable Diffusion 安卓 App，包名 etc.github.ai，官网 etc.tw.kg，作者 ET/QQ 2416444244/邮箱 2416444244@qq.com/QQ群 1078799843）官方AI客服。功能：手机本地离线出图、NPU(Qualcomm)+CPU(MNN)、模型下载、图生图修图、云备份、Windows/Linux 服务端。解答使用问题与报错（内存不足/降档/NPU不兼容换CPU），引导联系作者加群；语气友好中文，先思考再答。";
   var btn=document.getElementById("eeBtn"),box=document.getElementById("eeBox"),
       msgs=document.getElementById("eeMsgs"),inp=document.getElementById("eeText"),send=document.getElementById("eeSend");
   btn.addEventListener("click",function(){box.classList.toggle("open");inp.focus();});
@@ -506,10 +508,10 @@
     var q=inp.value.trim(); if(!q)return;
     add("me",q); inp.value="";
     var t=add("bot","小E 正在思考…");
-    fetch(EE_BASE+"/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({q:q})})
-      .then(function(r){ if(r.status===404){throw new Error("客服未上线");} if(!r.ok){throw new Error("服务暂忙");} return r.json(); })
-      .then(function(j){ t.textContent=(j&&j.reply)||"（暂无回复）"; })
-      .catch(function(e){ t.textContent="⚠️ "+(e.message||"网络异常")+"。你也可以加 QQ 群 1078799843 或发邮件 2416444244@qq.com 联系作者。"; });
+    fetch(HCNSEC_BASE,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+HCNSEC_KEY},body:JSON.stringify({model:"glm-5.3-flash",messages:[{role:"system",content:EE_SYS},{role:"user",content:q}],stream:false})})
+      .then(function(r){ if(!r.ok){throw new Error("HTTP "+r.status);} return r.json(); })
+      .then(function(j){ var rep=j&&j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content; t.textContent=rep||"（暂无回复）"; })
+      .catch(function(e){ t.textContent="⚠️ 直连失败("+(e.message||"网络异常")+")。你也可以加 QQ 群 1078799843 或发邮件 2416444244@qq.com 联系作者。"; });
   }
   send.addEventListener("click",ask);
   inp.addEventListener("keydown",function(e){if(e.key==="Enter")ask();});
