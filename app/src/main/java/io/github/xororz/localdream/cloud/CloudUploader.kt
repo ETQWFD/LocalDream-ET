@@ -119,7 +119,14 @@ object CloudUploader {
                 LogHub.log(LogHub.Category.UPLOAD, "primary ${provider.name} failed, trying next: ${e.message}")
             }
         }
-        throw lastError ?: NotLoggedInException()
+        val err = lastError ?: NotLoggedInException()
+        // et.78: never surface a blank "…: null" line. Map null messages to a
+        // readable reason so multi-upload failures are diagnosable instead of
+        // spamming dozens of "[UPLOAD] FAIL png/xxx.png: null".
+        if (err.message.isNullOrBlank()) {
+            throw java.io.IOException("上传失败（${err.javaClass.simpleName}），请检查网络或令牌后重试：$destPath")
+        }
+        throw err
     }
 
     /** True when a PAT login exists for at least one provider. */
