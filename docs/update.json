@@ -1,9 +1,9 @@
 {
-  "versionCode": 148,
-  "versionName": "3.0.0-et.74",
-  "title": "发现新版本 v3.0.0-et.74",
+  "versionCode": 149,
+  "versionName": "3.0.0-et.75",
+  "title": "发现新版本 v3.0.0-et.75（维护中，不定时更新）",
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
-  "size": 159623659,
-  "sha256": "7bd7ff445f9bc648890a5df47d6ad1deb0a3d6c4cbcfc279f6a060cb1129e9ce",
-  "releaseNotes": "维护中，不定时更新。作者因上学中，可能无法及时修复问题；如有问题请联系作者，邮箱 2416444244@qq.com。\n\n本版（修图三修）：\n· 修图请求强制带 image base64 + img2img=true（请求时防御性重读 tmp.txt），引擎侧应看到 Img2Img:1 / InitImg bytes=xxxx，不再当成文生图。\n· 修图路径 ShowProcess 强制=1（老机每步进度回传，进度条可走）。\n· 云备份上传遇空内容/空路径直接跳过，不再每次启动刷几十条“UPLOAD FAIL ... null”。\n\n安装后在“关于/版本”看到 build 148 即新版。版权 Copyright (C) 2026 etc，署名 ET。"
+  "size": 159623663,
+  "sha256": "c9254d16a4b4b84c2b44b204b8dbed421749c8cf3c03077e442fdc11de955ab5",
+  "releaseNotes": "维护中，不定时更新；作者上学中，可能无法及时回复。联系邮箱 2416444244@qq.com。\n\n本版：更新弹窗副标题改为“维护中，不定时更新”；下载完 APK 自动调起系统安装器。\n\n安装后在“关于/版本”看到 build 149 即新版。版权 Copyright (C) 2026 etc，署名 ET。"
 }
