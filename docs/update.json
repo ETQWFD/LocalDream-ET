@@ -1,9 +1,9 @@
 {
-  "versionCode": 149,
-  "versionName": "3.0.0-et.75",
-  "title": "发现新版本 v3.0.0-et.75（维护中，不定时更新）",
+  "versionCode": 150,
+  "versionName": "3.0.0-et.76",
+  "title": "发现新版本 v3.0.0-et.76（维护中，不定时更新）",
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
-  "size": 159623663,
-  "sha256": "c9254d16a4b4b84c2b44b204b8dbed421749c8cf3c03077e442fdc11de955ab5",
-  "releaseNotes": "维护中，不定时更新；作者上学中，可能无法及时回复。联系邮箱 2416444244@qq.com。\n\n本版：更新弹窗副标题改为“维护中，不定时更新”；下载完 APK 自动调起系统安装器。\n\n安装后在“关于/版本”看到 build 149 即新版。版权 Copyright (C) 2026 etc，署名 ET。"
+  "size": 159624459,
+  "sha256": "c255541786f0ff0a43b6dc05a2abc905e4ce13129e19293d007c86c25c08c26a",
+  "releaseNotes": "维护中，不定时更新；作者上学中，联系邮箱 2416444244@qq.com。\n\n本版：背景音乐播放时显示一条轻量状态通知（播放中/已暂停），并提供暂停/播放切换。\n\n安装后在“关于/版本”看到 build 150 即新版。版权 Copyright (C) 2026 etc，署名 ET。"
 }

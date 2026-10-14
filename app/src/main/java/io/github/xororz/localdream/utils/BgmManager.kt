@@ -74,6 +74,33 @@ object BgmManager {
 
     fun isPlaying(): Boolean = runCatching { player?.isPlaying == true }.getOrDefault(false)
 
+    /** et.76: pause/resume toggle used by the notification control. */
+    fun togglePause(ctx: Context) {
+        runCatching {
+            val p = player ?: return
+            if (p.isPlaying) p.pause() else p.start()
+        }
+    }
+
+    private fun postStatusNotification(ctx: Context, playing: Boolean) {
+        runCatching {
+            val app = ctx.applicationContext
+            val nm = app.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+            val chId = "bgm_channel"
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                val ch = android.app.NotificationChannel(chId, "背景音乐", android.app.NotificationManager.IMPORTANCE_LOW)
+                nm.createNotificationChannel(ch)
+            }
+            val notif = android.app.Notification.Builder(app, chId)
+                .setContentTitle("背景音乐")
+                .setContentText(if (playing) "播放中" else "已暂停")
+                .setSmallIcon(android.R.drawable.ic_media_play)
+                .setOngoing(playing)
+                .build()
+            if (playing) nm.notify(4242, notif) else nm.cancel(4242)
+        }
+    }
+
     /** Start (or restart) the currently selected background music. Idempotent. */
     fun start(ctx: Context) {
         val app = ctx.applicationContext
@@ -106,10 +133,12 @@ object BgmManager {
             mp.prepare()
             mp.start()
             player = mp
+            postStatusNotification(app, true)
         }
     }
 
     fun stop(ctx: Context) {
+        val app = ctx.applicationContext
         runCatching {
             player?.let {
                 if (it.isPlaying) it.stop()
@@ -117,6 +146,7 @@ object BgmManager {
             }
         }
         player = null
+        postStatusNotification(app, false)
     }
 
     private fun prefs(ctx: Context): SharedPreferences =
