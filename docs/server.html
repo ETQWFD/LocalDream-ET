@@ -198,7 +198,82 @@ curl -X POST http://127.0.0.1:8080/sdapi/v1/txt2img \
   -d '{"prompt":"a cat, best quality","steps":30,"batch_size":6}'</code></pre>
 </section>
 
-<!-- 诚实声明 -->
+<section id="cookbook">
+  <h2>完整调用手册（照着能跑通）</h2>
+
+  <h3>① 启动</h3>
+  <pre><code># Windows：双击 LocalDreamET-Server-Setup-1.2.0.exe 安装后运行 etserver
+# Linux：解压 tar.gz 后
+tar xzf LocalDreamET-Server-1.2.0-linux-x86_64.tar.gz
+cd LocalDreamET-Server
+bash download-cpu-model.sh        # 首次下载 CPU 大模型（约 1.6–4.3GB）
+./etserver</code></pre>
+  <p>启动后控制台会打印三行关键信息，<strong>复制 banner 连接串</strong>：</p>
+  <pre><code>[ET-Server] API: http://0.0.0.0:8080
+[ET-Server] KEY:  aB3x9...（46 位，每次启动随机生成）
+[ET-Server] MODEL: anythingv5cpu-mnn</code></pre>
+  <p>把 <code>http://&lt;你的IP&gt;:&lt;端口&gt;</code> 和 46 位 KEY 填到手机 App「设置 → API 连接」或你的脚本里即可。</p>
+
+  <h3>② 密钥怎么传（三选一）</h3>
+  <pre><code># 1) Bearer 头（推荐）
+-H "Authorization: Bearer &lt;46位KEY&gt;"
+# 2) 自定义头
+-H "X-API-Key: &lt;46位KEY&gt;"
+# 3) URL 参数（最简单）
+?api_key=&lt;46位KEY&gt;</code></pre>
+
+  <h3>③ txt2img 请求示例</h3>
+  <pre><code>curl -X POST http://127.0.0.1:8080/sdapi/v1/txt2img \
+  -H "Authorization: Bearer &lt;46位KEY&gt;" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "a cute cat sitting on a windowsill, best quality, masterpiece",
+    "negative_prompt": "lowres, bad anatomy, watermark",
+    "width": 512, "height": 512,
+    "steps": 30, "batch_size": 6,
+    "sampler_name": "Euler a"
+  }'
+# 返回：{ "images": ["&lt;base64...&gt;", ...] }，前端直接 data:image/png;base64, 拼</code></pre>
+
+  <h3>④ img2img（图生图/修图）示例</h3>
+  <pre><code>curl -X POST http://127.0.0.1:8080/sdapi/v1/img2img \
+  -H "Authorization: Bearer &lt;46位KEY&gt;" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "make it sunset, warm light",
+    "init_images": ["data:image/png;base64,&lt;原图base64&gt;"],
+    "resize_mode": 0,
+    "denoising_strength": 0.45,
+    "steps": 30
+  }'</code></pre>
+
+  <h3>⑤ ghost.txt（自动云备份）</h3>
+  <p>程序首次启动在当前目录生成 <code>ghost.txt</code> 模板，第一行填：</p>
+  <pre><code>gh:ghp_你的GitHub令牌</code></pre>
+  <p>出图后自动把图推到你的私密仓 <code>LocalDreamET-Upload</code>（不存在会自动创建）。换号就改这一行；<strong>令牌只存在 ghost.txt，不进程序、不上传他人</strong>。不填则不云备份，本地照常出图。</p>
+
+  <h3>⑥ tip.txt（默认提示词模板）</h3>
+  <p>当前目录 <code>tip.txt</code>：第一行写尺寸如 <code>512x512</code>，下面依次写正向、反向提示词模板；不改则以这份为默认，API 里显式传参仍覆盖它。</p>
+
+  <h3>⑦ frpc 内网穿透（让手机/外网连到家里这台服务端）</h3>
+  <pre><code># 1. 下载 frp（github.com/fatedier/frp），在你的 VPS 跑 frps，本地跑 frpc
+# 2. frpc.ini 关键段：
+[et-server]
+type = tcp
+local_ip = 127.0.0.1
+local_port = 8080
+remote_port = 18080
+
+# 3. 启动
+./frpc -c frpc.ini
+# 4. 手机 App 里 API 地址填 http://&lt;VPS_IP&gt;:18080 ，KEY 用控制台打印的那串</code></pre>
+  <p>也可用 Cloudflare Tunnel / ngrok 等任意 TCP 隧道；只要手机能访问到 <code>&lt;IP&gt;:&lt;端口&gt;</code> 即可。</p>
+
+  <h3>⑧ 保活</h3>
+  <pre><code># nohup
+nohup ./etserver &gt; etserver.log 2&gt;&amp;1 &amp;
+# 或 systemd（见上一节）</code></pre>
+</section>
 <div class="honest">
   诚实说明：服务端要真出图，仍需自行运行包内附带的 <code>download-cpu-model.sh</code> 下载 CPU 大模型（SD1.5，约 1.6–4.3GB 视模型），并在 ghost.txt 填入真实 <code>ghp_</code> 令牌才能云备份。本发布包与官网页面<strong>未在沙箱内端到端跑图</strong>；上述 API 字段与默认值来自代码契约（SERVER-API.md v1.3.0）。
 </div>
