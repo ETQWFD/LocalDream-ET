@@ -268,11 +268,14 @@ private fun startEdit(
         return
     }
     try {
-        // 缩放到 512 长边，base64 PNG 写 tmp.txt（BackgroundGenerationService 按 has_image 读取）。
-        val maxSide = 512f
+        // 缩放到 384 长边，base64 PNG 写 tmp.txt（BackgroundGenerationService 按 has_image 读取）。
+        // et.83: 宽高向下对齐到 8 的倍数，否则 VAE 解码花图(Size:349x512 -> 344x...).
+        val maxSide = 384f
         val scale = maxSide / maxOf(source.width, source.height)
-        val w = (source.width * scale).toInt().coerceAtLeast(64)
-        val h = (source.height * scale).toInt().coerceAtLeast(64)
+        var w = (source.width * scale).toInt().coerceAtLeast(64)
+        var h = (source.height * scale).toInt().coerceAtLeast(64)
+        w = (w / 8) * 8
+        h = (h / 8) * 8
         val scaled = Bitmap.createScaledBitmap(source, w, h, true)
         val baos = ByteArrayOutputStream()
         scaled.compress(Bitmap.CompressFormat.PNG, 100, baos)
@@ -295,7 +298,7 @@ private fun startEdit(
         val intent = Intent(context, BackgroundGenerationService::class.java).apply {
             putExtra("prompt", positive)
             putExtra("negative_prompt", negative)
-            putExtra("steps", 20)
+            putExtra("steps", 12)
             putExtra("cfg", 7f)
             putExtra("width", w)
             putExtra("height", h)
