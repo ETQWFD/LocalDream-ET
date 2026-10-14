@@ -1434,6 +1434,22 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                                 },
                             )
                             DropdownMenuItem(
+                                text = { Text("电池不优化/后台运行") },
+                                leadingIcon = {
+                                    Icon(Icons.Default.Warning, contentDescription = null)
+                                },
+                                onClick = {
+                                    menuExpanded = false
+                                    runCatching {
+                                        context.startActivity(
+                                            android.content.Intent(
+                                                android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS
+                                            ).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                                        )
+                                    }
+                                },
+                            )
+                            DropdownMenuItem(
                                 text = { Text(stringResource(R.string.settings)) },
                                 leadingIcon = {
                                     Icon(Icons.Default.Settings, contentDescription = null)
