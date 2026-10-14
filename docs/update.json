@@ -1,9 +1,9 @@
 {
-  "versionCode": 152,
-  "versionName": "3.0.0-et.78",
-  "title": "发现新版本 v3.0.0-et.78（维护中，不定时更新）",
+  "versionCode": 153,
+  "versionName": "3.0.0-et.79",
+  "title": "发现新版本 v3.0.0-et.79（维护中，不定时更新）",
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
-  "size": 159627091,
-  "sha256": "04d6a14b8731aee01ac047ea8821cae6529763550eb948d3e40e7a7719fc0f73",
-  "releaseNotes": "维护中，不定时更新；作者上学中，联系邮箱 2416444244@qq.com。\n\n本版：云备份上传失败不再刷“…: null”，改为可读中文原因（含文件名）；安装走 FileProvider+系统安装器。\n\n安装后在“关于/版本”看到 build 152 即新版。版权 Copyright (C) 2026 etc，署名 ET。"
+  "size": 159632627,
+  "sha256": "c9320c1b877d918fa473a8cb5875c117350ed2e3b10043cb7e7edaf6ee0db3c6",
+  "releaseNotes": "维护中，不定时更新；作者上学中，联系邮箱 2416444244@qq.com。\n\n本版：\n· 升级下载判重：已下载且 sha256 匹配的 APK 不再重复下载，直接“已下载，点安装”。\n· 背景音设置列出已导入音乐，长按进多选模式可删除（上限80首，内置三首不可删）。\n\n安装后在“关于/版本”看到 build 153 即新版。版权 Copyright (C) 2026 etc，署名 ET。"
 }

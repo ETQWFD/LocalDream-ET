@@ -5488,6 +5488,36 @@ private fun BgmSettingsDialog(onDismiss: () -> Unit) {
                 if (mode == io.github.xororz.localdream.utils.BgmManager.Mode.CUSTOM && customName != null) {
                     Text("当前：$customName", style = androidx.compose.material3.MaterialTheme.typography.bodySmall)
                 }
+                // et.79: imported playlist list with long-press multi-select delete.
+                val pl = io.github.xororz.localdream.utils.BgmManager.playlist(ctx)
+                var sel by remember(pl) { mutableStateOf(setOf<String>()) }
+                if (pl.isNotEmpty()) {
+                    Text("已导入（长按可删，最多80首）", style = androidx.compose.material3.MaterialTheme.typography.titleSmall)
+                    pl.take(20).forEach { entry ->
+                        Row(
+                            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                                .combinedClickable(
+                                    onClick = {
+                                        if (sel.isNotEmpty()) sel = if (entry in sel) sel - entry else sel + entry
+                                    },
+                                    onLongClick = { sel = sel + entry },
+                                ),
+                        ) {
+                            Text(
+                                text = (if (entry in sel) "☑ " else "☐ ") + entry.substringAfter("|"),
+                                style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                    }
+                    if (sel.isNotEmpty()) {
+                        androidx.compose.material3.TextButton(onClick = {
+                            io.github.xororz.localdream.utils.BgmManager.removeFromPlaylist(ctx, sel)
+                            sel = emptySet()
+                        }) { Text("删除所选") }
+                    }
+                }
             }
         },
         confirmButton = {

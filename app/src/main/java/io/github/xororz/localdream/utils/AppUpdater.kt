@@ -227,6 +227,14 @@ object AppUpdater {
         expectedSha256: String = "",
         onProgress: (downloaded: Long, total: Long) -> Unit = { _, _ -> },
     ): File = withContext(Dispatchers.IO) {
+        // et.79: dedup — if a previously downloaded APK for this version already
+        // exists and passes size+sha256, reuse it instead of re-downloading every launch.
+        runCatching {
+            val existing = File(io.github.xororz.localdream.utils.Storage.tempDir(context), "localdream-update.apk")
+            if (existing.exists() && verifyApk(existing, expectedSize, expectedSha256) == null) {
+                return@withContext existing
+            }
+        }
         var lastError: Exception? = null
         repeat(3) { attempt ->
             val target = downloadOnce(context, url, onProgress)
