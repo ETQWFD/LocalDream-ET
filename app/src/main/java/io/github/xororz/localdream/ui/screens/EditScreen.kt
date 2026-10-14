@@ -285,10 +285,13 @@ private fun startEdit(
         // et.73: like txt2img, first converge the engine for this model
         // (startBackend launches the child process + binds 8081). Without
         // this we only hit 8081 and fail with "引擎8081未就绪".
+        // et.85: img2img forces the CPU backend (sd15cpu) — no OpenCL/GPU,
+        // avoids PowerVR GE8320 OpenCL kernel 139 crash during VAE encode.
+        val cpuBackend = "sd15cpu"
         runCatching {
             val beIntent = Intent(context, io.github.xororz.localdream.service.BackendService::class.java).apply {
                 putExtra("modelId", modelId)
-                putExtra("backendType", backendType)
+                putExtra("backendType", cpuBackend)
                 putExtra("width", w)
                 putExtra("height", h)
             }
@@ -310,7 +313,7 @@ private fun startEdit(
             putExtra("aspect_ratio", "1:1")
             putExtra("has_image", true)
             putExtra("modelId", modelId)
-            putExtra("backendType", backendType)
+            putExtra("backendType", cpuBackend)
             putExtra("backend_host", "127.0.0.1:8081")
         }
         context.startForegroundService(intent)

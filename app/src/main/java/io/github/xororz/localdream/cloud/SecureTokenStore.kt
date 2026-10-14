@@ -130,6 +130,10 @@ class SecureTokenStore(context: Context) {
         )
     }
 
+    /** et.85: decrypted PAT for the provider, or null when not logged in. */
+    fun token(provider: CloudConfig.Provider): String? =
+        prefs(provider).getString(KEY_TOKEN, null)?.let { runCatching { decrypt(it) }.getOrNull() }
+
     /** All providers currently logged in (for the settings entry). */
     fun loggedInProviders(): List<CloudAuthState> =
         CloudConfig.Provider.entries.mapNotNull { state(it) }

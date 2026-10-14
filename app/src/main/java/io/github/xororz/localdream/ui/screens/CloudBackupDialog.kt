@@ -17,6 +17,8 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -131,6 +133,49 @@ fun CloudBackupDialog(onDismiss: () -> Unit) {
                         else
                             stringResource(R.string.cloud_backup_state_pending),
                     )
+                    // et.85: batch-pick album images -> upload each to png/ (x/y progress, retry).
+                    var batchBusy by remember { mutableStateOf(false) }
+                    var batchProgress by remember { mutableStateOf("") }
+                    val batchLauncher = rememberLauncherForActivityResult(
+                        ActivityResultContracts.GetMultipleContents(),
+                    ) { uris ->
+                        if (uris.isNullOrEmpty() || batchBusy) return@rememberLauncherForActivityResult
+                        val st = store.state(provider) ?: return@rememberLauncherForActivityResult
+                        val tok = store.token(provider) ?: return@rememberLauncherForActivityResult
+                        val owner = st.owner ?: st.login
+                        val repo = st.repo ?: CloudConfig.BACKUP_REPO
+                        val total = uris.size
+                        batchBusy = true
+                        scope.launch {
+                            var ok = 0
+                            var fail = 0
+                            uris.forEachIndexed { i, uri ->
+                                batchProgress = "已传 ${i + 1}/$total"
+                                val done = runCatching {
+                                    withContext(Dispatchers.IO) {
+                                        val bytes = context.contentResolver
+                                            .openInputStream(uri)?.use { it.readBytes() }
+                                            ?: throw IllegalStateException("空文件")
+                                        val name = "batch_" + System.currentTimeMillis() + "_$i.png"
+                                        CloudClient.uploadContent(
+                                            provider, tok, owner, repo,
+                                            "png/$name", bytes, "upload $name",
+                                        )
+                                    }
+                                }.isSuccess
+                                if (done) ok++ else fail++
+                            }
+                            batchBusy = false
+                            batchProgress = "完成：成功 $ok / 失败 $fail"
+                        }
+                    }
+                    OutlinedButton(
+                        enabled = !batchBusy,
+                        onClick = {
+                            runCatching { batchLauncher.launch("image/*") }
+                        },
+                    ) { Text(if (batchBusy) "上传中…" else "批量上传图片") }
+                    if (batchProgress.isNotBlank()) Text(batchProgress)
                 } else {
                     OutlinedTextField(
                         value = pat,
