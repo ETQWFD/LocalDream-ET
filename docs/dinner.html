@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>用户分布地图 · Local Dream ET</title>
+<style>
+  :root{--bg:#0f1115;--panel:#171a21;--line:#262b36;--text:#e6e9ef;--muted:#9aa3b2;--accent:#4f8cff;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:15px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;}
+  .wrap{max-width:1000px;margin:0 auto;padding:20px;}
+  h1{font-size:22px;margin:0 0 4px}
+  .sub{color:var(--muted);font-size:13px;margin-bottom:14px}
+  #map{width:100%;height:640px;background:var(--panel);border:1px solid var(--line);border-radius:12px;}
+  .bar{display:flex;gap:10px;align-items:center;margin:12px 0;flex-wrap:wrap}
+  .btn{background:var(--accent);color:#fff;border:0;border-radius:8px;padding:8px 16px;cursor:pointer;font-weight:600}
+  .stat{color:var(--muted);font-size:13px}
+  a{color:var(--accent);text-decoration:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>用户分布地图</h1>
+  <div class="sub">读公开仓 devices/index.json，按上报省份聚合。匿名、仅统计数量；无上报时地图为空。</div>
+  <div class="bar">
+    <button class="btn" id="reload">刷新</button>
+    <span class="stat" id="stat">读取中…</span>
+    <a href="index.html">← 返回官网</a>
+  </div>
+  <div id="map"></div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<script>
+(function(){
+  var RAW="https://raw.githubusercontent.com/ETQWFD/LocalDream-ET-ratings/main";
+  var GEO="https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json";
+  var chart=echarts.init(document.getElementById("map"));
+  var PROV={"北京":"北京","天津":"天津","上海":"上海","重庆":"重庆","河北":"河北","山西":"山西","辽宁":"辽宁","吉林":"吉林","黑龙江":"黑龙江","江苏":"江苏","浙江":"浙江","安徽":"安徽","福建":"福建","江西":"江西","山东":"山东","河南":"河南","湖北":"湖北","湖南":"湖南","广东":"广东","海南":"海南","四川":"四川","贵州":"贵州","云南":"云南","陕西":"陕西","甘肃":"甘肃","青海":"青海","台湾":"台湾","内蒙古":"内蒙古","广西":"广西","西藏":"西藏","宁夏":"宁夏","新疆":"新疆","香港":"香港","澳门":"澳门"};
+  function norm(s){s=(s||"").trim();for(var k in PROV){if(s.indexOf(k)>=0)return PROV[k];}return s;}
+  function render(data){
+    chart.setOption({
+      backgroundColor:"transparent",
+      tooltip:{trigger:"item",formatter:function(p){return p.name+"："+(p.value||0)+" 台";}},
+      visualMap:{min:0,max:Math.max(1,data.reduce(function(m,d){return Math.max(m,d.value);},0)),left:16,bottom:20,text:["多","少"],calculable:true,inRange:{color:["#1c2a4a","#3b82f6","#f5b942"]},textStyle:{color:"#9aa3b2"}},
+      series:[{name:"用户分布",type:"map",map:"china",roam:true,label:{show:false},emphasis:{label:{show:true,color:"#fff"},itemStyle:{areaColor:"#6366f1"}},data:data}]
+    },true);
+  }
+  function loadDevices(){
+    document.getElementById("stat").textContent="读取中…";
+    fetch(RAW+"/devices/index.json?_="+Date.now()).then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json();})
+      .then(function(arr){
+        arr=Array.isArray(arr)?arr:[];
+        var agg={};
+        arr.forEach(function(dv){var p=norm(dv.prov||dv.country||"");if(!p)return;agg[p]=(agg[p]||0)+1;});
+        var data=Object.keys(agg).map(function(k){return {name:k,value:agg[k]};});
+        document.getElementById("stat").textContent="共 "+arr.length+" 条设备记录，覆盖 "+data.length+" 个省级行政区。";
+        render(data);
+      })
+      .catch(function(e){document.getElementById("stat").textContent="暂无设备上报数据（"+e.message+"）";render([]);});
+  }
+  fetch(GEO).then(function(r){return r.json();}).then(function(geo){echarts.registerMap("china",geo);loadDevices();})
+    .catch(function(e){document.getElementById("stat").textContent="地图加载失败："+e.message;});
+  document.getElementById("reload").addEventListener("click",loadDevices);
+  window.addEventListener("resize",function(){chart.resize();});
+})();
+</script>
+</body>
+</html>

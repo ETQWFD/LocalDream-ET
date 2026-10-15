@@ -513,7 +513,7 @@
       .then(function(arr){
         arr=Array.isArray(arr)?arr:[];
         LOG_TOTAL=arr.length;
-        var size=15, start=(page-1)*size, items=arr.slice(start,start+size);
+        var size=20, start=(page-1)*size, items=arr.slice(start,start+size);
         renderLog(items);
         $("logPage").textContent="第 "+page+" 页 · 共 "+LOG_TOTAL+" 条";
         $("logStatus").textContent= writeOk ? "已读取（公开仓实时数据，删除走 Worker）。" : "已读取（公开仓数据；写操作 Worker 暂不可达）。";
@@ -522,7 +522,7 @@
   }
   $("logLoad").addEventListener("click",function(){loadLogs(1);});
   $("logPrev").addEventListener("click",function(){ if(LOG_PAGE>1) loadLogs(LOG_PAGE-1); });
-  $("logNext").addEventListener("click",function(){ if(LOG_PAGE*15<LOG_TOTAL) loadLogs(LOG_PAGE+1); });
+  $("logNext").addEventListener("click",function(){ if(LOG_PAGE*20<LOG_TOTAL) loadLogs(LOG_PAGE+1); });
 
   /* ---------- 在线设备（公开仓 devices/index.json） ---------- */
   function loadDevices(){

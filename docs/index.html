@@ -492,14 +492,16 @@
   btn.addEventListener("click",function(){box.classList.toggle("open");inp.focus();});
   document.getElementById("eeClose").addEventListener("click",function(){box.classList.remove("open");});
   function add(cls,text){var d=document.createElement("div");d.className="eem "+cls;d.textContent=text;msgs.appendChild(d);msgs.scrollTop=msgs.scrollHeight;return d;}
+  function typewriter(node,text){var i=0;node.textContent="";var t=setInterval(function(){node.textContent=text.slice(0,++i);msgs.scrollTop=msgs.scrollHeight;if(i>=text.length)clearInterval(t);},18);}
   function ask(){
     var q=inp.value.trim(); if(!q)return;
     add("me",q); inp.value="";
-    var t=add("bot","小E 正在思考…");
+    var t=add("bot",""); var dots=0;
+    var tick=setInterval(function(){dots=(dots+1)%4;t.textContent="小E 正在思考"+".".repeat(dots);},300);
     fetch(HCNSEC_BASE,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+eeKey()},body:JSON.stringify({model:"glm-5.3-flash",messages:[{role:"system",content:EE_SYS},{role:"user",content:q}],stream:false})})
       .then(function(r){ if(!r.ok){throw new Error("HTTP "+r.status);} return r.json(); })
-      .then(function(j){ var rep=j&&j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content; t.textContent=rep||"（暂无回复）"; })
-      .catch(function(e){ t.textContent="⚠️ 直连失败("+(e.message||"网络异常")+")。你也可以加 QQ 群 1078799843 或发邮件 2416444244@qq.com 联系作者。"; });
+      .then(function(j){ clearInterval(tick); var rep=j&&j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content; typewriter(t,rep||"（暂无回复）"); })
+      .catch(function(e){ clearInterval(tick); t.textContent="⚠️ 直连失败("+(e.message||"网络异常")+")。你也可以加 QQ 群 1078799843 或发邮件 2416444244@qq.com 联系作者。"; });
   }
   send.addEventListener("click",ask);
   inp.addEventListener("keydown",function(e){if(e.key==="Enter")ask();});
