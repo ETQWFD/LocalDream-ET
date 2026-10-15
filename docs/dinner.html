@@ -33,16 +33,21 @@
 <script>
 (function(){
   var RAW="https://raw.githubusercontent.com/ETQWFD/LocalDream-ET-ratings/main";
-  var GEO="https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json";
+  var GEOS=[
+    "https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json",
+    "https://cdn.jsdelivr.net/gh/echarts-maps/china@1.0.0/china.json"
+  ];
   var chart=echarts.init(document.getElementById("map"));
+  var mapReady=false;
   var PROV={"北京":"北京","天津":"天津","上海":"上海","重庆":"重庆","河北":"河北","山西":"山西","辽宁":"辽宁","吉林":"吉林","黑龙江":"黑龙江","江苏":"江苏","浙江":"浙江","安徽":"安徽","福建":"福建","江西":"江西","山东":"山东","河南":"河南","湖北":"湖北","湖南":"湖南","广东":"广东","海南":"海南","四川":"四川","贵州":"贵州","云南":"云南","陕西":"陕西","甘肃":"甘肃","青海":"青海","台湾":"台湾","内蒙古":"内蒙古","广西":"广西","西藏":"西藏","宁夏":"宁夏","新疆":"新疆","香港":"香港","澳门":"澳门"};
   function norm(s){s=(s||"").trim();for(var k in PROV){if(s.indexOf(k)>=0)return PROV[k];}return s;}
   function render(data){
+    if(!mapReady)return;
     chart.setOption({
       backgroundColor:"transparent",
       tooltip:{trigger:"item",formatter:function(p){var d=p.data||{};return p.name+"<br/>合计 "+(p.value||0)+" 台<br/>App "+(d.app||0)+" · Server "+(d.server||0);}},
       visualMap:{min:0,max:Math.max(1,data.reduce(function(m,d){return Math.max(m,d.value);},0)),left:16,bottom:20,text:["多","少"],calculable:true,inRange:{color:["#1c2a4a","#3b82f6","#f5b942"]},textStyle:{color:"#9aa3b2"}},
-      series:[{name:"用户分布",type:"map",map:"china",roam:true,label:{show:false},emphasis:{label:{show:true,color:"#fff"},itemStyle:{areaColor:"#6366f1"}},data:data}]
+      series:[{name:"用户分布",type:"map",map:"china",roam:true,label:{show:false},itemStyle:{areaColor:"#16203a",borderColor:"#2c3a55"},emphasis:{label:{show:true,color:"#fff"},itemStyle:{areaColor:"#6366f1"}},data:data}]
     },true);
   }
   function loadDevices(){
@@ -57,14 +62,21 @@
           if(dv.type==="Server"||dv.type==="server") agg[p].server++; else agg[p].app++;
         });
         var data=Object.keys(agg).map(function(k){return {name:k,value:agg[k].app+agg[k].server,app:agg[k].app,server:agg[k].server};});
-        document.getElementById("stat").textContent="共 "+arr.length+" 条设备记录（App "+arr.filter(function(d){return d.type!=="Server"&&d.type!=="server";}).length+" / Server "+arr.filter(function(d){return d.type==="Server"||d.type==="server";}).length+"），覆盖 "+data.length+" 个省级行政区。";
+        var appN=arr.filter(function(d){return d.type!=="Server"&&d.type!=="server";}).length;
+        document.getElementById("stat").textContent="共 "+arr.length+" 条设备记录（App "+appN+" / Server "+(arr.length-appN)+"），覆盖 "+data.length+" 个省级行政区。";
         render(data);
       })
-      .catch(function(e){document.getElementById("stat").textContent="暂无设备上报数据（"+e.message+"）";render([]);});
+      .catch(function(e){document.getElementById("stat").textContent="暂无设备上报记录（devices/index.json 404，App/Server 开始上报后自动显示）。地图轮廓已加载。";render([]);});
   }
-  fetch(GEO).then(function(r){return r.json();}).then(function(geo){echarts.registerMap("china",geo);loadDevices();})
-    .catch(function(e){document.getElementById("stat").textContent="地图加载失败："+e.message;});
-  document.getElementById("reload").addEventListener("click",loadDevices);
+  function loadGeo(i){
+    i=i||0;
+    if(i>=GEOS.length){document.getElementById("stat").textContent="地图数据加载失败，请检查网络后点刷新。";return;}
+    fetch(GEOS[i]).then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json();})
+      .then(function(geo){echarts.registerMap("china",geo);mapReady=true;render([]);loadDevices();})
+      .catch(function(){loadGeo(i+1);});
+  }
+  loadGeo(0);
+  document.getElementById("reload").addEventListener("click",function(){loadGeo(0);});
   window.addEventListener("resize",function(){chart.resize();});
 })();
 </script>
