@@ -1,9 +1,9 @@
 {
-  "versionCode": 167,
-  "versionName": "3.0.0-et.93",
-  "title": "发现新版本 v3.0.0-et.93（维护中，不定时更新）",
+  "versionCode": 168,
+  "versionName": "3.0.0-et.94",
+  "title": "发现新版本 v3.0.0-et.94（维护中，不定时更新）",
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
-  "size": 159667015,
-  "sha256": "085595e97b9ab4183a035d86de1f085c5d50d524b5b6cd252ac1b5e6f1fcec13",
-  "releaseNotes": "维护中，不定时更新；作者上学中，联系邮箱 2416444244@qq.com。\n\n本版：评分弹窗星标可点选（点第几颗亮到第几颗）。\n\n安装后在“关于/版本”看到 build 167 即新版。版权 Copyright (C) 2026 etc，署名 ET。"
+  "size": 159667055,
+  "sha256": "e0235c849140729c22b2f5accddac1569fa14aeb00a9ecd5f043b6c2158fbcf2",
+  "releaseNotes": "维护中，不定时更新；作者上学中，联系邮箱 2416444244@qq.com。\n\n本版：Manifest 补粗略/精确位置权限，定位授权弹窗可正常弹出。\n\n安装后在“关于/版本”看到 build 168 即新版。版权 Copyright (C) 2026 etc，署名 ET。"
 }
