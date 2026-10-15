@@ -531,11 +531,11 @@
       arr=Array.isArray(arr)?[]:arr;
       if(!arr.length){ $("devTable").innerHTML='<div class="note">当前无设备心跳记录。</div>'; $("devStatus").textContent="共 0 台。"; return; }
       arr=arr.slice().sort(function(a,b){return(b.ts||0)-(a.ts||0);});
-      var html='<table><thead><tr><th>类型</th><th>机型</th><th>IP</th><th>省份</th><th>最近时间</th><th>UA</th></tr></thead><tbody>';
+      var html='<table><thead><tr><th>类型</th><th>机型</th><th>公网IP</th><th>局域网IP(wifiIp)</th><th>省份</th><th>最近时间</th><th>UA</th></tr></thead><tbody>';
       arr.forEach(function(dv){
         var d=new Date(dv.ts||0).toLocaleString("zh-CN",{hour12:false});
         var ty=(dv.type==="Server"||dv.type==="server")?"Server":"App";
-        html+='<tr><td>'+(ty==="Server"?'<span style="color:#f5b942">Server</span>':'App')+'</td><td>'+esc(dv.model||"未知")+'</td><td class="dim">'+esc(dv.ip||"")+'</td><td>'+esc(dv.prov||dv.country||"")+'</td><td class="dim">'+esc(d)+'</td><td class="dim" style="font-size:11px;">'+esc(dv.ua||"")+'</td></tr>';
+        html+='<tr><td>'+(ty==="Server"?'<span style="color:#f5b942">Server</span>':'App')+'</td><td>'+esc(dv.model||"未知")+'</td><td class="dim">'+esc(dv.ip||"")+'</td><td class="dim">'+esc(dv.wifiIp||"")+'</td><td>'+esc(dv.prov||dv.country||"")+'</td><td class="dim">'+esc(d)+'</td><td class="dim" style="font-size:11px;">'+esc(dv.ua||"")+'</td></tr>';
       });
       html+='</tbody></table>';
       $("devTable").innerHTML=html;
