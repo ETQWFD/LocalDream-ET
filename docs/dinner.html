@@ -50,10 +50,10 @@
       series:[{name:"用户分布",type:"map",map:"china",roam:true,label:{show:false},itemStyle:{areaColor:"#16203a",borderColor:"#2c3a55"},emphasis:{label:{show:true,color:"#fff"},itemStyle:{areaColor:"#6366f1"}},data:data}]
     },true);
   }
+  function fetchJSON(url,ms){ms=ms||8000;return new Promise(function(res,rej){var t=setTimeout(function(){rej(new Error("timeout"));},ms);fetch(url).then(function(r){clearTimeout(t);if(!r.ok)throw new Error("HTTP "+r.status);return r.json();}).then(res,rej);});}
   function loadDevices(){
-    document.getElementById("stat").textContent="读取中…";
-    fetch(RAW+"/devices/index.json?_="+Date.now()).then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json();})
-      .then(function(arr){
+    document.getElementById("stat").textContent="读取上报…";
+    fetchJSON(RAW+"/devices/index.json?_="+Date.now(),8000).then(function(arr){
         arr=Array.isArray(arr)?arr:[];
         var agg={};
         arr.forEach(function(dv){
@@ -66,7 +66,7 @@
         document.getElementById("stat").textContent="共 "+arr.length+" 条设备记录（App "+appN+" / Server "+(arr.length-appN)+"），覆盖 "+data.length+" 个省级行政区。";
         render(data);
       })
-      .catch(function(e){document.getElementById("stat").textContent="暂无设备上报记录（devices/index.json 404，App/Server 开始上报后自动显示）。地图轮廓已加载。";render([]);});
+      .catch(function(e){document.getElementById("stat").textContent="暂无设备上报记录（App/Server 开始上报后自动显示）。地图轮廓已加载。";render([]);});
   }
   function loadGeo(i){
     i=i||0;

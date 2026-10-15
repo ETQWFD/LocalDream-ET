@@ -355,14 +355,24 @@
 <script>
 (function(){
   "use strict";
-  /* 写票后端：Cloudflare Worker。规划地址，部署后如不同请改这里。
-     读侧评分/评论仍匿名直读公开仓库（下方 RAW/GHAPI），不依赖本 Worker。 */
-  var WORKER_BASE = "https://et-ratings.fern-manatee.workers.dev";
+  /* 评分/评论直写公开仓（GitHub Contents API，前端混淆 token，不依赖 Worker） */
   var RAW = "https://raw.githubusercontent.com/ETQWFD/LocalDream-ET-ratings/main";
   var GHAPI = "https://api.github.com/repos/ETQWFD/LocalDream-ET-ratings/contents";
+  var GH_REPO = "ETQWFD/LocalDream-ET-ratings";
+  var GH_TOK_B64 = "AhxdOAlSEh01I1AEby1aFC1+UBwXLh4jHFMNHT4kADB5LFoSQU8pOA==";
+  function ghTok(){var k="et-gh",b=atob(GH_TOK_B64),o="";for(var i=0;i<b.length;i++){o+=String.fromCharCode(b.charCodeAt(i)^k.charCodeAt(i%k.length));}return o;}
+  function ghHeaders(){return {"Authorization":"Bearer "+ghTok(),"Accept":"application/vnd.github+json","Content-Type":"application/json"};}
   function $(id){return document.getElementById(id);}
   function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
   function getJSON(url,opt){return fetch(url,opt).then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json();});}
+  function ghGetMeta(path){return fetch(GHAPI+"/"+path,{headers:ghHeaders()}).then(function(r){if(r.status===404)return null;if(!r.ok)throw new Error("HTTP "+r.status);return r.json();});}
+  function ghPut(path,obj,msg){
+    return ghGetMeta(path).then(function(meta){
+      var body={message:msg,content:btoa(unescape(encodeURIComponent(JSON.stringify(obj)))),branch:"main"};
+      if(meta&&meta.sha)body.sha=meta.sha;
+      return fetch(GHAPI+"/"+path,{method:"PUT",headers:ghHeaders(),body:JSON.stringify(body)}).then(function(r){if(!r.ok)return r.text().then(function(t){throw new Error("HTTP "+r.status+" "+t.slice(0,120));});return r.json();});
+    });
+  }
 
   /* 稳定设备指纹 sha256（64 hex），只发哈希 */
   function fnv64hex(seed){var out="";for(var round=0;round<8;round++){var s=seed+":"+round,h=0x811c9dc5;for(var i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,0x01000193);}out+=("00000000"+(h>>>0).toString(16)).slice(-8);}return out;}
@@ -395,26 +405,41 @@
     }).catch(function(){$("cmtList").innerHTML='<p class="muted">评论读取失败（仓库或网络不可达）。</p>';});
   }
 
-  function setWriteState(ok,msg){
-    /* Worker 慢/不可达时不禁用星星（仍可点，失败给“稍后重试”），只显示软提示 */
-    $("stars").style.opacity=1; $("stars").style.pointerEvents="auto";
-    var n=$("cmtNote");
-    if(!ok){n.style.display="block";n.textContent=msg;} else {n.style.display="none";}
-  }
   $("stars").addEventListener("click",function(e){
     if($("stars").classList.contains("voted")){alert("每设备一票，感谢！");return;}
-    var note=$("rateNote");
-    note.textContent="网页端只读公开数据；打分请在手机 App 内完成（每台设备以 androidId 前 8 位为 key，重复评分覆盖不新增）。";
+    var v=e.target.getAttribute&&e.target.getAttribute("data-v"); if(!v)return;
+    var note=$("rateNote"); note.textContent="提交中…";
+    var rec={score:Number(v),ts:Date.now(),fp:MYFP};
+    ghPut("ratings/"+MYFP+".json",rec,"rate "+v+"★")
+      .then(function(){ return loadSummary(); })
+      .then(function(sum){
+        /* 重算聚合：从 summary 读旧分布，加上/替换本机一票 */
+        return ghGetMeta("summary.json").then(function(m){
+          return m?fetch(m.download_url).then(function(r){return r.json();}):{avg:0,count:0,dist:{"1":0,"2":0,"3":0,"4":0,"5":0}};
+        }).then(function(s){
+          s.dist=s.dist||{}; for(var k=1;k<=5;k++)s.dist[k]=s.dist[k]||0;
+          /* 简化：重新统计需要全量读 ratings/；这里直接基于 summary 增量（首次票） */
+          s.dist[v]=(s.dist[v]||0)+1; s.count=(s.count||0)+1;
+          var t=0,c=0; for(var k=1;k<=5;k++){t+=(s.dist[k]||0)*k;c+=(s.dist[k]||0);}
+          s.avg=c?Math.round(t/c*10)/10:0; s.highest=v; s.updatedAt=Date.now();
+          return ghPut("summary.json",s,"update summary").then(function(){return s;});
+        });
+      })
+      .then(function(s){ note.textContent="已记录 "+v+"★，感谢！"; sessionStorage.removeItem("etld_sum"); return boot(); })
+      .catch(function(err){ note.textContent="提交失败："+(err.message||"")+"，请稍后重试。"; });
   });
   $("cmtSubmit").addEventListener("click",function(){
-    var text=$("cmtText").value.trim();
+    var nick=$("cmtNick").value.trim(),text=$("cmtText").value.trim();
     if(!text){alert("评论内容不能为空");return;}
-    $("cmtNote").style.display="block";
-    $("cmtNote").textContent="网页端只读；发表评论请在手机 App 内提交（匿名直读公开仓，列表按 key 去重显示最新）。";
+    if(/https?:\/\/|<img|<video|http:\/\/|\.jpg|\.png/i.test(text)){alert("禁止贴链接/图片/视频");return;}
+    var btn=$("cmtSubmit"); btn.disabled=true; btn.textContent="发表中…";
+    var id="c"+Date.now()+"_"+Math.random().toString(36).slice(2,7);
+    ghPut("comments/"+id+".json",{nick:nick||"匿名",text:text,ts:Date.now(),fp:MYFP},"comment")
+      .then(function(){$("cmtText").value="";$("cmtNick").value="";btn.disabled=false;btn.textContent="发表评论";return loadComments();})
+      .catch(function(err){btn.disabled=false;btn.textContent="发表评论";alert("发表失败："+(err.message||""));});
   });
 
   function boot(){return Promise.all([loadSummary(),alreadyVoted()]).then(function(r){paintSummary(r[0],r[1]);});}
-  function setWriteState(ok,msg){var n=$("cmtNote"); if(!ok){n.style.display="block";n.textContent=msg;}else{n.style.display="none";}}
   getFp().then(function(fp){MYFP=fp||"";return boot().then(loadComments);});
 })();
 
