@@ -524,24 +524,34 @@
   $("logPrev").addEventListener("click",function(){ if(LOG_PAGE>1) loadLogs(LOG_PAGE-1); });
   $("logNext").addEventListener("click",function(){ if(LOG_PAGE*20<LOG_TOTAL) loadLogs(LOG_PAGE+1); });
 
-  /* ---------- 在线设备（公开仓 devices/index.json） ---------- */
+  /* ---------- 在线设备（合并读 devices/index.json 与 device_*.json，区分 App/Server） ---------- */
   function loadDevices(){
     $("devStatus").textContent="读取在线设备…";
+    function renderDev(arr){
+      arr=Array.isArray(arr)?[]:arr;
+      if(!arr.length){ $("devTable").innerHTML='<div class="note">当前无设备心跳记录。</div>'; $("devStatus").textContent="共 0 台。"; return; }
+      arr=arr.slice().sort(function(a,b){return(b.ts||0)-(a.ts||0);});
+      var html='<table><thead><tr><th>类型</th><th>机型</th><th>IP</th><th>省份</th><th>最近时间</th><th>UA</th></tr></thead><tbody>';
+      arr.forEach(function(dv){
+        var d=new Date(dv.ts||0).toLocaleString("zh-CN",{hour12:false});
+        var ty=(dv.type==="Server"||dv.type==="server")?"Server":"App";
+        html+='<tr><td>'+(ty==="Server"?'<span style="color:#f5b942">Server</span>':'App')+'</td><td>'+esc(dv.model||"未知")+'</td><td class="dim">'+esc(dv.ip||"")+'</td><td>'+esc(dv.prov||dv.country||"")+'</td><td class="dim">'+esc(d)+'</td><td class="dim" style="font-size:11px;">'+esc(dv.ua||"")+'</td></tr>';
+      });
+      html+='</tbody></table>';
+      $("devTable").innerHTML=html;
+      var appN=arr.filter(function(x){return x.type!=="Server"&&x.type!=="server";}).length;
+      $("devStatus").textContent="共 "+arr.length+" 台（App "+appN+" / Server "+(arr.length-appN)+"）。";
+    }
+    /* 优先 index.json；空时退到列出 device_*.json 逐个读 */
     ghGet(REPO_RAW+"/devices/index.json?_="+Date.now())
-      .then(function(arr){
-        arr=Array.isArray(arr)?arr:[];
-        if(!arr.length){ $("devTable").innerHTML='<div class="note">当前无设备心跳记录。</div>'; $("devStatus").textContent="共 0 台。"; return; }
-        arr=arr.slice().sort(function(a,b){return(b.ts||0)-(a.ts||0);});
-        var html='<table><thead><tr><th>最近时间</th><th>IP</th><th>省份</th><th>机型</th><th>UA</th></tr></thead><tbody>';
-        arr.forEach(function(dv){
-          var d=new Date(dv.ts||0).toLocaleString("zh-CN",{hour12:false});
-          html+='<tr><td class="dim">'+esc(d)+'</td><td class="dim">'+esc(dv.ip||"")+'</td><td>'+esc(dv.prov||dv.country||"")+'</td><td>'+esc(dv.model||"未知")+'</td><td class="dim" style="font-size:11px;">'+esc(dv.ua||"")+'</td></tr>';
-        });
-        html+='</tbody></table>';
-        $("devTable").innerHTML=html;
-        $("devStatus").textContent="共 "+arr.length+" 台在线/近期设备。";
-      })
-      .catch(function(e){ $("devStatus").textContent="读取失败（可能还没有 devices/index.json）："+e.message; $("devTable").innerHTML='<div class="note">无设备心跳记录。</div>'; });
+      .then(function(arr){ if(Array.isArray(arr)&&arr.length){renderDev(arr);} else {throw new Error("empty");} })
+      .catch(function(){
+        return ghGet("https://api.github.com/repos/ETQWFD/LocalDream-ET-ratings/contents/devices")
+          .then(function(list){ var files=(list||[]).filter(function(f){return /^device_.*\.json$/.test(f.name);});
+            return Promise.all(files.map(function(f){return ghGet(REPO_RAW+"/devices/"+f.name).catch(function(){return null;});})); })
+          .then(function(arr){ renderDev((arr||[]).filter(Boolean)); })
+          .catch(function(e){ $("devStatus").textContent="读取失败（可能还没有 devices 上报）："+e.message; $("devTable").innerHTML='<div class="note">无设备心跳记录。</div>'; });
+      });
   }
   $("devLoad").addEventListener("click",loadDevices);
   loadDevices();

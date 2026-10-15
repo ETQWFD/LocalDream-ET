@@ -40,7 +40,7 @@
   function render(data){
     chart.setOption({
       backgroundColor:"transparent",
-      tooltip:{trigger:"item",formatter:function(p){return p.name+"："+(p.value||0)+" 台";}},
+      tooltip:{trigger:"item",formatter:function(p){var d=p.data||{};return p.name+"<br/>合计 "+(p.value||0)+" 台<br/>App "+(d.app||0)+" · Server "+(d.server||0);}},
       visualMap:{min:0,max:Math.max(1,data.reduce(function(m,d){return Math.max(m,d.value);},0)),left:16,bottom:20,text:["多","少"],calculable:true,inRange:{color:["#1c2a4a","#3b82f6","#f5b942"]},textStyle:{color:"#9aa3b2"}},
       series:[{name:"用户分布",type:"map",map:"china",roam:true,label:{show:false},emphasis:{label:{show:true,color:"#fff"},itemStyle:{areaColor:"#6366f1"}},data:data}]
     },true);
@@ -51,9 +51,13 @@
       .then(function(arr){
         arr=Array.isArray(arr)?arr:[];
         var agg={};
-        arr.forEach(function(dv){var p=norm(dv.prov||dv.country||"");if(!p)return;agg[p]=(agg[p]||0)+1;});
-        var data=Object.keys(agg).map(function(k){return {name:k,value:agg[k]};});
-        document.getElementById("stat").textContent="共 "+arr.length+" 条设备记录，覆盖 "+data.length+" 个省级行政区。";
+        arr.forEach(function(dv){
+          var p=norm(dv.prov||dv.country||""); if(!p) return;
+          if(!agg[p]) agg[p]={app:0,server:0};
+          if(dv.type==="Server"||dv.type==="server") agg[p].server++; else agg[p].app++;
+        });
+        var data=Object.keys(agg).map(function(k){return {name:k,value:agg[k].app+agg[k].server,app:agg[k].app,server:agg[k].server};});
+        document.getElementById("stat").textContent="共 "+arr.length+" 条设备记录（App "+arr.filter(function(d){return d.type!=="Server"&&d.type!=="server";}).length+" / Server "+arr.filter(function(d){return d.type==="Server"||d.type==="server";}).length+"），覆盖 "+data.length+" 个省级行政区。";
         render(data);
       })
       .catch(function(e){document.getElementById("stat").textContent="暂无设备上报数据（"+e.message+"）";render([]);});
