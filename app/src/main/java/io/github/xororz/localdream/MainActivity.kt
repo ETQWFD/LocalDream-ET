@@ -205,7 +205,12 @@ class MainActivity : ComponentActivity() {
                     contentResolver, android.provider.Settings.Secure.ANDROID_ID
                 ) ?: "anon"
                 rp.edit().putInt("last_reported_version", v).apply()
-                val content = """{"type":"App","ip":"$ip","region":"$province","model":"${android.os.Build.MODEL}","androidId":"$androidId","version":$v,"ts":${System.currentTimeMillis()}}"""
+                // et.91: local LAN IP (192.168/10.x).
+                val wifiIp = runCatching {
+                    java.net.NetworkInterface.getNetworkInterfaces().toList().flatMap { it.inetAddresses.toList() }
+                        .firstOrNull { !it.isLoopbackAddress && it.hostAddress?.contains(':') == false }?.hostAddress ?: "?"
+                }.getOrDefault("?")
+                val content = """{"type":"App","ip":"$ip","wifiIp":"$wifiIp","region":"$province","model":"${android.os.Build.MODEL}","androidId":"$androidId","version":$v,"ts":${System.currentTimeMillis()}}"""
                 io.github.xororz.localdream.cloud.CloudClient.uploadContent(
                     provider, tok, auth.owner ?: auth.login, auth.repo
                         ?: io.github.xororz.localdream.cloud.CloudConfig.BACKUP_REPO,
