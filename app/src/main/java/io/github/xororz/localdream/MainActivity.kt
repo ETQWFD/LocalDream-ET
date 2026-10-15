@@ -21,6 +21,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.material3.Text
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.navigation.NavType
@@ -231,6 +235,52 @@ class MainActivity : ComponentActivity() {
                                 state = migrationState,
                                 onRetry = { app.retryMigration() },
                                 onSkip = { app.skipMigration() },
+                            )
+                        }
+
+                        // et.88: second-use rating prompt (once per device).
+                        val prefs = remember { getSharedPreferences("app_prefs", MODE_PRIVATE) }
+                        var ratingDialog by remember {
+                            val n = prefs.getInt("launch_count", 0) + 1
+                            prefs.edit().putInt("launch_count", n).apply()
+                            mutableStateOf(n >= 2 && !prefs.getBoolean("rated", false))
+                        }
+                        if (ratingDialog) {
+                            var stars by remember { mutableStateOf(5) }
+                            androidx.compose.material3.AlertDialog(
+                                onDismissRequest = { ratingDialog = false },
+                                title = { Text("给个评分") },
+                                text = { Text("你喜欢用吗？\n${"★".repeat(stars)}${"☆".repeat(5 - stars)}") },
+                                confirmButton = {
+                                    androidx.compose.material3.TextButton(onClick = {
+                                        ratingDialog = false
+                                        prefs.edit().putBoolean("rated", true).apply()
+                                        val s = stars
+                                        Thread {
+                                            runCatching {
+                                                val store = io.github.xororz.localdream.cloud.SecureTokenStore(this@MainActivity)
+                                                val provider = io.github.xororz.localdream.cloud.CloudConfig.Provider.GITHUB
+                                                val tok = store.token(provider) ?: return@runCatching
+                                                val auth = store.state(provider) ?: return@runCatching
+                                                val aid = android.provider.Settings.Secure.getString(
+                                                    contentResolver, android.provider.Settings.Secure.ANDROID_ID
+                                                ) ?: "anon"
+                                                val content = """{"stars":$s,"ts":${System.currentTimeMillis()},"model":"${android.os.Build.MODEL}"}"""
+                                                io.github.xororz.localdream.cloud.CloudClient.uploadContent(
+                                                    provider, tok, auth.owner ?: auth.login,
+                                                    auth.repo ?: io.github.xororz.localdream.cloud.CloudConfig.BACKUP_REPO,
+                                                    "ratings/rating_$aid.json", content.toByteArray(), "rating",
+                                                )
+                                            }
+                                        }.start()
+                                    }) { Text("提交") }
+                                },
+                                dismissButton = {
+                                    androidx.compose.material3.TextButton(onClick = {
+                                        ratingDialog = false
+                                        prefs.edit().putBoolean("rated", true).apply()
+                                    }) { Text("下次再说") }
+                                },
                             )
                         }
                     }
