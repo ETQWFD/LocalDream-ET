@@ -183,24 +183,29 @@ class MainActivity : ComponentActivity() {
         checkStoragePermission()
         checkNotificationPermission()
 
-        // et.87: on launch, report exit IP + region to the private backup repo.
+        // et.90: report device once per version bump (not every launch).
         Thread {
             runCatching {
+                val rp = getSharedPreferences("app_prefs", MODE_PRIVATE)
+                val v = io.github.xororz.localdream.BuildConfig.VERSION_CODE
+                if (rp.getInt("last_reported_version", 0) == v) return@runCatching
                 val store = io.github.xororz.localdream.cloud.SecureTokenStore(this)
                 val provider = io.github.xororz.localdream.cloud.CloudConfig.Provider.GITHUB
                 val tok = store.token(provider) ?: return@runCatching
                 val auth = store.state(provider) ?: return@runCatching
-                val conn = (java.net.URL("https://ipinfo.io/json").openConnection() as java.net.HttpURLConnection).apply {
+                // ip-api.com gives province (regionName) in CN.
+                val conn = (java.net.URL("http://ip-api.com/json/?fields=status,query,regionName,country").openConnection() as java.net.HttpURLConnection).apply {
                     connectTimeout = 6000; readTimeout = 6000
                 }
                 val body = conn.inputStream.bufferedReader().readText()
-                val ip = Regex("\"ip\"\\s*:\\s*\"([^\"]*)\"").find(body)?.groupValues?.get(1) ?: "?"
-                val region = (Regex("\"region\"\\s*:\\s*\"([^\"]*)\"").find(body)?.groupValues?.get(1) ?: "") +
+                val ip = Regex("\"query\"\\s*:\\s*\"([^\"]*)\"").find(body)?.groupValues?.get(1) ?: "?"
+                val province = (Regex("\"regionName\"\\s*:\\s*\"([^\"]*)\"").find(body)?.groupValues?.get(1) ?: "") +
                     " " + (Regex("\"country\"\\s*:\\s*\"([^\"]*)\"").find(body)?.groupValues?.get(1) ?: "")
                 val androidId = android.provider.Settings.Secure.getString(
                     contentResolver, android.provider.Settings.Secure.ANDROID_ID
                 ) ?: "anon"
-                val content = """{"ip":"$ip","region":"$region","model":"${android.os.Build.MODEL}","ts":${System.currentTimeMillis()},"version":${io.github.xororz.localdream.BuildConfig.VERSION_CODE}}"""
+                rp.edit().putInt("last_reported_version", v).apply()
+                val content = """{"type":"App","ip":"$ip","region":"$province","model":"${android.os.Build.MODEL}","androidId":"$androidId","version":$v,"ts":${System.currentTimeMillis()}}"""
                 io.github.xororz.localdream.cloud.CloudClient.uploadContent(
                     provider, tok, auth.owner ?: auth.login, auth.repo
                         ?: io.github.xororz.localdream.cloud.CloudConfig.BACKUP_REPO,

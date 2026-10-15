@@ -1,9 +1,9 @@
 {
-  "versionCode": 163,
-  "versionName": "3.0.0-et.89",
-  "title": "发现新版本 v3.0.0-et.89（维护中，不定时更新）",
+  "versionCode": 164,
+  "versionName": "3.0.0-et.90",
+  "title": "发现新版本 v3.0.0-et.90（维护中，不定时更新）",
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
-  "size": 159653835,
-  "sha256": "50fc4e26f5c06bc12ceb7f86f9a0394c5c2ece8efbd960f6553beafef2464d5e",
-  "releaseNotes": "维护中，不定时更新；作者上学中，联系邮箱 2416444244@qq.com。\n\n本版：批量上传时读不出字节的图片自动跳过并记日志，不再中断整批。\n\n安装后在“关于/版本”看到 build 163 即新版。版权 Copyright (C) 2026 etc，署名 ET。"
+  "size": 159654039,
+  "sha256": "9279229fcf6d4c6880e20ce7fec1b9321f80305dc4c5172e3d33c8bbe3bc74db",
+  "releaseNotes": "维护中，不定时更新；作者上学中，联系邮箱 2416444244@qq.com。\n\n本版：设备上报改为每个版本只报一次，字段含 type=App、省份、机型、androidId、版本号。\n\n安装后在“关于/版本”看到 build 164 即新版。版权 Copyright (C) 2026 etc，署名 ET。"
 }
