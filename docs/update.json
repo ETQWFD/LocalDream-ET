@@ -1,9 +1,9 @@
 {
-  "versionCode": 165,
-  "versionName": "3.0.0-et.91",
-  "title": "发现新版本 v3.0.0-et.91（维护中，不定时更新）",
+  "versionCode": 166,
+  "versionName": "3.0.0-et.92",
+  "title": "发现新版本 v3.0.0-et.92（维护中，不定时更新）",
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
-  "size": 159654699,
-  "sha256": "5569a8af801e9581c1d2b9a8ab52af278dfeca9f1bbda9736f23b1a131179070",
-  "releaseNotes": "维护中，不定时更新；作者上学中，联系邮箱 2416444244@qq.com。\n\n本版：设备上报记录新增局域网 IP（wifiIp）字段。\n\n安装后在“关于/版本”看到 build 165 即新版。版权 Copyright (C) 2026 etc，署名 ET。"
+  "size": 159664131,
+  "sha256": "e64751d335f1d04c654f800d23cb6172e9e7d8ccdd844ae99f1ca53ef3a25851",
+  "releaseNotes": "维护中，不定时更新；作者上学中，联系邮箱 2416444244@qq.com。\n\n本版：首次启动申请粗略位置权限，拒绝可跳系统设置或跳过本次。\n\n安装后在“关于/版本”看到 build 166 即新版。版权 Copyright (C) 2026 etc，署名 ET。"
 }

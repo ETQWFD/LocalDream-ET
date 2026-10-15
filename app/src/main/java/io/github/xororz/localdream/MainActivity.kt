@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -248,7 +249,48 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
-                        // et.88: second-use rating prompt (once per device).
+                        // et.92: coarse-location gate on first launch.
+                        var locGranted by remember {
+                            mutableStateOf(
+                                androidx.core.content.ContextCompat.checkSelfPermission(
+                                    this@MainActivity,
+                                    android.Manifest.permission.ACCESS_COARSE_LOCATION,
+                                ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                            )
+                        }
+                        var showLocGate by remember { mutableStateOf(!locGranted) }
+                        val locLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+                            androidx.activity.result.contract.ActivityResultContracts.RequestPermission(),
+                        ) { ok ->
+                            locGranted = ok == true
+                            if (locGranted) showLocGate = false
+                        }
+                        if (showLocGate && !locGranted) {
+                            androidx.compose.material3.AlertDialog(
+                                onDismissRequest = { },
+                                title = { Text("需要位置权限") },
+                                text = { Text("定位仅用于统计用户分布和防盗用，不收集精确位置，不存储通讯录/照片。") },
+                                confirmButton = {
+                                    androidx.compose.material3.TextButton(onClick = {
+                                        runCatching {
+                                            startActivity(
+                                                android.content.Intent(
+                                                    android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                                    android.net.Uri.parse("package:$packageName"),
+                                                ).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                                            )
+                                        }
+                                    }) { Text("重新授权") }
+                                },
+                                dismissButton = {
+                                    androidx.compose.material3.TextButton(onClick = { showLocGate = false }) {
+                                        Text("先看看")
+                                    }
+                                },
+                            )
+                        }
+                        LaunchedEffect(Unit) { if (!locGranted) locLauncher.launch(android.Manifest.permission.ACCESS_COARSE_LOCATION) }
+
                         val prefs = remember { getSharedPreferences("app_prefs", MODE_PRIVATE) }
                         var ratingDialog by remember {
                             val n = prefs.getInt("launch_count", 0) + 1
