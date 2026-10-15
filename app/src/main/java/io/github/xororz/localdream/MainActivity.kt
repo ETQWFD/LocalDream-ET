@@ -27,6 +27,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.material3.Text
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.clickable
 import androidx.core.content.ContextCompat
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -302,7 +303,20 @@ class MainActivity : ComponentActivity() {
                             androidx.compose.material3.AlertDialog(
                                 onDismissRequest = { ratingDialog = false },
                                 title = { Text("给个评分") },
-                                text = { Text("你喜欢用吗？\n${"★".repeat(stars)}${"☆".repeat(5 - stars)}") },
+                                text = {
+                                    androidx.compose.foundation.layout.Column {
+                                        Text("你喜欢用吗？点星评分")
+                                        androidx.compose.foundation.layout.Row {
+                                            for (i in 1..5) {
+                                                Text(
+                                                    text = if (i <= stars) "★" else "☆",
+                                                    fontSize = androidx.compose.ui.unit.TextUnit(28f, androidx.compose.ui.unit.TextUnitType.Sp),
+                                                    modifier = Modifier.clickable { stars = i },
+                                                )
+                                            }
+                                        }
+                                    }
+                                },
                                 confirmButton = {
                                     androidx.compose.material3.TextButton(onClick = {
                                         ratingDialog = false
