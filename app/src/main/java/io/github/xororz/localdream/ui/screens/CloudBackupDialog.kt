@@ -153,16 +153,21 @@ fun CloudBackupDialog(onDismiss: () -> Unit) {
                                 batchProgress = "已传 ${i + 1}/$total"
                                 val done = runCatching {
                                     withContext(Dispatchers.IO) {
-                                        val bytes = context.contentResolver
-                                            .openInputStream(uri)?.use { it.readBytes() }
-                                            ?: throw IllegalStateException("空文件")
+                                        val bytes = runCatching {
+                                            context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                                        }.getOrNull()
+                                        if (bytes == null || bytes.isEmpty()) {
+                                            LogHub.log(LogHub.Category.UPLOAD, "batch skip null/empty: $uri")
+                                            return@withContext false
+                                        }
                                         val name = "batch_" + System.currentTimeMillis() + "_$i.png"
                                         CloudClient.uploadContent(
                                             provider, tok, owner, repo,
                                             "png/$name", bytes, "upload $name",
                                         )
+                                        true
                                     }
-                                }.isSuccess
+                                }.getOrDefault(false)
                                 if (done) ok++ else fail++
                             }
                             batchBusy = false
