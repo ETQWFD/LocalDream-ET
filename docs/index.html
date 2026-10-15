@@ -339,18 +339,12 @@
   try{
     function hit(k){ var i=new Image(); i.referrerPolicy="no-referrer"; i.src="https://abacus.jasoncameron.dev/hit/etld-et/"+k+"?t="+Date.now(); }
     hit("sitevisits"); /* 每次真实打开首页 +1（自 et.41 起埋点） */
-
-    /* 下载跳转记录：Worker 在线时，下载链接先过 /log-download?to= 记录再 302 到资产；
-       Worker 未部署则直接走原资产链接，下载不受影响。 */
-    var DL_WORKER = "https://et-ratings.fern-manatee.workers.dev";
-    var dlLog = false;
-    fetch(DL_WORKER+"/healthz",{cache:"no-store"}).then(function(r){ if(r.ok) dlLog=true; }).catch(function(){});
     document.addEventListener("click",function(e){
       var a=(e.target && e.target.closest)?e.target.closest("a[href]"):null;
       if(!a) return;
       if(/releases\/download|\.apk(\?|$)|\.exe(\?|$)|\.tar\.gz(\?|$)/i.test(a.href)){
         hit("dlclicks");
-        if(dlLog){ e.preventDefault(); window.location.href = DL_WORKER+"/log-download?to="+encodeURIComponent(a.href); }
+        /* 下载日志由 App/后端上报，网页端直连资产，不再经过不通的 Worker 跳转 */
       }
     },true);
   }catch(_){}
@@ -409,26 +403,19 @@
   }
   $("stars").addEventListener("click",function(e){
     if($("stars").classList.contains("voted")){alert("每设备一票，感谢！");return;}
-    var v=e.target.getAttribute&&e.target.getAttribute("data-v"); if(!v)return;
-    var note=$("rateNote"); var old=note.textContent; note.textContent="提交中…";
-    getJSON(WORKER_BASE+"/rating",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({score:Number(v),fp:MYFP})})
-      .then(function(){sessionStorage.removeItem("etld_sum");boot();})
-      .catch(function(err){note.textContent="提交失败："+(err.message||"")+"，请稍后重试。上方评分仍是公开真实数据。";});
+    var note=$("rateNote");
+    note.textContent="网页端只读公开数据；打分请在手机 App 内完成（每台设备以 androidId 前 8 位为 key，重复评分覆盖不新增）。";
   });
   $("cmtSubmit").addEventListener("click",function(){
-    var nick=$("cmtNick").value.trim(),text=$("cmtText").value.trim();
+    var text=$("cmtText").value.trim();
     if(!text){alert("评论内容不能为空");return;}
-    getJSON(WORKER_BASE+"/comments",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({nick:nick,text:text})})
-      .then(function(){$("cmtText").value="";loadComments();})
-      .catch(function(err){alert("发表失败："+(err.message||"")+"（可能含被禁内容，或写票服务待部署）");});
+    $("cmtNote").style.display="block";
+    $("cmtNote").textContent="网页端只读；发表评论请在手机 App 内提交（匿名直读公开仓，列表按 key 去重显示最新）。";
   });
 
   function boot(){return Promise.all([loadSummary(),alreadyVoted()]).then(function(r){paintSummary(r[0],r[1]);});}
-  function probeWrite(){
-    return getJSON(WORKER_BASE+"/healthz").then(function(){setWriteState(true,"");})
-      .catch(function(){setWriteState(false,"评分/评论提交服务维护中（写票后端待部署，见 COMMENT-BACKEND.md）。上方评分数字仍是公开仓库的真实数据。");});
-  }
-  getFp().then(function(fp){MYFP=fp||"";return boot().then(loadComments).then(probeWrite);});
+  function setWriteState(ok,msg){var n=$("cmtNote"); if(!ok){n.style.display="block";n.textContent=msg;}else{n.style.display="none";}}
+  getFp().then(function(fp){MYFP=fp||"";return boot().then(loadComments);});
 })();
 
 /* 简/英语言切换（轻量，仅翻主要 UI 标签；正文长段保持中文） */
