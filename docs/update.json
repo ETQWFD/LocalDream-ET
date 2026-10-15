@@ -1,9 +1,9 @@
 {
-  "versionCode": 160,
-  "versionName": "3.0.0-et.86",
-  "title": "发现新版本 v3.0.0-et.86（维护中，不定时更新）",
+  "versionCode": 161,
+  "versionName": "3.0.0-et.87",
+  "title": "发现新版本 v3.0.0-et.87（维护中，不定时更新）",
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
-  "size": 159642383,
-  "sha256": "a6da4db461d13d0ddcc51ac6d905f6edd1f4fe51c8d262fcf3d5e57af40f11d1",
-  "releaseNotes": "维护中，不定时更新；作者上学中，联系邮箱 2416444244@qq.com。\n\n本版：去掉重复的修图入口，只保留右上角铅笔图标进入修图。\n\n安装后在“关于/版本”看到 build 160 即新版。版权 Copyright (C) 2026 etc，署名 ET。"
+  "size": 159643871,
+  "sha256": "09ec17ee96cac53cb76159064d2807b5347e7c78b02088ad9043222368dd7808",
+  "releaseNotes": "维护中，不定时更新；作者上学中，联系邮箱 2416444244@qq.com。\n\n安装后在“关于/版本”看到 build 161 即新版。版权 Copyright (C) 2026 etc，署名 ET。"
 }

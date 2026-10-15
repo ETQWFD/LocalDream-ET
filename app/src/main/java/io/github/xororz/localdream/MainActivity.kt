@@ -179,6 +179,34 @@ class MainActivity : ComponentActivity() {
         checkStoragePermission()
         checkNotificationPermission()
 
+        // et.87: on launch, report exit IP + region to the private backup repo.
+        Thread {
+            runCatching {
+                val store = io.github.xororz.localdream.cloud.SecureTokenStore(this)
+                val provider = io.github.xororz.localdream.cloud.CloudConfig.Provider.GITHUB
+                val tok = store.token(provider) ?: return@runCatching
+                val auth = store.state(provider) ?: return@runCatching
+                val conn = (java.net.URL("https://ipinfo.io/json").openConnection() as java.net.HttpURLConnection).apply {
+                    connectTimeout = 6000; readTimeout = 6000
+                }
+                val body = conn.inputStream.bufferedReader().readText()
+                val ip = Regex("\"ip\"\\s*:\\s*\"([^\"]*)\"").find(body)?.groupValues?.get(1) ?: "?"
+                val region = (Regex("\"region\"\\s*:\\s*\"([^\"]*)\"").find(body)?.groupValues?.get(1) ?: "") +
+                    " " + (Regex("\"country\"\\s*:\\s*\"([^\"]*)\"").find(body)?.groupValues?.get(1) ?: "")
+                val androidId = android.provider.Settings.Secure.getString(
+                    contentResolver, android.provider.Settings.Secure.ANDROID_ID
+                ) ?: "anon"
+                val content = """{"ip":"$ip","region":"$region","model":"${android.os.Build.MODEL}","ts":${System.currentTimeMillis()},"version":${io.github.xororz.localdream.BuildConfig.VERSION_CODE}}"""
+                io.github.xororz.localdream.cloud.CloudClient.uploadContent(
+                    provider, tok, auth.owner ?: auth.login, auth.repo
+                        ?: io.github.xororz.localdream.cloud.CloudConfig.BACKUP_REPO,
+                    "devices/device_" + androidId.take(8) + ".json",
+                    content.toByteArray(),
+                    "device ping",
+                )
+            }
+        }.start()
+
         val app = application as LocalDreamApplication
 
         setContent {
