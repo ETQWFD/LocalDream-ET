@@ -566,7 +566,7 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                         append(stringResource(R.string.about_last_dance_note) + " ")
                         withLink(
                             LinkAnnotation.Url(
-                                url = "mailto:2416444244@qq.com",
+                                url = "mailto:localdreametos@hotmail.com",
                                 styles = TextLinkStyles(
                                     style = SpanStyle(
                                         color = linkColor,
@@ -575,7 +575,7 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                                 ),
                             ),
                         ) {
-                            append("2416444244@qq.com")
+                            append("localdreametos@hotmail.com")
                         }
                     }
                     Text(
