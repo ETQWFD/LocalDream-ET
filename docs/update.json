@@ -1,9 +1,9 @@
 {
-  "versionCode": 175,
-  "versionName": "3.0.0-et.101",
-  "title": "发现新版本 v3.0.0-et.101（维护中，不定时更新）",
+  "versionCode": 176,
+  "versionName": "3.0.0-et.102",
+  "title": "发现新版本 v3.0.0-et.102（维护中，不定时更新）",
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
-  "size": 159671695,
-  "sha256": "7c2215970250e61d6ec286f464844ed4d4d11220e3f926a8489d8967bf99c1b5",
-  "releaseNotes": "维护中，不定时更新；作者上学中，联系邮箱 2416444244@qq.com。\n\n本版：模型下载多源 HEAD 测速，自动选延迟最低的镜像先下。\n\n安装后在“关于/版本”看到 build 175 即新版。版权 Copyright (C) 2026 etc，署名 ET。"
+  "size": 159671699,
+  "sha256": "87c684e2834fd74921e2d35880fdefaa7ed5fff60f41f83f0438dd8d922ea1bf",
+  "releaseNotes": "维护中，不定时更新；作者上学中，联系邮箱 2416444244@qq.com。\n\n本版：回归 bad_alloc 自动降档（512→384→256 重启引擎重发）。\n\n安装后在“关于/版本”看到 build 176 即新版。版权 Copyright (C) 2026 etc，署名 ET。"
 }
