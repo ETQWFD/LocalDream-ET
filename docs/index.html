@@ -425,9 +425,20 @@
   function tw(node,txt){var i=0;node.textContent="";var t=setInterval(function(){node.textContent=txt.slice(0,++i);msgs.scrollTop=msgs.scrollHeight;if(i>=txt.length)clearInterval(t);},18);}
   function ask(){var q=inp.value.trim();if(!q)return;add("me",q);inp.value="";var t=add("bot","");var d=0;var tk=setInterval(function(){d=(d+1)%4;t.textContent=thinking()+ ".".repeat(d);},300);
     var L=curLang();
-    fetch(HCNSEC,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+key()},body:JSON.stringify({model:"glm-5.3-flash",messages:[{role:"system",content:SYS[L]||SYS["zh-CN"]},{role:"user",content:q}],stream:false})})
-    .then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json();})
-    .then(function(j){clearInterval(tk);var rep=j&&j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content;tw(t,rep||"（暂无回复）");})
+    var gotContent=false;
+    fetch(HCNSEC,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+key()},body:JSON.stringify({model:"glm-5.3-flash",messages:[{role:"system",content:SYS[L]||SYS["zh-CN"]},{role:"user",content:q}],stream:true})})
+    .then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);if(!r.body||!r.body.getReader)return r.text().then(function(txt){throw new Error("stream unsupported");});
+      var reader=r.body.getReader(),dec=new TextDecoder("utf-8"),buf="",full="";
+      function pump(){return reader.read().then(function(res){
+        if(res.done){clearInterval(tk);if(!full)t.textContent=(L==="en")?"(no reply)":"（暂无回复）";msgs.scrollTop=msgs.scrollHeight;return;}
+        buf+=dec.decode(res.value,{stream:true});
+        var lines=buf.split("\n");buf=lines.pop();
+        lines.forEach(function(ln){ln=ln.trim();if(!ln||ln.indexOf("data:")!==0)return;var data=ln.slice(5).trim();if(data==="[DONE]")return;
+          try{var j=JSON.parse(data);var ch=j.choices&&j.choices[0];var dt=ch&&ch.delta;if(dt&&dt.content){gotContent=true;full+=dt.content;clearInterval(tk);t.textContent=full;msgs.scrollTop=msgs.scrollHeight;}}catch(e){}});
+        return pump();
+      });}
+      return pump();
+    })
     .catch(function(e){clearInterval(tk);var m=e&&e.message?e.message:"network error";var msg=(L==="en")?("Support unavailable ("+m+"). Join QQ group 1078799843 or email 2416444244@qq.com."):("客服暂时不可用（"+m+"）。加 QQ 群 1078799843 或发邮件 2416444244@qq.com。");t.textContent=msg;});}
   send.addEventListener("click",ask);
   inp.addEventListener("keydown",function(e){if(e.key==="Enter")ask();});
