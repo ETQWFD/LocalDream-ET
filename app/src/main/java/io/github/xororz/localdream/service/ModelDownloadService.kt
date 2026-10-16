@@ -74,6 +74,27 @@ class ModelDownloadService : Service() {
         return out.toList()
     }
 
+    // et.101: HEAD-latency measure each mirror, fastest first; failures go last.
+    private fun pickFastest(url: String): List<String> {
+        val cands = mirrorCandidates(url)
+        if (cands.size <= 1) return cands
+        return cands.map { u ->
+            val t = measureLatency(u)
+            u to (t ?: Long.MAX_VALUE)
+        }.sortedBy { it.second }.map { it.first }
+    }
+
+    private fun measureLatency(u: String): Long? = try {
+        val c = (java.net.URL(u).openConnection() as java.net.HttpURLConnection).apply {
+            requestMethod = "HEAD"; connectTimeout = 4000; readTimeout = 4000; instanceFollowRedirects = true
+        }
+        val s = System.nanoTime()
+        c.connect()
+        c.inputStream.use { }
+        c.disconnect()
+        (System.nanoTime() - s) / 1_000_000
+    } catch (e: Exception) { null }
+
     companion object {
         private const val TAG = "ModelDownloadService"
         private const val NOTIFICATION_CHANNEL_ID = "model_download_channel"
@@ -436,7 +457,7 @@ class ModelDownloadService : Service() {
 
     /** Published size of a remote file, or -1 when the server does not say. */
     private fun remoteSize(url: String): Long {
-        for (candidate in mirrorCandidates(url)) {
+        for (candidate in pickFastest(url)) {
             val request = Request.Builder().url(candidate).head().build()
             val size = runCatching {
                 client.newCall(request).execute().use { response ->
@@ -462,7 +483,7 @@ class ModelDownloadService : Service() {
     ) = withContext(Dispatchers.IO) {
         var lastError: Exception? = null
         // Try the chosen source, then the Hugging Face/mirror counterpart.
-        for (candidate in mirrorCandidates(url)) {
+        for (candidate in pickFastest(url)) {
             // Resume from whatever a previous attempt already wrote. A server
             // that answers 200 (ignores Range) restarts the file instead.
             val have = if (destFile.exists()) destFile.length().coerceAtLeast(0L) else 0L
