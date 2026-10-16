@@ -9,94 +9,117 @@
 <link rel="icon" href="assets/icon-192.png" type="image/png" />
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
 <link rel="manifest" href="site.webmanifest" />
-<meta name="theme-color" content="#0f1115" />
+<meta name="theme-color" content="#ffffff" />
 <title>Local Dream ET — 本地 Stable Diffusion 推理</title>
 <style>
   :root{
-    --bg:#0f1115; --panel:#171a21; --panel2:#1c2230; --line:#262b36; --text:#e6e9ef;
-    --muted:#9aa3b2; --accent:#4f8cff; --accent2:#6366f1;
+    --bg:#ffffff; --soft:#f6f8fb; --line:#e6e9ef; --text:#1a2233; --muted:#6b7689;
+    --accent:#2f6bff; --accent-soft:#eaf1ff;
   }
   *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
   body{margin:0;background:var(--bg);color:var(--text);
     font:15px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif}
   a{color:var(--accent);text-decoration:none}
   .wrap{max-width:1040px;margin:0 auto;padding:0 20px}
-  nav{position:sticky;top:0;z-index:100;background:rgba(15,17,21,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
-  .navin{max-width:1040px;margin:0 auto;padding:12px 20px;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
-  .logo{font-weight:700;color:#fff;font-size:15px}
-  .navlinks{display:flex;gap:16px;flex-wrap:wrap;flex:1}
+  nav{position:sticky;top:0;z-index:100;background:rgba(255,255,255,.88);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  .navin{max-width:1040px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+  .logo{font-weight:700;color:var(--text);font-size:15px;display:flex;align-items:center;gap:8px}
+  .logo svg{display:block}
+  .navlinks{display:flex;gap:18px;flex-wrap:wrap;flex:1}
   .navlinks a{color:var(--muted);font-size:13.5px}
   .navlinks a:hover{color:var(--text)}
   .langsel{position:relative}
-  .langbtn{background:var(--panel);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:6px 12px;font-size:13px;cursor:pointer}
-  .langmenu{display:none;position:absolute;right:0;top:38px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;overflow:hidden;min-width:140px;box-shadow:0 10px 30px rgba(0,0,0,.5)}
+  .langbtn{background:var(--soft);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:6px 12px;font-size:13px;cursor:pointer}
+  .langmenu{display:none;position:absolute;right:0;top:38px;background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden;min-width:140px;box-shadow:0 10px 30px rgba(20,40,80,.12)}
   .langmenu.open{display:block}
   .langmenu button{display:block;width:100%;text-align:left;background:none;border:0;color:var(--text);padding:10px 14px;font-size:13.5px;cursor:pointer}
-  .langmenu button:hover{background:var(--panel)}
-  .hero{padding:72px 0 40px;text-align:center}
-  .hero h1{font-size:40px;line-height:1.15;margin:0 0 14px;font-weight:750;letter-spacing:-.5px}
-  .hero h1 .g{background:linear-gradient(120deg,#4f8cff,#a855f7);-webkit-background-clip:text;background-clip:text;color:transparent}
-  .hero p{color:var(--muted);max-width:620px;margin:0 auto 26px;font-size:16px}
+  .langmenu button:hover{background:var(--soft)}
+  .hero{padding:80px 0 48px;text-align:center}
+  .pill{display:inline-block;font-size:12.5px;color:var(--accent);background:var(--accent-soft);border-radius:999px;padding:4px 12px;margin-bottom:18px}
+  .hero h1{font-size:44px;line-height:1.15;margin:0 0 16px;font-weight:800;letter-spacing:-1px;color:var(--text)}
+  .hero p{color:var(--muted);max-width:640px;margin:0 auto 28px;font-size:16.5px}
   .btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
-  .btn{display:inline-block;padding:12px 22px;border-radius:10px;font-weight:600;font-size:14.5px;border:1px solid var(--line);cursor:pointer}
-  .btn.p{background:linear-gradient(120deg,#4f8cff,#6366f1);border:0;color:#fff;box-shadow:0 8px 24px rgba(79,140,255,.35)}
-  .btn.g{background:transparent;color:var(--text)}
-  .badges{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:22px}
-  .badge{font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:3px 11px}
-  section{padding:48px 0;border-top:1px solid var(--line)}
-  .h2{font-size:26px;font-weight:700;margin:0 0 6px;letter-spacing:-.3px}
-  .hsub{color:var(--muted);margin:0 0 28px}
+  .btn{display:inline-flex;align-items:center;gap:8px;padding:12px 22px;border-radius:10px;font-weight:600;font-size:14.5px;border:1px solid var(--line);cursor:pointer}
+  .btn.p{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 6px 20px rgba(47,107,255,.25)}
+  .btn.g{background:#fff;color:var(--text)}
+  .badges{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:24px}
+  .badge{font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:3px 11px;background:#fff}
+  section{padding:56px 0;border-top:1px solid var(--line)}
+  .h2{font-size:28px;font-weight:800;margin:0 0 6px;letter-spacing:-.5px;color:var(--text)}
+  .hsub{color:var(--muted);margin:0 0 30px}
   .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px}
-  .card .ic{font-size:22px;margin-bottom:10px}
-  .card h3{margin:0 0 6px;font-size:15.5px}
+  .card{background:var(--soft);border:1px solid var(--line);border-radius:14px;padding:22px}
+  .card .ic{width:38px;height:38px;border-radius:9px;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;margin-bottom:12px;color:var(--accent)}
+  .card h3{margin:0 0 6px;font-size:15.5px;color:var(--text)}
   .card p{margin:0;color:var(--muted);font-size:13.5px}
   .shots{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px}
-  .shots img{width:100%;border-radius:12px;border:1px solid var(--line);display:block;background:#000}
-  details{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 18px;margin:8px 0}
-  details summary{cursor:pointer;font-weight:600;font-size:14.5px;list-style:none}
+  .shots img{width:100%;border-radius:12px;border:1px solid var(--line);display:block;background:#fff}
+  details{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 18px;margin:8px 0}
+  details summary{cursor:pointer;font-weight:600;font-size:14.5px;list-style:none;color:var(--text)}
   details summary::-webkit-details-marker{display:none}
   details summary::before{content:"+ ";color:var(--accent)}
   details[open] summary::before{content:"− "}
   details p{color:var(--muted);font-size:13.5px;margin:10px 0 0}
+  .relist{display:flex;flex-direction:column;gap:10px}
+  .rel{display:flex;justify-content:space-between;align-items:center;gap:12px;background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:14px 16px;flex-wrap:wrap}
+  .rel .v{font-weight:700;color:var(--text)}
+  .rel .d{color:var(--muted);font-size:12.5px}
+  .rel a{font-size:13.5px;font-weight:600}
   .ratebox{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:10px 0}
   .stars{font-size:26px;letter-spacing:4px;cursor:pointer;user-select:none}
-  .stars span{color:#3a4250}
-  .stars span.on{color:#f5b942}
+  .stars span{color:#d3d9e3}
+  .stars span.on{color:#f5a623}
   .stars.voted{cursor:default}
   .rateavg{color:var(--muted);font-size:14px}
   .dist{margin:12px 0;max-width:440px}
   .distrow{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);margin:3px 0}
   .distrow .lab{width:26px}
-  .distrow .track{flex:1;height:8px;background:#0c1017;border-radius:4px;overflow:hidden}
-  .distrow .fill{height:100%;background:linear-gradient(90deg,#f5b942,#4f8cff)}
+  .distrow .track{flex:1;height:8px;background:var(--soft);border-radius:4px;overflow:hidden}
+  .distrow .fill{height:100%;background:linear-gradient(90deg,#f5a623,#2f6bff)}
   .distrow .n{width:38px;text-align:right;font-family:ui-monospace,monospace}
-  .cmt{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:8px 0;background:var(--panel)}
-  .cmt .n{font-weight:600;font-size:13px}
+  .cmt{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:8px 0;background:#fff}
+  .cmt .n{font-weight:600;font-size:13px;color:var(--text)}
   .cmt .t{color:var(--muted);font-size:11px;float:right}
   .cmt .x{font-size:14px;margin-top:4px}
-  .cmtform input,.cmtform textarea{width:100%;background:#0c1017;border:1px solid var(--line);color:var(--text);border-radius:8px;padding:9px 11px;font:inherit;margin:5px 0}
-  .note{color:var(--muted);font-size:12.5px;background:var(--panel);border:1px dashed var(--line);border-radius:8px;padding:9px 12px;margin:8px 0}
-  footer{padding:40px 0 60px;border-top:1px solid var(--line);color:var(--muted);font-size:13px;text-align:center}
+  .cmtform input,.cmtform textarea{width:100%;background:#fff;border:1px solid var(--line);color:var(--text);border-radius:8px;padding:9px 11px;font:inherit;margin:5px 0}
+  .note{color:var(--muted);font-size:12.5px;background:var(--soft);border:1px dashed var(--line);border-radius:8px;padding:9px 12px;margin:8px 0}
+  footer{padding:48px 0 70px;border-top:1px solid var(--line);color:var(--muted);font-size:13px;text-align:center}
   .footbtns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:14px 0}
-  code{background:var(--panel);padding:2px 6px;border-radius:4px;font-size:13px}
+  code{background:var(--soft);padding:2px 6px;border-radius:4px;font-size:13px}
+  #eeBtn{position:fixed;right:18px;bottom:18px;z-index:9000;width:52px;height:52px;border-radius:50%;border:0;background:var(--accent);color:#fff;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 6px 18px rgba(47,107,255,.35)}
+  #eeBox{position:fixed;right:18px;bottom:80px;z-index:9001;width:330px;max-width:92vw;height:440px;max-height:70vh;background:#fff;border:1px solid var(--line);border-radius:14px;display:none;flex-direction:column;overflow:hidden;box-shadow:0 12px 40px rgba(20,40,80,.18)}
+  #eeBox.open{display:flex}
+  #eeHead{padding:12px 14px;background:var(--soft);color:var(--text);font-weight:700;display:flex;justify-content:space-between;align-items:center}
+  #eeHead span.x{cursor:pointer;color:var(--muted)}
+  #eeMsgs{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px}
+  .eem{max-width:82%;padding:8px 10px;border-radius:10px;font-size:13px;line-height:1.5;white-space:pre-wrap}
+  .eem.bot{background:var(--soft);color:var(--text);align-self:flex-start}
+  .eem.me{background:var(--accent);color:#fff;align-self:flex-end}
+  #eeInput{display:flex;gap:6px;padding:10px;border-top:1px solid var(--line)}
+  #eeInput input{flex:1;background:#fff;border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px}
+  #eeInput button{background:var(--accent);color:#fff;border:0;border-radius:8px;padding:0 14px;cursor:pointer}
 </style>
 </head>
 <body>
 
 <nav>
   <div class="navin">
-    <span class="logo">Local Dream ET</span>
+    <span class="logo">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect width="24" height="24" rx="6" fill="#2f6bff"/><path d="M7 15l3-6 2.5 4 1.5-2 3 4" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Local Dream ET
+    </span>
     <div class="navlinks">
       <a href="#features" data-i18n="nav.features">功能</a>
       <a href="#shots" data-i18n="nav.shots">截图</a>
       <a href="server.html" data-i18n="nav.server">服务端</a>
+      <a href="#releases" data-i18n="nav.versions">历史版本</a>
       <a href="#rating" data-i18n="nav.rating">评分</a>
       <a href="#faq" data-i18n="nav.faq">常见问题</a>
       <a href="https://github.com/ETQWFD/LocalDream-ET" target="_blank" rel="noopener">GitHub</a>
     </div>
     <div class="langsel">
-      <button class="langbtn" id="langBtn" type="button">🌐 简体中文 ▾</button>
+      <button class="langbtn" id="langBtn" type="button">简体中文 ▾</button>
       <div class="langmenu" id="langMenu">
         <button data-l="zh-CN" type="button">简体中文</button>
         <button data-l="zh-TW" type="button">繁體中文</button>
@@ -107,16 +130,16 @@
 </nav>
 
 <header class="hero wrap">
-  <h1 data-i18n="hero.title">手机本地跑 <span class="g">Stable Diffusion</span></h1>
-  <p data-i18n="hero.sub">完全离线的 AI 出图 App。无需联网、不上传图片，支持文生图 / 图生图 / 模型下载 / 云备份，另有 Windows 与 Linux 服务端。</p>
+  <span class="pill" data-i18n="hero.pill">本地离线 Stable Diffusion · 不上传图片</span>
+  <h1 data-i18n="hero.title">在手机本地跑<br>Stable Diffusion</h1>
+  <p data-i18n="hero.sub">完全离线的 AI 出图 App。无需联网、不上传图片，支持文生图、图生图、模型下载与云备份，另有 Windows 与 Linux 服务端。</p>
   <div class="btns">
     <a class="btn p" href="https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk" data-i18n="hero.dl">下载安卓 APK</a>
     <a class="btn g" href="server.html" data-i18n="hero.server">下载服务端</a>
   </div>
   <div class="badges">
-    <span class="badge">v3.0.0-et.86</span>
+    <span class="badge">v3.0.0-et.96</span>
     <span class="badge">arm64 · armv7 · x86_64</span>
-    <span class="badge">包名 etc.github.ai</span>
     <span class="badge" data-i18n="hero.offline">本地离线推理</span>
   </div>
 </header>
@@ -125,18 +148,18 @@
   <h2 class="h2" data-i18n="f.title">核心功能</h2>
   <p class="hsub" data-i18n="f.sub">为低配手机与本地推理优化，不强制上传。</p>
   <div class="grid">
-    <div class="card"><div class="ic">🎨</div><h3 data-i18n="f1.t">文生图 / 图生图</h3><p data-i18n="f1.d">英文提示逐词透传，支持整图修图、重绘强度调节（0.3–0.7）。</p></div>
-    <div class="card"><div class="ic">📱</div><h3 data-i18n="f2.t">NPU + CPU</h3><p data-i18n="f2.d">骁龙 Hexagon NPU 加速，无 OpenCL 自动回退 CPU，低配机安全档不崩溃。</p></div>
-    <div class="card"><div class="ic">📦</div><h3 data-i18n="f3.t">模型管理</h3><p data-i18n="f3.d">自动识别 CPU 直读模型与待转换模型，文件齐全才就绪。</p></div>
-    <div class="card"><div class="ic">☁️</div><h3 data-i18n="f4.t">云备份</h3><p data-i18n="f4.d">可选 GitHub/Gitee 私有仓备份图片与日志，令牌只存系统密钥库。</p></div>
-    <div class="card"><div class="ic">🖥️</div><h3 data-i18n="f5.t">PC 服务端</h3><p data-i18n="f5.d">Windows / Linux 出图服务端，A1111 兼容 API，手机可远程连。</p></div>
-    <div class="card"><div class="ic">🔒</div><h3 data-i18n="f6.t">隐私优先</h3><p data-i18n="f6.d">全程本地推理，图片不离开你的设备，联网仅用于下载模型。</p></div>
+    <div class="card"><div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 16l4-5 3 3 4-6 5 8H4z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></div><h3 data-i18n="f1.t">文生图 / 图生图</h3><p data-i18n="f1.d">英文提示逐词透传，支持整图修图、重绘强度调节（0.3–0.7）。</p></div>
+    <div class="card"><div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="7" y="7" width="10" height="10" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M9 1v3M15 1v3M9 20v3M15 20v3M1 9h3M1 15h3M20 9h3M20 15h3" stroke="currentColor" stroke-width="1.8"/></svg></div><h3 data-i18n="f2.t">NPU + CPU</h3><p data-i18n="f2.d">骁龙 Hexagon NPU 加速，无 OpenCL 自动回退 CPU，低配机安全档不崩溃。</p></div>
+    <div class="card"><div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M3 8l9 5 9-5M12 13v8" stroke="currentColor" stroke-width="1.8"/></svg></div><h3 data-i18n="f3.t">模型管理</h3><p data-i18n="f3.d">自动识别 CPU 直读模型与待转换模型，文件齐全才就绪。</p></div>
+    <div class="card"><div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M18 10a5 5 0 00-9.3-2.5A4.5 4.5 0 006 16h12a4 4 0 000-8z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></div><h3 data-i18n="f4.t">云备份</h3><p data-i18n="f4.d">可选 GitHub/Gitee 私有仓备份图片与日志，令牌只存系统密钥库。</p></div>
+    <div class="card"><div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="12" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M8 20h8M12 16v4" stroke="currentColor" stroke-width="1.8"/></svg></div><h3 data-i18n="f5.t">PC 服务端</h3><p data-i18n="f5.d">Windows / Linux 出图服务端，A1111 兼容 API，手机可远程连。</p></div>
+    <div class="card"><div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6l8-3z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></div><h3 data-i18n="f6.t">隐私优先</h3><p data-i18n="f6.d">全程本地推理，图片不离开你的设备，联网仅用于下载模型。</p></div>
   </div>
 </section>
 
 <section id="shots" class="wrap">
   <h2 class="h2" data-i18n="s.title">界面截图</h2>
-  <p class="hsub" data-i18n="s.sub">深色模式下的主界面、出图与修图流程。</p>
+  <p class="hsub" data-i18n="s.sub">主界面、出图与修图流程。</p>
   <div class="shots">
     <img src="assets/shots/s1.webp" alt="screenshot 1" loading="lazy">
     <img src="assets/shots/s2.webp" alt="screenshot 2" loading="lazy">
@@ -147,6 +170,12 @@
     <img src="assets/shots/s7.webp" alt="screenshot 7" loading="lazy">
     <img src="assets/shots/s8.webp" alt="screenshot 8" loading="lazy">
   </div>
+</section>
+
+<section id="releases" class="wrap">
+  <h2 class="h2" data-i18n="rel.title">历史版本</h2>
+  <p class="hsub" data-i18n="rel.sub">最近 5 个版本，可直接下载对应安装包。</p>
+  <div class="relist" id="relist"><div class="note" data-i18n="rel.loading">加载中…</div></div>
 </section>
 
 <section id="rating" class="wrap">
@@ -179,35 +208,37 @@
 <footer>
   <p data-i18n="foot.p">Local Dream ET · 本地离线 Stable Diffusion · Copyright © 2026 ET</p>
   <div class="footbtns">
-    <a class="btn g" href="mailto:2416444244@qq.com">✉ 2416444244@qq.com</a>
+    <a class="btn g" href="mailto:2416444244@qq.com">2416444244@qq.com</a>
     <a class="btn p" href="http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=FEhaN_bPJIhurqBLoRhqkhmHnkRz17bu&authKey=hYuEEJTFOcfkPr85OD8vyrhHH56GhhUKRYuIfEpEDIkdclfxVTEKMV0IMYrz5HFB&noverify=0&group_code=1078799843" target="_blank" rel="noopener" data-i18n="foot.qq">加入 QQ 交流群</a>
   </div>
   <p><a href="https://github.com/ETQWFD/LocalDream-ET" target="_blank" rel="noopener">GitHub 源码</a> · <a href="server.html" data-i18n="foot.server">服务端手册</a></p>
 </footer>
 
-<style>
-  #eeBtn{position:fixed;right:18px;bottom:18px;z-index:9000;width:56px;height:56px;border-radius:50%;border:0;background:linear-gradient(135deg,#3b82f6,#6366f1);color:#fff;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 6px 18px rgba(59,130,246,.45);}
-  #eeBox{position:fixed;right:18px;bottom:84px;z-index:9001;width:330px;max-width:92vw;height:440px;max-height:70vh;background:#141821;border:1px solid #2a3140;border-radius:14px;display:none;flex-direction:column;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.5);}
-  #eeBox.open{display:flex;}
-  #eeHead{padding:12px 14px;background:#1c2230;color:#e8ecf4;font-weight:700;display:flex;justify-content:space-between;align-items:center;}
-  #eeHead span.x{cursor:pointer;color:#9aa3b2;}
-  #eeMsgs{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px;}
-  .eem{max-width:82%;padding:8px 10px;border-radius:10px;font-size:13px;line-height:1.5;white-space:pre-wrap;}
-  .eem.bot{background:#1c2230;color:#dfe6f0;align-self:flex-start;}
-  .eem.me{background:#2563eb;color:#fff;align-self:flex-end;}
-  #eeInput{display:flex;gap:6px;padding:10px;border-top:1px solid #2a3140;}
-  #eeInput input{flex:1;background:#0b0d12;border:1px solid #2a3140;color:#e8ecf4;border-radius:8px;padding:8px;}
-  #eeInput button{background:#3b82f6;color:#fff;border:0;border-radius:8px;padding:0 14px;cursor:pointer;}
-</style>
 <button id="eeBtn" type="button">小E</button>
 <div id="eeBox">
   <div id="eeHead"><span>小E · AI 客服</span><span class="x" id="eeClose">收起</span></div>
-  <div id="eeMsgs"><div class="eem bot">你好，我是小E 👋 关于 LocalDream ET 的问题都可以问我～</div></div>
+  <div id="eeMsgs"><div class="eem bot">你好，我是小E。关于 LocalDream ET 的问题都可以问我。</div></div>
   <div id="eeInput"><input id="eeText" placeholder="输入你的问题，回车发送" /><button id="eeSend" type="button">发送</button></div>
 </div>
 
 <script>
 (function(){try{var ua=navigator.userAgent||"";if(ua.indexOf("MicroMessenger")<0&&ua.indexOf("QQ/")<0&&ua.indexOf("MQQBrowser")<0)return;var b=document.createElement("div");b.style.cssText="background:#fff8e1;color:#5a4a00;padding:10px 16px;font-size:13px";b.innerHTML="请用右上角「···」选择系统浏览器打开以下载。";document.body.insertBefore(b,document.body.firstChild);}catch(e){}})();
+</script>
+
+<script>
+/* 历史版本：GitHub Releases API */
+(function(){
+  function $(id){return document.getElementById(id);}
+  fetch("https://api.github.com/repos/ETQWFD/LocalDream-ET/releases?per_page=5").then(function(r){return r.json();}).then(function(list){
+    if(!Array.isArray(list)||!list.length){$("relist").innerHTML='<div class="note">暂无历史版本。</div>';return;}
+    $("relist").innerHTML=list.map(function(r){
+      var apk=(r.assets||[]).filter(function(a){return /\.apk$/i.test(a.name);})[0];
+      var url=apk?apk.browser_download_url:("https://github.com/ETQWFD/LocalDream-ET/releases/tag/"+encodeURIComponent(r.tag_name));
+      var d=r.published_at?new Date(r.published_at).toLocaleDateString():r.tag_name;
+      return '<div class="rel"><div><div class="v">'+(r.name||r.tag_name)+'</div><div class="d">'+d+'</div></div><a href="'+url+'" target="_blank" rel="noopener">下载 APK</a></div>';
+    }).join("");
+  }).catch(function(){$("relist").innerHTML='<div class="note">历史版本加载失败。</div>';});
+})();
 </script>
 
 <script>
@@ -232,7 +263,7 @@
   function loadSum(){try{var c=sessionStorage.getItem("etld_sum");if(c){var o=JSON.parse(c);if(Date.now()-o.t<60000)return Promise.resolve(o.d);}}catch(e){}return getJSON(RAW+"/summary.json?_="+Date.now()).then(function(d){try{sessionStorage.setItem("etld_sum",JSON.stringify({t:Date.now(),d:d}));}catch(e){}return d;});}
   function voted(){return getJSON(RAW+"/ratings/"+MYFP+".json").then(function(d){return d?Number(d.score):null;}).catch(function(){return null;});}
   function paint(sum,v){paintStars(sum.avg||0,v);paintDist(sum.dist||{});$("rateAvg").textContent=(sum.count>0)?(Number(sum.avg).toFixed(1)+" / 5.0 · "+sum.count+" 人"):"还没人评分，来做第一个";$("rateNote").textContent=v!=null?("你已投过 "+v+" ★（每设备一票，重复覆盖）。"):"点击星星评分，每设备一票。";}
-  function loadComments(){return getJSON(GHAPI+"/comments").then(function(arr){if(!Array.isArray(arr)){return [];}return Promise.all(arr.filter(function(f){return /\.json$/.test(f.name);}).slice(0,50).map(function(f){return getJSON(RAW+"/comments/"+f.name).catch(function(){return null;});}));}).then(function(list){list=(list||[]).filter(Boolean).sort(function(a,b){return(b.ts||0)-(a.ts||0);});if(!list.length){$("cmtList").innerHTML='<p class="note">还没有评论，来第一条。</p>';return;}$("cmtList").innerHTML=list.map(function(c){return '<div class="cmt"><span class="t">'+esc(new Date(c.ts).toLocaleDateString())+'</span><span class="n">'+esc(c.nick)+'</span><div class="x">'+esc(c.text)+'</div></div>';}).join("");}).catch(function(){$("cmtList").innerHTML='<p class="note">评论读取失败。</p>';});}
+  function loadComments(){return getJSON(GHAPI+"/comments").then(function(arr){if(!Array.isArray(arr)){return [];}return Promise.all(arr.filter(function(f){return /\.json$/.test(f.name);}).slice(0,50).map(function(f){return getJSON(RAW+"/comments/"+f.name).catch(function(){return null;});}));}).then(function(list){list=(list||[]).filter(Boolean).sort(function(a,b){return(b.ts||0)-(a.ts||0);});if(!list.length){$("cmtList").innerHTML='<p class="note">还没有评论，来第一条。</p>';return;}$("cmtList").innerHTML=list.map(function(c){return '<div class="cmt"><span class="t">'+esc(new Date(c.ts).toLocaleDateString())+'</span><span class="n">'+esc(c.nick)+'</span><div class="x">'+esc(c.text)+'</div></div>';}).join("");}).catch(function(){$("cmtList").innerHTML='<p class="note">暂无评论。</p>';});}
   $("stars").addEventListener("click",function(e){if($("stars").classList.contains("voted")){alert("每设备一票，感谢！");return;}var v=e.target.getAttribute&&e.target.getAttribute("data-v");if(!v)return;$("rateNote").textContent="提交中…";ghPut("ratings/"+MYFP+".json",{score:Number(v),ts:Date.now(),fp:MYFP},"rate").then(function(){return ghMeta("summary.json");}).then(function(m){return m?fetch(m.download_url).then(function(r){return r.json();}):{dist:{}};}).then(function(s){s.dist=s.dist||{};for(var k=1;k<=5;k++)s.dist[k]=s.dist[k]||0;s.dist[v]=(s.dist[v]||0)+1;var t=0,c=0;for(var k=1;k<=5;k++){t+=(s.dist[k]||0)*k;c+=(s.dist[k]||0);}s.avg=c?Math.round(t/c*10)/10:0;s.count=c;s.highest=v;s.updatedAt=Date.now();return ghPut("summary.json",s,"sum");}).then(function(){sessionStorage.removeItem("etld_sum");return boot();}).catch(function(err){$("rateNote").textContent="提交失败："+(err.message||"")+"，稍后重试。";});});
   $("cmtSubmit").addEventListener("click",function(){var nick=$("cmtNick").value.trim(),text=$("cmtText").value.trim();if(!text){alert("评论不能为空");return;}if(/https?:\/\/|<img|<video|\.jpg|\.png/i.test(text)){alert("禁止链接/图片");return;}var b=$("cmtSubmit");b.disabled=true;b.textContent="…";ghPut("comments/c"+Date.now()+"_"+Math.random().toString(36).slice(2,7)+".json",{nick:nick||"匿名",text:text,ts:Date.now(),fp:MYFP},"comment").then(function(){$("cmtText").value="";b.disabled=false;b.textContent="发表评论";return loadComments();}).catch(function(err){b.disabled=false;b.textContent="发表评论";alert("失败："+(err.message||""));});});
   function boot(){return Promise.all([loadSum(),voted()]).then(function(r){paint(r[0],r[1]);});}
@@ -245,9 +276,10 @@
   var DICT={
     "zh-CN":{},
     "zh-TW":{
-      "nav.features":"功能","nav.shots":"截圖","nav.server":"伺服器","nav.rating":"評分","nav.faq":"常見問題",
-      "hero.title":"手機本地跑 <span class=\"g\">Stable Diffusion</span>",
-      "hero.sub":"完全離線的 AI 出圖 App。無需聯網、不上傳圖片，支援文生圖 / 圖生圖 / 模型下載 / 雲備份，另有 Windows 與 Linux 伺服器。",
+      "nav.features":"功能","nav.shots":"截圖","nav.server":"伺服器","nav.versions":"歷史版本","nav.rating":"評分","nav.faq":"常見問題",
+      "hero.pill":"本地離線 Stable Diffusion · 不上傳圖片",
+      "hero.title":"在手機本地跑<br>Stable Diffusion",
+      "hero.sub":"完全離線的 AI 出圖 App。無需聯網、不上傳圖片，支援文生圖、圖生圖、模型下載與雲備份，另有 Windows 與 Linux 伺服器。",
       "hero.dl":"下載安卓 APK","hero.server":"下載伺服器","hero.offline":"本地離線推理",
       "f.title":"核心功能","f.sub":"為低配手機與本地推理優化，不強制上傳。",
       "f1.t":"文生圖 / 圖生圖","f1.d":"英文提示逐詞透傳，支援整圖修圖、重繪強度調節（0.3–0.7）。",
@@ -256,7 +288,8 @@
       "f4.t":"雲備份","f4.d":"可選 GitHub/Gitee 私有倉備份圖片與日誌，權杖只存系統密鑰庫。",
       "f5.t":"PC 伺服器","f5.d":"Windows / Linux 出圖伺服器，A1111 相容 API，手機可遠端連。",
       "f6.t":"隱私優先","f6.d":"全程本地推理，圖片不離開你的裝置，聯網僅用於下載模型。",
-      "s.title":"介面截圖","s.sub":"深色模式下的主介面、出圖與修圖流程。",
+      "s.title":"介面截圖","s.sub":"主介面、出圖與修圖流程。",
+      "rel.title":"歷史版本","rel.sub":"最近 5 個版本，可直接下載對應安裝包。","rel.loading":"載入中…",
       "r.title":"評分與評論","r.sub":"每台設備一票，重複評分自動覆蓋。",
       "cmt.nick":"暱稱（不填則匿名）","cmt.text":"留下你的使用反饋（禁止連結 / 圖片 / 辱罵）","cmt.btn":"發表評論",
       "q.title":"常見問題","q.sub":"安裝、效能與報錯快速解答。",
@@ -268,9 +301,10 @@
       "foot.qq":"加入 QQ 交流群","foot.server":"伺服器手冊"
     },
     "en":{
-      "nav.features":"Features","nav.shots":"Screenshots","nav.server":"Server","nav.rating":"Rating","nav.faq":"FAQ",
-      "hero.title":"Run <span class=\"g\">Stable Diffusion</span> on your phone",
-      "hero.sub":"A fully offline AI image generator. No internet, no uploads. Text-to-image, img2img, model download, cloud backup, plus Windows & Linux server.",
+      "nav.features":"Features","nav.shots":"Screenshots","nav.server":"Server","nav.versions":"Versions","nav.rating":"Rating","nav.faq":"FAQ",
+      "hero.pill":"Local offline Stable Diffusion · no uploads",
+      "hero.title":"Run <br>Stable Diffusion on your phone",
+      "hero.sub":"A fully offline AI image generator. No internet, no uploads. Txt2img, img2img, model download and cloud backup, plus Windows & Linux server.",
       "hero.dl":"Download APK","hero.server":"Download Server","hero.offline":"Local offline inference",
       "f.title":"Features","f.sub":"Optimized for low-end phones and local inference.",
       "f1.t":"Txt2img / Img2img","f1.d":"English prompts passed through verbatim. Edit whole images with adjustable denoise (0.3–0.7).",
@@ -279,7 +313,8 @@
       "f4.t":"Cloud backup","f4.d":"Optional private GitHub/Gitee backup of images and logs; token stored in system keystore.",
       "f5.t":"PC server","f5.d":"Windows / Linux server with A1111-compatible API, reachable from your phone.",
       "f6.t":"Privacy first","f6.d":"Runs fully on-device; images never leave your phone. Network only for model downloads.",
-      "s.title":"Screenshots","s.sub":"Main UI, generation and editing flow in dark mode.",
+      "s.title":"Screenshots","s.sub":"Main UI, generation and editing flow.",
+      "rel.title":"Previous versions","rel.sub":"Latest 5 releases with direct download links.","rel.loading":"Loading…",
       "r.title":"Rating & reviews","r.sub":"One vote per device; repeated votes overwrite.",
       "cmt.nick":"Nickname (anonymous if empty)","cmt.text":"Leave feedback (no links / images / abuse)","cmt.btn":"Post review",
       "q.title":"FAQ","q.sub":"Quick answers on install, performance and errors.",
@@ -291,7 +326,7 @@
       "foot.qq":"Join QQ group","foot.server":"Server docs"
     }
   };
-  var names={"zh-CN":"🌐 简体中文 ▾","zh-TW":"🌐 繁體中文 ▾","en":"🌐 English ▾"};
+  var names={"zh-CN":"简体中文 ▾","zh-TW":"繁體中文 ▾","en":"English ▾"};
   function $(id){return document.getElementById(id);}
   function apply(lang){
     document.documentElement.lang=lang==="en"?"en":"zh-CN";

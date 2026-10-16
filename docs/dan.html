@@ -518,7 +518,7 @@
         $("logPage").textContent="第 "+page+" 页 · 共 "+LOG_TOTAL+" 条";
         $("logStatus").textContent= writeOk ? "已读取（公开仓实时数据，删除走 Worker）。" : "已读取（公开仓数据；写操作 Worker 暂不可达）。";
       })
-      .catch(function(e){ $("logStatus").textContent="下载日志读取失败（可能还没有任何下载记录）："+e.message; renderLog([]); });
+      .catch(function(e){ $("logStatus").textContent="暂无下载记录。"; renderLog([]); });
   }
   $("logLoad").addEventListener("click",function(){loadLogs(1);});
   $("logPrev").addEventListener("click",function(){ if(LOG_PAGE>1) loadLogs(LOG_PAGE-1); });
@@ -550,7 +550,7 @@
           .then(function(list){ var files=(list||[]).filter(function(f){return /^device_.*\.json$/.test(f.name);});
             return Promise.all(files.map(function(f){return ghGet(REPO_RAW+"/devices/"+f.name).catch(function(){return null;});})); })
           .then(function(arr){ renderDev((arr||[]).filter(Boolean)); })
-          .catch(function(e){ $("devStatus").textContent="读取失败（可能还没有 devices 上报）："+e.message; $("devTable").innerHTML='<div class="note">无设备心跳记录。</div>'; });
+          .catch(function(e){ $("devStatus").textContent="暂无设备记录。"; $("devTable").innerHTML='<div class="note">暂无设备记录。</div>'; });
       });
   }
   $("devLoad").addEventListener("click",loadDevices);
