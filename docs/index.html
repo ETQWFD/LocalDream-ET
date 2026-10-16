@@ -264,7 +264,7 @@
       <small data-i18n="foot.copy">本地离线 Stable Diffusion · Copyright © 2026 ET</small>
     </div>
     <div class="footbtns">
-      <a class="btn g" href="mailto:2416444244@qq.com">2416444244@qq.com</a>
+      <a class="btn g" href="mailto:localdreametos@hotmail.com">localdreametos@hotmail.com</a>
       <a class="btn p" href="http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=FEhaN_bPJIhurqBLoRhqkhmHnkRz17bu&authKey=hYuEEJTFOcfkPr85OD8vyrhHH56GhhUKRYuIfEpEDIkdclfxVTEKMV0IMYrz5HFB&noverify=0&group_code=1078799843" target="_blank" rel="noopener" data-i18n="foot.qq">加入 QQ 群</a>
       <a class="link" href="https://github.com/ETQWFD/LocalDream-ET" target="_blank" rel="noopener">GitHub →</a>
     </div>
@@ -412,9 +412,9 @@
   var B64="Fh8AAwMTGU4nHTw8YyohPCdsMQoKPkILNl0mTC0fHxlCAzNcHXVcVT9FagIMKEFuICpQ";
   function key(){var k="et-ee",b=atob(B64),o="";for(var i=0;i<b.length;i++){o+=String.fromCharCode(b.charCodeAt(i)^k.charCodeAt(i%k.length));}return o;}
   var SYS={
-    "zh-CN":"你是小E，LocalDream ET（本地 Stable Diffusion 安卓 App，包名 etc.github.ai，官网 etc.tw.kg，作者 ET/QQ 2416444244/邮箱 2416444244@qq.com/QQ群 1078799843）官方AI客服。功能：手机本地离线出图、NPU+CPU、模型下载、图生图修图、云备份、Windows/Linux 服务端。解答使用问题与报错，引导联系作者加群；用简体中文友好回复。",
-    "zh-TW":"你是小E，LocalDream ET（本地 Stable Diffusion 安卓 App，包名 etc.github.ai，官網 etc.tw.kg，作者 ET/QQ 2416444244/邮箱 2416444244@qq.com/QQ群 1078799843）官方AI客服。功能：手機本地離線出圖、NPU+CPU、模型下載、圖生圖修圖、雲備份、Windows/Linux 伺服器。解答使用問題與報錯，引導聯繫作者加群；用繁體中文友善回覆。",
-    "en":"You are Xiao E, official AI support for LocalDream ET (a local Stable Diffusion Android app, package etc.github.ai, site etc.tw.kg, author ET / QQ 2416444244 / email 2416444244@qq.com / QQ group 1078799843). Features: on-device offline image generation, NPU+CPU, model download, img2img editing, cloud backup, Windows/Linux server. Help with usage and errors; reply in friendly English."
+    "zh-CN":"你是小E，LocalDream ET（本地 Stable Diffusion 安卓 App，包名 etc.github.ai，官网 etc.tw.kg，作者 ET/QQ 2416444244/邮箱 localdreametos@hotmail.com/QQ群 1078799843）官方AI客服。功能：手机本地离线出图、NPU+CPU、模型下载、图生图修图、云备份、Windows/Linux 服务端。解答使用问题与报错，引导联系作者加群；用简体中文友好回复。",
+    "zh-TW":"你是小E，LocalDream ET（本地 Stable Diffusion 安卓 App，包名 etc.github.ai，官網 etc.tw.kg，作者 ET/QQ 2416444244/邮箱 localdreametos@hotmail.com/QQ群 1078799843）官方AI客服。功能：手機本地離線出圖、NPU+CPU、模型下載、圖生圖修圖、雲備份、Windows/Linux 伺服器。解答使用問題與報錯，引導聯繫作者加群；用繁體中文友善回覆。",
+    "en":"You are Xiao E, official AI support for LocalDream ET (a local Stable Diffusion Android app, package etc.github.ai, site etc.tw.kg, author ET / QQ 2416444244 / email localdreametos@hotmail.com / QQ group 1078799843). Features: on-device offline image generation, NPU+CPU, model download, img2img editing, cloud backup, Windows/Linux server. Help with usage and errors; reply in friendly English."
   };
   function curLang(){try{return localStorage.getItem("etld_lang")||"zh-CN";}catch(e){return "zh-CN";}}
   function thinking(){return curLang()==="en"?"Xiao E is thinking":"小E 正在思考";}
@@ -442,7 +442,7 @@
       });}
       return pump();
     })
-    .catch(function(e){if(timedOut)return;clearTimeout(to);var m=e&&e.message?e.message:"network error";t.textContent=(L==="en")?("Support unavailable ("+m+"). Join QQ group 1078799843."):("客服暂时不可用（"+m+"）。加 QQ 群 1078799843 或发邮件 2416444244@qq.com。");});}
+    .catch(function(e){if(timedOut)return;clearTimeout(to);var m=e&&e.message?e.message:"network error";t.textContent=(L==="en")?("Support unavailable ("+m+"). Join QQ group 1078799843."):("客服暂时不可用（"+m+"）。加 QQ 群 1078799843 或发邮件 localdreametos@hotmail.com。");});}
   send.addEventListener("click",ask);
   inp.addEventListener("keydown",function(e){if(e.key==="Enter")ask();});
 })();

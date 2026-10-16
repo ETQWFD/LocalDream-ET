@@ -5,5 +5,5 @@
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
   "size": 159671699,
   "sha256": "87c684e2834fd74921e2d35880fdefaa7ed5fff60f41f83f0438dd8d922ea1bf",
-  "releaseNotes": "维护中，不定时更新；作者上学中，联系邮箱 2416444244@qq.com。\n\n本版：回归 bad_alloc 自动降档（512→384→256 重启引擎重发）。\n\n安装后在“关于/版本”看到 build 176 即新版。版权 Copyright (C) 2026 etc，署名 ET。"
+  "releaseNotes": "维护中，不定时更新；作者上学中，联系邮箱 localdreametos@hotmail.com。\n\n本版：回归 bad_alloc 自动降档（512→384→256 重启引擎重发）。\n\n安装后在“关于/版本”看到 build 176 即新版。版权 Copyright (C) 2026 etc，署名 ET。"
 }
