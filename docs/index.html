@@ -151,6 +151,7 @@
   <p class="lead" data-i18n="hero.lead">完全离线的 AI 出图 App。文生图、图生图、模型下载、云备份，另有 Windows / Linux 服务端。不联网也能出图。</p>
   <div class="btns">
     <a class="btn p" href="https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk" data-i18n="hero.dl">下载安卓版 ↓</a>
+    <a class="btn g" href="server.html" target="_blank" rel="noopener" data-i18n="hero.server">下载服务端</a>
     <a class="link" href="https://github.com/ETQWFD/LocalDream-ET" target="_blank" rel="noopener" data-i18n="hero.gh">查看开源项目 →</a>
   </div>
   <div class="meta" data-i18n="hero.meta">当前版本 v3.0.0-et.96 · Android 8.0+ · arm64 / armv7 / x86_64</div>
@@ -272,9 +273,9 @@
 
 <button id="eeBtn" type="button">小E</button>
 <div id="eeBox">
-  <div id="eeHead"><span>小E · AI 客服</span><span class="x" id="eeClose">收起</span></div>
-  <div id="eeMsgs"><div class="eem bot">你好，我是小E。关于 Local Dream ET 的问题都可以问我。</div></div>
-  <div id="eeInput"><input id="eeText" placeholder="输入你的问题，回车发送" /><button id="eeSend" type="button">发送</button></div>
+  <div id="eeHead"><span data-i18n="ee.title">小E · AI 客服</span><span class="x" id="eeClose" data-i18n="ee.close">收起</span></div>
+  <div id="eeMsgs"><div class="eem bot" id="eeWelcome" data-i18n="ee.welcome">你好，我是小E。关于 Local Dream ET 的问题都可以问我。</div></div>
+  <div id="eeInput"><input id="eeText" data-i18n-ph="ee.ph" placeholder="输入你的问题，回车发送" /><button id="eeSend" type="button" data-i18n="ee.send">发送</button></div>
 </div>
 
 <script>
@@ -336,8 +337,9 @@
       "hero.eye":"LOCAL OFFLINE SD · ANDROID / PC",
       "hero.h1":"在手機本地<br>跑 Stable Diffusion<br>不上傳一張圖",
       "hero.lead":"完全離線的 AI 出圖 App。文生圖、圖生圖、模型下載、雲備份，另有 Windows / Linux 伺服器。不聯網也能出圖。",
-      "hero.dl":"下載安卓版 ↓","hero.gh":"查看開源專案 →",
+      "hero.dl":"下載安卓版 ↓","hero.server":"下載伺服器","hero.gh":"查看開源專案 →",
       "hero.meta":"當前版本 v3.0.0-et.96 · Android 8.0+ · arm64 / armv7 / x86_64",
+      "ee.title":"小E · AI 客服","ee.close":"收起","ee.welcome":"你好，我是小E。關於 Local Dream ET 的問題都可以問我。","ee.ph":"輸入你的問題，回車發送","ee.send":"發送",
       "why.eye":"WHY LOCAL","why.h":"從使用場景了解 Local Dream ET","why.p":"不需要把圖片上傳到任何伺服器，所有推理都在你的手機或電腦本地完成。",
       "why1.t":"文生圖 / 圖生圖","why1.d":"英文提示詞逐詞透傳，支援整圖修圖、重繪強度 0.3–0.7 調節。",
       "why2.t":"NPU + CPU 雙引擎","why2.d":"驍龍 Hexagon NPU 加速，無 OpenCL 自動回退 CPU，低配機安全檔不崩潰。",
@@ -363,8 +365,9 @@
       "hero.eye":"LOCAL OFFLINE SD · ANDROID / PC",
       "hero.h1":"Run Stable Diffusion<br>on your phone,<br>nothing uploads.",
       "hero.lead":"A fully offline AI image generator. Txt2img, img2img, model download, cloud backup. Plus Windows / Linux server. No internet needed.",
-      "hero.dl":"Download APK ↓","hero.gh":"View open source →",
+      "hero.dl":"Download APK ↓","hero.server":"Download Server","hero.gh":"View open source →",
       "hero.meta":"v3.0.0-et.96 · Android 8.0+ · arm64 / armv7 / x86_64",
+      "ee.title":"Xiao E · AI Support","ee.close":"Close","ee.welcome":"Hi, I'm Xiao E. Ask me anything about Local Dream ET.","ee.ph":"Type your question, press Enter to send","ee.send":"Send",
       "why.eye":"WHY LOCAL","why.h":"Why Local Dream ET","why.p":"No images ever leave your device. All inference runs locally on your phone or PC.",
       "why1.t":"Txt2img / Img2img","why1.d":"English prompts passed verbatim. Edit whole images with denoise 0.3–0.7.",
       "why2.t":"NPU + CPU","why2.d":"Snapdragon Hexagon NPU acceleration, auto fallback to CPU / GPU.",
@@ -408,17 +411,24 @@
   var HCNSEC="https://api.hcnsec.cn/v1/chat/completions";
   var B64="Fh8AAwMTGU4nHTw8YyohPCdsMQoKPkILNl0mTC0fHxlCAzNcHXVcVT9FagIMKEFuICpQ";
   function key(){var k="et-ee",b=atob(B64),o="";for(var i=0;i<b.length;i++){o+=String.fromCharCode(b.charCodeAt(i)^k.charCodeAt(i%k.length));}return o;}
-  var SYS="你是小E，LocalDream ET（本地 Stable Diffusion 安卓 App，包名 etc.github.ai，官网 etc.tw.kg，作者 ET/QQ 2416444244/邮箱 2416444244@qq.com/QQ群 1078799843）官方AI客服。功能：手机本地离线出图、NPU+CPU、模型下载、图生图修图、云备份、Windows/Linux 服务端。解答使用问题与报错，引导联系作者加群；语气友好中文。";
+  var SYS={
+    "zh-CN":"你是小E，LocalDream ET（本地 Stable Diffusion 安卓 App，包名 etc.github.ai，官网 etc.tw.kg，作者 ET/QQ 2416444244/邮箱 2416444244@qq.com/QQ群 1078799843）官方AI客服。功能：手机本地离线出图、NPU+CPU、模型下载、图生图修图、云备份、Windows/Linux 服务端。解答使用问题与报错，引导联系作者加群；用简体中文友好回复。",
+    "zh-TW":"你是小E，LocalDream ET（本地 Stable Diffusion 安卓 App，包名 etc.github.ai，官網 etc.tw.kg，作者 ET/QQ 2416444244/邮箱 2416444244@qq.com/QQ群 1078799843）官方AI客服。功能：手機本地離線出圖、NPU+CPU、模型下載、圖生圖修圖、雲備份、Windows/Linux 伺服器。解答使用問題與報錯，引導聯繫作者加群；用繁體中文友善回覆。",
+    "en":"You are Xiao E, official AI support for LocalDream ET (a local Stable Diffusion Android app, package etc.github.ai, site etc.tw.kg, author ET / QQ 2416444244 / email 2416444244@qq.com / QQ group 1078799843). Features: on-device offline image generation, NPU+CPU, model download, img2img editing, cloud backup, Windows/Linux server. Help with usage and errors; reply in friendly English."
+  };
+  function curLang(){try{return localStorage.getItem("etld_lang")||"zh-CN";}catch(e){return "zh-CN";}}
+  function thinking(){return curLang()==="en"?"Xiao E is thinking":"小E 正在思考";}
   var btn=document.getElementById("eeBtn"),box=document.getElementById("eeBox"),msgs=document.getElementById("eeMsgs"),inp=document.getElementById("eeText"),send=document.getElementById("eeSend");
   btn.addEventListener("click",function(){box.classList.toggle("open");inp.focus();});
   document.getElementById("eeClose").addEventListener("click",function(){box.classList.remove("open");});
   function add(c,t){var d=document.createElement("div");d.className="eem "+c;d.textContent=t;msgs.appendChild(d);msgs.scrollTop=msgs.scrollHeight;return d;}
   function tw(node,txt){var i=0;node.textContent="";var t=setInterval(function(){node.textContent=txt.slice(0,++i);msgs.scrollTop=msgs.scrollHeight;if(i>=txt.length)clearInterval(t);},18);}
-  function ask(){var q=inp.value.trim();if(!q)return;add("me",q);inp.value="";var t=add("bot","");var d=0;var tk=setInterval(function(){d=(d+1)%4;t.textContent="小E 正在思考"+".".repeat(d);},300);
-    fetch(HCNSEC,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+key()},body:JSON.stringify({model:"glm-5.3-flash",messages:[{role:"system",content:SYS},{role:"user",content:q}],stream:false})})
+  function ask(){var q=inp.value.trim();if(!q)return;add("me",q);inp.value="";var t=add("bot","");var d=0;var tk=setInterval(function(){d=(d+1)%4;t.textContent=thinking()+ ".".repeat(d);},300);
+    var L=curLang();
+    fetch(HCNSEC,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+key()},body:JSON.stringify({model:"glm-5.3-flash",messages:[{role:"system",content:SYS[L]||SYS["zh-CN"]},{role:"user",content:q}],stream:false})})
     .then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json();})
     .then(function(j){clearInterval(tk);var rep=j&&j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content;tw(t,rep||"（暂无回复）");})
-    .catch(function(e){clearInterval(tk);var m=e&&e.message?e.message:"网络错误";t.textContent="客服暂时不可用（"+m+"）。加 QQ 群 1078799843 或发邮件 2416444244@qq.com。";});}
+    .catch(function(e){clearInterval(tk);var m=e&&e.message?e.message:"network error";var msg=(L==="en")?("Support unavailable ("+m+"). Join QQ group 1078799843 or email 2416444244@qq.com."):("客服暂时不可用（"+m+"）。加 QQ 群 1078799843 或发邮件 2416444244@qq.com。");t.textContent=msg;});}
   send.addEventListener("click",ask);
   inp.addEventListener("keydown",function(e){if(e.key==="Enter")ask();});
 })();

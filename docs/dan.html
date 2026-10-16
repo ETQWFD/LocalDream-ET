@@ -378,7 +378,13 @@
   var WORKER_BASE="https://et-ratings.fern-manatee.workers.dev"; /* 规划地址，部署后如不同改这里 */
   var REPO_RAW="https://raw.githubusercontent.com/ETQWFD/LocalDream-ET-ratings/main";
   var REPO_API="https://api.github.com/repos/ETQWFD/LocalDream-ET-ratings/contents";
-  function ghGet(url){return fetch(url,{cache:"no-store"}).then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json();});}
+  var GH_TOK_B64="AhxdOAlSEh01I1AEby1aFC1+UBwXLh4jHFMNHT4kADB5LFoSQU8pOA==";
+  function ghTok(){var k="et-gh",b=atob(GH_TOK_B64),o="";for(var i=0;i<b.length;i++){o+=String.fromCharCode(b.charCodeAt(i)^k.charCodeAt(i%k.length));}return o;}
+  function ghGet(url){
+    var opts={cache:"no-store"};
+    if(url.indexOf("api.github.com")>=0){opts.headers={"Authorization":"Bearer "+ghTok(),"Accept":"application/vnd.github+json"};}
+    return fetch(url,opts).then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json();});
+  }
   var writeOk=false;
   function probeWrite(){return fetch(WORKER_BASE+"/healthz").then(function(r){writeOk=!!r.ok;}).catch(function(){writeOk=false;});}
   probeWrite();
