@@ -13,478 +13,178 @@
 <title>Local Dream ET — 本地 Stable Diffusion 推理</title>
 <style>
   :root{
-    --bg:#0f1115; --panel:#171a21; --line:#262b36; --text:#e6e9ef;
-    --muted:#9aa3b2; --accent:#4f8cff;
+    --bg:#0f1115; --panel:#171a21; --panel2:#1c2230; --line:#262b36; --text:#e6e9ef;
+    --muted:#9aa3b2; --accent:#4f8cff; --accent2:#6366f1;
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--text);
     font:15px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif}
-  .wrap{max-width:860px;margin:0 auto;padding:0 20px}
-  header{padding:48px 0 24px;border-bottom:1px solid var(--line)}
-  h1{margin:0 0 6px;font-size:26px;font-weight:650}
-  .tagline{color:var(--muted);margin:0 0 16px}
-  .badges{display:flex;flex-wrap:wrap;gap:8px}
-  .badge{font-size:12px;color:var(--muted);border:1px solid var(--line);
-    border-radius:999px;padding:3px 10px}
-  .badge.b{color:var(--accent);border-color:var(--accent)}
-  nav{position:sticky;top:0;background:var(--bg);border-bottom:1px solid var(--line);
-    padding:10px 0;margin-top:24px}
-  nav a{color:var(--muted);text-decoration:none;margin-right:16px;font-size:13px}
-  nav a:hover{color:var(--text)}
-  section{padding:28px 0;border-bottom:1px solid var(--line)}
-  h2{font-size:18px;margin:0 0 14px;font-weight:600}
-  p{margin:8px 0}
-  .muted{color:var(--muted);font-size:13px}
-  .btns{display:flex;flex-wrap:wrap;gap:12px;margin:16px 0}
-  .btn{display:inline-block;padding:11px 18px;border-radius:8px;text-decoration:none;
-    font-weight:600;font-size:14px;border:1px solid var(--line)}
-  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
-  .btn.ghost{background:transparent;color:var(--text)}
-  table{width:100%;border-collapse:collapse;margin:12px 0;font-size:14px}
-  th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
-  th{background:var(--panel);color:var(--muted);font-weight:500}
-  ul{margin:8px 0;padding-left:20px}
-  li{margin:4px 0}
-  code{background:var(--panel);padding:2px 6px;border-radius:4px;font-size:13px}
-  footer{padding:28px 0 48px;color:var(--muted);font-size:13px}
-  footer a{color:var(--muted)}
-  /* 维护中横幅 */
-  .swansong{background:linear-gradient(180deg,#1a2233,#141a26);border:1px solid #2c3a55;
-    border-radius:12px;padding:18px 20px;margin:20px 0 4px}
-  .swansong h2{margin:0 0 8px;font-size:19px;color:#fff}
-  .swansong .ver{color:var(--accent);font-weight:600}
-  .swansong p{margin:6px 0;font-size:14px}
-  .contactrow{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
-  /* 评分与评论 */
-  .ratebox{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0}
-  .stars{font-size:22px;letter-spacing:3px;cursor:pointer;user-select:none}
+  a{color:var(--accent);text-decoration:none}
+  .wrap{max-width:1040px;margin:0 auto;padding:0 20px}
+  nav{position:sticky;top:0;z-index:100;background:rgba(15,17,21,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  .navin{max-width:1040px;margin:0 auto;padding:12px 20px;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+  .logo{font-weight:700;color:#fff;font-size:15px}
+  .navlinks{display:flex;gap:16px;flex-wrap:wrap;flex:1}
+  .navlinks a{color:var(--muted);font-size:13.5px}
+  .navlinks a:hover{color:var(--text)}
+  .langsel{position:relative}
+  .langbtn{background:var(--panel);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:6px 12px;font-size:13px;cursor:pointer}
+  .langmenu{display:none;position:absolute;right:0;top:38px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;overflow:hidden;min-width:140px;box-shadow:0 10px 30px rgba(0,0,0,.5)}
+  .langmenu.open{display:block}
+  .langmenu button{display:block;width:100%;text-align:left;background:none;border:0;color:var(--text);padding:10px 14px;font-size:13.5px;cursor:pointer}
+  .langmenu button:hover{background:var(--panel)}
+  .hero{padding:72px 0 40px;text-align:center}
+  .hero h1{font-size:40px;line-height:1.15;margin:0 0 14px;font-weight:750;letter-spacing:-.5px}
+  .hero h1 .g{background:linear-gradient(120deg,#4f8cff,#a855f7);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .hero p{color:var(--muted);max-width:620px;margin:0 auto 26px;font-size:16px}
+  .btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+  .btn{display:inline-block;padding:12px 22px;border-radius:10px;font-weight:600;font-size:14.5px;border:1px solid var(--line);cursor:pointer}
+  .btn.p{background:linear-gradient(120deg,#4f8cff,#6366f1);border:0;color:#fff;box-shadow:0 8px 24px rgba(79,140,255,.35)}
+  .btn.g{background:transparent;color:var(--text)}
+  .badges{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:22px}
+  .badge{font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:3px 11px}
+  section{padding:48px 0;border-top:1px solid var(--line)}
+  .h2{font-size:26px;font-weight:700;margin:0 0 6px;letter-spacing:-.3px}
+  .hsub{color:var(--muted);margin:0 0 28px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px}
+  .card .ic{font-size:22px;margin-bottom:10px}
+  .card h3{margin:0 0 6px;font-size:15.5px}
+  .card p{margin:0;color:var(--muted);font-size:13.5px}
+  .shots{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px}
+  .shots img{width:100%;border-radius:12px;border:1px solid var(--line);display:block;background:#000}
+  details{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 18px;margin:8px 0}
+  details summary{cursor:pointer;font-weight:600;font-size:14.5px;list-style:none}
+  details summary::-webkit-details-marker{display:none}
+  details summary::before{content:"+ ";color:var(--accent)}
+  details[open] summary::before{content:"− "}
+  details p{color:var(--muted);font-size:13.5px;margin:10px 0 0}
+  .ratebox{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:10px 0}
+  .stars{font-size:26px;letter-spacing:4px;cursor:pointer;user-select:none}
   .stars span{color:#3a4250}
   .stars span.on{color:#f5b942}
-  .rateavg{font-size:14px;color:var(--muted)}
-  .cmt{border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:8px 0;background:var(--panel)}
-  .cmt .n{font-weight:600;font-size:13px}
-  .cmt .t{color:var(--muted);font-size:11px;float:right}
-  .cmt .x{font-size:14px;margin-top:4px}
-  .cmtform input,.cmtform textarea{width:100%;background:#0c1017;border:1px solid var(--line);
-    color:var(--text);border-radius:8px;padding:9px 11px;font:inherit;margin:5px 0}
-  .cmtnote{color:var(--muted);font-size:12px;background:var(--panel);border:1px dashed var(--line);
-    border-radius:8px;padding:10px 12px;margin:8px 0}
-  .dist{margin:10px 0;max-width:420px}
+  .stars.voted{cursor:default}
+  .rateavg{color:var(--muted);font-size:14px}
+  .dist{margin:12px 0;max-width:440px}
   .distrow{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);margin:3px 0}
   .distrow .lab{width:26px}
   .distrow .track{flex:1;height:8px;background:#0c1017;border-radius:4px;overflow:hidden}
   .distrow .fill{height:100%;background:linear-gradient(90deg,#f5b942,#4f8cff)}
   .distrow .n{width:38px;text-align:right;font-family:ui-monospace,monospace}
-  .stars.voted{cursor:default}
-  .stars.voted span{cursor:default}
-  .ratenote{font-size:11px;color:var(--dim);margin-top:6px}
-  /* 6 步教程折叠 */
-  details.step{border:1px solid var(--line);border-radius:10px;padding:0;margin:8px 0;background:var(--panel)}
-  details.step summary{cursor:pointer;padding:12px 14px;font-weight:600;font-size:14px;list-style:none}
-  details.step summary::-webkit-details-marker{display:none}
-  details.step summary::before{content:"▸ ";color:var(--accent)}
-  details.step[open] summary::before{content:"▾ "}
-  details.step .bd{padding:0 14px 12px;font-size:13.5px;color:var(--text)}
-  .warn{background:#241a0c;border:1px solid #4a3718;color:#e5a33d;border-radius:8px;padding:8px 11px;font-size:12.5px;margin:8px 0}
-  .langbtn{background:transparent;border:1px solid var(--line);color:var(--muted);border-radius:6px;padding:2px 9px;font-size:12px;cursor:pointer;margin-left:4px}
-  .langbtn.on{color:var(--accent);border-color:var(--accent)}
+  .cmt{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:8px 0;background:var(--panel)}
+  .cmt .n{font-weight:600;font-size:13px}
+  .cmt .t{color:var(--muted);font-size:11px;float:right}
+  .cmt .x{font-size:14px;margin-top:4px}
+  .cmtform input,.cmtform textarea{width:100%;background:#0c1017;border:1px solid var(--line);color:var(--text);border-radius:8px;padding:9px 11px;font:inherit;margin:5px 0}
+  .note{color:var(--muted);font-size:12.5px;background:var(--panel);border:1px dashed var(--line);border-radius:8px;padding:9px 12px;margin:8px 0}
+  footer{padding:40px 0 60px;border-top:1px solid var(--line);color:var(--muted);font-size:13px;text-align:center}
+  .footbtns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:14px 0}
+  code{background:var(--panel);padding:2px 6px;border-radius:4px;font-size:13px}
 </style>
 </head>
 <body>
-<div class="wrap">
 
-<!-- 产品定位与版本徽标 -->
-<header>
-  <h1>Local Dream ET</h1>
-  <p class="tagline" data-i18n-t="tagline">在手机与电脑本地运行 Stable Diffusion 的离线推理 App，无需联网、不上传图片。</p>
+<nav>
+  <div class="navin">
+    <span class="logo">Local Dream ET</span>
+    <div class="navlinks">
+      <a href="#features" data-i18n="nav.features">功能</a>
+      <a href="#shots" data-i18n="nav.shots">截图</a>
+      <a href="server.html" data-i18n="nav.server">服务端</a>
+      <a href="#rating" data-i18n="nav.rating">评分</a>
+      <a href="#faq" data-i18n="nav.faq">常见问题</a>
+      <a href="https://github.com/ETQWFD/LocalDream-ET" target="_blank" rel="noopener">GitHub</a>
+    </div>
+    <div class="langsel">
+      <button class="langbtn" id="langBtn" type="button">🌐 简体中文 ▾</button>
+      <div class="langmenu" id="langMenu">
+        <button data-l="zh-CN" type="button">简体中文</button>
+        <button data-l="zh-TW" type="button">繁體中文</button>
+        <button data-l="en" type="button">English</button>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<header class="hero wrap">
+  <h1 data-i18n="hero.title">手机本地跑 <span class="g">Stable Diffusion</span></h1>
+  <p data-i18n="hero.sub">完全离线的 AI 出图 App。无需联网、不上传图片，支持文生图 / 图生图 / 模型下载 / 云备份，另有 Windows 与 Linux 服务端。</p>
+  <div class="btns">
+    <a class="btn p" href="https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk" data-i18n="hero.dl">下载安卓 APK</a>
+    <a class="btn g" href="server.html" data-i18n="hero.server">下载服务端</a>
+  </div>
   <div class="badges">
-    <span class="badge b">v3.0.0-et.61</span>
-    <span class="badge">三 ABI：arm64-v8a · armeabi-v7a · x86_64</span>
+    <span class="badge">v3.0.0-et.86</span>
+    <span class="badge">arm64 · armv7 · x86_64</span>
     <span class="badge">包名 etc.github.ai</span>
-    <span class="badge">签名 CN=ET</span>
-    <span class="badge b">聊天式客户端 etc.github.ai.chat v1.0.2</span>
+    <span class="badge" data-i18n="hero.offline">本地离线推理</span>
   </div>
 </header>
 
-<!-- 旧发布卡已下线，改为维护中说明 -->
-
-<nav>
-  <a href="#download" data-i18n="nav.download">下载</a>
-  <a href="#chat" data-i18n="nav.chat">聊天客户端</a>
-  <a href="server.html">Linux/Windows 服务端</a>
-  <a href="#features" data-i18n="nav.features">功能</a>
-  <a href="#models" data-i18n="nav.models">模型与机型</a>
-  <a href="#restore" data-i18n="nav.restore">修图模式</a>
-  <a href="#cloud" data-i18n="nav.cloud">云备份</a>
-  <a href="#help" data-i18n="nav.help">帮助</a>
-  <a href="#feedback" data-i18n="nav.feedback">评分评论</a>
-  <a href="https://github.com/ETQWFD/LocalDream-ET" target="_blank" rel="noopener">GitHub</a>
-  <span id="langSwitch" style="float:right">
-    <button class="langbtn" data-lang="zh" type="button">简体中文</button>
-    <button class="langbtn" data-lang="en" type="button">EN</button>
-  </span>
-</nav>
-
-<!-- 下载入口 -->
-<section id="download">
-  <h2 data-i18n-t="h2.download">下载</h2>
-  <div class="btns">
-    <a class="btn primary" href="https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk">手机 APK（Android · 本地出图）</a>
-    <a class="btn primary" href="https://github.com/ETQWFD/LocalDream-ET/releases/download/chat-v1.0.2/LocalDream-Chat-ET.apk">聊天式出图客户端 APK v1.0.2</a>
-    <button class="btn ghost" type="button" id="srvBtn" style="cursor:pointer">下载服务端（Windows / Linux）</button>
-    <a class="btn ghost" href="https://github.com/ETQWFD/LocalDream-ET/releases/tag/desktop-v3.0.1">旧电脑图形版 v3.0.1</a>
+<section id="features" class="wrap">
+  <h2 class="h2" data-i18n="f.title">核心功能</h2>
+  <p class="hsub" data-i18n="f.sub">为低配手机与本地推理优化，不强制上传。</p>
+  <div class="grid">
+    <div class="card"><div class="ic">🎨</div><h3 data-i18n="f1.t">文生图 / 图生图</h3><p data-i18n="f1.d">英文提示逐词透传，支持整图修图、重绘强度调节（0.3–0.7）。</p></div>
+    <div class="card"><div class="ic">📱</div><h3 data-i18n="f2.t">NPU + CPU</h3><p data-i18n="f2.d">骁龙 Hexagon NPU 加速，无 OpenCL 自动回退 CPU，低配机安全档不崩溃。</p></div>
+    <div class="card"><div class="ic">📦</div><h3 data-i18n="f3.t">模型管理</h3><p data-i18n="f3.d">自动识别 CPU 直读模型与待转换模型，文件齐全才就绪。</p></div>
+    <div class="card"><div class="ic">☁️</div><h3 data-i18n="f4.t">云备份</h3><p data-i18n="f4.d">可选 GitHub/Gitee 私有仓备份图片与日志，令牌只存系统密钥库。</p></div>
+    <div class="card"><div class="ic">🖥️</div><h3 data-i18n="f5.t">PC 服务端</h3><p data-i18n="f5.d">Windows / Linux 出图服务端，A1111 兼容 API，手机可远程连。</p></div>
+    <div class="card"><div class="ic">🔒</div><h3 data-i18n="f6.t">隐私优先</h3><p data-i18n="f6.d">全程本地推理，图片不离开你的设备，联网仅用于下载模型。</p></div>
   </div>
-  <p style="margin:4px 0 0"><a href="server.html" style="color:var(--accent);font-weight:600">→ 新版服务端 Server v1.2.0（EXE / Linux，自动端口 · ghost.txt 云备份 · steps=30 batch=6）介绍与下载</a></p>
-  <p class="muted">手机版当前 v3.0.0-et.95，约 153 MB，含 arm64-v8a / armeabi-v7a / x86_64 三套原生引擎，包名 <code>etc.github.ai</code>，签名 <code>CN=ET</code>。装完在「关于/版本」看到 build 169 即新版。更早版本的逐条修复见 GitHub Release 说明。按下面 6 步使用：</p>
+</section>
 
-<details class="step" open>
-  <summary data-i18n-t="step1">① 下载安装 App</summary>
-  <div class="bd">点上方「手机 APK」下载固定名 <code>LocalDream-ET.apk</code>，允许安装未知来源。安装后在「关于/版本」核对 build 号；三架构引擎已内置。</div>
-</details>
-<details class="step">
-  <summary data-i18n-t="step2">② 授予「所有文件访问」权限</summary>
-  <div class="bd">首次使用请在系统设置里给 App「所有文件 / 管理所有文件」权限，否则读不到公共目录里的模型，模型列表会是空的。</div>
-</details>
-<details class="step">
-  <summary data-i18n-t="step3">③ 下载 / 选择模型</summary>
-  <div class="bd">把模型放到公共目录 <code>LocalDreamET/models</code>；带转换流程的模型会自动转换一次，<code>anythingv5cpu</code> 等 CPU 直读模型无需转换。文件齐全即就绪、缺文件置灰。</div>
-</details>
-<details class="step">
-  <summary data-i18n-t="step4">④ 本地出图 / 修图</summary>
-  <div class="bd">输入提示词 → 选模型 → 出图；修图在「修图」里上传整图、设重绘强度（0.3–0.7，默认 0.45）。英文提示逐词透传。
-    <div class="warn">低端机（32 位 / 无半精度 / 2–3GB，如 PowerVR GE8320）默认强制安全档：长边 256、8 步、euler_a、单张；约 164 秒/步是硬件地板，软件无法快一个数量级，不承诺秒出。<br>「设置 → 强制出图」默认关；打开后不再自动降档、按你选的分辨率/步数硬跑——低配机可能崩溃或极慢，需自行承担风险。</div>
+<section id="shots" class="wrap">
+  <h2 class="h2" data-i18n="s.title">界面截图</h2>
+  <p class="hsub" data-i18n="s.sub">深色模式下的主界面、出图与修图流程。</p>
+  <div class="shots">
+    <img src="assets/shots/s1.webp" alt="screenshot 1" loading="lazy">
+    <img src="assets/shots/s2.webp" alt="screenshot 2" loading="lazy">
+    <img src="assets/shots/s3.webp" alt="screenshot 3" loading="lazy">
+    <img src="assets/shots/s4.webp" alt="screenshot 4" loading="lazy">
+    <img src="assets/shots/s5.webp" alt="screenshot 5" loading="lazy">
+    <img src="assets/shots/s6.webp" alt="screenshot 6" loading="lazy">
+    <img src="assets/shots/s7.webp" alt="screenshot 7" loading="lazy">
+    <img src="assets/shots/s8.webp" alt="screenshot 8" loading="lazy">
   </div>
-</details>
-<details class="step">
-  <summary data-i18n-t="step5">⑤ 可选：API 连接 / 用电脑服务端出图</summary>
-  <div class="bd">手机「设置 → API 连接」选一个就绪模型，手机即变成局域网出图服务器（前台服务常驻、WakeLock 保活），其它设备可连 <code>http://手机IP:8082</code>。也可用上方「下载服务端」在 Windows/Linux 跑 v1.1.7：启动即先绑定端口、引擎后台加载，<code>/healthz</code> 就绪后对外提供 SD1.5 的 txt2img/img2img，默认无内容限制。聊天客户端「ET 聊天画师」v1.0.2 连接服务端出图。</div>
-</details>
-<details class="step">
-  <summary data-i18n-t="step6">⑥ 常见问题：内存不足 / 太慢怎么办</summary>
-  <div class="bd"><ul>
-    <li>std::bad_alloc 内存不足：降分辨率/步数；低端机保持 256/8 安全档，或改用电脑服务端。</li>
-    <li>8081 启动失败：模型未下完、未转换完成或 ABI 不匹配。</li>
-    <li>x86 模拟器跑不了 ARM 原生引擎，出图需真机；模拟器只能验证 UI。</li>
-    <li>连续/多张出图引擎复用、每张立即落盘，第二张不重启不丢图。</li>
-  </ul></div>
-</details>
-
-  <p class="muted">本站已启用 HTTPS。但微信/QQ 可能对未在中国大陆 ICP 备案的第三方域名（含 github.io 及本自定义域）直接安全拦截（“已停止访问”），这是平台侧限制、网页无法解除；被拦截时请用系统浏览器打开，或到 GitHub Release 页下载。如需在微信内稳定访问需自备已 ICP 备案域名（本版不提供）。</p>
 </section>
 
-<!-- 聊天式出图客户端 -->
-<section id="chat">
-  <h2 data-i18n-t="h2.chat">聊天式出图客户端（新 APK，独立安装）</h2>
-  <p>全新 <code>etc.github.ai.chat</code>「ET 聊天画师」v1.0.2：标准聊天界面（顶部标题+设置，中间消息气泡流，底部固定“图片 + / 输入框 / 发送”栏，默认深色），手机自身不带模型，连接电脑上已就绪的 <strong>Local Dream ET Server v1.1.7</strong> 或主 App 的“API 连接”服务出图，可与主 App 同时安装。</p>
-  <ul>
-    <li>右上角设置里填：服务端地址（<code>http://电脑物理网卡IP:8080</code>）、46 位 API Key、AI/模型名，并可设置<strong>全局反推理（负面）提示语</strong>，保存即全局生效；“连接测试”就绪/模型加载中/连不上三态中文提示（3 秒超时+自动重试），失败给出同 WiFi/物理网卡地址/防火墙放行 8080/服务端已就绪的排查清单。</li>
-    <li><strong>一键扫描局域网</strong>：自动枚举手机所在 192.168/10.x 网段并发探测 8080 的 /healthz，命中即可点选自动填入（200 标注就绪、503 标注模型加载中），免去手填 IP、避免误填 172.x 虚拟网卡。</li>
-    <li>回对话页：输中文提示词即文生图；也可上传图片让 AI 修图（图生图，带重绘幅度滑杆）。AI 返回的图直接在左侧气泡内按网格内联显示，返回几张显几张（服务端批量 6 就显示 6 张），点开可全屏、保存相册、分享、云上传。</li>
-    <li>v1.0.2 修复“发送后没反应”：点发送立即显示右侧用户气泡与左侧“AI 生成中”气泡，失败在气泡内给中文并可一键重试；会话与图片本地持久化，返回页面或重开 App 记录仍在。</li>
-  </ul>
-  <p class="muted">用法：先在电脑启动服务端并等模型下载完整、界面显示就绪；复制其服务地址 / API Key / 模型名到本 App 设置并保存即可。批量步数默认跟随服务端（设置里可单独指定）。本客户端不出图在本地，完全依赖局域网内的服务端。</p>
-</section>
-
-<!-- 功能列表 -->
-<section id="features">
-  <h2 data-i18n-t="h2.features">功能</h2>
-  <ul>
-    <li>完全离线的文生图与图生图：英文提示逐字透传，中文提示本地或可选联网增强，不强制上传。</li>
-    <li>SD1.5 支持 CPU 与 GPU（OpenCL），GPU 初始化失败自动回退 CPU。</li>
-    <li>出图健康检测：识别碎玻璃/NaN 时自动关闭 OpenCL、用 CPU 安全参数重试一次，并记住本机 GPU 不稳定。</li>
-    <li>应用内检测更新：GitHub 优先、Gitee 兜底（Gitee 镜像需配置后开通），支持断点续传。</li>
-    <li>本地日志与导出诊断：右上角“日志”查看引擎/下载/转换/生成/更新/云上传。</li>
-    <li>可选 GitHub/Gitee 私有云备份（PAT），图片与日志备份到你自己的私有仓库。</li>
-  </ul>
-</section>
-
-<!-- 模型与机型兼容表：QNN 大模型仅骁龙 -->
-<section id="models">
-  <h2 data-i18n-t="h2.models">模型与机型兼容</h2>
-  <table>
-    <tr><th>模型</th><th>架构</th><th>支持范围</th></tr>
-    <tr>
-      <td>SD1.5（含 Anything 系列）</td>
-      <td>arm64-v8a / armeabi-v7a / x86_64</td>
-      <td>全部 64 位安卓机（华为麒麟、联发科、Exynos、Tensor 等）CPU/GPU 可跑，无 OpenCL 回退 CPU；32 位设备支持 CPU/GPU；x86_64 模拟器可原生跑 CPU。</td>
-    </tr>
-    <tr>
-      <td>SDXL / DiT / 千问等大模型</td>
-      <td>QNN NPU（libdit_engine）</td>
-      <td>当前仅骁龙 Hexagon NPU（SM8650/8750 级别）。华为等无 Hexagon 的机型不支持，App 会如实锁定、不假标。</td>
-    </tr>
-  </table>
-  <p class="muted">性能取决于设备，生成耗时随分辨率平方与步数增加，不承诺秒出或 4K。图片尺寸长边按内存自适应：≤6GB 512、≤10GB 640、&gt;10GB 768（均 64 对齐），比例支持 1:1 / 2:3 / 3:4 / 4:3 / 3:2 / 9:16 / 16:9 与自定义。</p>
-</section>
-
-<!-- 修图模式 -->
-<section id="restore">
-  <h2 data-i18n-t="h2.restore">修图模式</h2>
-  <p>新增整图 img2img 工作台：选择已下载且本机可用的模型 → 上传整张图片（不裁剪、不分割）→ 输入中文正向/负向提示 → 调整重绘强度（0.3–0.7，默认 0.45）→ 结果写入历史，可保存到相册或云备份。</p>
-  <p class="muted">自动反推提示词（tagger）暂未内置，目前请用中文直接描述想把图改成什么样子。</p>
-</section>
-
-<!-- 更新机制 -->
-<section id="update">
-  <h2>更新机制与安装</h2>
-  <ul>
-    <li>检测更新读取 update.json，GitHub 主通道优先，失败自动回退镜像通道。</li>
-    <li>「发现新版本」弹窗标题与更新内容由 update.json 的 <code>title</code> / <code>releaseNotes</code> 下发，更新说明首行为联系作者说明，支持换行。</li>
-    <li>下载走前台服务并显示进度通知；断点续传校验 206/Content-Range，不盲目删 .part。</li>
-    <li>安装优先 PackageInstaller，失败回退系统安装器并引导“未知来源”。</li>
-  </ul>
-</section>
-
-<!-- 云备份与令牌 -->
-<section id="cloud">
-  <h2>云备份与令牌</h2>
-  <ul>
-    <li>登录使用个人访问令牌（PAT），不内嵌网页收账号密码。GitHub classic 令牌勾选 <code>repo</code>；fine-grained 令牌需 Administration + Contents 权限。</li>
-    <li>建仓遇 403（fine-grained 无建仓权限）时，可用“使用已有仓库”手动绑定你已建好的私有仓库。</li>
-    <li>Gitee 使用私人令牌（设置 → 私人令牌，勾选 user_info / projects）。</li>
-    <li>GitHub 设备码登录需开发者自行注册 OAuth App 并填入 client_id；未配置时入口暂不可用。</li>
-    <li>“关注开发者 / 点 Star”默认勾选、可取消，失败不影响登录与上传。</li>
-    <li>令牌仅存 Android 系统密钥库，不写入日志或导出文件。</li>
-  </ul>
-</section>
-
-<!-- 帮助与日志 -->
-<section id="help">
-  <h2>帮助与日志</h2>
-  <p>常见问题与错误说明见 <a href="help.html" style="color:var(--accent)">帮助页</a>。日志位置：App 内右上角“日志”、导出诊断；公共目录 <code>LocalDreamET/logs/app.log</code>，以及 <code>engine_*.log</code>、<code>convert_*.log</code>。</p>
-  <ul>
-    <li>内存不足（std::bad_alloc）：降低图片尺寸或步数后重试。</li>
-    <li>8081 启动失败：模型未下载完成、转换未完成或 ABI 不匹配。</li>
-    <li>x86 模拟器提示：使用已内置 x86_64 引擎的版本，或换 arm64 真机。</li>
-  </ul>
-  <p class="muted" style="margin-top:10px">联系作者（可复制/发邮件）：<a href="mailto:2416444244@qq.com" style="color:var(--accent)">2416444244@qq.com</a> ·
-    <a href="http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=FEhaN_bPJIhurqBLoRhqkhmHnkRz17bu&authKey=hYuEEJTFOcfkPr85OD8vyrhHH56GhhUKRYuIfEpEDIkdclfxVTEKMV0IMYrz5HFB&noverify=0&group_code=1078799843" target="_blank" rel="noopener" style="color:var(--accent)">QQ 交流群 1078799843</a></p>
-</section>
-
-<section id="feedback">
-  <h2 data-i18n-t="h2.feedback">评分与用户评论</h2>
+<section id="rating" class="wrap">
+  <h2 class="h2" data-i18n="r.title">评分与评论</h2>
+  <p class="hsub" data-i18n="r.sub">每台设备一票，重复评分自动覆盖。</p>
   <div class="ratebox">
-    <div class="stars" id="stars" title="点击打分"></div>
-    <div class="rateavg" id="rateAvg">读取中…</div>
+    <div class="stars" id="stars"></div>
+    <div class="rateavg" id="rateAvg">—</div>
   </div>
   <div class="dist" id="distBox"></div>
-  <div class="ratenote" id="rateNote"></div>
+  <div class="note" id="rateNote"></div>
   <div id="cmtList"></div>
-  <div id="cmtFormWrap">
-    <div class="cmtform">
-      <input id="cmtNick" maxlength="20" placeholder="昵称（不填则匿名）" />
-      <textarea id="cmtText" maxlength="300" rows="3" placeholder="留下你的使用反馈（禁止贴链接 / 图片 / 辱骂内容）"></textarea>
-      <button class="btn primary" id="cmtSubmit" type="button">发表评论</button>
-    </div>
+  <div class="cmtform" style="margin-top:10px">
+    <input id="cmtNick" maxlength="20" data-i18n-ph="cmt.nick" placeholder="昵称（不填则匿名）" />
+    <textarea id="cmtText" maxlength="300" rows="3" data-i18n-ph="cmt.text" placeholder="留下你的使用反馈（禁止链接 / 图片 / 辱骂）"></textarea>
+    <button class="btn p" id="cmtSubmit" type="button" data-i18n="cmt.btn">发表评论</button>
   </div>
-  <div class="cmtnote" id="cmtNote" style="display:none"></div>
+  <div class="note" id="cmtNote" style="display:none"></div>
+</section>
+
+<section id="faq" class="wrap">
+  <h2 class="h2" data-i18n="q.title">常见问题</h2>
+  <p class="hsub" data-i18n="q.sub">安装、性能与报错快速解答。</p>
+  <details><summary data-i18n="q1.q">出图很慢 / 提示内存不足？</summary><p data-i18n="q1.a">降低分辨率与步数；低端机保持 256×256 / 8 步安全档，或改用 Windows/Linux 服务端出图。</p></details>
+  <details><summary data-i18n="q2.q">NPU 不生效 / 模型不加载？</summary><p data-i18n="q2.a">QNN NPU 仅骁龙 Hexagon 机型支持；其它机型自动用 CPU/GPU。模型需下载完整并完成转换后才会就绪。</p></details>
+  <details><summary data-i18n="q3.q">为什么读不到模型列表？</summary><p data-i18n="q3.a">请在系统设置给 App「所有文件访问」权限，并把模型放到公共目录 <code>LocalDreamET/models</code>。</p></details>
+  <details><summary data-i18n="q4.q">微信里打不开 / 提示已停止访问？</summary><p data-i18n="q4.a">第三方域名可能被微信拦截，请点右上角「···」用系统浏览器打开。</p></details>
 </section>
 
 <footer>
-  <p>源码：<a href="https://github.com/ETQWFD/LocalDream-ET" target="_blank" rel="noopener">github.com/ETQWFD/LocalDream-ET</a> · License MIT · Copyright © 2026 ET</p>
+  <p data-i18n="foot.p">Local Dream ET · 本地离线 Stable Diffusion · Copyright © 2026 ET</p>
+  <div class="footbtns">
+    <a class="btn g" href="mailto:2416444244@qq.com">✉ 2416444244@qq.com</a>
+    <a class="btn p" href="http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=FEhaN_bPJIhurqBLoRhqkhmHnkRz17bu&authKey=hYuEEJTFOcfkPr85OD8vyrhHH56GhhUKRYuIfEpEDIkdclfxVTEKMV0IMYrz5HFB&noverify=0&group_code=1078799843" target="_blank" rel="noopener" data-i18n="foot.qq">加入 QQ 交流群</a>
+  </div>
+  <p><a href="https://github.com/ETQWFD/LocalDream-ET" target="_blank" rel="noopener">GitHub 源码</a> · <a href="server.html" data-i18n="foot.server">服务端手册</a></p>
 </footer>
 
-<!-- 微信/QQ 内置浏览器提示（X5/TBS 兼容写法，ES5） -->
-<script>
-(function () {
-  try {
-    var ua = navigator.userAgent || "";
-    var isWx = ua.indexOf("MicroMessenger") >= 0;
-    var isQQ = ua.indexOf("QQ/") >= 0 || ua.indexOf("MQQBrowser") >= 0;
-    if (!isWx && !isQQ) return;
-    var bar = document.createElement("div");
-    bar.style.cssText = "background:#fff8e1;border-bottom:1px solid #f0d98a;color:#5a4a00;padding:10px 16px;font-size:13px;line-height:1.6";
-    bar.innerHTML = "你正在微信/QQ 内置浏览器打开。若无法下载或提示“已停止访问”，请点右上角 ··· 选择“在浏览器打开/在 Safari 或 Chrome 中打开”后再下载安装包（安卓：···→在浏览器打开；iOS：···→在 Safari 打开）。<a href=\"#\" id=\"ldetCloseBar\" style=\"margin-left:10px;color:#8a6d00\">关闭</a>";
-    document.body.insertBefore(bar, document.body.firstChild);
-    document.getElementById("ldetCloseBar").onclick = function (e) {
-      e.preventDefault();
-      bar.parentNode.removeChild(bar);
-    };
-  } catch (err) {}
-})();
-</script>
-
-<!-- 下载服务端：Windows / Linux 二选一 -->
-<div id="srvModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.55);align-items:center;justify-content:center;padding:20px">
-  <div style="max-width:420px;width:100%;background:#1c1c1e;border:1px solid #333;border-radius:14px;padding:22px;color:#eee;box-shadow:0 20px 60px rgba(0,0,0,.5)">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-      <strong style="font-size:17px">下载出图服务端 v1.1.7</strong>
-      <button id="srvX" type="button" style="background:none;border:none;color:#aaa;font-size:20px;cursor:pointer;line-height:1">×</button>
-    </div>
-    <p class="muted" style="margin:0 0 16px">选择你的系统。本版智能识别物理/虚拟网卡并列出推荐局域网地址；模型以国内魔搭为主、直读 safetensors/GGUF 无需转换，完整校验后才就绪；图形窗口可设步数/CFG/批量并一键复制【服务地址 / API Key / 模型名】。</p>
-    <a class="btn primary" style="display:block;text-align:center;margin-bottom:10px"
-       href="https://github.com/ETQWFD/LocalDream-ET/releases/download/server-v1.1.7/LocalDreamET-Server-Setup-1.1.7.exe">Windows 安装程序（.exe，免管理员/免 UAC）</a>
-    <a class="btn ghost" style="display:block;text-align:center;margin-bottom:14px"
-       href="https://github.com/ETQWFD/LocalDream-ET/releases/download/server-v1.1.7/LocalDreamET-Server-1.1.7-linux-x86_64.tar.gz">Linux x86_64（.tar.gz）</a>
-    <p class="muted" style="margin:0;font-size:12px">CPU 推理；模型与手机端对齐（SD1.5，含 DreamShaper/AbsoluteReality/QteaMix/CuteYuki/BreakDomain/Counterfeit）。Windows 后台图形界面，可切换模型/主题，内容限制默认无限制。版权 © 2026 etc（MIT）。</p>
-  </div>
-</div>
-<script>
-(function(){
-  var m=document.getElementById("srvModal");
-  function openM(e){e.preventDefault();m.style.display="flex";}
-  function closeM(){m.style.display="none";}
-  document.getElementById("srvBtn").addEventListener("click",openM);
-  document.getElementById("srvX").addEventListener("click",closeM);
-  m.addEventListener("click",function(e){if(e.target===m)closeM();});
-  document.addEventListener("keydown",function(e){if(e.key==="Escape")closeM();});
-})();
-</script>
-
-</div>
-<script>
-/* 真实访问/点击埋点（第三方计数 Abacus，仅统计量级，不去重/不防刷；数据后台 dan.html 已如实标注口径）。
-   用 Image GET 上报，不阻塞页面、不受跨域限制；任何异常都静默，绝不影响官网功能。 */
-(function(){
-  try{
-    function hit(k){ var i=new Image(); i.referrerPolicy="no-referrer"; i.src="https://abacus.jasoncameron.dev/hit/etld-et/"+k+"?t="+Date.now(); }
-    hit("sitevisits"); /* 每次真实打开首页 +1（自 et.41 起埋点） */
-    document.addEventListener("click",function(e){
-      var a=(e.target && e.target.closest)?e.target.closest("a[href]"):null;
-      if(!a) return;
-      if(/releases\/download|\.apk(\?|$)|\.exe(\?|$)|\.tar\.gz(\?|$)/i.test(a.href)){
-        hit("dlclicks");
-        /* 下载日志由 App/后端上报，网页端直连资产，不再经过不通的 Worker 跳转 */
-      }
-    },true);
-  }catch(_){}
-})();
-</script>
-
-<!-- 评分与评论：数字直读公开仓库（匿名，已上线）；写票走同源边缘函数，未部署则禁用输入但保留真实展示 -->
-<script>
-(function(){
-  "use strict";
-  /* 评分/评论直写公开仓（GitHub Contents API，前端混淆 token，不依赖 Worker） */
-  var RAW = "https://raw.githubusercontent.com/ETQWFD/LocalDream-ET-ratings/main";
-  var GHAPI = "https://api.github.com/repos/ETQWFD/LocalDream-ET-ratings/contents";
-  var GH_REPO = "ETQWFD/LocalDream-ET-ratings";
-  var GH_TOK_B64 = "AhxdOAlSEh01I1AEby1aFC1+UBwXLh4jHFMNHT4kADB5LFoSQU8pOA==";
-  function ghTok(){var k="et-gh",b=atob(GH_TOK_B64),o="";for(var i=0;i<b.length;i++){o+=String.fromCharCode(b.charCodeAt(i)^k.charCodeAt(i%k.length));}return o;}
-  function ghHeaders(){return {"Authorization":"Bearer "+ghTok(),"Accept":"application/vnd.github+json","Content-Type":"application/json"};}
-  function $(id){return document.getElementById(id);}
-  function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
-  function getJSON(url,opt){return fetch(url,opt).then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json();});}
-  function ghGetMeta(path){return fetch(GHAPI+"/"+path,{headers:ghHeaders()}).then(function(r){if(r.status===404)return null;if(!r.ok)throw new Error("HTTP "+r.status);return r.json();});}
-  function ghPut(path,obj,msg){
-    return ghGetMeta(path).then(function(meta){
-      var body={message:msg,content:btoa(unescape(encodeURIComponent(JSON.stringify(obj)))),branch:"main"};
-      if(meta&&meta.sha)body.sha=meta.sha;
-      return fetch(GHAPI+"/"+path,{method:"PUT",headers:ghHeaders(),body:JSON.stringify(body)}).then(function(r){if(!r.ok)return r.text().then(function(t){throw new Error("HTTP "+r.status+" "+t.slice(0,120));});return r.json();});
-    });
-  }
-
-  /* 稳定设备指纹 sha256（64 hex），只发哈希 */
-  function fnv64hex(seed){var out="";for(var round=0;round<8;round++){var s=seed+":"+round,h=0x811c9dc5;for(var i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,0x01000193);}out+=("00000000"+(h>>>0).toString(16)).slice(-8);}return out;}
-  function deviceSeed(){var r="";try{r=localStorage.getItem("etld_fpseed")||"";if(!r){r=Math.random().toString(36).slice(2)+Date.now().toString(36);localStorage.setItem("etld_fpseed",r);}}catch(e){r="r"+Date.now();}var n=navigator,s=screen;return[r,s.width+"x"+s.height,s.colorDepth,new Date().getTimezoneOffset(),n.hardwareConcurrency,n.maxTouchPoints,n.userAgent].join("|");}
-  function getFp(){try{if(window.crypto&&crypto.subtle){var data=new TextEncoder().encode(deviceSeed());return crypto.subtle.digest("SHA-256",data).then(function(buf){return Array.prototype.map.call(new Uint8Array(buf),function(b){return("00"+b.toString(16)).slice(-2);}).join("");});}}catch(e){}return Promise.resolve(fnv64hex(deviceSeed()));}
-
-  var MYFP="";
-  function paintStars(avg,voted){var base=(voted!=null)?voted:Math.round(avg);var html="";for(var i=1;i<=5;i++){html+='<span data-v="'+i+'" class="'+(i<=base?"on":"")+'">★</span>';}$("stars").innerHTML=html;$("stars").classList.toggle("voted",voted!=null);}
-  function paintDist(dist){dist=dist||{};var total=0;for(var k=1;k<=5;k++)total+=(dist[k]||0);var html="";for(var s=5;s>=1;s--){var c=dist[s]||0,pct=total?Math.round(c/total*100):0;html+='<div class="distrow"><span class="lab">'+s+'★</span><span class="track"><span class="fill" style="width:'+pct+'%"></span></span><span class="n">'+c+'</span></div>';}$("distBox").innerHTML=html;}
-
-  function loadSummary(){
-    try{var c=sessionStorage.getItem("etld_sum");if(c){var o=JSON.parse(c);if(Date.now()-o.t<60000)return Promise.resolve(o.d);}}catch(e){}
-    return getJSON(RAW+"/summary.json?_="+Date.now()).then(function(d){try{sessionStorage.setItem("etld_sum",JSON.stringify({t:Date.now(),d:d}));}catch(e){}return d;});
-  }
-  function alreadyVoted(){return getJSON(RAW+"/ratings/"+MYFP+".json").then(function(d){return d?Number(d.score):null;}).catch(function(){return null;});}
-  function paintSummary(sum,voted){
-    paintStars(sum.avg||0,voted); paintDist(sum.dist||{});
-    $("rateAvg").textContent=(sum.count>0)?(Number(sum.avg).toFixed(1)+" / 5.0 · 共 "+sum.count+" 人 · 最高 "+(sum.highest||0)+"★"):"还没人评分，来做第一个";
-    $("rateNote").textContent=voted!=null?("你已投过 "+voted+" 星（每设备一票）。评分匿名记录地区与机型。"):"评分匿名记录地区与机型。";
-  }
-  function loadComments(){
-    return getJSON(GHAPI+"/comments").then(function(arr){
-      if(!Array.isArray(arr)){$("cmtList").innerHTML="";return;}
-      var files=arr.filter(function(f){return /\.json$/.test(f.name);}).slice(0,50);
-      return Promise.all(files.map(function(f){return getJSON(RAW+"/comments/"+f.name).catch(function(){return null;});}));
-    }).then(function(list){
-      list=(list||[]).filter(Boolean).sort(function(a,b){return(b.ts||0)-(a.ts||0);});
-      if(!list.length){$("cmtList").innerHTML='<p class="muted">还没有评论，来第一条。</p>';return;}
-      $("cmtList").innerHTML=list.map(function(c){var d=new Date(c.ts).toLocaleDateString("zh-CN");return '<div class="cmt"><span class="t">'+esc(d)+'</span><span class="n">'+esc(c.nick)+'</span><div class="x">'+esc(c.text)+'</div></div>';}).join("");
-    }).catch(function(){$("cmtList").innerHTML='<p class="muted">评论读取失败（仓库或网络不可达）。</p>';});
-  }
-
-  $("stars").addEventListener("click",function(e){
-    if($("stars").classList.contains("voted")){alert("每设备一票，感谢！");return;}
-    var v=e.target.getAttribute&&e.target.getAttribute("data-v"); if(!v)return;
-    var note=$("rateNote"); note.textContent="提交中…";
-    var rec={score:Number(v),ts:Date.now(),fp:MYFP};
-    ghPut("ratings/"+MYFP+".json",rec,"rate "+v+"★")
-      .then(function(){ return loadSummary(); })
-      .then(function(sum){
-        /* 重算聚合：从 summary 读旧分布，加上/替换本机一票 */
-        return ghGetMeta("summary.json").then(function(m){
-          return m?fetch(m.download_url).then(function(r){return r.json();}):{avg:0,count:0,dist:{"1":0,"2":0,"3":0,"4":0,"5":0}};
-        }).then(function(s){
-          s.dist=s.dist||{}; for(var k=1;k<=5;k++)s.dist[k]=s.dist[k]||0;
-          /* 简化：重新统计需要全量读 ratings/；这里直接基于 summary 增量（首次票） */
-          s.dist[v]=(s.dist[v]||0)+1; s.count=(s.count||0)+1;
-          var t=0,c=0; for(var k=1;k<=5;k++){t+=(s.dist[k]||0)*k;c+=(s.dist[k]||0);}
-          s.avg=c?Math.round(t/c*10)/10:0; s.highest=v; s.updatedAt=Date.now();
-          return ghPut("summary.json",s,"update summary").then(function(){return s;});
-        });
-      })
-      .then(function(s){ note.textContent="已记录 "+v+"★，感谢！"; sessionStorage.removeItem("etld_sum"); return boot(); })
-      .catch(function(err){ note.textContent="提交失败："+(err.message||"")+"，请稍后重试。"; });
-  });
-  $("cmtSubmit").addEventListener("click",function(){
-    var nick=$("cmtNick").value.trim(),text=$("cmtText").value.trim();
-    if(!text){alert("评论内容不能为空");return;}
-    if(/https?:\/\/|<img|<video|http:\/\/|\.jpg|\.png/i.test(text)){alert("禁止贴链接/图片/视频");return;}
-    var btn=$("cmtSubmit"); btn.disabled=true; btn.textContent="发表中…";
-    var id="c"+Date.now()+"_"+Math.random().toString(36).slice(2,7);
-    ghPut("comments/"+id+".json",{nick:nick||"匿名",text:text,ts:Date.now(),fp:MYFP},"comment")
-      .then(function(){$("cmtText").value="";$("cmtNick").value="";btn.disabled=false;btn.textContent="发表评论";return loadComments();})
-      .catch(function(err){btn.disabled=false;btn.textContent="发表评论";alert("发表失败："+(err.message||""));});
-  });
-
-  function boot(){return Promise.all([loadSummary(),alreadyVoted()]).then(function(r){paintSummary(r[0],r[1]);});}
-  getFp().then(function(fp){MYFP=fp||"";return boot().then(loadComments);});
-})();
-
-/* 简/英语言切换（轻量，仅翻主要 UI 标签；正文长段保持中文） */
-(function(){
-  var I18N={
-    "zh":{},
-    "en":{
-      "tagline":"Run Stable Diffusion locally on Android & desktop. Fully offline, your images never leave the device.",
-      "nav.download":"Download","nav.chat":"Chat client","nav.features":"Features","nav.models":"Models & devices",
-      "nav.restore":"Img2img","nav.cloud":"Cloud backup","nav.help":"Help","nav.feedback":"Rating",
-      "h2.download":"Download","h2.chat":"Chat-style image client","h2.features":"Features",
-      "h2.models":"Models & device compatibility","h2.restore":"Img2img mode","h2.feedback":"Rating & feedback",
-      "step1":"1. Download & install the app",
-      "step2":"2. Grant \"All files access\" permission",
-      "step3":"3. Download / pick a model",
-      "step4":"4. Generate / edit locally",
-      "step5":"5. Optional: API mode / desktop server",
-      "step6":"6. FAQ: out of memory / too slow"
-    }
-  };
-  function apply(lang){
-    document.querySelectorAll("[data-i18n]").forEach(function(el){
-      var k=el.getAttribute("data-i18n");
-      if(lang!=="zh"&&I18N.en[k]) el.textContent=I18N.en[k];
-    });
-    document.querySelectorAll("[data-i18n-t]").forEach(function(el){
-      var k=el.getAttribute("data-i18n-t");
-      if(lang!=="zh"&&I18N.en[k]) el.textContent=I18N.en[k];
-    });
-    try{localStorage.setItem("etld_lang",lang);}catch(e){}
-    document.querySelectorAll(".langbtn").forEach(function(b){
-      b.classList.toggle("on",b.getAttribute("data-lang")===lang);
-    });
-  }
-  document.querySelectorAll(".langbtn").forEach(function(b){
-    b.addEventListener("click",function(){apply(b.getAttribute("data-lang"));});
-  });
-  var cur="zh";
-  try{cur=localStorage.getItem("etld_lang")||"zh";}catch(e){}
-  apply(cur);
-})();
-</script>
-
-<!-- 小E AI客服（前端直连 hcnsec，CORS 已放行 *） -->
 <style>
   #eeBtn{position:fixed;right:18px;bottom:18px;z-index:9000;width:56px;height:56px;border-radius:50%;border:0;background:linear-gradient(135deg,#3b82f6,#6366f1);color:#fff;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 6px 18px rgba(59,130,246,.45);}
   #eeBox{position:fixed;right:18px;bottom:84px;z-index:9001;width:330px;max-width:92vw;height:440px;max-height:70vh;background:#141821;border:1px solid #2a3140;border-radius:14px;display:none;flex-direction:column;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.5);}
@@ -499,38 +199,136 @@
   #eeInput input{flex:1;background:#0b0d12;border:1px solid #2a3140;color:#e8ecf4;border-radius:8px;padding:8px;}
   #eeInput button{background:#3b82f6;color:#fff;border:0;border-radius:8px;padding:0 14px;cursor:pointer;}
 </style>
-<button id="eeBtn" title="小E客服">小E</button>
+<button id="eeBtn" type="button">小E</button>
 <div id="eeBox">
-  <div id="eeHead"><span>小E · 官方AI客服</span><span class="x" id="eeClose">收起</span></div>
-  <div id="eeMsgs"><div class="eem bot">你好，我是小E 👋 关于 LocalDream ET 本地出图 App 的问题都可以问我～</div></div>
-  <div id="eeInput"><input id="eeText" placeholder="输入你的问题，回车发送" /><button id="eeSend">发送</button></div>
+  <div id="eeHead"><span>小E · AI 客服</span><span class="x" id="eeClose">收起</span></div>
+  <div id="eeMsgs"><div class="eem bot">你好，我是小E 👋 关于 LocalDream ET 的问题都可以问我～</div></div>
+  <div id="eeInput"><input id="eeText" placeholder="输入你的问题，回车发送" /><button id="eeSend" type="button">发送</button></div>
 </div>
+
+<script>
+(function(){try{var ua=navigator.userAgent||"";if(ua.indexOf("MicroMessenger")<0&&ua.indexOf("QQ/")<0&&ua.indexOf("MQQBrowser")<0)return;var b=document.createElement("div");b.style.cssText="background:#fff8e1;color:#5a4a00;padding:10px 16px;font-size:13px";b.innerHTML="请用右上角「···」选择系统浏览器打开以下载。";document.body.insertBefore(b,document.body.firstChild);}catch(e){}})();
+</script>
+
 <script>
 (function(){
   "use strict";
-  var HCNSEC_BASE="https://api.hcnsec.cn/v1/chat/completions";
-  var EE_KEY_B64="Fh8AAwMTGU4nHTw8YyohPCdsMQoKPkILNl0mTC0fHxlCAzNcHXVcVT9FagIMKEFuICpQ";
-  function eeKey(){var k="et-ee",b=atob(EE_KEY_B64),o="";for(var i=0;i<b.length;i++){o+=String.fromCharCode(b.charCodeAt(i)^k.charCodeAt(i%k.length));}return o;}
-  var EE_SYS="你是“小E”，LocalDream ET（本地 Stable Diffusion 安卓 App，包名 etc.github.ai，官网 etc.tw.kg，作者 ET/QQ 2416444244/邮箱 2416444244@qq.com/QQ群 1078799843）官方AI客服。功能：手机本地离线出图、NPU(Qualcomm)+CPU(MNN)、模型下载、图生图修图、云备份、Windows/Linux 服务端。解答使用问题与报错（内存不足/降档/NPU不兼容换CPU），引导联系作者加群；语气友好中文，先思考再答。";
-  var btn=document.getElementById("eeBtn"),box=document.getElementById("eeBox"),
-      msgs=document.getElementById("eeMsgs"),inp=document.getElementById("eeText"),send=document.getElementById("eeSend");
+  var RAW="https://raw.githubusercontent.com/ETQWFD/LocalDream-ET-ratings/main";
+  var GHAPI="https://api.github.com/repos/ETQWFD/LocalDream-ET-ratings/contents";
+  var GH_TOK_B64="AhxdOAlSEh01I1AEby1aFC1+UBwXLh4jHFMNHT4kADB5LFoSQU8pOA==";
+  function ghTok(){var k="et-gh",b=atob(GH_TOK_B64),o="";for(var i=0;i<b.length;i++){o+=String.fromCharCode(b.charCodeAt(i)^k.charCodeAt(i%k.length));}return o;}
+  function ghHeaders(){return {"Authorization":"Bearer "+ghTok(),"Accept":"application/vnd.github+json","Content-Type":"application/json"};}
+  function $(id){return document.getElementById(id);}
+  function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
+  function getJSON(u,o){return fetch(u,o).then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json();});}
+  function ghMeta(p){return fetch(GHAPI+"/"+p,{headers:ghHeaders()}).then(function(r){if(r.status===404)return null;if(!r.ok)throw new Error("HTTP "+r.status);return r.json();});}
+  function ghPut(p,obj,msg){return ghMeta(p).then(function(m){var body={message:msg,content:btoa(unescape(encodeURIComponent(JSON.stringify(obj)))),branch:"main"};if(m&&m.sha)body.sha=m.sha;return fetch(GHAPI+"/"+p,{method:"PUT",headers:ghHeaders(),body:JSON.stringify(body)}).then(function(r){if(!r.ok)return r.text().then(function(t){throw new Error("HTTP "+r.status);});return r.json();});});}
+  function fnv(seed){var out="";for(var rd=0;rd<8;rd++){var s=seed+":"+rd,h=0x811c9dc5;for(var i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,0x01000193);}out+=("00000000"+(h>>>0).toString(16)).slice(-8);}return out;}
+  function dseed(){var r="";try{r=localStorage.getItem("etld_fpseed")||"";if(!r){r=Math.random().toString(36).slice(2)+Date.now().toString(36);localStorage.setItem("etld_fpseed",r);}}catch(e){r="r"+Date.now();}return[r,screen.width+"x"+screen.height,navigator.hardwareConcurrency,navigator.userAgent].join("|");}
+  function getFp(){if(window.crypto&&crypto.subtle){return crypto.subtle.digest("SHA-256",new TextEncoder().encode(dseed())).then(function(b){return Array.prototype.map.call(new Uint8Array(b),function(x){return("00"+x.toString(16)).slice(-2);}).join("");});}return Promise.resolve(fnv(dseed()));}
+  var MYFP="";
+  function paintStars(avg,voted){var base=(voted!=null)?voted:Math.round(avg);var h="";for(var i=1;i<=5;i++)h+='<span data-v="'+i+'" class="'+(i<=base?"on":"")+'">★</span>';$("stars").innerHTML=h;$("stars").classList.toggle("voted",voted!=null);}
+  function paintDist(d){d=d||{};var t=0;for(var k=1;k<=5;k++)t+=(d[k]||0);var h="";for(var s=5;s>=1;s--){var c=d[s]||0,pct=t?Math.round(c/t*100):0;h+='<div class="distrow"><span class="lab">'+s+'★</span><span class="track"><span class="fill" style="width:'+pct+'%"></span></span><span class="n">'+c+'</span></div>';}$("distBox").innerHTML=h;}
+  function loadSum(){try{var c=sessionStorage.getItem("etld_sum");if(c){var o=JSON.parse(c);if(Date.now()-o.t<60000)return Promise.resolve(o.d);}}catch(e){}return getJSON(RAW+"/summary.json?_="+Date.now()).then(function(d){try{sessionStorage.setItem("etld_sum",JSON.stringify({t:Date.now(),d:d}));}catch(e){}return d;});}
+  function voted(){return getJSON(RAW+"/ratings/"+MYFP+".json").then(function(d){return d?Number(d.score):null;}).catch(function(){return null;});}
+  function paint(sum,v){paintStars(sum.avg||0,v);paintDist(sum.dist||{});$("rateAvg").textContent=(sum.count>0)?(Number(sum.avg).toFixed(1)+" / 5.0 · "+sum.count+" 人"):"还没人评分，来做第一个";$("rateNote").textContent=v!=null?("你已投过 "+v+" ★（每设备一票，重复覆盖）。"):"点击星星评分，每设备一票。";}
+  function loadComments(){return getJSON(GHAPI+"/comments").then(function(arr){if(!Array.isArray(arr)){return [];}return Promise.all(arr.filter(function(f){return /\.json$/.test(f.name);}).slice(0,50).map(function(f){return getJSON(RAW+"/comments/"+f.name).catch(function(){return null;});}));}).then(function(list){list=(list||[]).filter(Boolean).sort(function(a,b){return(b.ts||0)-(a.ts||0);});if(!list.length){$("cmtList").innerHTML='<p class="note">还没有评论，来第一条。</p>';return;}$("cmtList").innerHTML=list.map(function(c){return '<div class="cmt"><span class="t">'+esc(new Date(c.ts).toLocaleDateString())+'</span><span class="n">'+esc(c.nick)+'</span><div class="x">'+esc(c.text)+'</div></div>';}).join("");}).catch(function(){$("cmtList").innerHTML='<p class="note">评论读取失败。</p>';});}
+  $("stars").addEventListener("click",function(e){if($("stars").classList.contains("voted")){alert("每设备一票，感谢！");return;}var v=e.target.getAttribute&&e.target.getAttribute("data-v");if(!v)return;$("rateNote").textContent="提交中…";ghPut("ratings/"+MYFP+".json",{score:Number(v),ts:Date.now(),fp:MYFP},"rate").then(function(){return ghMeta("summary.json");}).then(function(m){return m?fetch(m.download_url).then(function(r){return r.json();}):{dist:{}};}).then(function(s){s.dist=s.dist||{};for(var k=1;k<=5;k++)s.dist[k]=s.dist[k]||0;s.dist[v]=(s.dist[v]||0)+1;var t=0,c=0;for(var k=1;k<=5;k++){t+=(s.dist[k]||0)*k;c+=(s.dist[k]||0);}s.avg=c?Math.round(t/c*10)/10:0;s.count=c;s.highest=v;s.updatedAt=Date.now();return ghPut("summary.json",s,"sum");}).then(function(){sessionStorage.removeItem("etld_sum");return boot();}).catch(function(err){$("rateNote").textContent="提交失败："+(err.message||"")+"，稍后重试。";});});
+  $("cmtSubmit").addEventListener("click",function(){var nick=$("cmtNick").value.trim(),text=$("cmtText").value.trim();if(!text){alert("评论不能为空");return;}if(/https?:\/\/|<img|<video|\.jpg|\.png/i.test(text)){alert("禁止链接/图片");return;}var b=$("cmtSubmit");b.disabled=true;b.textContent="…";ghPut("comments/c"+Date.now()+"_"+Math.random().toString(36).slice(2,7)+".json",{nick:nick||"匿名",text:text,ts:Date.now(),fp:MYFP},"comment").then(function(){$("cmtText").value="";b.disabled=false;b.textContent="发表评论";return loadComments();}).catch(function(err){b.disabled=false;b.textContent="发表评论";alert("失败："+(err.message||""));});});
+  function boot(){return Promise.all([loadSum(),voted()]).then(function(r){paint(r[0],r[1]);});}
+  getFp().then(function(fp){MYFP=fp||"";return boot().then(loadComments);});
+})();
+</script>
+
+<script>
+(function(){
+  var DICT={
+    "zh-CN":{},
+    "zh-TW":{
+      "nav.features":"功能","nav.shots":"截圖","nav.server":"伺服器","nav.rating":"評分","nav.faq":"常見問題",
+      "hero.title":"手機本地跑 <span class=\"g\">Stable Diffusion</span>",
+      "hero.sub":"完全離線的 AI 出圖 App。無需聯網、不上傳圖片，支援文生圖 / 圖生圖 / 模型下載 / 雲備份，另有 Windows 與 Linux 伺服器。",
+      "hero.dl":"下載安卓 APK","hero.server":"下載伺服器","hero.offline":"本地離線推理",
+      "f.title":"核心功能","f.sub":"為低配手機與本地推理優化，不強制上傳。",
+      "f1.t":"文生圖 / 圖生圖","f1.d":"英文提示逐詞透傳，支援整圖修圖、重繪強度調節（0.3–0.7）。",
+      "f2.t":"NPU + CPU","f2.d":"驍龍 Hexagon NPU 加速，無 OpenCL 自動回退 CPU，低配機安全檔不崩潰。",
+      "f3.t":"模型管理","f3.d":"自動識別 CPU 直讀模型與待轉換模型，檔案齊全才就緒。",
+      "f4.t":"雲備份","f4.d":"可選 GitHub/Gitee 私有倉備份圖片與日誌，權杖只存系統密鑰庫。",
+      "f5.t":"PC 伺服器","f5.d":"Windows / Linux 出圖伺服器，A1111 相容 API，手機可遠端連。",
+      "f6.t":"隱私優先","f6.d":"全程本地推理，圖片不離開你的裝置，聯網僅用於下載模型。",
+      "s.title":"介面截圖","s.sub":"深色模式下的主介面、出圖與修圖流程。",
+      "r.title":"評分與評論","r.sub":"每台設備一票，重複評分自動覆蓋。",
+      "cmt.nick":"暱稱（不填則匿名）","cmt.text":"留下你的使用反饋（禁止連結 / 圖片 / 辱罵）","cmt.btn":"發表評論",
+      "q.title":"常見問題","q.sub":"安裝、效能與報錯快速解答。",
+      "q1.q":"出圖很慢 / 提示記憶體不足？","q1.a":"降低解析度與步數；低端機保持 256×256 / 8 步安全檔，或改用 Windows/Linux 伺服器出圖。",
+      "q2.q":"NPU 不生效 / 模型不載入？","q2.a":"QNN NPU 僅驍龍 Hexagon 機型支援；其它機型自動用 CPU/GPU。模型需下載完整並完成轉換後才會就緒。",
+      "q3.q":"為什麼讀不到模型列表？","q3.a":"請在系統設定給 App「所有檔案存取」權限，並把模型放到公共目錄 LocalDreamET/models。",
+      "q4.q":"微信裡打不開 / 提示已停止存取？","q4.a":"第三方網域可能被微信攔截，請點右上角「···」用系統瀏覽器開啟。",
+      "foot.p":"Local Dream ET · 本地離線 Stable Diffusion · Copyright © 2026 ET",
+      "foot.qq":"加入 QQ 交流群","foot.server":"伺服器手冊"
+    },
+    "en":{
+      "nav.features":"Features","nav.shots":"Screenshots","nav.server":"Server","nav.rating":"Rating","nav.faq":"FAQ",
+      "hero.title":"Run <span class=\"g\">Stable Diffusion</span> on your phone",
+      "hero.sub":"A fully offline AI image generator. No internet, no uploads. Text-to-image, img2img, model download, cloud backup, plus Windows & Linux server.",
+      "hero.dl":"Download APK","hero.server":"Download Server","hero.offline":"Local offline inference",
+      "f.title":"Features","f.sub":"Optimized for low-end phones and local inference.",
+      "f1.t":"Txt2img / Img2img","f1.d":"English prompts passed through verbatim. Edit whole images with adjustable denoise (0.3–0.7).",
+      "f2.t":"NPU + CPU","f2.d":"Snapdragon Hexagon NPU acceleration, auto fallback to CPU/GPU without OpenCL.",
+      "f3.t":"Model manager","f3.d":"Auto-detects CPU-ready and convertible models; ready only when files are complete.",
+      "f4.t":"Cloud backup","f4.d":"Optional private GitHub/Gitee backup of images and logs; token stored in system keystore.",
+      "f5.t":"PC server","f5.d":"Windows / Linux server with A1111-compatible API, reachable from your phone.",
+      "f6.t":"Privacy first","f6.d":"Runs fully on-device; images never leave your phone. Network only for model downloads.",
+      "s.title":"Screenshots","s.sub":"Main UI, generation and editing flow in dark mode.",
+      "r.title":"Rating & reviews","r.sub":"One vote per device; repeated votes overwrite.",
+      "cmt.nick":"Nickname (anonymous if empty)","cmt.text":"Leave feedback (no links / images / abuse)","cmt.btn":"Post review",
+      "q.title":"FAQ","q.sub":"Quick answers on install, performance and errors.",
+      "q1.q":"Generation is slow / out of memory?","q1.a":"Lower resolution and steps; low-end devices stay at 256×256 / 8 steps, or use the Windows/Linux server.",
+      "q2.q":"NPU not working / model not loading?","q2.a":"QNN NPU supports Snapdragon Hexagon only; others use CPU/GPU. Models must finish downloading and converting.",
+      "q3.q":"Why is the model list empty?","q3.a":"Grant \"All files access\" and put models into the shared folder LocalDreamET/models.",
+      "q4.q":"WeChat blocks the page?","q4.a":"Third-party domains may be blocked by WeChat; open in your system browser via ··· menu.",
+      "foot.p":"Local Dream ET · Local offline Stable Diffusion · Copyright © 2026 ET",
+      "foot.qq":"Join QQ group","foot.server":"Server docs"
+    }
+  };
+  var names={"zh-CN":"🌐 简体中文 ▾","zh-TW":"🌐 繁體中文 ▾","en":"🌐 English ▾"};
+  function $(id){return document.getElementById(id);}
+  function apply(lang){
+    document.documentElement.lang=lang==="en"?"en":"zh-CN";
+    document.querySelectorAll("[data-i18n]").forEach(function(el){var k=el.getAttribute("data-i18n");if(lang!=="zh-CN"&&DICT[lang][k]!=null)el.innerHTML=DICT[lang][k];});
+    document.querySelectorAll("[data-i18n-ph]").forEach(function(el){var k=el.getAttribute("data-i18n-ph");if(lang!=="zh-CN"&&DICT[lang][k]!=null)el.placeholder=DICT[lang][k];});
+    $("langBtn").textContent=names[lang];
+    try{localStorage.setItem("etld_lang",lang);}catch(e){}
+  }
+  $("langBtn").addEventListener("click",function(e){e.stopPropagation();$("langMenu").classList.toggle("open");});
+  document.addEventListener("click",function(){$("langMenu").classList.remove("open");});
+  $("langMenu").querySelectorAll("button").forEach(function(b){b.addEventListener("click",function(){$("langMenu").classList.remove("open");apply(b.getAttribute("data-l"));});});
+  var cur="zh-CN";try{cur=localStorage.getItem("etld_lang")||"zh-CN";}catch(e){}
+  apply(cur);
+})();
+</script>
+
+<script>
+(function(){
+  "use strict";
+  var HCNSEC="https://api.hcnsec.cn/v1/chat/completions";
+  var B64="Fh8AAwMTGU4nHTw8YyohPCdsMQoKPkILNl0mTC0fHxlCAzNcHXVcVT9FagIMKEFuICpQ";
+  function key(){var k="et-ee",b=atob(B64),o="";for(var i=0;i<b.length;i++){o+=String.fromCharCode(b.charCodeAt(i)^k.charCodeAt(i%k.length));}return o;}
+  var SYS="你是小E，LocalDream ET（本地 Stable Diffusion 安卓 App，包名 etc.github.ai，官网 etc.tw.kg，作者 ET/QQ 2416444244/邮箱 2416444244@qq.com/QQ群 1078799843）官方AI客服。功能：手机本地离线出图、NPU+CPU、模型下载、图生图修图、云备份、Windows/Linux 服务端。解答使用问题与报错，引导联系作者加群；语气友好中文。";
+  var btn=document.getElementById("eeBtn"),box=document.getElementById("eeBox"),msgs=document.getElementById("eeMsgs"),inp=document.getElementById("eeText"),send=document.getElementById("eeSend");
   btn.addEventListener("click",function(){box.classList.toggle("open");inp.focus();});
   document.getElementById("eeClose").addEventListener("click",function(){box.classList.remove("open");});
-  function add(cls,text){var d=document.createElement("div");d.className="eem "+cls;d.textContent=text;msgs.appendChild(d);msgs.scrollTop=msgs.scrollHeight;return d;}
-  function typewriter(node,text){var i=0;node.textContent="";var t=setInterval(function(){node.textContent=text.slice(0,++i);msgs.scrollTop=msgs.scrollHeight;if(i>=text.length)clearInterval(t);},18);}
-  function ask(){
-    var q=inp.value.trim(); if(!q)return;
-    add("me",q); inp.value="";
-    var t=add("bot",""); var dots=0;
-    var tick=setInterval(function(){dots=(dots+1)%4;t.textContent="小E 正在思考"+".".repeat(dots);},300);
-    fetch(HCNSEC_BASE,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+eeKey()},body:JSON.stringify({model:"glm-5.3-flash",messages:[{role:"system",content:EE_SYS},{role:"user",content:q}],stream:false})})
-      .then(function(r){ if(!r.ok){throw new Error("HTTP "+r.status);} return r.json(); })
-      .then(function(j){ clearInterval(tick); var rep=j&&j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content; typewriter(t,rep||"（暂无回复）"); })
-      .catch(function(e){ clearInterval(tick); t.textContent="⚠️ 直连失败("+(e.message||"网络异常")+")。你也可以加 QQ 群 1078799843 或发邮件 2416444244@qq.com 联系作者。"; });
-  }
+  function add(c,t){var d=document.createElement("div");d.className="eem "+c;d.textContent=t;msgs.appendChild(d);msgs.scrollTop=msgs.scrollHeight;return d;}
+  function tw(node,txt){var i=0;node.textContent="";var t=setInterval(function(){node.textContent=txt.slice(0,++i);msgs.scrollTop=msgs.scrollHeight;if(i>=txt.length)clearInterval(t);},18);}
+  function ask(){var q=inp.value.trim();if(!q)return;add("me",q);inp.value="";var t=add("bot","");var d=0;var tk=setInterval(function(){d=(d+1)%4;t.textContent="小E 正在思考"+".".repeat(d);},300);
+    fetch(HCNSEC,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+key()},body:JSON.stringify({model:"glm-5.3-flash",messages:[{role:"system",content:SYS},{role:"user",content:q}],stream:false})})
+    .then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json();})
+    .then(function(j){clearInterval(tk);var rep=j&&j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content;tw(t,rep||"（暂无回复）");})
+    .catch(function(e){clearInterval(tk);var m=e&&e.message?e.message:"网络错误";t.textContent="客服暂时不可用（"+m+"）。加 QQ 群 1078799843 或发邮件 2416444244@qq.com。";});}
   send.addEventListener("click",ask);
   inp.addEventListener("keydown",function(e){if(e.key==="Enter")ask();});
 })();
 </script>
+
 </body>
 </html>
