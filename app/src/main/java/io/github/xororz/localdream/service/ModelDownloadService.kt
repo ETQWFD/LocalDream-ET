@@ -59,11 +59,15 @@ class ModelDownloadService : Service() {
      * reachable one on the current network.
      */
     private fun mirrorCandidates(url: String): List<String> {
+        // et.99: prefer hf-mirror.com first (huggingface.co blocked/timeout in CN).
+        if (url.contains("//huggingface.co")) {
+            val mirror = url
+                .replace("https://huggingface.co", "https://hf-mirror.com")
+                .replace("http://huggingface.co", "https://hf-mirror.com")
+            return listOf(mirror, url)
+        }
         val out = linkedSetOf(url)
         when {
-            url.contains("//huggingface.co") ->
-                out += url.replace("https://huggingface.co", "https://hf-mirror.com")
-                    .replace("http://huggingface.co", "https://hf-mirror.com")
             url.contains("//hf-mirror.com") ->
                 out += url.replace("https://hf-mirror.com", "https://huggingface.co")
         }
