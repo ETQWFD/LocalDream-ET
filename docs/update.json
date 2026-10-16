@@ -1,9 +1,9 @@
 {
-  "versionCode": 169,
-  "versionName": "3.0.0-et.95",
-  "title": "发现新版本 v3.0.0-et.95（维护中，不定时更新）",
+  "versionCode": 170,
+  "versionName": "3.0.0-et.96",
+  "title": "发现新版本 v3.0.0-et.96（维护中，不定时更新）",
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
-  "size": 159669819,
-  "sha256": "676537a7398b469b5a866c24031e369047420a877ec214a8c5eb5838fb2c4256",
-  "releaseNotes": "维护中，不定时更新；作者上学中，联系邮箱 2416444244@qq.com。\n\n本版：评分弹窗加评论输入框，提交后有成功/失败提示。\n\n安装后在“关于/版本”看到 build 169 即新版。版权 Copyright (C) 2026 etc，署名 ET。"
+  "size": 159669695,
+  "sha256": "2e774c88dbe588c89753587e88f467203ab0ef3bbce19252e921f93c0ce3f882",
+  "releaseNotes": "维护中，不定时更新；作者上学中，联系邮箱 2416444244@qq.com。\n\n本版：云备份已授权状态改为“已授权（Token已配置）”，不再显示 null。\n\n安装后在“关于/版本”看到 build 170 即新版。版权 Copyright (C) 2026 etc，署名 ET。"
 }
