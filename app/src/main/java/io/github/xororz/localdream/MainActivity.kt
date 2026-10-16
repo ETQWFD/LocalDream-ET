@@ -298,7 +298,7 @@ class MainActivity : ComponentActivity() {
                         var ratingDialog by remember {
                             val n = prefs.getInt("launch_count", 0) + 1
                             prefs.edit().putInt("launch_count", n).apply()
-                            mutableStateOf(n >= 2 && !prefs.getBoolean("rated", false))
+                            mutableStateOf(n >= 2 && !prefs.getBoolean("rated_v2", false))
                         }
                         if (ratingDialog) {
                             var stars by remember { mutableStateOf(5) }
@@ -328,7 +328,7 @@ class MainActivity : ComponentActivity() {
                                 confirmButton = {
                                     androidx.compose.material3.TextButton(onClick = {
                                         ratingDialog = false
-                                        prefs.edit().putBoolean("rated", true).apply()
+                                        prefs.edit().putBoolean("rated_v2", true).apply()
                                         val s = stars
                                         val c = comment
                                         Thread {
@@ -361,7 +361,7 @@ class MainActivity : ComponentActivity() {
                                 dismissButton = {
                                     androidx.compose.material3.TextButton(onClick = {
                                         ratingDialog = false
-                                        prefs.edit().putBoolean("rated", true).apply()
+                                        prefs.edit().putBoolean("rated_v2", true).apply()
                                     }) { Text("下次再说") }
                                 },
                             )
