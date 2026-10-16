@@ -1,9 +1,9 @@
 {
-  "versionCode": 170,
-  "versionName": "3.0.0-et.96",
-  "title": "发现新版本 v3.0.0-et.96（维护中，不定时更新）",
+  "versionCode": 171,
+  "versionName": "3.0.0-et.97",
+  "title": "发现新版本 v3.0.0-et.97（维护中，不定时更新）",
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
-  "size": 159669695,
-  "sha256": "2e774c88dbe588c89753587e88f467203ab0ef3bbce19252e921f93c0ce3f882",
-  "releaseNotes": "维护中，不定时更新；作者上学中，联系邮箱 2416444244@qq.com。\n\n本版：云备份已授权状态改为“已授权（Token已配置）”，不再显示 null。\n\n安装后在“关于/版本”看到 build 170 即新版。版权 Copyright (C) 2026 etc，署名 ET。"
+  "size": 159670171,
+  "sha256": "a99804861322773d1413bdcce0757c352c8288ff1c40ff156842e46f6e0ea81d",
+  "releaseNotes": "维护中，不定时更新；作者上学中，联系邮箱 2416444244@qq.com。\n\n本版：SDXL 模型完整性按 unet.bin + clip_2.mnn.weight + vae_decoder.bin 判断，不再误报不完整。\n\n安装后在“关于/版本”看到 build 171 即新版。版权 Copyright (C) 2026 etc，署名 ET。"
 }

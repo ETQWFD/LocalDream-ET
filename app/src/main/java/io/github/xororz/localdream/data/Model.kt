@@ -491,6 +491,18 @@ data class Model(
             }
         }
 
+        // et.97: SDXL weight presence check — do not hard-require a finished marker;
+        // unet.bin + clip_2.mnn.weight + vae_decoder.bin all present & non-empty
+        // means the package is complete (Illustrious v16 ships this flattened layout).
+        private val SDXL_REQUIRED = listOf("unet.bin", "clip_2.mnn.weight", "vae_decoder.bin")
+
+        fun hasCompleteSdxlPackage(modelDir: File): Boolean {
+            if (!modelDir.isDirectory) return false
+            return SDXL_REQUIRED.all { name ->
+                File(modelDir, name).let { it.isFile && it.length() > 100L * 1024 * 1024 }
+            }
+        }
+
         fun hasConvertedSd15Outputs(modelDir: File): Boolean {
             return hasCompleteSdPackage(modelDir, qnn = false)
         }
