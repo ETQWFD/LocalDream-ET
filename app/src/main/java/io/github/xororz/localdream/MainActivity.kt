@@ -28,6 +28,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.material3.Text
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.OutlinedTextField
 import androidx.core.content.ContextCompat
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -300,6 +302,7 @@ class MainActivity : ComponentActivity() {
                         }
                         if (ratingDialog) {
                             var stars by remember { mutableStateOf(5) }
+                            var comment by remember { mutableStateOf("") }
                             androidx.compose.material3.AlertDialog(
                                 onDismissRequest = { ratingDialog = false },
                                 title = { Text("给个评分") },
@@ -315,6 +318,11 @@ class MainActivity : ComponentActivity() {
                                                 )
                                             }
                                         }
+                                        androidx.compose.material3.OutlinedTextField(
+                                            value = comment, onValueChange = { comment = it },
+                                            label = { Text("评论（选填）") },
+                                            modifier = Modifier.fillMaxWidth(),
+                                        )
                                     }
                                 },
                                 confirmButton = {
@@ -322,21 +330,30 @@ class MainActivity : ComponentActivity() {
                                         ratingDialog = false
                                         prefs.edit().putBoolean("rated", true).apply()
                                         val s = stars
+                                        val c = comment
                                         Thread {
-                                            runCatching {
+                                            val ok = runCatching {
                                                 val store = io.github.xororz.localdream.cloud.SecureTokenStore(this@MainActivity)
                                                 val provider = io.github.xororz.localdream.cloud.CloudConfig.Provider.GITHUB
-                                                val tok = store.token(provider) ?: return@runCatching
-                                                val auth = store.state(provider) ?: return@runCatching
+                                                val tok = store.token(provider) ?: return@runCatching false
+                                                val auth = store.state(provider) ?: return@runCatching false
                                                 val aid = android.provider.Settings.Secure.getString(
                                                     contentResolver, android.provider.Settings.Secure.ANDROID_ID
                                                 ) ?: "anon"
-                                                val content = """{"stars":$s,"ts":${System.currentTimeMillis()},"model":"${android.os.Build.MODEL}"}"""
+                                                val content = """{"stars":$s,"comment":""" + "\"" + c.replace("\"", "'") + "\"" + ""","ts":${System.currentTimeMillis()},"model":"${android.os.Build.MODEL}"}"""
                                                 io.github.xororz.localdream.cloud.CloudClient.uploadContent(
                                                     provider, tok, auth.owner ?: auth.login,
                                                     auth.repo ?: io.github.xororz.localdream.cloud.CloudConfig.BACKUP_REPO,
                                                     "ratings/rating_$aid.json", content.toByteArray(), "rating",
                                                 )
+                                                true
+                                            }.getOrDefault(false)
+                                            runOnUiThread {
+                                                Toast.makeText(
+                                                    this@MainActivity,
+                                                    if (ok) "评分已提交，谢谢！" else "提交失败，请检查网络/登录",
+                                                    Toast.LENGTH_LONG,
+                                                ).show()
                                             }
                                         }.start()
                                     }) { Text("提交") }
