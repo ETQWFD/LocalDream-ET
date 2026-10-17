@@ -882,18 +882,17 @@ class BackgroundGenerationService : Service() {
                 val isBadAlloc = msgLc.contains("bad_alloc") || msgLc.contains("image generation error")
                 if (isBadAlloc && !badAllocRetryDone) {
                     badAllocRetryDone = true
-                    val longEdge = maxOf(attemptWidth, attemptHeight)
-                    val target = when {
-                        longEdge > 448 -> 384
-                        else -> 256
-                    }
-                    val scale = target.toDouble() / longEdge
-                    attemptWidth = (Math.round(attemptWidth * scale).toInt() / 8) * 8
-                    attemptHeight = (Math.round(attemptHeight * scale).toInt() / 8) * 8
+                    // et.106: bad_alloc on an 8gen2 QNN package running on 8gen3 is NOT
+                    // fixable by a smaller resolution — the HTP pool mismatch SIGSEGVs(139)
+                    // on the next restart. Kill the residual engine first, wait 2s to free
+                    // 8081, then try 256 once. If it still dies, fall through to CPU.
+                    attemptWidth = (256) / 8 * 8
+                    attemptHeight = (256) / 8 * 8
                     io.github.xororz.localdream.cloud.LogHub.log(
                         io.github.xororz.localdream.cloud.LogHub.Category.GENERATE,
-                        "engine bad_alloc; auto-downgrade to ${attemptWidth}x${attemptHeight}",
+                        "engine bad_alloc; kill residual, wait 2s, retry at 256x256",
                     )
+                    runCatching { Thread.sleep(2000) }
                     if (engineModelId != null) {
                         runCatching {
                             val ri = android.content.Intent(
@@ -911,6 +910,41 @@ class BackgroundGenerationService : Service() {
                             while (waited < 45_000L) {
                                 try { java.net.Socket("127.0.0.1", 8081).use { break } }
                                 catch (_: Exception) { Thread.sleep(400); waited += 400 }
+                            }
+                        }
+                    }
+                    updateState(GenerationState.Progress(0f))
+                    continue@attemptLoop
+                }
+                // et.106: bad_alloc (or NPU crash) already retried at 256 and still dying ->
+                // the 8gen2 QNN package is incompatible with this SoC. Switch to CPU backend.
+                if (isBadAlloc && badAllocRetryDone && engineBackendType != "sd15cpu") {
+                    io.github.xororz.localdream.cloud.LogHub.log(
+                        io.github.xororz.localdream.cloud.LogHub.Category.GENERATE,
+                        "NPU bad_alloc persists at 256; switch to CPU backend",
+                    )
+                    android.os.Handler(android.os.Looper.getMainLooper()).post {
+                        android.widget.Toast.makeText(
+                            this@BackgroundGenerationService,
+                            "NPU引擎不兼容，已切换CPU模式",
+                            android.widget.Toast.LENGTH_LONG,
+                        ).show()
+                    }
+                    engineBackendType = "sd15cpu"
+                    runCatching { Thread.sleep(1500) }
+                    if (engineModelId != null) {
+                        runCatching {
+                            startService(android.content.Intent(this@BackgroundGenerationService,
+                                io.github.xororz.localdream.service.BackendService::class.java).apply {
+                                    setAction(io.github.xororz.localdream.service.BackendService.ACTION_RESTART)
+                                    putExtra("modelId", engineModelId)
+                                    putExtra("backendType", "sd15cpu")
+                                    putExtra("width", attemptWidth); putExtra("height", attemptHeight)
+                                })
+                            var waited = 0L
+                            while (waited < 60_000L) {
+                                try { java.net.Socket("127.0.0.1", 8081).use { break } }
+                                catch (_: Exception) { Thread.sleep(500); waited += 500 }
                             }
                         }
                     }
