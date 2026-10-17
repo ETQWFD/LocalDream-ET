@@ -882,15 +882,17 @@ class BackgroundGenerationService : Service() {
                 val isBadAlloc = msgLc.contains("bad_alloc") || msgLc.contains("image generation error")
                 if (isBadAlloc && !badAllocRetryDone) {
                     badAllocRetryDone = true
-                    // et.106: bad_alloc on an 8gen2 QNN package running on 8gen3 is NOT
-                    // fixable by a smaller resolution — the HTP pool mismatch SIGSEGVs(139)
-                    // on the next restart. Kill the residual engine first, wait 2s to free
-                    // 8081, then try 256 once. If it still dies, fall through to CPU.
-                    attemptWidth = (256) / 8 * 8
-                    attemptHeight = (256) / 8 * 8
+                    // et.107: on a top-tier 8gen3/Adreno830 the NPU package SHOULD run —
+                    // do NOT immediately fall back to CPU. Tier resolution down in the SAME
+                    // NPU model (512->384->256), wait 2s to free 8081, then restart+resend.
+                    val longEdge = maxOf(attemptWidth, attemptHeight)
+                    val target = if (longEdge > 448) 384 else 256
+                    val scale = target.toDouble() / longEdge
+                    attemptWidth = (Math.round(attemptWidth * scale).toInt() / 8) * 8
+                    attemptHeight = (Math.round(attemptHeight * scale).toInt() / 8) * 8
                     io.github.xororz.localdream.cloud.LogHub.log(
                         io.github.xororz.localdream.cloud.LogHub.Category.GENERATE,
-                        "engine bad_alloc; kill residual, wait 2s, retry at 256x256",
+                        "engine bad_alloc; tier down to ${attemptWidth}x${attemptHeight} on NPU, retry",
                     )
                     runCatching { Thread.sleep(2000) }
                     if (engineModelId != null) {
@@ -916,17 +918,18 @@ class BackgroundGenerationService : Service() {
                     updateState(GenerationState.Progress(0f))
                     continue@attemptLoop
                 }
-                // et.106: bad_alloc (or NPU crash) already retried at 256 and still dying ->
-                // the 8gen2 QNN package is incompatible with this SoC. Switch to CPU backend.
-                if (isBadAlloc && badAllocRetryDone && engineBackendType != "sd15cpu") {
+                // et.107: only after tiering all the way down (now at 256) and still bad_alloc
+                // do we suggest CPU. Top-tier phones should keep running NPU at lower res.
+                val alreadyLowest = maxOf(attemptWidth, attemptHeight) <= 256
+                if (isBadAlloc && badAllocRetryDone && alreadyLowest && engineBackendType != "sd15cpu") {
                     io.github.xororz.localdream.cloud.LogHub.log(
                         io.github.xororz.localdream.cloud.LogHub.Category.GENERATE,
-                        "NPU bad_alloc persists at 256; switch to CPU backend",
+                        "NPU bad_alloc persists at 256 after all tiers; switch to CPU backend",
                     )
                     android.os.Handler(android.os.Looper.getMainLooper()).post {
                         android.widget.Toast.makeText(
                             this@BackgroundGenerationService,
-                            "NPU引擎不兼容，已切换CPU模式",
+                            "三档分辨率均崩溃，已切换CPU模式",
                             android.widget.Toast.LENGTH_LONG,
                         ).show()
                     }
