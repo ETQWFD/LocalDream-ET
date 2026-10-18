@@ -1109,7 +1109,9 @@ class BackgroundGenerationService : Service() {
                 throw e
             }
             } // attemptLoop
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
+            // et.108: catch Throwable (not just Exception) so a platform Error/NPE during
+            // generation surfaces as an error toast instead of crashing the app.
             if (completed) {
                 // Result already delivered; a teardown exception from the
                 // closing socket must not overwrite the Complete state.

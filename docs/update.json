@@ -1,9 +1,9 @@
 {
-  "versionCode": 181,
-  "versionName": "3.0.0-et.107",
-  "title": "发现新版本 v3.0.0-et.107（维护中，不定时更新）",
+  "versionCode": 182,
+  "versionName": "3.0.0-et.108",
+  "title": "发现新版本 v3.0.0-et.108（维护中，不定时更新）",
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
-  "size": 159672411,
-  "sha256": "3d34b03de1f4510dbbd45961b6ce9b3a2e7d8ec503da735ae9d5f226c0a96e6b",
-  "releaseNotes": "维护中，不定时更新；作者上学中，联系邮箱 localdreametos@hotmail.com，QQ群 1078799843。\n\n本版：NPU bad_alloc 在同模型内逐档降分辨率(512→384→256)重试，三档都崩才提示切CPU。\n\n安装后在“关于/版本”看到 build 181 即新版。版权 Copyright (C) 2026 etc，署名 ET。"
+  "size": 159672299,
+  "sha256": "ebb704e47aa66d63e264a2698b0f0bee1a349c2638c2df4fdfb30a17bc42820c",
+  "releaseNotes": "维护中，不定时更新；作者上学中，联系邮箱 localdreametos@hotmail.com，QQ群 1078799843。\n\n本版：修复点生成/API 偶发闪退，全局兜底改为 Throwable，任何异常弹错误提示不崩溃。\n\n安装后在“关于/版本”看到 build 182 即新版。版权 Copyright (C) 2026 etc，署名 ET。"
 }
