@@ -345,7 +345,7 @@
     <string name="settings_force_generate_confirm">On a low-RAM / no-fp16 32-bit phone, forcing your own resolution &amp; steps may get the engine killed by the system (OOM). Continue?</string>
     <string name="contact_author">Contact author</string>
     <string name="contact_author_desc">QQ 2416444244 · join QQ group (last build: in school, may be slow to fix)</string>
-    <string name="contact_author_body">Last build "Final Dance". The author is in school and may not fix issues promptly. Email: localdreametos@hotmail.com (tap to copy).</string>
+    <string name="contact_author_body">Last build "Final Dance". The author is in school and may not fix issues promptly. Email: 2416444244@qq.com (tap to copy).</string>
     <string name="edition_last_dance">"Final Dance"</string>
     <string name="about_last_dance_note">The author is in school and may be slow to fix issues. Email</string>
     <string name="bgm_title">Background music</string>

@@ -182,6 +182,23 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // et.109: global crash handler — dump stack to clipboard, toast feedback, no silent crash.
+        val prev = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { t, e ->
+            runCatching {
+                val sw = java.io.StringWriter(); e.printStackTrace(java.io.PrintWriter(sw))
+                val clip = (getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager)
+                clip.setPrimaryClip(android.content.ClipData.newPlainText("crash", sw.toString()))
+                val main = android.os.Handler(android.os.Looper.getMainLooper())
+                main.post {
+                    runCatching {
+                        Toast.makeText(this, "日志已复制，请反馈开发者 2416444244@qq.com", Toast.LENGTH_LONG).show()
+                    }
+                }
+                Thread.sleep(1500)
+            }
+            prev?.uncaughtException(t, e)
+        }
         enableEdgeToEdge()
 
         checkStoragePermission()
