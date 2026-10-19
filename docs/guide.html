@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="description" content="Local Dream ET 使用手册 — 手机版与电脑服务端完整说明。">
+<link rel="icon" href="assets/favicon.ico" sizes="any" />
+<link rel="icon" href="assets/icon-192.png" type="image/png" />
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
+<link rel="manifest" href="site.webmanifest" />
+<meta name="theme-color" content="#ffffff" />
+<title>使用手册 — Local Dream ET</title>
+<style>
+  :root{--bg:#fff;--ink:#111418;--mut:#6b7280;--line:#e8eaee;--soft:#f4f5f7}
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.75 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+  code{background:var(--soft);padding:2px 6px;border-radius:4px;font-size:13px}
+  pre{background:var(--soft);border-radius:10px;padding:14px 16px;overflow:auto;font-size:12.5px;line-height:1.6}
+  pre code{background:transparent;padding:0}
+  ul{margin:8px 0;padding-left:22px}
+  li{margin:6px 0}
+  .wrap{max-width:880px;margin:0 auto;padding:0 28px}
+  nav{position:sticky;top:0;z-index:100;background:rgba(255,255,255,.9);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  .navin{max-width:1080px;margin:0 auto;padding:18px 28px;display:flex;align-items:center;gap:28px}
+  .brand{font-weight:700;font-size:14.5px}
+  .navlinks{display:flex;gap:22px;flex:1}
+  .navlinks a{color:var(--mut);font-size:13.5px}
+  .navlinks a:hover{color:var(--ink)}
+  .langsel{position:relative}
+  .langbtn{background:none;border:1px solid var(--line);color:var(--ink);border-radius:999px;padding:6px 14px;font-size:12.5px;cursor:pointer}
+  .langmenu{display:none;position:absolute;right:0;top:40px;background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden;min-width:140px;box-shadow:0 12px 30px rgba(0,0,0,.1)}
+  .langmenu.open{display:block}
+  .langmenu button{display:block;width:100%;text-align:left;background:none;border:0;color:var(--ink);padding:10px 14px;font-size:13px;cursor:pointer}
+  .langmenu button:hover{background:var(--soft)}
+  .eyebrow{font-size:11.5px;letter-spacing:2.5px;text-transform:uppercase;color:var(--mut);font-weight:600;margin-bottom:18px}
+  .hero{padding:72px 0 40px}
+  .hero h1{font-size:42px;line-height:1.1;letter-spacing:-1.5px;font-weight:700;margin:0 0 14px}
+  .hero p{color:var(--mut);font-size:16px;max-width:560px;margin:0}
+  section{padding:48px 0;border-top:1px solid var(--line)}
+  h2{font-size:26px;letter-spacing:-1px;font-weight:700;margin:0 0 18px}
+  h3{font-size:17px;margin:24px 0 8px}
+  .step{display:flex;gap:16px;margin:14px 0}
+  .step .n{flex:none;width:28px;height:28px;border-radius:50%;background:var(--ink);color:#fff;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center}
+  .step .b{flex:1}
+  .step .b strong{display:block;margin-bottom:2px}
+  .step .b span{color:var(--mut);font-size:14px}
+  details{border-top:1px solid var(--line);padding:18px 0}
+  details summary{cursor:pointer;font-weight:600;font-size:15.5px;list-style:none;display:flex;justify-content:space-between;align-items:center}
+  details summary::-webkit-details-marker{display:none}
+  details summary::after{content:"+";color:var(--mut);font-weight:400}
+  details[open] summary::after{content:"−"}
+  details p{color:var(--mut);font-size:14px;margin:10px 0 0}
+  footer{padding:48px 0;border-top:1px solid var(--line);color:var(--mut);font-size:13px;text-align:center}
+  @media(max-width:760px){.hero h1{font-size:30px}.navlinks{display:none}}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="navin">
+    <a class="brand" href="index.html">Local Dream ET</a>
+    <div class="navlinks">
+      <a href="#mobile" data-i18n="nav.mobile">手机版</a>
+      <a href="#server" data-i18n="nav.server">服务端</a>
+      <a href="#faq" data-i18n="nav.faq">常见问题</a>
+      <a href="index.html" data-i18n="nav.home">返回官网</a>
+    </div>
+    <div class="langsel">
+      <button class="langbtn" id="langBtn" type="button">简体中文</button>
+      <div class="langmenu" id="langMenu">
+        <button data-l="zh-CN" type="button">简体中文</button>
+        <button data-l="zh-TW" type="button">繁體中文</button>
+        <button data-l="en" type="button">English</button>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<header class="hero wrap">
+  <div class="eyebrow" data-i18n="hero.eye">USER GUIDE</div>
+  <h1 data-i18n="hero.h1">使用手册</h1>
+  <p data-i18n="hero.p">从安装到出图，手机版与电脑服务端的完整步骤。</p>
+</header>
+
+<section id="mobile">
+  <div class="wrap">
+    <div class="eyebrow" data-i18n="m.eye">ANDROID APP</div>
+    <h2 data-i18n="m.h">手机版使用</h2>
+    <div class="step"><div class="n">1</div><div class="b"><strong data-i18n="m.s1.t">下载并安装 APK</strong><span data-i18n="m.s1.d">官网首页点「下载安卓版」，允许安装未知来源 App。</span></div></div>
+    <div class="step"><div class="n">2</div><div class="b"><strong data-i18n="m.s2.t">下载模型</strong><span data-i18n="m.s2.d">进入模型页，选一个 SD1.5 模型下载；或把模型文件放到公共目录 <code>LocalDreamET/models</code>。</span></div></div>
+    <div class="step"><div class="n">3</div><div class="b"><strong data-i18n="m.s3.t">文生图</strong><span data-i18n="m.s3.d">输入英文提示词（可加反向提示词），选 512×512、steps 20–30，点生成。</span></div></div>
+    <div class="step"><div class="n">4</div><div class="b"><strong data-i18n="m.s4.t">图生图修图</strong><span data-i18n="m.s4.d">上传参考图，重绘强度 0.3–0.7，只改局部不整体重画。</span></div></div>
+    <div class="step"><div class="n">5</div><div class="b"><strong data-i18n="m.s5.t">云备份</strong><span data-i18n="m.s5.d">设置里填入 GitHub/Gitee 私有仓令牌，出图自动备份，令牌只存系统密钥库。</span></div></div>
+    <div class="step"><div class="n">6</div><div class="b"><strong data-i18n="m.s6.t">打分评论</strong><span data-i18n="m.s6.d">官网评分区点星星，每设备一票；可留昵称和反馈。</span></div></div>
+  </div>
+</section>
+
+<section id="server">
+  <div class="wrap">
+    <div class="eyebrow" data-i18n="s.eye">PC SERVER</div>
+    <h2 data-i18n="s.h">电脑服务端使用</h2>
+    <div class="step"><div class="n">1</div><div class="b"><strong data-i18n="s.s1.t">下载安装包</strong><span data-i18n="s.s1.d">服务端页下载 Windows EXE 或 Linux tar.gz。</span></div></div>
+    <div class="step"><div class="n">2</div><div class="b"><strong data-i18n="s.s2.t">启动 etserver</strong><span data-i18n="s.s2.d">Windows 双击安装后运行；Linux 解压后 <code>./etserver</code>。控制台会打印地址、46 位 API Key、模型名。</span></div></div>
+    <div class="step"><div class="n">3</div><div class="b"><strong data-i18n="s.s3.t">连接手机</strong><span data-i18n="s.s3.d">手机与电脑同一 WiFi，在 App 设置里填 <code>http://&lt;电脑IP&gt;:8080</code> 和控制台打印的 Key。</span></div></div>
+    <div class="step"><div class="n">4</div><div class="b"><strong data-i18n="s.s4.t">API 调用</strong><span data-i18n="s.s4.d">A1111 兼容：<code>POST /sdapi/v1/txt2img</code>，Header 带 <code>Authorization: Bearer &lt;key&gt;</code>。</span></div></div>
+    <div class="step"><div class="n">5</div><div class="b"><strong data-i18n="s.s5.t">外网访问（frpc 穿透）</strong><span data-i18n="s.s5.d">VPS 跑 frps，本地 frpc 把 8080 映射到远程端口，手机填 <code>http://&lt;VPS_IP&gt;:&lt;端口&gt;</code>。</span></div></div>
+    <h3 data-i18n="s.curl">curl 示例</h3>
+    <pre><code>curl -X POST http://127.0.0.1:8080/sdapi/v1/txt2img \
+  -H "Authorization: Bearer &lt;46位KEY&gt;" \
+  -H "Content-Type: application/json" \
+  -d '{"prompt":"a cat, best quality","width":512,"height":512,"steps":30}'</code></pre>
+  </div>
+</section>
+
+<section id="faq">
+  <div class="wrap">
+    <div class="eyebrow" data-i18n="q.eye">FAQ</div>
+    <h2 data-i18n="q.h">常见问题</h2>
+    <details><summary data-i18n="q1.q">出图很慢 / 内存不足？</summary><p data-i18n="q1.a">降低分辨率到 256×256，步数降到 8–15；或改用电脑服务端出图。</p></details>
+    <details><summary data-i18n="q2.q">NPU 不生效？</summary><p data-i18n="q2.a">QNN NPU 仅骁龙 Hexagon 机型支持，其它自动用 CPU。</p></details>
+    <details><summary data-i18n="q3.q">读不到模型列表？</summary><p data-i18n="q3.a">给 App「所有文件访问」权限，模型放到 <code>LocalDreamET/models</code>。</p></details>
+    <details><summary data-i18n="q4.q">服务端手机连不上？</summary><p data-i18n="q4.a">确认同 WiFi、防火墙放行 8080、Key 复制完整；外网用 frpc。</p></details>
+    <details><summary data-i18n="q5.q">微信里打不开？</summary><p data-i18n="q5.a">点右上角「···」用系统浏览器打开。</p></details>
+  </div>
+</section>
+
+<footer>
+  Local Dream ET · <a href="mailto:2416444244@qq.com">2416444244@qq.com</a> · QQ 群 1078799843
+</footer>
+
+<script>
+(function(){
+  var DICT={
+    "zh-CN":{},
+    "zh-TW":{
+      "nav.mobile":"手機版","nav.server":"伺服器","nav.faq":"常見問題","nav.home":"返回官網",
+      "hero.eye":"USER GUIDE","hero.h1":"使用手冊","hero.p":"從安裝到出圖，手機版與電腦伺服器的完整步驟。",
+      "m.eye":"ANDROID APP","m.h":"手機版使用",
+      "m.s1.t":"下載並安裝 APK","m.s1.d":"官網首頁點「下載安卓版」，允許安裝未知來源 App。",
+      "m.s2.t":"下載模型","m.s2.d":"進入模型頁，選一個 SD1.5 模型下載；或把模型檔放到 LocalDreamET/models。",
+      "m.s3.t":"文生圖","m.s3.d":"輸入英文提示詞（可加反向提示詞），選 512×512、steps 20–30，點生成。",
+      "m.s4.t":"圖生圖修圖","m.s4.d":"上傳參考圖，重繪強度 0.3–0.7，只改局部不整體重畫。",
+      "m.s5.t":"雲備份","m.s5.d":"設定裡填入 GitHub/Gitee 私有倉權杖，出圖自動備份，權杖只存系統密鑰庫。",
+      "m.s6.t":"打分評論","m.s6.d":"官網評分區點星星，每設備一票；可留暱稱和回饋。",
+      "s.eye":"PC SERVER","s.h":"電腦伺服器使用",
+      "s.s1.t":"下載安裝包","s.s1.d":"伺服器頁下載 Windows EXE 或 Linux tar.gz。",
+      "s.s2.t":"啟動 etserver","s.s2.d":"Windows 雙擊安裝後執行；Linux 解壓後 ./etserver。主控台會印出位址、46 位 API Key、模型名。",
+      "s.s3.t":"連接手機","s.s3.d":"手機與電腦同一 WiFi，在 App 設定填 http://<電腦IP>:8080 和主控台印的 Key。",
+      "s.s4.t":"API 呼叫","s.s4.d":"A1111 相容：POST /sdapi/v1/txt2img，Header 帶 Authorization: Bearer <key>。",
+      "s.s5.t":"外網存取（frpc 穿透）","s.s5.d":"VPS 跑 frps，本地 frpc 把 8080 映射到遠端埠，手機填 http://<VPS_IP>:<埠>。",
+      "s.curl":"curl 範例",
+      "q.eye":"FAQ","q.h":"常見問題",
+      "q1.q":"出圖很慢 / 記憶體不足？","q1.a":"降低解析度到 256×256，步數降到 8–15；或改用電腦伺服器出圖。",
+      "q2.q":"NPU 不生效？","q2.a":"QNN NPU 僅驍龍 Hexagon 機型支援，其它自動用 CPU。",
+      "q3.q":"讀不到模型列表？","q3.a":"給 App「所有檔案存取」權限，模型放到 LocalDreamET/models。",
+      "q4.q":"伺服器手機連不上？","q4.a":"確認同 WiFi、防火牆放行 8080、Key 複製完整；外網用 frpc。",
+      "q5.q":"微信裡打不開？","q5.a":"點右上角「···」用系統瀏覽器開啟。"
+    },
+    "en":{
+      "nav.mobile":"Mobile","nav.server":"Server","nav.faq":"FAQ","nav.home":"Home",
+      "hero.eye":"USER GUIDE","hero.h1":"User guide","hero.p":"From install to first image. Steps for the Android app and PC server.",
+      "m.eye":"ANDROID APP","m.h":"Android app",
+      "m.s1.t":"Download & install APK","m.s1.d":"Tap Download on the home page; allow installs from unknown sources.",
+      "m.s2.t":"Get a model","m.s2.d":"Download an SD1.5 model in the app, or drop files into LocalDreamET/models.",
+      "m.s3.t":"Txt2img","m.s3.d":"Type an English prompt (plus negative), pick 512×512 and steps 20–30, tap generate.",
+      "m.s4.t":"Img2img edit","m.s4.d":"Upload a reference image, denoise 0.3–0.7 to edit locally.",
+      "m.s5.t":"Cloud backup","m.s5.d":"Add a GitHub/Gitee private repo token in settings; images back up automatically.",
+      "m.s6.t":"Rate & review","m.s6.d":"Tap stars on the rating section; one vote per device.",
+      "s.eye":"PC SERVER","s.h":"PC server",
+      "s.s1.t":"Download installer","s.s1.d":"Grab Windows EXE or Linux tarball from the server page.",
+      "s.s2.t":"Start etserver","s.s2.d":"Windows: install and run. Linux: extract then ./etserver. Console prints URL, 46-char key, model.",
+      "s.s3.t":"Connect phone","s.s3.d":"Same WiFi; in app settings enter http://<PC_IP>:8080 and the key.",
+      "s.s4.t":"API calls","s.s4.d":"A1111-compatible: POST /sdapi/v1/txt2img with Authorization: Bearer <key>.",
+      "s.s5.t":"Remote access (frpc)","s.s5.d":"Run frps on a VPS, frpc locally maps port 8080; phone uses http://<VPS_IP>:<port>.",
+      "s.curl":"curl example",
+      "q.eye":"FAQ","q.h":"FAQ",
+      "q1.q":"Slow / out of memory?","q1.a":"Lower to 256×256 and steps 8–15, or use the PC server.",
+      "q2.q":"NPU not working?","q2.a":"QNN NPU supports Snapdragon Hexagon only; others fall back to CPU.",
+      "q3.q":"Model list empty?","q3.a":"Grant All files access and put models in LocalDreamET/models.",
+      "q4.q":"Phone can't reach server?","q4.a":"Same WiFi, firewall allows 8080, key copied fully; use frpc for remote.",
+      "q5.q":"WeChat blocks the page?","q5.a":"Open in your system browser via the ··· menu."
+    }
+  };
+  function $(id){return document.getElementById(id);}
+  function apply(lang){
+    document.documentElement.lang=lang==="en"?"en":"zh-CN";
+    document.querySelectorAll("[data-i18n]").forEach(function(el){var k=el.getAttribute("data-i18n");if(lang!=="zh-CN"&&DICT[lang][k]!=null)el.innerHTML=DICT[lang][k];});
+    $("langBtn").textContent=lang==="zh-TW"?"繁體中文":(lang==="en"?"English":"简体中文");
+    try{localStorage.setItem("etld_lang",lang);}catch(e){}
+  }
+  $("langBtn").addEventListener("click",function(e){e.stopPropagation();$("langMenu").classList.toggle("open");});
+  document.addEventListener("click",function(){$("langMenu").classList.remove("open");});
+  $("langMenu").querySelectorAll("button").forEach(function(b){b.addEventListener("click",function(){$("langMenu").classList.remove("open");apply(b.getAttribute("data-l"));});});
+  var cur="zh-CN";try{cur=localStorage.getItem("etld_lang")||"zh-CN";}catch(e){}
+  apply(cur);
+})();
+</script>
+
+</body>
+</html>
