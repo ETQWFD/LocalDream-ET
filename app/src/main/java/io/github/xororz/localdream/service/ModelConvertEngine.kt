@@ -136,6 +136,18 @@ object ModelConvertEngine {
                     partFile.copyTo(fullFile, overwrite = true)
                     partFile.delete()
                 }
+                // et.110: validate safetensors header (first 8 bytes = uint64 LE header length).
+                // A .ckpt/Pickle file or truncated download fails this -> clear message, no hard convert.
+                val hdrLen = runCatching {
+                    java.io.DataInputStream(fullFile.inputStream().buffered(8)).use { it.readLong() }
+                }.getOrNull() ?: -1L
+                val sz = fullFile.length()
+                if (hdrLen !in 16L..(sz - 8L)) {
+                    runCatching { fullFile.delete() }
+                    throw IOException(
+                        "文件损坏或是 .ckpt 格式（safetensors 头长度=$hdrLen，文件=$sz 字节），请重新下载 safetensors 版本"
+                    )
+                }
                 onProgress(fullFile.length(), total)
                 return fullFile
             } catch (e: CancelledException) {
