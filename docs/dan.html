@@ -230,6 +230,18 @@
     </div>
   </div>
 
+  <!-- 用户反馈：读公开仓 feedback/，App 端「反馈问题」提交 -->
+  <div class="card">
+    <div class="hd"><h2>用户反馈</h2><span class="d">读公开仓 feedback/*.json · 问题内容 / 机型 / Android 版本 / 时间</span></div>
+    <div class="bd">
+      <div class="healthline">
+        <button class="btn" id="fbLoad">拉取反馈</button>
+        <span class="status" id="fbStatus">未拉取</span>
+      </div>
+      <div id="fbTable" style="margin-top:10px"></div>
+    </div>
+  </div>
+
   <p class="foot">
     数据口径：① 各版本/各文件下载次数、各端合计、最新版本，均实时读取 GitHub 官方 Releases API 的 <code>download_count</code>，由 GitHub 统计、无法伪造；浏览器匿名访问（每 IP 约 60 次/小时），限流时自动重试并使用 2 分钟会话缓存。GitHub 只提供“累计值”，不提供历史下载曲线，面板不画虚构趋势；“较上次 +N”来自本浏览器本地存储的上次读数。
     ② 访问 PV / 点击 PV 为第三方计数器在首页的真实埋点，仅量级、不去重。
@@ -561,6 +573,31 @@
   }
   $("devLoad").addEventListener("click",loadDevices);
   loadDevices();
+
+  /* ---------- 用户反馈：读 feedback/*.json ---------- */
+  function loadFeedback(){
+    $("fbStatus").textContent="读取反馈…";
+    ghGet("https://api.github.com/repos/ETQWFD/LocalDream-ET-ratings/contents/feedback")
+      .then(function(list){
+        var files=(list||[]).filter(function(f){return /^feedback_.*\.json$/.test(f.name);});
+        return Promise.all(files.map(function(f){return ghGet(REPO_RAW+"/feedback/"+f.name).catch(function(){return null;});}));
+      })
+      .then(function(arr){
+        arr=(arr||[]).filter(Boolean).sort(function(a,b){return(b.ts||0)-(a.ts||0);});
+        if(!arr.length){$("fbStatus").textContent="暂无反馈。";$("fbTable").innerHTML='<div class="note">暂无反馈。</div>';return;}
+        var html='<table><thead><tr><th>时间</th><th>机型</th><th>Android</th><th>问题</th></tr></thead><tbody>';
+        arr.forEach(function(f){
+          var d=f.ts?new Date(f.ts).toLocaleString("zh-CN",{year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit"}):"";
+          html+='<tr><td class="dim">'+esc(d)+'</td><td>'+esc(f.model||"未知")+'</td><td class="dim">'+esc(f.androidVer||"")+'</td><td>'+esc(f.text||"")+'</td></tr>';
+        });
+        html+='</tbody></table>';
+        $("fbTable").innerHTML=html;
+        $("fbStatus").textContent="共 "+arr.length+" 条反馈。";
+      })
+      .catch(function(e){$("fbStatus").textContent="暂无反馈。";$("fbTable").innerHTML='<div class="note">暂无反馈。</div>';});
+  }
+  $("fbLoad").addEventListener("click",loadFeedback);
+  loadFeedback();
 
   /* ---------- clock / auto refresh ---------- */
   function tickClock(){ $("clock").textContent=new Date().toLocaleString("zh-CN"); $("updated").textContent=new Date().toLocaleTimeString("zh-CN"); }
