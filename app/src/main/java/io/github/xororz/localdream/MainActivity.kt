@@ -383,6 +383,58 @@ class MainActivity : ComponentActivity() {
                                 },
                             )
                         }
+                        // et.112: 反馈问题入口 + 弹窗
+                        var feedbackDialog by remember { mutableStateOf(false) }
+                        androidx.compose.material3.ExtendedFloatingActionButton(
+                            onClick = { feedbackDialog = true },
+                        ) { Text("反馈问题") }
+                        if (feedbackDialog) {
+                            var fb by remember { mutableStateOf("") }
+                            androidx.compose.material3.AlertDialog(
+                                onDismissRequest = { feedbackDialog = false },
+                                confirmButton = {
+                                    androidx.compose.material3.TextButton(onClick = {
+                                        feedbackDialog = false
+                                        val text = fb
+                                        Thread {
+                                            val (ok, reason) = runCatching {
+                                                val store = io.github.xororz.localdream.cloud.SecureTokenStore(this@MainActivity)
+                                                val provider = io.github.xororz.localdream.cloud.CloudConfig.Provider.GITHUB
+                                                val tok = store.token(provider) ?: return@runCatching (false to "未登录Token")
+                                                val auth = store.state(provider) ?: return@runCatching (false to "未登录")
+                                                val aid = android.provider.Settings.Secure.getString(
+                                                    contentResolver, android.provider.Settings.Secure.ANDROID_ID
+                                                ) ?: "anon"
+                                                val ts = System.currentTimeMillis()
+                                                val body = """{"text":"${text.replace("\"","'")}","model":"${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}","androidVer":"${android.os.Build.VERSION.RELEASE}","ts":$ts}"""
+                                                io.github.xororz.localdream.cloud.CloudClient.uploadContent(
+                                                    provider, tok, auth.owner ?: auth.login,
+                                                    auth.repo ?: io.github.xororz.localdream.cloud.CloudConfig.BACKUP_REPO,
+                                                    "feedback/feedback_${aid.take(8)}_$ts.json", body.toByteArray(), "feedback",
+                                                )
+                                                (true to "")
+                                            }.getOrElse { false to (it.message ?: "网络错误") }
+                                            runOnUiThread {
+                                                Toast.makeText(this@MainActivity,
+                                                    if (ok) "反馈已提交，谢谢" else "提交失败：$reason",
+                                                    Toast.LENGTH_LONG).show()
+                                            }
+                                        }.start()
+                                    }) { Text("提交") }
+                                },
+                                dismissButton = {
+                                    androidx.compose.material3.TextButton(onClick = { feedbackDialog = false }) { Text("取消") }
+                                },
+                                title = { Text("反馈问题") },
+                                text = {
+                                    androidx.compose.material3.OutlinedTextField(
+                                        value = fb, onValueChange = { fb = it },
+                                        placeholder = { Text("请描述遇到的问题…") },
+                                        minLines = 4,
+                                    )
+                                },
+                            )
+                        }
                     }
                 }
             }
