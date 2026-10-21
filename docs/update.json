@@ -1,9 +1,9 @@
 {
-  "versionCode": 184,
-  "versionName": "3.0.0-et.110",
-  "title": "发现新版本 v3.0.0-et.110（维护中，不定时更新）",
+  "versionCode": 185,
+  "versionName": "3.0.0-et.111",
+  "title": "发现新版本 v3.0.0-et.111（维护中，不定时更新）",
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
   "size": 159674155,
-  "sha256": "6a596f81fc601a5431acb46ce5cec09b16c6309291ea9fe14913f4693c60776b",
-  "releaseNotes": "维护中，不定时更新；作者上学中，联系邮箱 2416444244@qq.com，QQ群 1078799843。\n\n本版：模型转换前校验 safetensors 文件头，损坏/.ckpt 明确提示重新下载，不硬转。\n\n安装后在“关于/版本”看到 build 184 即新版。版权 Copyright (C) 2026 etc，署名 ET。"
+  "sha256": "932096ba5c80edcdd3dd7e2649af29bc41a85d52031663a99ed5ce25d53aab3f",
+  "releaseNotes": "维护中，不定时更新；作者上学中，联系邮箱 2416444244@qq.com，QQ群 1078799843。\n\n安装后在“关于/版本”看到 build 185 即新版。版权 Copyright (C) 2026 etc，署名 ET。"
 }
