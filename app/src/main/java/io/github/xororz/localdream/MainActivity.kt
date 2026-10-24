@@ -180,6 +180,8 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private val announceDialog = androidx.compose.runtime.mutableStateOf<Pair<String, String>?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // et.109: global crash handler — dump stack to clipboard, toast feedback, no silent crash.
@@ -239,6 +241,55 @@ class MainActivity : ComponentActivity() {
                     content.toByteArray(),
                     "device ping",
                 )
+            }
+        }.start()
+
+        // et.114: pull announcements/ from ratings repo; newest matching 手机端/全部 -> dialog.
+        Thread {
+            runCatching {
+                val store = io.github.xororz.localdream.cloud.SecureTokenStore(this)
+                val provider = io.github.xororz.localdream.cloud.CloudConfig.Provider.GITHUB
+                val tok = store.token(provider) ?: return@runCatching
+                val repo = "ETQWFD/LocalDream-ET-ratings"
+                val listConn = (java.net.URL("https://api.github.com/repos/$repo/contents/announcements")
+                    .openConnection() as java.net.HttpURLConnection).apply {
+                    connectTimeout = 8000; readTimeout = 8000
+                    setRequestProperty("Authorization", "token $tok")
+                    setRequestProperty("Accept", "application/vnd.github+json")
+                }
+                if (listConn.responseCode != 200) return@runCatching
+                val arr = org.json.JSONArray(listConn.inputStream.bufferedReader().readText())
+                var best: Pair<Long, String>? = null
+                for (i in 0 until arr.length()) {
+                    val name = arr.getJSONObject(i).optString("name", "")
+                    if (!name.startsWith("announce_") || !name.endsWith(".json")) continue
+                    val raw = runCatching {
+                        val c = (java.net.URL("https://api.github.com/repos/$repo/contents/announcements/$name")
+                            .openConnection() as java.net.HttpURLConnection).apply {
+                            connectTimeout = 8000; readTimeout = 8000
+                            setRequestProperty("Authorization", "token $tok")
+                            setRequestProperty("Accept", "application/vnd.github+json")
+                        }
+                        if (c.responseCode != 200) return@runCatching null
+                        val j = org.json.JSONObject(c.inputStream.bufferedReader().readText())
+                        String(android.util.Base64.decode(j.getString("content"), android.util.Base64.DEFAULT))
+                    }.getOrNull() ?: continue
+                    val o = runCatching { org.json.JSONObject(raw) }.getOrNull() ?: continue
+                    val target = o.optString("target", "全部")
+                    if (!target.contains("手机") && !target.contains("全部")) continue
+                    val ts = o.optLong("ts", 0L)
+                    if (best == null || ts > best!!.first) best = ts to raw
+                }
+                val b = best ?: return@runCatching
+                val sp = getSharedPreferences("app_prefs", MODE_PRIVATE)
+                val lastTs = sp.getLong("last_announce_ts", 0L)
+                val o = org.json.JSONObject(b.second)
+                val ts = o.optLong("ts", 0L)
+                if (ts <= lastTs) return@runCatching
+                sp.edit().putLong("last_announce_ts", ts).apply()
+                val title = o.optString("title", "公告")
+                val text = o.optString("text", "")
+                runOnUiThread { announceDialog.value = title to text }
             }
         }.start()
 
@@ -433,6 +484,17 @@ class MainActivity : ComponentActivity() {
                                         minLines = 4,
                                     )
                                 },
+                            )
+                        }
+                        // et.114: announcement dialog
+                        announceDialog.value?.let { (t, tx) ->
+                            androidx.compose.material3.AlertDialog(
+                                onDismissRequest = { announceDialog.value = null },
+                                confirmButton = {
+                                    androidx.compose.material3.TextButton(onClick = { announceDialog.value = null }) { Text("知道了") }
+                                },
+                                title = { Text(t) },
+                                text = { Text(tx) },
                             )
                         }
                     }
