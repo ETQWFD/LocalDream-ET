@@ -1,9 +1,9 @@
 {
-  "versionCode": 186,
-  "versionName": "3.0.0-et.112",
-  "title": "发现新版本 v3.0.0-et.112（维护中，不定时更新）",
+  "versionCode": 187,
+  "versionName": "3.0.0-et.113",
+  "title": "发现新版本 v3.0.0-et.113（维护中，不定时更新）",
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
   "size": 159686835,
-  "sha256": "b297595d7f4dfeb9d1d838f83fc876619f2729f2782d338811c6be8935256d15",
-  "releaseNotes": "维护中，不定时更新；作者上学中，联系邮箱 2416444244@qq.com，QQ群 1078799843。\n\n本版：新增“反馈问题”按钮，可提交问题描述与机型到后台。\n\n安装后在“关于/版本”看到 build 186 即新版。版权 Copyright (C) 2026 etc，署名 ET。"
+  "sha256": "f7dde1786443c027dbd36b8caf8ef6f6e75a964396da474dc63504dcf372d2f9",
+  "releaseNotes": "维护中，不定时更新；作者上学中，联系邮箱 2416444244@qq.com，QQ群 1078799843。\n\n安装后在“关于/版本”看到 build 187 即新版。版权 Copyright (C) 2026 etc，署名 ET。"
 }
