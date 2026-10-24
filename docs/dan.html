@@ -242,6 +242,28 @@
     </div>
   </div>
 
+  <!-- 发送公告：写 announcements/announce_<ts>.json -->
+  <div class="card">
+    <div class="hd"><h2>发送公告</h2><span class="d">写公开仓 announcements/*.json · 手机端 / 服务端 / 全部接收</span></div>
+    <div class="bd">
+      <div style="display:grid;gap:8px">
+        <input id="anTitle" placeholder="公告标题" style="padding:8px 10px;border:1px solid var(--line,#d8dde6);border-radius:8px;background:#fff;color:inherit" />
+        <textarea id="anContent" rows="3" placeholder="公告内容" style="padding:8px 10px;border:1px solid var(--line,#d8dde6);border-radius:8px;background:#fff;color:inherit;font:inherit"></textarea>
+        <select id="anTarget" style="padding:8px 10px;border:1px solid var(--line,#d8dde6);border-radius:8px;background:#fff;color:inherit">
+          <option value="all">全部（手机端 + 服务端）</option>
+          <option value="app">手机端</option>
+          <option value="server">服务端</option>
+        </select>
+        <div class="healthline">
+          <button class="btn" id="anSend">发送公告</button>
+          <button class="btn" id="anLoad">刷新列表</button>
+          <span class="status" id="anStatus">未发送</span>
+        </div>
+      </div>
+      <div id="anList" style="margin-top:12px"></div>
+    </div>
+  </div>
+
   <p class="foot">
     数据口径：① 各版本/各文件下载次数、各端合计、最新版本，均实时读取 GitHub 官方 Releases API 的 <code>download_count</code>，由 GitHub 统计、无法伪造；浏览器匿名访问（每 IP 约 60 次/小时），限流时自动重试并使用 2 分钟会话缓存。GitHub 只提供“累计值”，不提供历史下载曲线，面板不画虚构趋势；“较上次 +N”来自本浏览器本地存储的上次读数。
     ② 访问 PV / 点击 PV 为第三方计数器在首页的真实埋点，仅量级、不去重。
@@ -598,6 +620,47 @@
   }
   $("fbLoad").addEventListener("click",loadFeedback);
   loadFeedback();
+
+  /* ---------- 发送公告：写 announcements/announce_<ts>.json ---------- */
+  function loadAnn(){
+    $("anStatus").textContent="读取公告…";
+    ghGet("https://api.github.com/repos/ETQWFD/LocalDream-ET-ratings/contents/announcements")
+      .then(function(list){
+        var files=(list||[]).filter(function(f){return /^announce_.*\.json$/.test(f.name);});
+        return Promise.all(files.map(function(f){return ghGet(REPO_RAW+"/announcements/"+f.name).catch(function(){return null;});}));
+      })
+      .then(function(arr){
+        arr=(arr||[]).filter(Boolean).sort(function(a,b){return(b.ts||0)-(a.ts||0);});
+        if(!arr.length){$("anStatus").textContent="暂无公告。";$("anList").innerHTML='<div class="note">暂无公告。</div>';return;}
+        var html='<table><thead><tr><th>时间</th><th>接收端</th><th>标题</th><th>内容</th></tr></thead><tbody>';
+        arr.forEach(function(a){
+          var d=a.ts?new Date(a.ts).toLocaleString("zh-CN",{year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit"}):"";
+          var tg=a.target==="app"?"手机端":(a.target==="server"?"服务端":"全部");
+          html+='<tr><td class="dim">'+esc(d)+'</td><td>'+esc(tg)+'</td><td>'+esc(a.title||"")+'</td><td>'+esc(a.content||"")+'</td></tr>';
+        });
+        html+='</tbody></table>';
+        $("anList").innerHTML=html;
+        $("anStatus").textContent="共 "+arr.length+" 条公告。";
+      })
+      .catch(function(e){$("anStatus").textContent="暂无公告。";$("anList").innerHTML='<div class="note">暂无公告。</div>';});
+  }
+  $("anLoad").addEventListener("click",loadAnn);
+  $("anSend").addEventListener("click",function(){
+    var title=$("anTitle").value.trim(),content=$("anContent").value.trim(),target=$("anTarget").value;
+    if(!title||!content){alert("标题和内容都要填");return;}
+    var b=$("anSend");b.disabled=true;b.textContent="发送中…";
+    var ts=Date.now();
+    var obj={title:title,content:content,target:target,ts:ts,from:"admin"};
+    var path="announcements/announce_"+ts+"_"+Math.random().toString(36).slice(2,7)+".json";
+    fetch("https://api.github.com/repos/ETQWFD/LocalDream-ET-ratings/contents/"+path,{
+      method:"PUT",
+      headers:{"Authorization":"Bearer "+ghTok(),"Accept":"application/vnd.github+json","Content-Type":"application/json"},
+      body:JSON.stringify({message:"announce",content:btoa(unescape(encodeURIComponent(JSON.stringify(obj)))),branch:"main"})
+    }).then(function(r){if(!r.ok)return r.text().then(function(t){throw new Error("HTTP "+r.status);});return r.json();})
+      .then(function(){$("anTitle").value="";$("anContent").value="";b.disabled=false;b.textContent="发送公告";$("anStatus").textContent="已发送。";loadAnn();})
+      .catch(function(e){b.disabled=false;b.textContent="发送公告";$("anStatus").textContent="发送失败："+(e.message||"");});
+  });
+  loadAnn();
 
   /* ---------- clock / auto refresh ---------- */
   function tickClock(){ $("clock").textContent=new Date().toLocaleString("zh-CN"); $("updated").textContent=new Date().toLocaleTimeString("zh-CN"); }
