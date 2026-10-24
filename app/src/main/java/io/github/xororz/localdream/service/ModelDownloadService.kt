@@ -74,7 +74,10 @@ class ModelDownloadService : Service() {
         return out.toList()
     }
 
-    // et.101: HEAD-latency measure each mirror, fastest first; failures go last.
+    // et.117: HEAD each mirror and (a) sort by latency, (b) capture the real
+    // Content-Length so downloadFile can pin total and use an exact byte range.
+    // A HEAD that answers 2xx but carries no body (the common case) is fine;
+    // only non-2xx / no-length candidates drop to the back of the list.
     private fun pickFastest(url: String): List<String> {
         val cands = mirrorCandidates(url)
         if (cands.size <= 1) return cands
@@ -84,16 +87,38 @@ class ModelDownloadService : Service() {
         }.sortedBy { it.second }.map { it.first }
     }
 
-    private fun measureLatency(u: String): Long? = try {
-        val c = (java.net.URL(u).openConnection() as java.net.HttpURLConnection).apply {
-            requestMethod = "HEAD"; connectTimeout = 4000; readTimeout = 4000; instanceFollowRedirects = true
+    /** Latency of a HEAD request, or null when the mirror is unreachable. */
+    private fun measureLatency(u: String): Long? {
+        val c = (runCatching { java.net.URL(u).openConnection() as java.net.HttpURLConnection }
+            .getOrNull() ?: return null).apply {
+            requestMethod = "HEAD"
+            connectTimeout = 4000
+            readTimeout = 4000
+            instanceFollowRedirects = true
+            setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 12)")
         }
-        val s = System.nanoTime()
-        c.connect()
-        c.inputStream.use { }
-        c.disconnect()
-        (System.nanoTime() - s) / 1_000_000
-    } catch (e: Exception) { null }
+        return try {
+            val s = System.nanoTime()
+            val code = c.responseCode
+            // A HEAD response legitimately has no body; do not read one.
+            val ms = (System.nanoTime() - s) / 1_000_000
+            if (code in 200..399) ms else null
+        } catch (e: Exception) {
+            null
+        } finally {
+            runCatching { c.disconnect() }
+        }
+    }
+
+    /** (HEAD code, authoritative Content-Length) for [url]; length -1 when unknown. */
+    private fun headCodeAndLength(url: String): Pair<Int, Long> {
+        val request = Request.Builder().url(url).head().build()
+        return runCatching {
+            client.newCall(request).execute().use { r ->
+                r.code to (r.header("Content-Length")?.toLongOrNull() ?: -1L)
+            }
+        }.getOrDefault(-1 to -1L)
+    }
 
     companion object {
         private const val TAG = "ModelDownloadService"
@@ -484,78 +509,131 @@ class ModelDownloadService : Service() {
         var lastError: Exception? = null
         // Try the chosen source, then the Hugging Face/mirror counterpart.
         for (candidate in pickFastest(url)) {
-            // Resume from whatever a previous attempt already wrote. A server
-            // that answers 200 (ignores Range) restarts the file instead.
-            val have = if (destFile.exists()) destFile.length().coerceAtLeast(0L) else 0L
-            try {
+            // (a) pin authoritative total via HEAD on this mirror first.
+            var (headCode, total) = headCodeAndLength(candidate)
+            if (headCode !in 200..399) {
+                lastError = Exception(getString(R.string.error_download_failed, "HTTP $headCode"))
+                Log.w(TAG, "HEAD $candidate -> $headCode, next source")
+                continue
+            }
+
+            // (b) a stale/over-long scratch restarts from 0 instead of appending.
+            var have = if (destFile.exists()) destFile.length().coerceAtLeast(0L) else 0L
+            if (total > 0L && have > total) {
+                Log.w(TAG, "$candidate stale scratch have=$have total=$total, restart")
+                destFile.delete()
+                have = 0L
+            }
+
+            // (c) per-mirror full-restart budget on 404/416 / size mismatch.
+            var restartBudget = 2
+            var ok = false
+            while (!ok && restartBudget >= 0) {
                 val requestBuilder = Request.Builder().url(candidate)
-                if (have > 0L) requestBuilder.header("Range", "bytes=$have-")
+                // Exact range [have, total-1]; never open-ended.
+                if (total > 0L && have in 1L until total) {
+                    requestBuilder.header("Range", "bytes=$have-${total - 1}")
+                }
+                try {
+                    var rangeRejected = false
+                    requestBuilder.build().let { request ->
+                        client.newCall(request).execute().use { response ->
+                            val code = response.code
+                            if (code == 404 || code == 416) {
+                                // Rejected range: drop scratch, re-HEAD, refetch whole.
+                                Log.w(TAG, "$candidate range rejected HTTP $code (have=$have)")
+                                destFile.delete()
+                                have = 0L
+                                val (hc, tl) = headCodeAndLength(candidate)
+                                if (hc in 200..399 && tl > 0L) total = tl
+                                restartBudget--
+                                rangeRejected = true
+                                return@use
+                            }
+                            val append = code == 206
+                            if (!append && code !in 200..299) {
+                                throw Exception(getString(R.string.error_download_failed, "HTTP $code"))
+                            }
+                            // 200 to a range request -> server ignored Range, overwrite.
+                            if (!append && destFile.exists() && have > 0L) {
+                                destFile.delete()
+                                have = 0L
+                            }
 
-                requestBuilder.build().let { request ->
-                client.newCall(request).execute().use { response ->
-                    val append = response.code == 206
-                    if (!append && response.code !in 200..299) {
-                        throw Exception(getString(R.string.error_download_failed, response.code.toString()))
-                    }
+                            val body = response.body ?: throw Exception("Response body is null")
+                            val segmentLen = body.contentLength()
+                            val totalThisFile = when {
+                                total > 0L -> total
+                                append && segmentLen > 0L -> have + segmentLen
+                                else -> segmentLen
+                            }
+                            var downloadedBytes = if (append) have else 0L
+                            var lastUpdateTime = 0L
 
-                    val body = response.body ?: throw Exception("Response body is null")
-                    val segmentLen = body.contentLength()
-                    // Absolute size of this file when resuming a 206 response.
-                    val totalThisFile = if (append && segmentLen > 0) have + segmentLen else segmentLen
-                    var downloadedBytes = if (append) have else 0L
-                    var lastUpdateTime = 0L
+                            java.io.BufferedOutputStream(FileOutputStream(destFile, append)).use { output ->
+                                body.byteStream().buffered().use { input ->
+                                    val buffer = ByteArray(256 * 1024)
+                                    var bytes: Int
+                                    while (input.read(buffer).also { bytes = it } != -1) {
+                                        output.write(buffer, 0, bytes)
+                                        downloadedBytes += bytes
 
-                    java.io.BufferedOutputStream(FileOutputStream(destFile, append)).use { output ->
-                        body.byteStream().buffered().use { input ->
-                            val buffer = ByteArray(256 * 1024)
-                            var bytes: Int
+                                        val currentTime = System.currentTimeMillis()
+                                        if (currentTime - lastUpdateTime >= 500 ||
+                                            downloadedBytes == totalThisFile
+                                        ) {
+                                            lastUpdateTime = currentTime
+                                            val reportedDone = packageOffset + downloadedBytes
+                                            val reportedTotal =
+                                                if (packageTotal > 0) packageTotal else totalThisFile
+                                            val progress = if (reportedTotal > 0) {
+                                                reportedDone.toFloat() / reportedTotal
+                                            } else {
+                                                0f
+                                            }
 
-                            while (input.read(buffer).also { bytes = it } != -1) {
-                                output.write(buffer, 0, bytes)
-                                downloadedBytes += bytes
+                                            _downloadState.value = DownloadState.Downloading(
+                                                modelId,
+                                                progress,
+                                                reportedDone,
+                                                reportedTotal,
+                                            )
 
-                                val currentTime = System.currentTimeMillis()
-                                if (currentTime - lastUpdateTime >= 500 || downloadedBytes == totalThisFile) {
-                                    lastUpdateTime = currentTime
-                                    val reportedDone = packageOffset + downloadedBytes
-                                    val reportedTotal =
-                                        if (packageTotal > 0) packageTotal else totalThisFile
-                                    val progress = if (reportedTotal > 0) {
-                                        reportedDone.toFloat() / reportedTotal
-                                    } else {
-                                        0f
+                                            updateNotification(modelName, progress)
+                                        }
                                     }
-
-                                    _downloadState.value = DownloadState.Downloading(
-                                        modelId,
-                                        progress,
-                                        reportedDone,
-                                        reportedTotal,
-                                    )
-
-                                    updateNotification(modelName, progress)
                                 }
+                            }
+
+                            // (d) hard size gate when the server told us the size.
+                            if (totalThisFile > 0 && destFile.length() != totalThisFile) {
+                                throw Exception(
+                                    getString(
+                                        R.string.error_download_failed,
+                                        "${destFile.length()}/$totalThisFile",
+                                    ),
+                                )
                             }
                         }
                     }
-
-                    // Guard against silently truncated downloads: a dropped connection
-                    // ends the read loop without throwing, leaving a partial file.
-                    if (totalThisFile > 0 && downloadedBytes != totalThisFile) {
-                        throw Exception(
-                            getString(R.string.error_download_failed, "$downloadedBytes/$totalThisFile"),
-                        )
+                    if (!rangeRejected) ok = true
+                } catch (e: Exception) {
+                    lastError = e
+                    Log.w(TAG, "download from $candidate failed (${e.message}); budget=$restartBudget")
+                    // A truncated/mismatched file retries whole; a transient drop
+                    // keeps the scratch so the next mirror resumes its bytes.
+                    val sizeMismatch = e.message?.contains('/') == true &&
+                        e.message?.substringAfter('/')?.toLongOrNull() != null
+                    if (sizeMismatch && restartBudget > 0) {
+                        destFile.delete()
+                        have = 0L
+                        restartBudget--
+                    } else {
+                        break // rotate to next mirror, keep scratch for resume
                     }
                 }
-                }
-                // Success on this source.
-                return@withContext
-            } catch (e: Exception) {
-                lastError = e
-                Log.w(TAG, "download from $candidate failed (${e.message}); trying next source")
-                // Keep destFile so the next mirror resumes from these bytes
-                // instead of discarding potentially gigabytes of progress.
             }
+            if (ok) return@withContext
         }
         throw lastError ?: Exception(getString(R.string.error_download_failed, "no source"))
     }
