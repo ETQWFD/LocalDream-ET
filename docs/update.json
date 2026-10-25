@@ -1,9 +1,9 @@
 {
-  "versionCode": 191,
+  "versionCode": 193,
   "versionName": "3.0.0-et.117",
-  "title": "发现新版本 v3.0.0-et.117（模型下载器重修，修复下载到99%报404）",
+  "title": "发现新版本 v3.0.0-et.117 build193（性能优化+小修）",
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
-  "size": 159529634,
-  "sha256": "5e789cb8ef665aca671ffeb81ee39878731537d06e80afd14e96b62d91707c09",
-  "releaseNotes": "维护中，不定时更新；作者上学中，联系邮箱 2416444244@qq.com，QQ群 1078799843。\n\net.117 模型下载器重修：下载前先 HEAD 取真实文件大小；续传前比对服务器大小与已有 .part，不一致则清空重下；Range 精确到 bytes=起始-(总长-1)；遇 404/416 自动删 .part 全量重下（最多2次，每次重下前重发 HEAD）；写完严格校验文件字节==总字节才改名，否则重下；进度持久化到本地。修复 Counterfeit 等大模型下载到 99% 弹“模型下载失败：HTTP 404”的问题。\n\n安装后在“关于/版本”看到 build 191 即新版。版权 Copyright (C) 2026 etc，署名 ET。"
+  "size": 159530138,
+  "sha256": "bafab6a552ed466fe1635733815d7804de046b164a8b6694544981f4b8eecefb",
+  "releaseNotes": "维护中，不定时更新；作者上学中，联系邮箱 2416444244@qq.com，QQ群 1078799843。\n\nbuild193 优化：结果网格缩略图降采样(280px)+灰色占位+裁剪，滚动不再解码全分辨率大图，模型列表加 contentType 稳定复用；修图导入大图先读边界再 inSampleSize 降采样，避免老手机 OOM；生成中间位图完成后即释放。\n小修：云备份“已授权”显示真实登录账号；评分/反馈提交对换行/反斜杠做 JSON 转义，空反馈不再提交；下载器 build191 的 404 修复回归保留。\n\n安装后在“关于/版本”看到 build 193 即新版。版权 Copyright (C) 2026 etc，署名 ET。"
 }

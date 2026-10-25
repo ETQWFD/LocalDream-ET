@@ -73,8 +73,22 @@ fun EditScreen(
             resultBitmap = null
             errorMsg = null
             try {
+                // et.117: downsample large photos before decoding; a full-res camera
+                // image otherwise OOMs a constrained/32-bit device.
+                val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                context.contentResolver.openInputStream(uri)?.use {
+                    BitmapFactory.decodeStream(it, null, opts)
+                }
+                val maxEdge = 1536
+                opts.inSampleSize = 1
+                while (opts.outWidth / opts.inSampleSize > maxEdge ||
+                    opts.outHeight / opts.inSampleSize > maxEdge
+                ) {
+                    opts.inSampleSize *= 2
+                }
+                opts.inJustDecodeBounds = false
                 val bmp = context.contentResolver.openInputStream(uri)?.use {
-                    BitmapFactory.decodeStream(it)
+                    BitmapFactory.decodeStream(it, null, opts)
                 }
                 sourceBitmap = bmp
             } catch (e: Exception) {

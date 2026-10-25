@@ -552,10 +552,18 @@ internal fun ModelRunHistoryPage(
                                 AsyncImage(
                                     model = ImageRequest.Builder(LocalContext.current)
                                         .data(item.imageFile)
+                                        // et.117: downsample to a small thumbnail so a fast
+                                        // scroll does not decode full-res 512/768px bitmaps.
+                                        .size(280)
                                         .crossfade(true)
                                         .build(),
                                     contentDescription = "Generated image",
-                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(
+                                            MaterialTheme.colorScheme.surfaceContainerHighest,
+                                        ),
                                 )
 
                                 if (isSelected) {

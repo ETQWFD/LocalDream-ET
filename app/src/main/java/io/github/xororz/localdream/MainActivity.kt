@@ -408,7 +408,9 @@ class MainActivity : ComponentActivity() {
                                                 val aid = android.provider.Settings.Secure.getString(
                                                     contentResolver, android.provider.Settings.Secure.ANDROID_ID
                                                 ) ?: "anon"
-                                                val content = """{"stars":$s,"comment":""" + "\"" + c.replace("\"", "'") + "\"" + ""","ts":${System.currentTimeMillis()},"model":"${android.os.Build.MODEL}"}"""
+                                                val safeComment = c.replace("\\", "\\\\").replace("\"", "'")
+                                                    .replace("\n", "\\n").replace("\r", "")
+                                                val content = """{"stars":$s,"comment":""" + "\"" + safeComment + "\"" + ""","ts":${System.currentTimeMillis()},"model":"${android.os.Build.MODEL}"}"""
                                                 io.github.xororz.localdream.cloud.CloudClient.uploadContent(
                                                     provider, tok, auth.owner ?: auth.login,
                                                     auth.repo ?: io.github.xororz.localdream.cloud.CloudConfig.BACKUP_REPO,
@@ -445,8 +447,9 @@ class MainActivity : ComponentActivity() {
                                 onDismissRequest = { feedbackDialog = false },
                                 confirmButton = {
                                     androidx.compose.material3.TextButton(onClick = {
+                                        val text = fb.trim()
+                                        if (text.isEmpty()) return@TextButton
                                         feedbackDialog = false
-                                        val text = fb
                                         Thread {
                                             val (ok, reason) = runCatching {
                                                 val store = io.github.xororz.localdream.cloud.SecureTokenStore(this@MainActivity)
@@ -457,7 +460,9 @@ class MainActivity : ComponentActivity() {
                                                     contentResolver, android.provider.Settings.Secure.ANDROID_ID
                                                 ) ?: "anon"
                                                 val ts = System.currentTimeMillis()
-                                                val body = """{"text":"${text.replace("\"","'")}","model":"${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}","androidVer":"${android.os.Build.VERSION.RELEASE}","ts":$ts}"""
+                                                val safeText = text.replace("\\", "\\\\").replace("\"", "'")
+                                                    .replace("\n", "\\n").replace("\r", "")
+                                                val body = """{"text":"$safeText","model":"${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}","androidVer":"${android.os.Build.VERSION.RELEASE}","ts":$ts}"""
                                                 io.github.xororz.localdream.cloud.CloudClient.uploadContent(
                                                     provider, tok, auth.owner ?: auth.login,
                                                     auth.repo ?: io.github.xororz.localdream.cloud.CloudConfig.BACKUP_REPO,

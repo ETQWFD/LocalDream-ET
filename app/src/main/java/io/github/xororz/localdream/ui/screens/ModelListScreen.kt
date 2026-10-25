@@ -1586,6 +1586,9 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                     items(
                         items = models,
                         key = { model -> model.id },
+                        // et.117: explicit content type lets LazyColumn reuse the exact
+                        // slot layout while scrolling instead of rebinding mixed rows.
+                        contentType = { "model" },
                     ) { model ->
                         ModelCard(
                             model = model,

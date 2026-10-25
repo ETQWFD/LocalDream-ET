@@ -118,7 +118,7 @@ fun CloudBackupDialog(onDismiss: () -> Unit) {
                             )
                         }
                         Text(
-                            text = "已授权（Token已配置）",
+                            text = "已授权：${auth?.login ?: "Token已配置"}",
                             modifier = Modifier.padding(start = 8.dp),
                         )
                     }
