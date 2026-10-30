@@ -28,7 +28,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.material3.Text
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.ui.unit.dp
 import androidx.compose.material3.OutlinedTextField
 import androidx.core.content.ContextCompat
 import androidx.navigation.NavType
@@ -443,51 +447,68 @@ class MainActivity : ComponentActivity() {
                         ) { Text("反馈问题") }
                         if (feedbackDialog) {
                             var fb by remember { mutableStateOf("") }
+                            // et.117/build194: explicit Column body with fillMaxWidth.
+                            // The bare OutlinedTextField-as-text version measured to
+                            // zero height on some devices, leaving only the title.
                             androidx.compose.material3.AlertDialog(
                                 onDismissRequest = { feedbackDialog = false },
                                 confirmButton = {
-                                    androidx.compose.material3.TextButton(onClick = {
-                                        val text = fb.trim()
-                                        if (text.isEmpty()) return@TextButton
-                                        feedbackDialog = false
-                                        Thread {
-                                            val (ok, reason) = runCatching {
-                                                val store = io.github.xororz.localdream.cloud.SecureTokenStore(this@MainActivity)
-                                                val provider = io.github.xororz.localdream.cloud.CloudConfig.Provider.GITHUB
-                                                val tok = store.token(provider) ?: return@runCatching (false to "未登录Token")
-                                                val auth = store.state(provider) ?: return@runCatching (false to "未登录")
-                                                val aid = android.provider.Settings.Secure.getString(
-                                                    contentResolver, android.provider.Settings.Secure.ANDROID_ID
-                                                ) ?: "anon"
-                                                val ts = System.currentTimeMillis()
-                                                val safeText = text.replace("\\", "\\\\").replace("\"", "'")
-                                                    .replace("\n", "\\n").replace("\r", "")
-                                                val body = """{"text":"$safeText","model":"${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}","androidVer":"${android.os.Build.VERSION.RELEASE}","ts":$ts}"""
-                                                io.github.xororz.localdream.cloud.CloudClient.uploadContent(
-                                                    provider, tok, auth.owner ?: auth.login,
-                                                    auth.repo ?: io.github.xororz.localdream.cloud.CloudConfig.BACKUP_REPO,
-                                                    "feedback/feedback_${aid.take(8)}_$ts.json", body.toByteArray(), "feedback",
-                                                )
-                                                (true to "")
-                                            }.getOrElse { false to (it.message ?: "网络错误") }
-                                            runOnUiThread {
-                                                Toast.makeText(this@MainActivity,
-                                                    if (ok) "反馈已提交，谢谢" else "提交失败：$reason",
-                                                    Toast.LENGTH_LONG).show()
-                                            }
-                                        }.start()
-                                    }) { Text("提交") }
+                                    androidx.compose.material3.TextButton(
+                                        onClick = {
+                                            val text = fb.trim()
+                                            if (text.isEmpty()) return@TextButton
+                                            feedbackDialog = false
+                                            Thread {
+                                                val (ok, reason) = runCatching {
+                                                    val store = io.github.xororz.localdream.cloud.SecureTokenStore(this@MainActivity)
+                                                    val provider = io.github.xororz.localdream.cloud.CloudConfig.Provider.GITHUB
+                                                    val tok = store.token(provider) ?: return@runCatching (false to "未登录Token")
+                                                    val auth = store.state(provider) ?: return@runCatching (false to "未登录")
+                                                    val aid = android.provider.Settings.Secure.getString(
+                                                        contentResolver, android.provider.Settings.Secure.ANDROID_ID
+                                                    ) ?: "anon"
+                                                    val ts = System.currentTimeMillis()
+                                                    val safeText = text.replace("\\", "\\\\").replace("\"", "'")
+                                                        .replace("\n", "\\n").replace("\r", "")
+                                                    val body = """{"text":"$safeText","model":"${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}","androidVer":"${android.os.Build.VERSION.RELEASE}","ts":$ts}"""
+                                                    io.github.xororz.localdream.cloud.CloudClient.uploadContent(
+                                                        provider, tok, auth.owner ?: auth.login,
+                                                        auth.repo ?: io.github.xororz.localdream.cloud.CloudConfig.BACKUP_REPO,
+                                                        "feedback/feedback_${aid.take(8)}_$ts.json", body.toByteArray(), "feedback",
+                                                    )
+                                                    (true to "")
+                                                }.getOrElse { false to (it.message ?: "网络错误") }
+                                                runOnUiThread {
+                                                    Toast.makeText(this@MainActivity,
+                                                        if (ok) "反馈已提交，谢谢" else "提交失败：$reason",
+                                                        Toast.LENGTH_LONG).show()
+                                                }
+                                            }.start()
+                                        },
+                                    ) { Text("提交") }
                                 },
                                 dismissButton = {
                                     androidx.compose.material3.TextButton(onClick = { feedbackDialog = false }) { Text("取消") }
                                 },
                                 title = { Text("反馈问题") },
                                 text = {
-                                    androidx.compose.material3.OutlinedTextField(
-                                        value = fb, onValueChange = { fb = it },
-                                        placeholder = { Text("请描述遇到的问题…") },
-                                        minLines = 4,
-                                    )
+                                    Column(
+                                        modifier = Modifier.fillMaxWidth(),
+                                    ) {
+                                        Text(
+                                            text = "机型：${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}（Android ${android.os.Build.VERSION.RELEASE}）",
+                                            style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                                            color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        OutlinedTextField(
+                                            value = fb,
+                                            onValueChange = { fb = it },
+                                            modifier = Modifier.fillMaxWidth(),
+                                            placeholder = { Text("请描述遇到的问题…") },
+                                            minLines = 4,
+                                        )
+                                    }
                                 },
                             )
                         }
