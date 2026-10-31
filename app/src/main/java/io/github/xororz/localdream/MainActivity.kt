@@ -33,6 +33,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.filled.Feedback
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.OutlinedTextField
@@ -263,8 +266,12 @@ class MainActivity : ComponentActivity() {
                     setRequestProperty("Authorization", "token $tok")
                     setRequestProperty("Accept", "application/vnd.github+json")
                 }
-                if (listConn.responseCode != 200) return@runCatching
+                if (listConn.responseCode != 200) {
+                    android.util.Log.w("Announce", "list HTTP ${listConn.responseCode}")
+                    return@runCatching
+                }
                 val arr = org.json.JSONArray(listConn.inputStream.bufferedReader().readText())
+                android.util.Log.i("Announce", "pulled ${arr.length()} entries")
                 var best: Pair<Long, String>? = null
                 for (i in 0 until arr.length()) {
                     val name = arr.getJSONObject(i).optString("name", "")
@@ -291,13 +298,17 @@ class MainActivity : ComponentActivity() {
                 val lastTs = sp.getLong("last_announce_ts", 0L)
                 val o = org.json.JSONObject(b.second)
                 val ts = o.optLong("ts", 0L)
-                if (ts <= lastTs) return@runCatching
+                if (ts <= lastTs) {
+                    android.util.Log.i("Announce", "latest ts=$ts <= lastRead=$lastTs, skip popup")
+                    return@runCatching
+                }
                 // et.118/build195: do NOT mark read on pull; write last_announce_ts
                 // only when the user dismisses the dialog (see the "知道了" handler).
                 val title = o.optString("title", "公告")
                 val text = o.optString("text", "")
+                android.util.Log.i("Announce", "showing new announcement ts=$ts title=$title")
                 runOnUiThread { announceDialog.value = Triple(title, text, ts) }
-            }
+            }.onFailure { android.util.Log.w("Announce", "pull failed: ${it.message}") }
         }.start()
 
         val app = application as LocalDreamApplication
@@ -511,8 +522,14 @@ class MainActivity : ComponentActivity() {
                                 },
                                 title = { Text("反馈问题") },
                                 text = {
+                                    // et.118/build195b: harden against the content slot
+                                    // collapsing to zero height on some devices — make the
+                                    // column scrollable and pin the input to a minimum height
+                                    // so the model line, the field and the buttons always show.
                                     Column(
-                                        modifier = Modifier.fillMaxWidth(),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .verticalScroll(rememberScrollState()),
                                     ) {
                                         Text(
                                             text = "机型：${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}（Android ${android.os.Build.VERSION.RELEASE}）",
@@ -520,10 +537,16 @@ class MainActivity : ComponentActivity() {
                                             color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
                                         Spacer(modifier = Modifier.height(8.dp))
+                                        Text(
+                                            text = "问题描述",
+                                            style = androidx.compose.material3.MaterialTheme.typography.labelMedium,
+                                        )
                                         OutlinedTextField(
                                             value = fb,
                                             onValueChange = { fb = it },
-                                            modifier = Modifier.fillMaxWidth(),
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .heightIn(min = 120.dp),
                                             placeholder = { Text("请描述遇到的问题…") },
                                             minLines = 4,
                                         )

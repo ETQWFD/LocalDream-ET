@@ -63,6 +63,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.AutoFixHigh
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Brush
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Close
@@ -3381,6 +3382,19 @@ fun ModelRunScreen(
                     ),
                     scrollBehavior = scrollBehavior,
                     actions = {
+                        // et.118/build195b: announcement center entry in the top bar.
+                        var showAnn by remember { mutableStateOf(false) }
+                        IconButton(onClick = { showAnn = true }) {
+                            Icon(
+                                imageVector = androidx.compose.material.icons.Icons.Default.Notifications,
+                                contentDescription = "公告",
+                            )
+                        }
+                        if (showAnn) {
+                            io.github.xororz.localdream.ui.screens.AnnouncementCenterDialog(
+                                onDismiss = { showAnn = false },
+                            )
+                        }
                         Row {
                             val tabs = listOf(
                                 stringResource(R.string.prompt_tab),

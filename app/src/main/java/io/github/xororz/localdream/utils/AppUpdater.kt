@@ -70,6 +70,18 @@ object AppUpdater {
             .build()
     }
 
+    // et.118/build195b: a short read timeout acts as a stall watchdog — if a mirror
+    // pushes no bytes for 30s the read throws SocketTimeoutException and we switch
+    // to the next candidate instead of hanging at 0%.
+    private val stallClient: OkHttpClient by lazy {
+        OkHttpClient.Builder()
+            .connectTimeout(10, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .followRedirects(true)
+            .followSslRedirects(true)
+            .build()
+    }
+
     /** Whether the app is allowed to install APKs (Android O+). */
     fun canInstall(context: Context): Boolean {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return true
@@ -167,10 +179,13 @@ object AppUpdater {
             return listOf(origin)
         }
         val proxies = listOf(
+            // et.118/build195b: requested mirror order after GitHub origin.
+            // jsdelivr is tried (release assets usually 404 here -> probed out),
+            // then the ghproxy family, then a couple of extra accelerators.
+            "https://cdn.jsdelivr.net/",
             "https://gh-proxy.com/",
-            "https://ghfast.top/",
             "https://ghproxy.net/",
-            "https://gh.llkk.cc/",
+            "https://ghfast.top/",
             "https://mirror.ghproxy.com/",
         )
         // Direct origin first (it is fastest on good networks), then proxies.
@@ -304,56 +319,45 @@ object AppUpdater {
         val target = File(dir, "localdream-update.apk")
         val part = File(dir, "localdream-update.apk.part")
 
-        val best = fastestCandidate(mirrorCandidates(url))
-            ?: run {
-                // Last resort: try the origin without probing/mirroring.
-                Probe(url, 0L, -1L)
-            }
+        // Ordered mirror list: the fastest probed candidate first, then the rest
+        // in the requested mirror order. Each attempt resumes the same .part, so
+        // switching mirrors mid-download never re-downloads completed bytes.
+        val probes = fastestCandidate(mirrorCandidates(url))
+        val ordered = buildList {
+            probes?.url?.let { add(it) }
+            mirrorCandidates(url).forEach { if (it !in this) add(it) }
+        }
 
         var from = if (part.exists()) part.length() else 0L
-        var total = best.total.takeIf { it > 0 } ?: -1L
-
-        // A stale .part longer than the announced file (or from another
-        // release) cannot be resumed — start clean.
+        var total = probes?.total?.takeIf { it > 0 } ?: -1L
         if (total > 0 && from >= total) from = 0L
         if (from == 0L && part.exists()) part.delete()
-
-        // et.34: a fresh download starts from 0 — drop any previously completed
-        // APK left at [target]. Otherwise the dialog polling (which reads file
-        // sizes) would see the OLD finished APK at ~99% of the new size the
-        // instant the download starts, i.e. "jumping to 99% before bytes move".
         if (from == 0L && target.exists()) target.delete()
 
-        val builder = Request.Builder()
-            .url(best.url)
-            .header("User-Agent", "LocalDream-ET/${BuildConfig.VERSION_NAME}")
-        if (from > 0) builder.header("Range", "bytes=$from-")
-        val resp = client.newCall(builder.build()).execute()
-        try {
-            // 206 = resumed; 200 = server ignored Range and restarts.
-            if (resp.code != 200 && resp.code != 206) error("HTTP ${resp.code}")
-            if (resp.code == 200) { from = 0L; part.delete() }
-            val body = resp.body ?: error("empty response body")
-            val bodyLen = body.contentLength().takeIf { it > 0 } ?: -1L
-            if (total <= 0) total = if (bodyLen > 0) bodyLen + from else -1L
-
-            body.byteStream().use { input ->
-                java.io.FileOutputStream(part, resp.code == 206).use { output ->
-                    val buffer = ByteArray(64 * 1024)
-                    var downloaded = from
-                    while (true) {
-                        val r = input.read(buffer)
-                        if (r == -1) break
-                        output.write(buffer, 0, r)
-                        downloaded += r
-                        onProgress(downloaded, total)
-                    }
-                    output.flush()
+        var lastError: Exception? = null
+        for (mirror in ordered) {
+            if (total > 0 && from >= total) break
+            val startedFrom = from
+            try {
+                from = streamRange(mirror, from, part) { got, tot ->
+                    if (total <= 0 && tot > 0) total = tot
+                    onProgress(got, if (tot > 0) tot else total)
                 }
+                lastError = null
+            } catch (e: Exception) {
+                // 30s read timeout (stall) or connection error -> try the next mirror.
+                lastError = e
+                io.github.xororz.localdream.cloud.LogHub.log(
+                    io.github.xororz.localdream.cloud.LogHub.Category.UPDATE,
+                    "mirror failed/stalled ($mirror, from=$startedFrom, now=$from): ${e.message}; switching",
+                )
             }
-        } finally {
-            resp.close()
         }
+
+        if (total > 0 && from < total) {
+            throw lastError ?: IOException("download stalled before completing ($from/$total)")
+        }
+        if (lastError != null && total <= 0) throw lastError ?: IOException("download failed")
 
         if (!part.exists() || part.length() <= 0L) error("downloaded file is empty")
         if (target.exists()) target.delete()
@@ -361,6 +365,46 @@ object AppUpdater {
             part.copyTo(target, overwrite = true); part.delete()
         }
         target
+    }
+
+    /**
+     * Opens a ranged GET on [mirror], appends to [part] and returns the new .part
+     * length. Uses the short-read-timeout [stallClient] so a mirror that stops
+     * pushing bytes throws instead of hanging.
+     */
+    private fun streamRange(
+        mirror: String,
+        from: Long,
+        part: File,
+        onProgress: (got: Long, total: Long) -> Unit,
+    ): Long {
+        val builder = Request.Builder()
+            .url(mirror)
+            .header("User-Agent", "LocalDream-ET/${BuildConfig.VERSION_NAME}")
+        if (from > 0) builder.header("Range", "bytes=$from-")
+        stallClient.newCall(builder.build()).execute().use { resp ->
+            if (resp.code != 200 && resp.code != 206) error("HTTP ${resp.code} on $mirror")
+            var base = from
+            if (resp.code == 200) { part.delete(); base = 0L }
+            val body = resp.body ?: error("empty body on $mirror")
+            val bodyLen = body.contentLength().takeIf { it > 0 } ?: -1L
+            val tot = if (bodyLen > 0) bodyLen + base else -1L
+            body.byteStream().use { input ->
+                java.io.FileOutputStream(part, resp.code == 206 && base > 0).use { output ->
+                    val buffer = ByteArray(64 * 1024)
+                    var downloaded = base
+                    while (true) {
+                        val r = input.read(buffer)
+                        if (r == -1) break
+                        output.write(buffer, 0, r)
+                        downloaded += r
+                        onProgress(downloaded, tot)
+                    }
+                    output.flush()
+                }
+            }
+            return part.length()
+        }
     }
 
     /**
