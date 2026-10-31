@@ -51,7 +51,16 @@
   function load(){
     $("status").textContent="加载中…";
     fetch(API+"/feedback",{headers:{"Authorization":"Bearer "+ghTok(),"Accept":"application/vnd.github+json"}})
-      .then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json();})
+      .then(function(r){
+        if(r.status===404){
+          return fetch(API+"/feedback/.gitkeep",{method:"PUT",headers:{"Authorization":"Bearer "+ghTok(),"Accept":"application/vnd.github+json","Content-Type":"application/json"},body:JSON.stringify({message:"init feedback dir",content:btoa("# keep\n"),branch:"main"})})
+            .then(function(r2){if(!r2.ok)throw new Error("目录不存在或令牌无效，已尝试自动创建");return fetch(API+"/feedback",{headers:{"Authorization":"Bearer "+ghTok(),"Accept":"application/vnd.github+json"}});})
+            .then(function(r3){if(!r3.ok)throw new Error("目录创建后仍不可读");return r3;});
+        }
+        if(!r.ok)throw new Error("HTTP "+r.status);
+        return r;
+      })
+      .then(function(r){return r.json();})
       .then(function(files){
         var js=(files||[]).filter(function(f){return /\.json$/.test(f.name);});
         return Promise.all(js.map(function(f){return fetch(RAW+"/feedback/"+f.name).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;});}));

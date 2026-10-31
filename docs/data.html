@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
-<title>兑换码管理 — Local Dream ET</title>
+<title>卡密管理 — Local Dream ET</title>
 <link rel="icon" href="assets/favicon.ico" sizes="any" />
 <link rel="icon" href="assets/icon-192.png" type="image/png" />
 <style>
@@ -16,11 +16,9 @@
   .navin{max-width:960px;margin:0 auto;padding:0 24px;display:flex;gap:18px;align-items:center}
   .brand{font-weight:700}
   a{color:inherit;text-decoration:none}
-  section{padding:32px 0;border-top:1px solid var(--line)}
-  h1{font-size:24px;margin:0 0 6px}
-  h2{font-size:18px;margin:24px 0 12px}
+  h1{font-size:24px;margin:24px 0 6px}
   .mut{color:var(--mut);font-size:13px}
-  input,select,textarea{padding:9px 12px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);font:inherit}
+  input,select{padding:9px 12px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);font:inherit}
   button{padding:9px 16px;border:1px solid var(--ink);border-radius:8px;background:var(--ink);color:#fff;font-weight:600;cursor:pointer;font:inherit}
   button.g{background:#fff;color:var(--ink)}
   button.d{background:#fff;color:var(--bad);border-color:var(--bad)}
@@ -28,44 +26,88 @@
   table{width:100%;border-collapse:collapse;margin-top:10px;font-size:13.5px}
   th,td{border:1px solid var(--line);padding:8px 10px;text-align:left}
   th{background:var(--soft)}
-  .status-unused{color:var(--ok);font-weight:600}
-  .status-used{color:var(--mut)}
+  .st-unused{color:var(--ok);font-weight:600}
+  .st-used{color:var(--mut)}
+  .st-reusable{color:#b8860b;font-weight:600}
   .hidden{display:none}
-  .note{color:var(--mut);font-size:12.5px;margin:8px 0}
+  .tabs{display:flex;gap:6px;margin:14px 0 6px;flex-wrap:wrap}
+  .tabs button{background:#fff;color:var(--mut);border-color:var(--line)}
+  .tabs button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center;z-index:200;padding:20px}
+  .modal.open{display:flex}
+  .box{background:#fff;border-radius:14px;padding:24px;width:100%;max-width:420px;max-height:90vh;overflow:auto}
+  .box h3{margin:0 0 14px}
+  .fld{margin:10px 0}
+  .fld label{font-size:12px;color:var(--mut);display:block;margin-bottom:4px}
+  .fld input,.fld select{width:100%}
+  .radio{display:flex;gap:16px;margin:10px 0}
+  .radio label{display:flex;align-items:center;gap:6px;font-size:14px}
+  .chk{display:flex;align-items:center;gap:6px;font-size:13.5px;margin:8px 0}
 </style>
 </head>
 <body>
 
-<nav><div class="navin"><span class="brand">兑换码管理</span><a href="index.html">返回官网</a><a href="admin.html">反馈后台</a><a href="dan.html">数据面板</a></div></nav>
+<nav><div class="navin"><span class="brand">卡密管理</span><a href="index.html">返回官网</a><a href="admin.html">反馈后台</a><a href="dan.html">数据面板</a></div></nav>
 
 <div class="wrap">
-  <h1>兑换码管理</h1>
-  <p class="mut">仓：ETQWFD/LocalDreamET-Quota · 目录：redeem/codes/ · 令牌仅存本地 sessionStorage，不上传。</p>
+  <h1>卡密管理</h1>
+  <p class="mut">仓：ETQWFD/LocalDreamET-Quota · 目录：redeem/codes/ · 令牌仅存本浏览器会话。</p>
 
-  <section id="loginSec">
-    <h2>1. 输入 GitHub 私人令牌</h2>
-    <input id="ghToken" type="password" placeholder="ghp_..." style="flex:1;min-width:280px" />
-    <button id="btnLogin">确认加载</button>
-    <div class="note">需要 repo 写权限；令牌只在本浏览器内存/会话中使用。</div>
-  </section>
-
-  <section id="codesSec" class="hidden">
-    <h2>2. 兑换码列表</h2>
+  <div id="loginSec">
     <div class="row">
-      <input id="newCode" placeholder="9位兑换码（留空自动生成）" style="width:200px" />
-      <select id="newEffect">
-        <option value="quota">赠送额度</option>
-      </select>
-      <input id="newValue" type="number" placeholder="数值，如 700" style="width:120px" value="700" />
-      <button id="btnAdd">添加兑换码</button>
-      <button id="btnReload" class="g">刷新</button>
+      <input id="ghToken" type="text" autocomplete="off" spellcheck="false" placeholder="粘贴 GitHub 私人令牌（ghp_...）自动加载" style="flex:1;min-width:280px" />
+    </div>
+    <div class="mut">需要 repo 写权限；粘贴后自动识别 ghp_ 开头并加载。</div>
+  </div>
+
+  <div id="mainSec" class="hidden">
+    <div class="row">
+      <button id="btnNew">新建卡密</button>
+      <button class="g" id="btnReload">刷新</button>
       <span id="status" class="mut"></span>
     </div>
+    <div class="tabs">
+      <button data-tab="unused" class="on">未使用</button>
+      <button data-tab="used">已使用</button>
+      <button data-tab="reusable">可重复使用</button>
+    </div>
     <table>
-      <thead><tr><th>兑换码</th><th>效果</th><th>状态</th><th>创建时间</th><th>操作</th></tr></thead>
+      <thead><tr><th>卡密</th><th>类型</th><th>状态</th><th>创建时间</th><th>操作</th></tr></thead>
       <tbody id="tbody"></tbody>
     </table>
-  </section>
+  </div>
+</div>
+
+<div class="modal" id="modal">
+  <div class="box">
+    <h3>新建卡密</h3>
+    <div class="fld"><label>卡密（3-6 位数字/字母，留空自动生成）</label>
+      <input id="mCode" type="text" autocomplete="off" spellcheck="false" maxlength="6" /></div>
+    <div class="radio">
+      <label><input type="radio" name="mType" value="quota" checked /> 赠送额度</label>
+      <label><input type="radio" name="mType" value="sub" /> 赠送订阅</label>
+    </div>
+    <div id="fQuota">
+      <div class="fld"><label>额度数值（默认 700）</label>
+        <input id="mValue" type="number" value="700" /></div>
+    </div>
+    <div id="fSub" class="hidden">
+      <div class="fld"><label>套餐</label>
+        <select id="mPlan">
+          <option value="basic">普通套餐</option>
+          <option value="plus">加强套餐</option>
+          <option value="pro" selected>高级套餐</option>
+        </select></div>
+      <div class="fld"><label>天数</label><input id="mDays" type="number" value="30" /></div>
+      <label class="chk"><input type="checkbox" id="mLife" /> 终身</label>
+      <label class="chk"><input type="checkbox" id="mCustom" /> 自定义时间</label>
+    </div>
+    <label class="chk"><input type="checkbox" id="mOnce" checked /> 一次性使用（不勾 = 可重复使用）</label>
+    <div class="row" style="justify-content:flex-end;margin-top:16px">
+      <button class="g" id="mCancel">取消</button>
+      <button id="mOk">创建</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -79,64 +121,103 @@
   function setTok(t){try{sessionStorage.setItem("et_quota_gh",t);}catch(e){}}
   function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
   function hdr(){return {"Authorization":"Bearer "+tok(),"Accept":"application/vnd.github+json","Content-Type":"application/json"};}
-  function fmtTs(ts){if(!ts)return"";try{return new Date(ts).toLocaleString("zh-CN",{year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit"});}catch(e){return ts;}}
-  function genCode(){var c="";var a="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";for(var i=0;i<9;i++)c+=a[Math.floor(Math.random()*a.length)];return c;}
+  function fmtTs(ts){if(!ts)return"";try{return new Date(ts).toLocaleString("zh-CN",{year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"});}catch(e){return ts;}}
+  function genCode(){var c="";var a="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";for(var i=0;i<6;i++)c+=a[Math.floor(Math.random()*a.length)];return c;}
+  var all=[];var curTab="unused";
+
+  function ensureDir(){
+    return fetch(API+"/redeem/codes/.gitkeep",{headers:hdr()}).then(function(r){
+      if(r.ok)return true;
+      return fetch(API+"/redeem/codes/.gitkeep",{method:"PUT",headers:hdr(),body:JSON.stringify({message:"init dir",content:btoa("# keep\n"),branch:"main"})}).then(function(r2){if(!r2.ok)throw new Error("HTTP "+r2.status);return true;});
+    }).catch(function(){return false;});
+  }
 
   function listCodes(){
     $("status").textContent="读取中…";
-    fetch(API+"/redeem/codes",{headers:hdr()}).then(function(r){if(!r.ok)return r.text().then(function(t){throw new Error("HTTP "+r.status+" "+t.slice(0,120));});return r.json();})
+    fetch(API+"/redeem/codes",{headers:hdr()}).then(function(r){
+      if(r.status===404){return ensureDir().then(function(ok){if(!ok)throw new Error("仓库/目录不存在或令牌无效，已尝试自动创建");return fetch(API+"/redeem/codes",{headers:hdr()});});}
+      if(!r.ok)throw new Error("HTTP "+r.status);
+      return r;
+    })
+    .then(function(r){return r.json();})
     .then(function(files){
-      var js=files.filter(function(f){return /^redeem_.*\.json$/.test(f.name);});
+      var js=(files||[]).filter(function(f){return /^redeem_.*\.json$/.test(f.name);});
       return Promise.all(js.map(function(f){return fetch(RAW+"/redeem/codes/"+f.name).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;});}));
     })
     .then(function(arr){
-      arr=(arr||[]).filter(Boolean).sort(function(a,b){return(b.createdAt||0)-(a.createdAt||0);});
-      if(!arr.length){$("tbody").innerHTML='<tr><td colspan="5" class="mut">暂无兑换码。</td></tr>';$("status").textContent="共 0 个。";return;}
-      $("tbody").innerHTML=arr.map(function(c){
-        var eff=(c.effect&&c.effect.type==="quota")?("+"+(c.effect.value||0)+" 额度"):JSON.stringify(c.effect||{});
-        var st=c.status==="used"?'<span class="status-used">已使用</span>':'<span class="status-unused">未使用</span>';
-        return '<tr><td><code>'+esc(c.code)+'</code></td><td>'+esc(eff)+'</td><td>'+st+'</td><td>'+esc(fmtTs(c.createdAt))+'</td><td><button class="d" data-del="'+esc(c.code)+'">删除</button></td></tr>';
-      }).join("");
-      $("status").textContent="共 "+arr.length+" 个。";
+      all=(arr||[]).filter(Boolean);
+      render();
     })
-    .catch(function(e){$("status").textContent="读取失败："+e.message;});
+    .catch(function(e){$("tbody").innerHTML='<tr><td colspan="5" class="mut">'+esc(e.message)+'</td></tr>';$("status").textContent="读取失败。";});
   }
 
-  function putCode(code,value){
-    var obj={code:code,effect:{type:"quota",value:Number(value)||0},status:"unused",createdAt:Date.now(),createdBy:"admin"};
-    var path="redeem/codes/redeem_"+code+".json";
-    return fetch(API+"/"+path,{method:"PUT",headers:hdr(),body:JSON.stringify({message:"add "+code,content:btoa(unescape(encodeURIComponent(JSON.stringify(obj)))),branch:"main"})})
-      .then(function(r){if(!r.ok)return r.text().then(function(t){throw new Error("HTTP "+r.status+" "+t.slice(0,120));});return r.json();});
+  function effText(c){
+    var e=c.effect||{};
+    if(e.type==="quota")return "额度 +"+(e.value||0);
+    if(e.type==="sub"){var p={basic:"普通",plus:"加强",pro:"高级"}[e.plan]||e.plan;return "订阅·"+p+(e.life?"·终身":(e.days?("·"+e.days+"天"):""));}
+    return JSON.stringify(e);
+  }
+  function statusOf(c){
+    if(c.reusable===true||c.reusable===1)return "reusable";
+    return c.status==="used"?"used":"unused";
+  }
+  function render(){
+    var rows=all.filter(function(c){return statusOf(c)===curTab;});
+    if(!rows.length){$("tbody").innerHTML='<tr><td colspan="5" class="mut">暂无。</td></tr>';$("status").textContent="共 "+all.length+" 个。";return;}
+    $("tbody").innerHTML=rows.map(function(c){
+      var st=statusOf(c)==="used"?'<span class="st-used">已使用</span>':(statusOf(c)==="reusable"?'<span class="st-reusable">可重复</span>':'<span class="st-unused">未使用</span>');
+      return '<tr><td><code>'+esc(c.code)+'</code></td><td>'+esc(effText(c))+'</td><td>'+st+'</td><td>'+esc(fmtTs(c.createdAt))+'</td><td><button class="d" data-del="'+esc(c.code)+'">删除</button></td></tr>';
+    }).join("");
+    $("status").textContent="共 "+all.length+" 个。";
+  }
+
+  function putCode(obj){
+    var path="redeem/codes/redeem_"+obj.code+".json";
+    return fetch(API+"/"+path,{method:"PUT",headers:hdr(),body:JSON.stringify({message:"add "+obj.code,content:btoa(unescape(encodeURIComponent(JSON.stringify(obj)))),branch:"main"})}).then(function(r){if(!r.ok)return r.text().then(function(t){throw new Error("HTTP "+r.status+" "+t.slice(0,100));});});
   }
   function delCode(code){
     return fetch(API+"/redeem/codes/redeem_"+code+".json",{headers:hdr()}).then(function(r){if(r.status===404)return null;if(!r.ok)throw new Error("HTTP "+r.status);return r.json();})
       .then(function(m){if(!m)return;return fetch(API+"/redeem/codes/redeem_"+code+".json",{method:"DELETE",headers:hdr(),body:JSON.stringify({message:"del "+code,sha:m.sha,branch:"main"})}).then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);});});
   }
 
-  $("btnLogin").addEventListener("click",function(){
-    var t=$("ghToken").value.trim();if(!t){alert("请粘贴令牌");return;}
-    setTok(t);
-    fetch("https://api.github.com/user",{headers:hdr()}).then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json();})
-      .then(function(u){alert("已登录："+u.login);$("loginSec").classList.add("hidden");$("codesSec").classList.remove("hidden");listCodes();})
-      .catch(function(e){alert("令牌无效："+e.message);});
+  function enter(){
+    $("loginSec").classList.add("hidden");$("mainSec").classList.remove("hidden");listCodes();
+  }
+  $("ghToken").addEventListener("input",function(){
+    var t=this.value.trim();
+    if(/^ghp_[A-Za-z0-9]{20,}$/.test(t)){setTok(t);fetch("https://api.github.com/user",{headers:hdr()}).then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json();}).then(function(u){enter();}).catch(function(e){$("status").textContent="令牌无效："+e.message;});}
   });
   $("btnReload").addEventListener("click",listCodes);
-  $("btnAdd").addEventListener("click",function(){
-    var code=$("newCode").value.trim().toUpperCase();if(!code)code=genCode();
-    if(!/^[A-Z0-9]{6,16}$/.test(code)){alert("兑换码只能是 6-16 位字母数字");return;}
-    var value=$("newValue").value.trim();
-    if(!confirm("创建兑换码 "+code+"（+"+value+" 额度）？"))return;
-    $("status").textContent="创建中…";
-    putCode(code,value).then(function(){$("newCode").value="";$("status").textContent="已创建。";listCodes();}).catch(function(e){$("status").textContent="创建失败："+e.message;});
-  });
+  document.querySelectorAll(".tabs button").forEach(function(b){b.addEventListener("click",function(){document.querySelectorAll(".tabs button").forEach(function(x){x.classList.remove("on");});b.classList.add("on");curTab=b.getAttribute("data-tab");render();});});
   $("tbody").addEventListener("click",function(e){
-    var b=e.target.closest("[data-del]");if(!b)return;
-    var code=b.getAttribute("data-del");
-    if(!confirm("删除兑换码 "+code+"？"))return;
+    var b=e.target.closest("[data-del]");if(!b)return;var code=b.getAttribute("data-del");
+    if(!confirm("删除卡密 "+code+"？"))return;
     delCode(code).then(function(){$("status").textContent="已删除。";listCodes();}).catch(function(e){$("status").textContent="删除失败："+e.message;});
   });
 
-  if(tok()){$("loginSec").classList.add("hidden");$("codesSec").classList.remove("hidden");listCodes();}
+  /* modal */
+  document.querySelectorAll('input[name="mType"]').forEach(function(r){r.addEventListener("change",function(){
+    var v=document.querySelector('input[name="mType"]:checked').value;
+    $("fQuota").classList.toggle("hidden",v!=="quota");
+    $("fSub").classList.toggle("hidden",v!=="sub");
+  });});
+  $("btnNew").addEventListener("click",function(){$("mCode").value="";$("modal").classList.add("open");});
+  $("mCancel").addEventListener("click",function(){$("modal").classList.remove("open");});
+  $("mOk").addEventListener("click",function(){
+    var code=$("mCode").value.trim().toUpperCase();
+    if(!code)code=genCode();
+    if(!/^[A-Z0-9]{3,6}$/.test(code)){alert("卡密需为 3-6 位字母/数字");return;}
+    var type=document.querySelector('input[name="mType"]:checked').value;
+    var obj={code:code,status:"unused",createdAt:Date.now(),createdBy:"admin"};
+    if(type==="quota"){obj.effect={type:"quota",value:Number($("mValue").value)||0};}
+    else{obj.effect={type:"sub",plan:$("mPlan").value,days:Number($("mDays").value)||0,life:$("mLife").checked,custom:$("mCustom").checked};}
+    obj.once=$("mOnce").checked;
+    obj.reusable=!$("mOnce").checked;
+    $("status").textContent="创建中…";
+    putCode(obj).then(function(){$("modal").classList.remove("open");$("status").textContent="已创建 "+code;listCodes();}).catch(function(e){$("status").textContent="创建失败："+e.message;});
+  });
+
+  if(tok())enter();
 })();
 </script>
 
