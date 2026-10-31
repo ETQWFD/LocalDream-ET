@@ -31,7 +31,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.height
+import androidx.compose.material.icons.filled.Feedback
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.OutlinedTextField
 import androidx.core.content.ContextCompat
@@ -184,7 +186,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private val announceDialog = androidx.compose.runtime.mutableStateOf<Pair<String, String>?>(null)
+    private val announceDialog = androidx.compose.runtime.mutableStateOf<Triple<String, String, Long>?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -290,10 +292,11 @@ class MainActivity : ComponentActivity() {
                 val o = org.json.JSONObject(b.second)
                 val ts = o.optLong("ts", 0L)
                 if (ts <= lastTs) return@runCatching
-                sp.edit().putLong("last_announce_ts", ts).apply()
+                // et.118/build195: do NOT mark read on pull; write last_announce_ts
+                // only when the user dismisses the dialog (see the "知道了" handler).
                 val title = o.optString("title", "公告")
                 val text = o.optString("text", "")
-                runOnUiThread { announceDialog.value = title to text }
+                runOnUiThread { announceDialog.value = Triple(title, text, ts) }
             }
         }.start()
 
@@ -367,11 +370,14 @@ class MainActivity : ComponentActivity() {
                         LaunchedEffect(Unit) { if (!locGranted) locLauncher.launch(android.Manifest.permission.ACCESS_COARSE_LOCATION) }
 
                         val prefs = remember { getSharedPreferences("app_prefs", MODE_PRIVATE) }
-                        var ratingDialog by remember {
+                        // et.118/build195: rating popup removed per request. Keep the
+                        // launch counter (harmless) but never show the star dialog;
+                        // users who already rated stay untouched.
+                        remember {
                             val n = prefs.getInt("launch_count", 0) + 1
                             prefs.edit().putInt("launch_count", n).apply()
-                            mutableStateOf(n >= 2 && !prefs.getBoolean("rated_v2", false))
                         }
+                        var ratingDialog by remember { mutableStateOf(false) }
                         if (ratingDialog) {
                             var stars by remember { mutableStateOf(5) }
                             var comment by remember { mutableStateOf("") }
@@ -440,11 +446,24 @@ class MainActivity : ComponentActivity() {
                                 },
                             )
                         }
-                        // et.112: 反馈问题入口 + 弹窗
+                        // et.118/build195: feedback entry must be a small 48dp floating
+                        // ball pinned bottom-end. Emitting it as a bare sibling of
+                        // AppContent in the Surface box let it balloon and swallow all
+                        // touches; align it explicitly to BottomEnd and pad it.
                         var feedbackDialog by remember { mutableStateOf(false) }
-                        androidx.compose.material3.ExtendedFloatingActionButton(
-                            onClick = { feedbackDialog = true },
-                        ) { Text("反馈问题") }
+                        androidx.compose.foundation.layout.Box(modifier = Modifier.fillMaxSize()) {
+                            androidx.compose.material3.FloatingActionButton(
+                                onClick = { feedbackDialog = true },
+                                modifier = Modifier
+                                    .align(androidx.compose.ui.Alignment.BottomEnd)
+                                    .padding(16.dp),
+                            ) {
+                                androidx.compose.material3.Icon(
+                                    imageVector = androidx.compose.material.icons.Icons.Default.Feedback,
+                                    contentDescription = "反馈问题",
+                                )
+                            }
+                        }
                         if (feedbackDialog) {
                             var fb by remember { mutableStateOf("") }
                             // et.117/build194: explicit Column body with fillMaxWidth.
@@ -513,11 +532,20 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                         // et.114: announcement dialog
-                        announceDialog.value?.let { (t, tx) ->
+                        announceDialog.value?.let { (t, tx, ats) ->
                             androidx.compose.material3.AlertDialog(
-                                onDismissRequest = { announceDialog.value = null },
+                                onDismissRequest = {
+                                    // et.118/build195: mark read only on user close.
+                                    getSharedPreferences("app_prefs", MODE_PRIVATE)
+                                        .edit().putLong("last_announce_ts", ats).apply()
+                                    announceDialog.value = null
+                                },
                                 confirmButton = {
-                                    androidx.compose.material3.TextButton(onClick = { announceDialog.value = null }) { Text("知道了") }
+                                    androidx.compose.material3.TextButton(onClick = {
+                                        getSharedPreferences("app_prefs", MODE_PRIVATE)
+                                            .edit().putLong("last_announce_ts", ats).apply()
+                                        announceDialog.value = null
+                                    }) { Text("知道了") }
                                 },
                                 title = { Text(t) },
                                 text = { Text(tx) },

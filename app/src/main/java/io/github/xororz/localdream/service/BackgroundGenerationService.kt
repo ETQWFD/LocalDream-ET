@@ -315,6 +315,16 @@ class BackgroundGenerationService : Service() {
 
         Log.d("GenerationService", "params: steps=$steps, cfg=$cfg, seed=$seed")
 
+        // et.118/build195 quota gate: refuse when the 7-day budget is exhausted.
+        val quotaCost = QuotaManager.cost(steps, width, height)
+        if (!QuotaManager.available(this@BackgroundGenerationService)) {
+            updateState(
+                GenerationState.Error("额度不足，无法生成图片（等7天自动重置）"),
+            )
+            return START_NOT_STICKY
+        }
+        QuotaManager.consume(this@BackgroundGenerationService, quotaCost)
+
         if (_generationState.value is GenerationState.Complete) {
             updateState(GenerationState.Idle)
         }
@@ -323,27 +333,38 @@ class BackgroundGenerationService : Service() {
 
         serviceScope.launch {
             Log.d("GenerationService", "start generation")
-            runGeneration(
-                prompt,
-                negativePrompt,
-                steps,
-                cfg,
-                seed,
-                width,
-                height,
-                effectiveWidth,
-                effectiveHeight,
-                image,
-                mask,
-                referenceImages,
-                denoiseStrength,
-                useOpenCL,
-                scheduler,
-                aspectRatio,
-                ultrafix,
-                ultrafixTileSize,
-                backendHost,
-            )
+            try {
+                runGeneration(
+                    prompt,
+                    negativePrompt,
+                    steps,
+                    cfg,
+                    seed,
+                    width,
+                    height,
+                    effectiveWidth,
+                    effectiveHeight,
+                    image,
+                    mask,
+                    referenceImages,
+                    denoiseStrength,
+                    useOpenCL,
+                    scheduler,
+                    aspectRatio,
+                    ultrafix,
+                    ultrafixTileSize,
+                    backendHost,
+                )
+                // Success: report usage (non-blocking).
+                QuotaManager.report(this@BackgroundGenerationService)
+            } catch (e: CancellationException) {
+                QuotaManager.refund(this@BackgroundGenerationService, quotaCost)
+                throw e
+            } catch (e: Exception) {
+                // True failure / no image -> refund the units consumed for this run.
+                QuotaManager.refund(this@BackgroundGenerationService, quotaCost)
+                throw e
+            }
         }
 
         return START_NOT_STICKY

@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -13,6 +14,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -33,6 +35,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import io.github.xororz.localdream.BuildConfig
@@ -129,6 +132,31 @@ fun CloudBackupDialog(onDismiss: () -> Unit) {
                         else
                             stringResource(R.string.cloud_backup_state_pending),
                     )
+                    // et.118/build195: quota row under the login status.
+                    run {
+                        val qUsed = io.github.xororz.localdream.service.QuotaManager
+                            .used(LocalContext.current)
+                        val qTotal = io.github.xororz.localdream.service.QuotaManager.TOTAL
+                        val frac = (qUsed.toFloat() / qTotal.toFloat()).coerceIn(0f, 1f)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "高级套餐",
+                                color = androidx.compose.ui.graphics.Color(0xFF7C4DFF),
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.labelMedium,
+                            )
+                            Spacer(modifier = Modifier.padding(horizontal = 4.dp))
+                            Text(
+                                text = "额度 ${qUsed}/${qTotal}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        androidx.compose.material3.LinearProgressIndicator(
+                            progress = { frac },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
                     // et.85: batch-pick album images -> upload each to png/ (x/y progress, retry).
                     var batchBusy by remember { mutableStateOf(false) }
                     var batchProgress by remember { mutableStateOf("") }
