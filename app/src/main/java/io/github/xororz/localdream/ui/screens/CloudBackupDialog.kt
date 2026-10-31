@@ -156,6 +156,17 @@ fun CloudBackupDialog(onDismiss: () -> Unit) {
                             progress = { frac },
                             modifier = Modifier.fillMaxWidth(),
                         )
+                        // et.119/build197: next reset date under the progress bar.
+                        val resetMs = io.github.xororz.localdream.service.QuotaManager
+                            .resetEpochMs(LocalContext.current)
+                        if (resetMs > 0L) {
+                            val ds = remember { java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()) }
+                            Text(
+                                text = "下次重置：${ds.format(java.util.Date(resetMs))}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
                     // et.85: batch-pick album images -> upload each to png/ (x/y progress, retry).
                     var batchBusy by remember { mutableStateOf(false) }

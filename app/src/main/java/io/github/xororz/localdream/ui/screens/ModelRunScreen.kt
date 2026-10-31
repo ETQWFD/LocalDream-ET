@@ -63,6 +63,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.AutoFixHigh
+import androidx.compose.material.icons.filled.ConfirmationNumber
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Brush
 import androidx.compose.material.icons.filled.Clear
@@ -3384,10 +3385,23 @@ fun ModelRunScreen(
                     actions = {
                         // et.118/build195b: announcement center entry in the top bar.
                         var showAnn by remember { mutableStateOf(false) }
+                        // et.119/build197: prize redemption entry.
+                        var showRedeem by remember { mutableStateOf(false) }
+                        IconButton(onClick = { showRedeem = true }) {
+                            Icon(
+                                imageVector = androidx.compose.material.icons.Icons.Default.ConfirmationNumber,
+                                contentDescription = "兑换奖品",
+                            )
+                        }
                         IconButton(onClick = { showAnn = true }) {
                             Icon(
                                 imageVector = androidx.compose.material.icons.Icons.Default.Notifications,
                                 contentDescription = "公告",
+                            )
+                        }
+                        if (showRedeem) {
+                            io.github.xororz.localdream.ui.screens.RedeemDialog(
+                                onDismiss = { showRedeem = false },
                             )
                         }
                         if (showAnn) {

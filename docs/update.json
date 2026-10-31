@@ -1,9 +1,9 @@
 {
-  "versionCode": 196,
-  "versionName": "3.0.0-et.118",
-  "title": "发现新版本 v3.0.0-et.118 build196（额度合并+反馈小球确认）",
+  "versionCode": 197,
+  "versionName": "3.0.0-et.119",
+  "title": "发现新版本 v3.0.0-et.119 build197（兑换奖品+重置时间）",
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
-  "size": 159571246,
-  "sha256": "8c4a305276b9560e7c9391552737a257fe1aaf9a51725d242235ece15601b1e9",
-  "releaseNotes": "维护中，不定时更新；作者上学中，联系邮箱 2416444244@qq.com，QQ群 1078799843。\n\nbuild196：\n1) 反馈入口确认为右下角唯一 48dp 悬浮球（旧版全屏吞触摸按钮已彻底移除，本版 versionCode 196 强制覆盖旧版）。\n2) 额度系统补强：启动时从额度仓合并本机最近用量到本地（非阻塞）；生成消耗/失败返还/不足拦截/进度条/高级套餐字标/上报字段均已就绪。\n3) 默认额度公告启动自动弹出；第二次启动不再弹评分窗。\n\n安装后在“关于/版本”看到 build 196 即新版。版权 Copyright (C) 2026 etc，署名 ET。"
+  "size": 159590710,
+  "sha256": "d6840743ae96dd3ff86b7afd4968ac81cbd810d14f9a34b0e9d31cc24adcdff4",
+  "releaseNotes": "维护中，不定时更新；作者上学中，联系邮箱 2416444244@qq.com，QQ群 1078799843。\n\nbuild197：\n1) 顶栏公告铃铛旁新增“兑换奖品”入口，输入兑换码核销；无效/已用提示，未登录提示先登录，按 effect 返还额度。\n2) 额度进度条下方显示“下次重置：yyyy-MM-dd”（按启用日+7天）。\n\n安装后在“关于/版本”看到 build 197 即新版。版权 Copyright (C) 2026 etc，署名 ET。"
 }

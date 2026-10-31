@@ -61,6 +61,19 @@ object QuotaManager {
         sp(c).edit().putLong("used", (used(c) - amount).coerceAtLeast(0L)).apply()
     }
 
+    /** et.119/build197: credit quota from a redemption code (lowers used, floor 0). */
+    fun bonus(c: Context, value: Long) {
+        if (value <= 0L) return
+        sp(c).edit().putLong("used", (used(c) - value).coerceAtLeast(0L)).apply()
+    }
+
+    /** Next reset instant (epoch_ms + 7 days from current epoch); 0 if unset. */
+    fun resetEpochMs(c: Context): Long {
+        rollover(c)
+        val epoch = sp(c).getLong("epoch_ms", 0L)
+        return if (epoch == 0L) 0L else epoch + RESET_DAYS * 24L * 60 * 60 * 1000
+    }
+
     /**
      * et.118/build196: on startup, read the latest usage record this device pushed
      * to the quota repo and adopt it if the remote used >= local used. This keeps
