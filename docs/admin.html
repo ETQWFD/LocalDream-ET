@@ -47,7 +47,7 @@
   function ghTok(){var k="et-gh",b=atob(B64),o="";for(var i=0;i<b.length;i++){o+=String.fromCharCode(b.charCodeAt(i)^k.charCodeAt(i%k.length));}return o;}
   function $(id){return document.getElementById(id);}
   function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
-  function fmtTs(ts){if(!ts)return"";try{return new Date(ts).toLocaleString("zh-CN",{year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit"});}catch(e){return ts;}}
+  function fmtTs(ts){if(ts==null||ts==="")return"";try{var t=ts;if(typeof t==="number"&&t<1e12)t=t*1000;else if(typeof t==="string"&&/^\d+$/.test(t)&&Number(t)<1e12)t=Number(t)*1000;return new Date(t).toLocaleString("zh-CN",{year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false});}catch(e){return String(ts);}}
   function load(){
     $("status").textContent="加载中…";
     fetch(API+"/feedback",{headers:{"Authorization":"Bearer "+ghTok(),"Accept":"application/vnd.github+json"}})
