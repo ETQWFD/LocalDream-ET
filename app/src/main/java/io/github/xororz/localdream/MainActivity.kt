@@ -311,6 +311,9 @@ class MainActivity : ComponentActivity() {
             }.onFailure { android.util.Log.w("Announce", "pull failed: ${it.message}") }
         }.start()
 
+        // et.118/build196: best-effort quota merge from the quota repo on startup.
+        io.github.xororz.localdream.service.QuotaManager.mergeFromRemote(this)
+
         val app = application as LocalDreamApplication
 
         setContent {
