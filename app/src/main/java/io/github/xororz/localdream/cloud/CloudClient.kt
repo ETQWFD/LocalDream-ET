@@ -237,6 +237,44 @@ object CloudClient {
         throw CloudHttpException(lastCode, "Upload failed HTTP $lastCode", lastDetail)
     }
 
+    /**
+     * et.121/build199: update an EXISTING file in place via the Contents API,
+     * sending its current blob `sha` (required for PUT). Used by redemption to
+     * flip a one-time code to `status:"used"` without creating a duplicate.
+     */
+    fun updateContent(
+        provider: CloudConfig.Provider,
+        token: String,
+        owner: String,
+        repo: String,
+        path: String,
+        bytes: ByteArray,
+        sha: String,
+        message: String,
+    ): Boolean = runCatching {
+        val b64 = Base64.encodeToString(bytes, Base64.NO_WRAP)
+        val body = JSONObject()
+            .put("message", message)
+            .put("content", b64)
+            .put("sha", sha)
+            .toString()
+        val req = Request.Builder()
+            .url("https://api.github.com/repos/$owner/$repo/contents/$path")
+            .addHeader("Authorization", "Bearer $token")
+            .addHeader("Accept", "application/vnd.github+json")
+            .put(body.toRequestBody(JSON_MEDIA))
+            .build()
+        client.newCall(req).execute().use { resp ->
+            if (!resp.isSuccessful) {
+                LogHub.log(
+                    LogHub.Category.UPLOAD,
+                    "updateContent $path HTTP ${resp.code}",
+                )
+            }
+            resp.isSuccessful
+        }
+    }.getOrDefault(false)
+
     /** Pull GitHub/Gitee's human "message" out of an error body, if present. */
     private fun parseErrorMessage(text: String): String? = runCatching {
         val o = JSONObject(text)

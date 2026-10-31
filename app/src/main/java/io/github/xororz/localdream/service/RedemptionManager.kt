@@ -110,9 +110,11 @@ object RedemptionManager {
                         put("used_ts", ts)
                     }.toString()
                     if (l.sha != null) {
-                        CloudClient.uploadContent(
+                        // et.121/build199: update the existing code file in place (with sha)
+                        // so a one-time code actually flips to used instead of duplicating.
+                        CloudClient.updateContent(
                             provider, tok, "ETQWFD", REPO,
-                            "redeem/codes/redeem_$code.json", marked.toByteArray(), "code",
+                            "redeem/codes/redeem_$code.json", marked.toByteArray(), l.sha, "redeem",
                         )
                     }
                     val rec = """{"code":"$code","androidId":"$aid","ts":$ts}"""
