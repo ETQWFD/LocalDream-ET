@@ -1292,30 +1292,30 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                             }
                         }
                     } else {
-                        // et.118/build195: announcement center + prize redemption
-                        // live in the HOME top bar (not the generation page).
-                        var showAnnCenter by remember { mutableStateOf(false) }
-                        var showRedeemCenter by remember { mutableStateOf(false) }
-                        IconButton(onClick = { showAnnCenter = true }) {
+                        // et.130: announcement + redeem entries live in the HOME
+                        // top bar (not the generation page).
+                        var showAnnHome by remember { mutableStateOf(false) }
+                        var showRedeemHome by remember { mutableStateOf(false) }
+                        IconButton(onClick = { showAnnHome = true }) {
                             Icon(
                                 imageVector = androidx.compose.material.icons.Icons.Default.Notifications,
                                 contentDescription = "公告",
                             )
                         }
-                        IconButton(onClick = { showRedeemCenter = true }) {
+                        IconButton(onClick = { showRedeemHome = true }) {
                             Icon(
                                 imageVector = androidx.compose.material.icons.Icons.Default.ConfirmationNumber,
                                 contentDescription = "兑换奖品",
                             )
                         }
-                        if (showAnnCenter) {
-                            io.github.xororz.localdream.ui.screens.AnnouncementCenterDialog(
-                                onDismiss = { showAnnCenter = false },
+                        if (showRedeemHome) {
+                            io.github.xororz.localdream.ui.screens.RedeemDialog(
+                                onDismiss = { showRedeemHome = false },
                             )
                         }
-                        if (showRedeemCenter) {
-                            io.github.xororz.localdream.ui.screens.RedeemDialog(
-                                onDismiss = { showRedeemCenter = false },
+                        if (showAnnHome) {
+                            io.github.xororz.localdream.ui.screens.AnnouncementCenterDialog(
+                                onDismiss = { showAnnHome = false },
                             )
                         }
                         // A single overflow menu keeps the collapsed large top

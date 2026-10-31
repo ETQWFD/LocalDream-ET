@@ -20,11 +20,20 @@ fun RedeemDialog(onDismiss: () -> Unit) {
         onDismissRequest = onDismiss,
         confirmButton = {
             TextButton(
-                enabled = !busy && code.length >= 6,
+                enabled = !busy,
                 onClick = {
+                    val input = code.trim()
+                    if (input.isEmpty()) {
+                        Toast.makeText(context, "请输入兑换码", Toast.LENGTH_LONG).show()
+                        return@TextButton
+                    }
+                    if (input.length > 9) {
+                        Toast.makeText(context, "兑换码最长9位", Toast.LENGTH_LONG).show()
+                        return@TextButton
+                    }
                     busy = true
                     val result = kotlin.runCatching {
-                        io.github.xororz.localdream.service.RedemptionManager.redeem(context, code)
+                        io.github.xororz.localdream.service.RedemptionManager.redeem(context, input)
                     }.getOrElse { RedemptionManager.Result.Invalid }
                     busy = false
                     when (result) {
@@ -43,8 +52,14 @@ fun RedeemDialog(onDismiss: () -> Unit) {
                             Toast.makeText(context, "兑换码无效", Toast.LENGTH_LONG).show()
                         RedemptionManager.Result.NeedLogin ->
                             Toast.makeText(context, "你确定有这个奖品兑换码吗？请先登录", Toast.LENGTH_LONG).show()
-                        RedemptionManager.Result.Network ->
-                            Toast.makeText(context, "网络超时，请检查网络后重试", Toast.LENGTH_LONG).show()
+                        RedemptionManager.Result.Timeout ->
+                            Toast.makeText(context, "请求超时，请重试", Toast.LENGTH_LONG).show()
+                        RedemptionManager.Result.NoNetwork ->
+                            Toast.makeText(context, "无网络连接，请检查网络", Toast.LENGTH_LONG).show()
+                        RedemptionManager.Result.Forbidden ->
+                            Toast.makeText(context, "令牌无效或权限不足", Toast.LENGTH_LONG).show()
+                        is RedemptionManager.Result.WriteFailed ->
+                            Toast.makeText(context, "写入失败：${(result as RedemptionManager.Result.WriteFailed).reason}", Toast.LENGTH_LONG).show()
                     }
                 },
             ) { Text("兑换") }
@@ -54,14 +69,17 @@ fun RedeemDialog(onDismiss: () -> Unit) {
         text = {
             Column {
                 Text(
-                    "输入 9 位兑换码",
+                    "输入兑换码（最多9位，数字+字母）",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Spacer(Modifier.height(8.dp))
                 OutlinedTextField(
                     value = code,
-                    onValueChange = { if (it.length <= 12) code = it.uppercase() },
+                    onValueChange = { v ->
+                        // et.130: max 9 alphanumeric, no minimum length.
+                        code = v.uppercase().filter { it.isLetterOrDigit() }.take(9)
+                    },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     placeholder = { Text("兑换码") },

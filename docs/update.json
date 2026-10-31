@@ -5,5 +5,5 @@
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
   "size": 159601858,
   "sha256": "14a3d235e589f07d89554bc64eae4d13b24f7fd93789c2fc903d5ff4dc6f9554",
-  "releaseNotes": "maintained"
+  "releaseNotes": "et.130: version 130 unified; home top-bar bell+redeem; announce content/ts fix; redeem timeout+mirrors; feedback local time."
 }

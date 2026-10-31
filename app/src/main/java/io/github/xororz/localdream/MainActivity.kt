@@ -290,14 +290,14 @@ class MainActivity : ComponentActivity() {
                     val o = runCatching { org.json.JSONObject(raw) }.getOrNull() ?: continue
                     val target = o.optString("target", "全部")
                     if (!target.contains("手机") && !target.contains("全部")) continue
-                    val ts = o.optLong("ts", 0L)
+                    val ts = io.github.xororz.localdream.ui.screens.parseAnnounceTs(o)
                     if (best == null || ts > best!!.first) best = ts to raw
                 }
                 val b = best ?: return@runCatching
                 val sp = getSharedPreferences("app_prefs", MODE_PRIVATE)
                 val lastTs = sp.getLong("last_announce_ts", 0L)
                 val o = org.json.JSONObject(b.second)
-                val ts = o.optLong("ts", 0L)
+                val ts = io.github.xororz.localdream.ui.screens.parseAnnounceTs(o)
                 if (ts <= lastTs) {
                     android.util.Log.i("Announce", "latest ts=$ts <= lastRead=$lastTs, skip popup")
                     return@runCatching
@@ -305,8 +305,8 @@ class MainActivity : ComponentActivity() {
                 // et.118/build195: do NOT mark read on pull; write last_announce_ts
                 // only when the user dismisses the dialog (see the "知道了" handler).
                 val title = o.optString("title", "公告")
-                val text = o.optString("text", "")
-                android.util.Log.i("Announce", "showing new announcement ts=$ts title=$title")
+                val text = io.github.xororz.localdream.ui.screens.parseAnnounceContent(o)
+                android.util.Log.i("Announce", "showing new announcement ts=$ts title=$title contentLen=${text.length}")
                 runOnUiThread { announceDialog.value = Triple(title, text, ts) }
             }.onFailure { android.util.Log.w("Announce", "pull failed: ${it.message}") }
         }.start()
@@ -536,6 +536,14 @@ class MainActivity : ComponentActivity() {
                                     ) {
                                         Text(
                                             text = "机型：${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}（Android ${android.os.Build.VERSION.RELEASE}）",
+                                            style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                                            color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                        // et.130: device-local time (UTC ms -> local).
+                                        Text(
+                                            text = "时间：" + java.text.SimpleDateFormat(
+                                                "yyyy-MM-dd HH:mm", java.util.Locale.getDefault(),
+                                            ).format(java.util.Date()),
                                             style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
                                             color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
                                         )

@@ -3383,9 +3383,8 @@ fun ModelRunScreen(
                     ),
                     scrollBehavior = scrollBehavior,
                     actions = {
-                        // et.118/build195b: announcement center + prize redemption
-                        // moved to the HOME top bar (ModelListScreen); the
-                        // generation page keeps its top bar clean.
+                        // et.130: announcement + redeem entries moved to the HOME
+                        // (ModelListScreen) top bar; the generation page stays clean.
                         Row {
                             val tabs = listOf(
                                 stringResource(R.string.prompt_tab),

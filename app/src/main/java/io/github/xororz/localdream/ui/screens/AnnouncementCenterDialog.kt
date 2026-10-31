@@ -23,6 +23,32 @@ import java.util.Locale
 
 data class AnnouncementItem(val title: String, val text: String, val ts: Long)
 
+/** et.130: accept Unix seconds / milliseconds / ISO-8601; always return epoch ms. */
+internal fun parseAnnounceTs(o: org.json.JSONObject): Long {
+    // numeric may be seconds (~1.7e9) or ms (~1.7e12); ISO strings parse to ms.
+    if (o.has("ts") && !o.isNull("ts")) {
+        val s = o.optString("ts", "").trim()
+        if (s.isNotEmpty()) {
+            val num = s.toLongOrNull()
+            if (num != null) {
+                // < ~1e12 means seconds (ms epoch for 2001 is 1e9; 2286 ms is 4e12)
+                return if (num < 1_000_000_000_000L) num * 1000L else num
+            }
+            runCatching {
+                return java.text.SimpleDateFormat(
+                    "yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.US,
+                ).apply { timeZone = java.util.TimeZone.getTimeZone("UTC") }
+                    .parse(s.substringBefore('.'))?.time ?: 0L
+            }
+        }
+    }
+    return 0L
+}
+
+/** et.130: body field is `content` per backend; fall back to legacy `text`. */
+internal fun parseAnnounceContent(o: org.json.JSONObject): String =
+    o.optString("content", "").ifBlank { o.optString("text", "") }
+
 private fun loadAll(context: Context): List<AnnouncementItem> {
     val store = SecureTokenStore(context)
     val tok = store.token(CloudConfig.Provider.GITHUB) ?: return emptyList()
@@ -52,7 +78,11 @@ private fun loadAll(context: Context): List<AnnouncementItem> {
             val o = org.json.JSONObject(raw)
             val target = o.optString("target", "全部")
             if (!target.contains("手机") && !target.contains("全部")) return@runCatching
-            out.add(AnnouncementItem(o.optString("title", "公告"), o.optString("text", ""), o.optLong("ts", 0L)))
+            val title = o.optString("title", "公告")
+            val content = parseAnnounceContent(o)
+            val ts = parseAnnounceTs(o)
+            android.util.Log.i("Announce", "loaded $name title=$title ts=$ts contentLen=${content.length}")
+            out.add(AnnouncementItem(title, content, ts))
         }
     }
     out.sortByDescending { it.ts }
@@ -153,7 +183,7 @@ fun AnnouncementCenterDialog(onDismiss: () -> Unit) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Spacer(Modifier.height(8.dp))
-                    Text(a.text)
+                    Text(if (a.text.isBlank()) "（无内容）" else a.text)
                 }
             },
         )
