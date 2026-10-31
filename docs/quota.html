@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="description" content="Local Dream ET 额度说明 — 每周免费额度、重置规则与失败返还。">
+<link rel="icon" href="assets/favicon.ico" sizes="any" />
+<link rel="icon" href="assets/icon-192.png" type="image/png" />
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
+<link rel="manifest" href="site.webmanifest" />
+<meta name="theme-color" content="#ffffff" />
+<title>额度说明 — Local Dream ET</title>
+<style>
+  :root{--bg:#fff;--ink:#111418;--mut:#6b7280;--line:#e8eaee;--soft:#f4f5f7}
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.75 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:880px;margin:0 auto;padding:0 28px}
+  nav{position:sticky;top:0;z-index:100;background:rgba(255,255,255,.9);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  .navin{max-width:1080px;margin:0 auto;padding:18px 28px;display:flex;align-items:center;gap:28px}
+  .brand{font-weight:700;font-size:14.5px}
+  .navlinks{display:flex;gap:22px;flex:1}
+  .navlinks a{color:var(--mut);font-size:13.5px}
+  .navlinks a:hover{color:var(--ink)}
+  .langsel{position:relative}
+  .langbtn{background:none;border:1px solid var(--line);color:var(--ink);border-radius:999px;padding:6px 14px;font-size:12.5px;cursor:pointer}
+  .langmenu{display:none;position:absolute;right:0;top:40px;background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden;min-width:140px;box-shadow:0 12px 30px rgba(0,0,0,.1)}
+  .langmenu.open{display:block}
+  .langmenu button{display:block;width:100%;text-align:left;background:none;border:0;color:var(--ink);padding:10px 14px;font-size:13px;cursor:pointer}
+  .langmenu button:hover{background:var(--soft)}
+  .eyebrow{font-size:11.5px;letter-spacing:2.5px;text-transform:uppercase;color:var(--mut);font-weight:600;margin-bottom:18px}
+  .hero{padding:72px 0 40px}
+  .hero h1{font-size:42px;line-height:1.1;letter-spacing:-1.5px;font-weight:700;margin:0 0 14px}
+  .hero p{color:var(--mut);font-size:16px;max-width:560px;margin:0}
+  section{padding:48px 0;border-top:1px solid var(--line)}
+  h2{font-size:26px;letter-spacing:-1px;font-weight:700;margin:0 0 18px}
+  .card{border:1px solid var(--line);border-radius:16px;padding:24px;margin:14px 0}
+  .card h3{margin:0 0 6px;font-size:16px}
+  .card p{margin:0;color:var(--mut);font-size:14px}
+  .big{font-size:48px;font-weight:800;letter-spacing:-2px;color:var(--ink);line-height:1}
+  footer{padding:48px 0;border-top:1px solid var(--line);color:var(--mut);font-size:13px;text-align:center}
+  @media(max-width:760px){.hero h1{font-size:30px}.navlinks{display:none}}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="navin">
+    <a class="brand" href="index.html">Local Dream ET</a>
+    <div class="navlinks">
+      <a href="#rules" data-i18n="nav.rules">规则</a>
+      <a href="#faq" data-i18n="nav.faq">常见问题</a>
+      <a href="index.html" data-i18n="nav.home">返回官网</a>
+    </div>
+    <div class="langsel">
+      <button class="langbtn" id="langBtn" type="button">简体中文</button>
+      <div class="langmenu" id="langMenu">
+        <button data-l="zh-CN" type="button">简体中文</button>
+        <button data-l="zh-TW" type="button">繁體中文</button>
+        <button data-l="en" type="button">English</button>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<header class="hero wrap">
+  <div class="eyebrow" data-i18n="hero.eye">QUOTA</div>
+  <h1 data-i18n="hero.h1">每周免费额度</h1>
+  <p data-i18n="hero.p">当前完全免费，按设备/账号发放；以下为额度规则说明。</p>
+  <div class="big" style="margin-top:24px">1,280,000</div>
+  <p class="mut" style="color:var(--mut);font-size:13px;margin-top:6px" data-i18n="hero.unit">每周 token 额度 · 7 天自动重置</p>
+</header>
+
+<section id="rules">
+  <div class="wrap">
+    <h2 data-i18n="r.h">规则说明</h2>
+    <div class="card"><h3 data-i18n="r1.t">每周 128 万 token</h3><p data-i18n="r1.d">每个设备/账号每周获得 1,280,000 token 免费额度，足够日常出图使用。</p></div>
+    <div class="card"><h3 data-i18n="r2.t">7 天自动重置</h3><p data-i18n="r2.d">额度自首次使用起 7 天后自动重置，无需手动操作；重置后用量清零。</p></div>
+    <div class="card"><h3 data-i18n="r3.t">按设备 / 账号绑定</h3><p data-i18n="r3.d">额度与当前设备或登录账号绑定，换设备/换号不继承，请勿共享账号。</p></div>
+    <div class="card"><h3 data-i18n="r4.t">失败自动返还</h3><p data-i18n="r4.d">出图请求因服务端错误、网络中断失败时，已扣额度会自动返还，不白扣。</p></div>
+    <div class="card"><h3 data-i18n="r5.t">额度用完怎么办</h3><p data-i18n="r5.d">额度耗尽后请等待下一个 7 天周期重置；期间可改用本地模型离线出图（不消耗额度）。</p></div>
+    <div class="card"><h3 data-i18n="r6.t">未来可能收费</h3><p data-i18n="r6.d">长期来看可能收取十几元费用，请开发者喝奶茶维持服务器；当前阶段全部免费，不强制。</p></div>
+  </div>
+</section>
+
+<section id="faq">
+  <div class="wrap">
+    <h2 data-i18n="q.h">常见问题</h2>
+    <div class="card"><h3 data-i18n="q1.t">怎么看剩余额度？</h3><p data-i18n="q1.d">App 内设置或出图页会显示本周已用/剩余额度；耗尽时会弹出提示。</p></div>
+    <div class="card"><h3 data-i18n="q2.t">为什么额度突然变 0？</h3><p data-i18n="q2.d">可能是本周用量已达上限，或 7 天周期刚重置；重置后即恢复。</p></div>
+    <div class="card"><h3 data-i18n="q3.t">本地出图也扣额度吗？</h3><p data-i18n="q3.d">不扣。完全本地推理（手机 NPU/CPU 或自部署服务端）不消耗云端额度。</p></div>
+  </div>
+</section>
+
+<footer>
+  Local Dream ET · <a href="mailto:2416444244@qq.com">2416444244@qq.com</a> · QQ 群 1078799843
+</footer>
+
+<script>
+(function(){
+  var DICT={
+    "zh-CN":{},
+    "zh-TW":{
+      "nav.rules":"規則","nav.faq":"常見問題","nav.home":"返回官網",
+      "hero.eye":"QUOTA","hero.h1":"每週免費額度","hero.p":"目前完全免費，按設備/帳號發放；以下為額度規則說明。",
+      "hero.unit":"每週 token 額度 · 7 天自動重置",
+      "r.h":"規則說明",
+      "r1.t":"每週 128 萬 token","r1.d":"每個設備/帳號每週獲得 1,280,000 token 免費額度，夠日常出圖使用。",
+      "r2.t":"7 天自動重置","r2.d":"額度自首次使用起 7 天後自動重置，無需手動操作；重置後用量歸零。",
+      "r3.t":"按設備 / 帳號綁定","r3.d":"額度與當前設備或登入帳號綁定，換設備/換號不繼承，請勿共享帳號。",
+      "r4.t":"失敗自動返還","r4.d":"出圖請求因伺服器錯誤、網路中斷失敗時，已扣額度會自動返還，不白扣。",
+      "r5.t":"額度用完怎麼辦","r5.d":"額度耗盡後請等待下一個 7 天週期重置；期間可改用本地模型離線出圖（不消耗額度）。",
+      "r6.t":"未來可能收費","r6.d":"長期來看可能收取十幾元費用，請開發者喝奶茶維持伺服器；現階段全部免費，不強制。",
+      "q.h":"常見問題",
+      "q1.t":"怎麼看剩餘額度？","q1.d":"App 內設定或出圖頁會顯示本週已用/剩餘額度；耗盡時會彈出提示。",
+      "q2.t":"為什麼額度突然變 0？","q2.d":"可能是本週用量已達上限，或 7 天週期剛重置；重置後即恢復。",
+      "q3.t":"本地出圖也扣額度嗎？","q3.d":"不扣。完全本地推理（手機 NPU/CPU 或自部署伺服器）不消耗雲端額度。"
+    },
+    "en":{
+      "nav.rules":"Rules","nav.faq":"FAQ","nav.home":"Home",
+      "hero.eye":"QUOTA","hero.h1":"Weekly free quota","hero.p":"Currently completely free, issued per device/account. Rules below.",
+      "hero.unit":"Weekly token quota · auto-resets every 7 days",
+      "r.h":"Rules",
+      "r1.t":"1.28M tokens per week","r1.d":"Each device/account gets 1,280,000 free tokens per week, enough for daily use.",
+      "r2.t":"Auto-resets in 7 days","r2.d":"Quota resets 7 days after first use, automatically; usage counter clears.",
+      "r3.t":"Bound to device / account","r3.d":"Quota is tied to your device or login. Switching devices doesn't carry over; please don't share accounts.",
+      "r4.t":"Failed requests refunded","r4.d":"If a generation fails due to server error or network issue, deducted tokens are returned.",
+      "r5.t":"Out of quota?","r5.d":"Wait for the next 7-day cycle. Meanwhile you can run local offline generation (no cloud quota used).",
+      "r6.t":"May become paid later","r6.d":"In the future we may charge a small fee (~a few USD) to cover server costs; everything is free now, no pressure.",
+      "q.h":"FAQ",
+      "q1.t":"Where do I see remaining quota?","q1.d":"The app's settings or generation screen shows used/remaining tokens; you'll be alerted when out.",
+      "q2.t":"Why did quota suddenly drop to 0?","q2.d":"You may have hit the weekly cap, or the 7-day cycle just reset; it recovers after reset.",
+      "q3.t":"Does local generation use quota?","q3.d":"No. Fully local inference (phone NPU/CPU or self-hosted server) uses zero cloud quota."
+    }
+  };
+  function $(id){return document.getElementById(id);}
+  function apply(lang){
+    document.documentElement.lang=lang==="en"?"en":"zh-CN";
+    document.querySelectorAll("[data-i18n]").forEach(function(el){var k=el.getAttribute("data-i18n");if(lang!=="zh-CN"&&DICT[lang][k]!=null)el.innerHTML=DICT[lang][k];});
+    $("langBtn").textContent=lang==="zh-TW"?"繁體中文":(lang==="en"?"English":"简体中文");
+    try{localStorage.setItem("etld_lang",lang);}catch(e){}
+  }
+  $("langBtn").addEventListener("click",function(e){e.stopPropagation();$("langMenu").classList.toggle("open");});
+  document.addEventListener("click",function(){$("langMenu").classList.remove("open");});
+  $("langMenu").querySelectorAll("button").forEach(function(b){b.addEventListener("click",function(){$("langMenu").classList.remove("open");apply(b.getAttribute("data-l"));});});
+  var cur="zh-CN";try{cur=localStorage.getItem("etld_lang")||"zh-CN";}catch(e){}
+  apply(cur);
+})();
+</script>
+
+</body>
+</html>
