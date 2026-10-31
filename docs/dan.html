@@ -242,25 +242,28 @@
     </div>
   </div>
 
-  <!-- 发送公告：写 announcements/announce_<ts>.json -->
+  <!-- 发送公告：写 announcements/announce_<ts>.json（已登录管理员直接发，无令牌输入） -->
   <div class="card">
-    <div class="hd"><h2>发送公告</h2><span class="d">写公开仓 announcements/*.json · 手机端 / 服务端 / 全部接收</span></div>
+    <div class="hd"><h2>发送公告</h2><span class="d">已登录管理员直接发送 · 写公开仓 announcements/*.json</span></div>
     <div class="bd">
-      <div style="display:grid;gap:8px">
-        <input id="anTitle" placeholder="公告标题" style="padding:8px 10px;border:1px solid var(--line,#d8dde6);border-radius:8px;background:#fff;color:inherit" />
-        <textarea id="anContent" rows="3" placeholder="公告内容" style="padding:8px 10px;border:1px solid var(--line,#d8dde6);border-radius:8px;background:#fff;color:inherit;font:inherit"></textarea>
-        <select id="anTarget" style="padding:8px 10px;border:1px solid var(--line,#d8dde6);border-radius:8px;background:#fff;color:inherit">
-          <option value="all">全部（手机端 + 服务端）</option>
-          <option value="app">手机端</option>
-          <option value="server">服务端</option>
-        </select>
+      <div style="display:grid;gap:10px;max-width:640px">
+        <div><label style="font-size:12px;color:var(--dim,#888);display:block;margin-bottom:4px">标题</label>
+          <input id="anTitle" placeholder="公告标题" style="width:100%;padding:9px 12px;border:1px solid var(--line,#d8dde6);border-radius:8px;background:#fff;color:inherit;box-sizing:border-box" /></div>
+        <div><label style="font-size:12px;color:var(--dim,#888);display:block;margin-bottom:4px">正文</label>
+          <textarea id="anContent" rows="5" placeholder="公告内容（可多行）" style="width:100%;min-height:120px;padding:9px 12px;border:1px solid var(--line,#d8dde6);border-radius:8px;background:#fff;color:inherit;font:inherit;box-sizing:border-box;resize:vertical"></textarea></div>
+        <div><label style="font-size:12px;color:var(--dim,#888);display:block;margin-bottom:4px">接收端</label>
+          <select id="anTarget" style="padding:9px 12px;border:1px solid var(--line,#d8dde6);border-radius:8px;background:#fff;color:inherit">
+            <option value="all">全部（手机端 + 服务端）</option>
+            <option value="app">手机端</option>
+            <option value="server">服务端</option>
+          </select></div>
         <div class="healthline">
           <button class="btn" id="anSend">发送公告</button>
           <button class="btn" id="anLoad">刷新列表</button>
           <span class="status" id="anStatus">未发送</span>
         </div>
       </div>
-      <div id="anList" style="margin-top:12px"></div>
+      <div id="anList" style="margin-top:14px"></div>
     </div>
   </div>
 
