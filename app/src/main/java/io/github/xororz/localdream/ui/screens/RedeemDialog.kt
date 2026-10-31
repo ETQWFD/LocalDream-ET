@@ -37,10 +37,14 @@ fun RedeemDialog(onDismiss: () -> Unit) {
                             ).show()
                             onDismiss()
                         }
+                        RedemptionManager.Result.Used ->
+                            Toast.makeText(context, "该兑换码已使用", Toast.LENGTH_LONG).show()
                         RedemptionManager.Result.Invalid ->
-                            Toast.makeText(context, "兑换码无效或已被使用", Toast.LENGTH_LONG).show()
+                            Toast.makeText(context, "兑换码无效", Toast.LENGTH_LONG).show()
                         RedemptionManager.Result.NeedLogin ->
                             Toast.makeText(context, "你确定有这个奖品兑换码吗？请先登录", Toast.LENGTH_LONG).show()
+                        RedemptionManager.Result.Network ->
+                            Toast.makeText(context, "网络超时，请检查网络后重试", Toast.LENGTH_LONG).show()
                     }
                 },
             ) { Text("兑换") }

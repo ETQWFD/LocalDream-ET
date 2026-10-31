@@ -8,26 +8,80 @@ import io.github.xororz.localdream.cloud.SecureTokenStore
 import org.json.JSONObject
 
 /**
- * et.119/build197 prize redemption.
+ * et.119/build197 prize redemption; hardened in et.120/build198.
  *
- * Flow: read redeem/codes/redeem_<code>.json in the public quota repo. If it is
- * `status:"unused"`, apply its `effect` locally (quota credit), then best-effort
- * mark it `used` and write a used_<code>_<aid>.json record. The local quota credit
- * always wins; remote bookkeeping failures are logged, not surfaced as errors.
+ * Flow: read redeem/codes/redeem_<code>.json via the GitHub Contents API (same
+ * quota repo), 30s timeouts, retry up to 2 extra times on a network failure.
+ * If `status:"unused"`, apply its `effect` locally (quota credit), then best-effort
+ * mark it `used` and write a used_<code>_<aid>.json record.
  *
- * NOTE on auth: code lookup uses the user's logged-in GitHub token (unauthenticated
- * GitHub API is too rate-limited for a redeemed flow). No repo PAT is embedded in
- * the APK or committed to git — if the account lacks write to the quota repo the
- * remote mark-used step silently skips, but the prize is still credited locally.
+ * Results are split so the UI can show the right Chinese message:
+ *  - Ok(credit): redeemed
+ *  - Used: code exists but already redeemed -> "该兑换码已使用"
+ *  - Invalid: code not found / malformed -> "兑换码无效"
+ *  - NeedLogin: no GitHub token -> prompt login first
+ *  - Network: timed out / unreachable -> retry message
  */
 object RedemptionManager {
     private const val TAG = "Redemption"
     private const val REPO = "ETQWFD/LocalDreamET-Quota"
+    private const val TIMEOUT_MS = 30000
+    private const val MAX_NET_TRIES = 3 // initial + 2 retries
 
     sealed class Result {
         data class Ok(val credit: Long) : Result()
+        object Used : Result()
         object Invalid : Result()
         object NeedLogin : Result()
+        object Network : Result()
+    }
+
+    private sealed class Lookup {
+        data class Looked(val sha: String?, val effectValue: Long) : Lookup()
+        object Used : Lookup()
+        object Invalid : Lookup()
+        object Network : Lookup()
+    }
+
+    private fun lookup(code: String, tok: String): Lookup {
+        var lastErr: Exception? = null
+        repeat(MAX_NET_TRIES) { attempt ->
+            var conn: java.net.HttpURLConnection? = null
+            try {
+                val url = "https://api.github.com/repos/$REPO/contents/redeem/codes/redeem_$code.json"
+                conn = (java.net.URL(url).openConnection() as java.net.HttpURLConnection).apply {
+                    connectTimeout = TIMEOUT_MS; readTimeout = TIMEOUT_MS
+                    setRequestProperty("Authorization", "token $tok")
+                    setRequestProperty("Accept", "application/vnd.github+json")
+                }
+                when (conn.responseCode) {
+                    404 -> return Lookup.Invalid
+                    200 -> {
+                        val j = JSONObject(conn.inputStream.bufferedReader().readText())
+                        val sha = j.optString("sha", "").ifBlank { null }
+                        val raw = String(
+                            android.util.Base64.decode(j.getString("content"), android.util.Base64.DEFAULT),
+                        )
+                        val o = JSONObject(raw)
+                        val status = o.optString("status", "unused")
+                        if (status.equals("used", ignoreCase = true)) return Lookup.Used
+                        val eff = o.optJSONObject("effect")
+                        val value = if (eff != null &&
+                            eff.optString("type", "quota").equals("quota", ignoreCase = true)
+                        ) eff.optLong("value", 0L) else 0L
+                        return Lookup.Looked(sha, value)
+                    }
+                    else -> return Lookup.Invalid
+                }
+            } catch (e: Exception) {
+                lastErr = e
+                Log.w(TAG, "lookup try ${attempt + 1} failed: ${e.message}")
+            } finally {
+                conn?.disconnect()
+            }
+        }
+        Log.w(TAG, "lookup gave up after $MAX_NET_TRIES tries: ${lastErr?.message}")
+        return Lookup.Network
     }
 
     fun redeem(context: Context, rawCode: String): Result {
@@ -37,66 +91,41 @@ object RedemptionManager {
         val provider = CloudConfig.Provider.GITHUB
         val tok = store.token(provider) ?: return Result.NeedLogin
 
-        var conn: java.net.HttpURLConnection? = null
-        var sha: String? = null
-        var currentStatus: String? = null
-        var credit = 0L
-        try {
-            val url = "https://api.github.com/repos/$REPO/contents/redeem/codes/redeem_$code.json"
-            conn = (java.net.URL(url).openConnection() as java.net.HttpURLConnection).apply {
-                connectTimeout = 8000; readTimeout = 8000
-                setRequestProperty("Authorization", "token $tok")
-                setRequestProperty("Accept", "application/vnd.github+json")
+        return when (val l = lookup(code, tok)) {
+            is Lookup.Looked -> {
+                var credit = 0L
+                if (l.effectValue > 0L) {
+                    QuotaManager.bonus(context, l.effectValue)
+                    credit = l.effectValue
+                }
+                // Best-effort: flip status to used + write a used record. Never fails redeem.
+                runCatching {
+                    val aid = android.provider.Settings.Secure.getString(
+                        context.contentResolver, android.provider.Settings.Secure.ANDROID_ID,
+                    ) ?: "anon"
+                    val ts = System.currentTimeMillis()
+                    val marked = JSONObject().apply {
+                        put("status", "used")
+                        put("used_by", aid)
+                        put("used_ts", ts)
+                    }.toString()
+                    if (l.sha != null) {
+                        CloudClient.uploadContent(
+                            provider, tok, "ETQWFD", REPO,
+                            "redeem/codes/redeem_$code.json", marked.toByteArray(), "code",
+                        )
+                    }
+                    val rec = """{"code":"$code","androidId":"$aid","ts":$ts}"""
+                    CloudClient.uploadContent(
+                        provider, tok, "ETQWFD", REPO,
+                        "redeem/used/used_${code}_$aid.json", rec.toByteArray(), "used",
+                    )
+                }.onFailure { Log.w(TAG, "mark-used best-effort failed: ${it.message}") }
+                Result.Ok(credit)
             }
-            when (conn.responseCode) {
-                404 -> return Result.Invalid
-                200 -> Unit
-                else -> return Result.Invalid
-            }
-            val j = JSONObject(conn.inputStream.bufferedReader().readText())
-            sha = j.optString("sha", "").ifBlank { null }
-            val raw = String(android.util.Base64.decode(j.getString("content"), android.util.Base64.DEFAULT))
-            val o = JSONObject(raw)
-            currentStatus = o.optString("status", "unused")
-            if (currentStatus.equals("used", ignoreCase = true)) return Result.Invalid
-
-            val effect = o.optJSONObject("effect")
-            if (effect != null && effect.optString("type", "quota").equals("quota", ignoreCase = true)) {
-                credit = effect.optLong("value", 0L)
-                if (credit > 0L) QuotaManager.bonus(context, credit)
-            }
-        } catch (e: Exception) {
-            Log.w(TAG, "redeem lookup failed: ${e.message}")
-            return Result.Invalid
-        } finally {
-            conn?.disconnect()
+            Lookup.Used -> Result.Used
+            Lookup.Invalid -> Result.Invalid
+            Lookup.Network -> Result.Network
         }
-
-        // Best-effort: flip status to used + write a used record. Never fails redeem.
-        runCatching {
-            val aid = android.provider.Settings.Secure.getString(
-                context.contentResolver, android.provider.Settings.Secure.ANDROID_ID,
-            ) ?: "anon"
-            val ts = System.currentTimeMillis()
-            val marked = JSONObject().apply {
-                put("status", "used")
-                put("used_by", aid)
-                put("used_ts", ts)
-            }.toString()
-            // Update the code file (PUT with sha). Best-effort; ignore failures.
-            if (sha != null) {
-                CloudClient.uploadContent(
-                    provider, tok, "ETQWFD", REPO,
-                    "redeem/codes/redeem_$code.json", marked.toByteArray(), "code",
-                )
-            }
-            val rec = """{"code":"$code","androidId":"$aid","ts":$ts}"""
-            CloudClient.uploadContent(
-                provider, tok, "ETQWFD", REPO,
-                "redeem/used/used_${code}_$aid.json", rec.toByteArray(), "used",
-            )
-        }.onFailure { Log.w(TAG, "mark-used best-effort failed: ${it.message}") }
-
-        return Result.Ok(credit)
     }
 }

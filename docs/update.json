@@ -1,9 +1,9 @@
 {
-  "versionCode": 197,
-  "versionName": "3.0.0-et.119",
-  "title": "发现新版本 v3.0.0-et.119 build197（兑换奖品+重置时间）",
+  "versionCode": 198,
+  "versionName": "3.0.0-et.120",
+  "title": "发现新版本 v3.0.0-et.120 build198（兑换连接加固）",
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
-  "size": 159590710,
-  "sha256": "d6840743ae96dd3ff86b7afd4968ac81cbd810d14f9a34b0e9d31cc24adcdff4",
-  "releaseNotes": "维护中，不定时更新；作者上学中，联系邮箱 2416444244@qq.com，QQ群 1078799843。\n\nbuild197：\n1) 顶栏公告铃铛旁新增“兑换奖品”入口，输入兑换码核销；无效/已用提示，未登录提示先登录，按 effect 返还额度。\n2) 额度进度条下方显示“下次重置：yyyy-MM-dd”（按启用日+7天）。\n\n安装后在“关于/版本”看到 build 197 即新版。版权 Copyright (C) 2026 etc，署名 ET。"
+  "size": 159594878,
+  "sha256": "8f14622a35ff97a8c52976f24ef49656c68b35530f91f2aee801e8d1bc2116a5",
+  "releaseNotes": "维护中，不定时更新；作者上学中，联系邮箱 2416444244@qq.com，QQ群 1078799843。\n\nbuild198：\n1) 兑换卡密走 GitHub Contents API，超时30s、网络失败自动重试2次；已用码提示“该兑换码已使用”，不存在提示“兑换码无效”，未登录提示先登录，超时提示检查网络。\n2) 公告启动自动弹出+右上角公告列表+已读去重确认正常。\n\n安装后在“关于/版本”看到 build 198 即新版。版权 Copyright (C) 2026 etc，署名 ET。"
 }
