@@ -292,6 +292,16 @@
   function fmtBytes(b){ if(b==null)return""; if(b>=1073741824)return (b/1073741824).toFixed(2)+" GB"; if(b>=1048576)return (b/1048576).toFixed(1)+" MB"; return fmt(b)+" B"; }
   function fmtDate(s){ try{return new Date(s).toLocaleString("zh-CN",{month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"});}catch(e){return s||"";} }
   function relDate(s){ try{return new Date(s).toLocaleDateString("zh-CN");}catch(e){return "";} }
+  /* 兼容秒/毫秒/ISO：<1e12 视为秒，*1000 */
+  function fmtTs(ts){
+    if(ts==null||ts==="")return "";
+    try{
+      var t=ts;
+      if(typeof t==="number"&&t<1e12)t=t*1000;
+      else if(typeof t==="string"&&/^\d+$/.test(t)&&Number(t)<1e12)t=Number(t)*1000;
+      return new Date(t).toLocaleString("zh-CN",{year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false});
+    }catch(e){return String(ts);}
+  }
 
   /* ---------- GitHub releases ---------- */
   function ghFromCache(){ try{var raw=sessionStorage.getItem(GH_CACHE);if(!raw)return null;var o=JSON.parse(raw);return (o&&Date.now()-(o.t||0)<=CACHE_TTL_MS)?o.data:null;}catch(e){return null;} }
@@ -612,7 +622,7 @@
         if(!arr.length){$("fbStatus").textContent="暂无反馈。";$("fbTable").innerHTML='<div class="note">暂无反馈。</div>';return;}
         var html='<table><thead><tr><th>时间</th><th>机型</th><th>Android</th><th>问题</th></tr></thead><tbody>';
         arr.forEach(function(f){
-          var d=f.ts?new Date(f.ts).toLocaleString("zh-CN",{year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit"}):"";
+          var d=fmtTs(f.ts);
           html+='<tr><td class="dim">'+esc(d)+'</td><td>'+esc(f.model||"未知")+'</td><td class="dim">'+esc(f.androidVer||"")+'</td><td>'+esc(f.text||"")+'</td></tr>';
         });
         html+='</tbody></table>';
@@ -637,7 +647,7 @@
         if(!arr.length){$("anStatus").textContent="暂无公告。";$("anList").innerHTML='<div class="note">暂无公告。</div>';return;}
         var html='<table><thead><tr><th>时间</th><th>接收端</th><th>标题</th><th>内容</th></tr></thead><tbody>';
         arr.forEach(function(a){
-          var d=a.ts?new Date(a.ts).toLocaleString("zh-CN",{year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit"}):"";
+          var d=fmtTs(a.ts);
           var tg=a.target==="app"?"手机端":(a.target==="server"?"服务端":"全部");
           html+='<tr><td class="dim">'+esc(d)+'</td><td>'+esc(tg)+'</td><td>'+esc(a.title||"")+'</td><td>'+esc(a.content||"")+'</td></tr>';
         });
