@@ -55,9 +55,10 @@
 
   <div id="loginSec">
     <div class="row">
-      <input id="ghToken" type="text" autocomplete="off" spellcheck="false" placeholder="粘贴 GitHub 私人令牌（ghp_...）自动加载" style="flex:1;min-width:280px" />
+      <input id="ghToken" type="text" autocomplete="off" spellcheck="false" placeholder="粘贴 GitHub 私人令牌（ghp_...）" style="flex:1;min-width:280px" />
+      <button id="btnLogin">确认登录</button>
     </div>
-    <div class="mut">需要 repo 写权限；粘贴后自动识别 ghp_ 开头并加载。</div>
+    <div class="mut">需要 repo 写权限；粘贴后可自动识别，也可点按钮登录。</div>
   </div>
 
   <div id="mainSec" class="hidden">
@@ -186,6 +187,13 @@
   $("ghToken").addEventListener("input",function(){
     var t=this.value.trim();
     if(/^ghp_[A-Za-z0-9]{20,}$/.test(t)){setTok(t);fetch("https://api.github.com/user",{headers:hdr()}).then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json();}).then(function(u){enter();}).catch(function(e){$("status").textContent="令牌无效："+e.message;});}
+  });
+  $("btnLogin").addEventListener("click",function(){
+    var t=$("ghToken").value.trim();if(!t){alert("请粘贴令牌");return;}
+    setTok(t);var b=$("btnLogin");b.disabled=true;b.textContent="校验中…";
+    fetch("https://api.github.com/user",{headers:hdr()}).then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json();})
+      .then(function(u){b.disabled=false;b.textContent="确认登录";enter();})
+      .catch(function(e){b.disabled=false;b.textContent="确认登录";alert("令牌无效："+e.message);});
   });
   $("btnReload").addEventListener("click",listCodes);
   document.querySelectorAll(".tabs button").forEach(function(b){b.addEventListener("click",function(){document.querySelectorAll(".tabs button").forEach(function(x){x.classList.remove("on");});b.classList.add("on");curTab=b.getAttribute("data-tab");render();});});
