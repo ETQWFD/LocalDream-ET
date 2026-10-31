@@ -1,9 +1,9 @@
 {
   "versionCode": 199,
-  "versionName": "3.0.0-et.121",
-  "title": "发现新版本 v3.0.0-et.121 build199（兑换+反馈链路自测）",
+  "versionName": "3.0.0-et.130",
+  "title": "发现新版本 v3.0.0-et.130 build130",
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
   "size": 159595806,
   "sha256": "eb222ccbbdc75eca108e627fa8730bc6e93c393ceb3432223a524b2552624de8",
-  "releaseNotes": "维护中，不定时更新；作者上学中，联系邮箱 2416444244@qq.com，QQ群 1078799843。\n\nbuild199：\n1) 兑换一次性卡密真正写回 used（带 sha 更新原文件，不再产生重复）；兑换成功加本地额度并尽力上报 usage。\n2) 反馈提交链路实测通过（feedback/feedback_<aid>_<ts>.json，字段 text/model/androidVer/ts），后台可读列表。\n3) 公告/打分/额度回归正常。\n\n安装后在“关于/版本”看到 build 199 即新版。版权 Copyright (C) 2026 etc，署名 ET。"
+  "releaseNotes": "维护中，不定时更新；作者上学中，联系邮箱 2416444244@qq.com，QQ群 1078799843。\n\nbuild130：\n1) 兑换一次性卡密真正写回 used（带 sha 更新原文件，不再产生重复）；兑换成功加本地额度并尽力上报 usage。\n2) 反馈提交链路实测通过（feedback/feedback_<aid>_<ts>.json，字段 text/model/androidVer/ts），后台可读列表。\n3) 公告/打分/额度回归正常。\n\n安装后在“关于/版本”看到 build 130 即新版。版权 Copyright (C) 2026 etc，署名 ET。"
 }
