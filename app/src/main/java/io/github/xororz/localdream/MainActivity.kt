@@ -500,14 +500,15 @@ class MainActivity : ComponentActivity() {
                                                     val aid = android.provider.Settings.Secure.getString(
                                                         contentResolver, android.provider.Settings.Secure.ANDROID_ID
                                                     ) ?: "anon"
-                                                    val ts = System.currentTimeMillis()
+                                                    val tsMs = System.currentTimeMillis()
+                                                    val ts = tsMs / 1000L // et.130: body ts = Unix seconds
                                                     val safeText = text.replace("\\", "\\\\").replace("\"", "'")
                                                         .replace("\n", "\\n").replace("\r", "")
                                                     val body = """{"text":"$safeText","model":"${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}","androidVer":"${android.os.Build.VERSION.RELEASE}","ts":$ts}"""
                                                     io.github.xororz.localdream.cloud.CloudClient.uploadContent(
                                                         provider, tok, auth.owner ?: auth.login,
                                                         auth.repo ?: io.github.xororz.localdream.cloud.CloudConfig.BACKUP_REPO,
-                                                        "feedback/feedback_${aid.take(8)}_$ts.json", body.toByteArray(), "feedback",
+                                                        "feedback/feedback_${aid.take(8)}_$tsMs.json", body.toByteArray(), "feedback",
                                                     )
                                                     (true to "")
                                                 }.getOrElse { false to (it.message ?: "网络错误") }
