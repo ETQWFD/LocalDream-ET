@@ -3383,32 +3383,9 @@ fun ModelRunScreen(
                     ),
                     scrollBehavior = scrollBehavior,
                     actions = {
-                        // et.118/build195b: announcement center entry in the top bar.
-                        var showAnn by remember { mutableStateOf(false) }
-                        // et.119/build197: prize redemption entry.
-                        var showRedeem by remember { mutableStateOf(false) }
-                        IconButton(onClick = { showRedeem = true }) {
-                            Icon(
-                                imageVector = androidx.compose.material.icons.Icons.Default.ConfirmationNumber,
-                                contentDescription = "兑换奖品",
-                            )
-                        }
-                        IconButton(onClick = { showAnn = true }) {
-                            Icon(
-                                imageVector = androidx.compose.material.icons.Icons.Default.Notifications,
-                                contentDescription = "公告",
-                            )
-                        }
-                        if (showRedeem) {
-                            io.github.xororz.localdream.ui.screens.RedeemDialog(
-                                onDismiss = { showRedeem = false },
-                            )
-                        }
-                        if (showAnn) {
-                            io.github.xororz.localdream.ui.screens.AnnouncementCenterDialog(
-                                onDismiss = { showAnn = false },
-                            )
-                        }
+                        // et.118/build195b: announcement center + prize redemption
+                        // moved to the HOME top bar (ModelListScreen); the
+                        // generation page keeps its top bar clean.
                         Row {
                             val tabs = listOf(
                                 stringResource(R.string.prompt_tab),

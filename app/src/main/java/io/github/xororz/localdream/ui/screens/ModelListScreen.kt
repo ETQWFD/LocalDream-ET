@@ -1292,6 +1292,32 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                             }
                         }
                     } else {
+                        // et.118/build195: announcement center + prize redemption
+                        // live in the HOME top bar (not the generation page).
+                        var showAnnCenter by remember { mutableStateOf(false) }
+                        var showRedeemCenter by remember { mutableStateOf(false) }
+                        IconButton(onClick = { showAnnCenter = true }) {
+                            Icon(
+                                imageVector = androidx.compose.material.icons.Icons.Default.Notifications,
+                                contentDescription = "公告",
+                            )
+                        }
+                        IconButton(onClick = { showRedeemCenter = true }) {
+                            Icon(
+                                imageVector = androidx.compose.material.icons.Icons.Default.ConfirmationNumber,
+                                contentDescription = "兑换奖品",
+                            )
+                        }
+                        if (showAnnCenter) {
+                            io.github.xororz.localdream.ui.screens.AnnouncementCenterDialog(
+                                onDismiss = { showAnnCenter = false },
+                            )
+                        }
+                        if (showRedeemCenter) {
+                            io.github.xororz.localdream.ui.screens.RedeemDialog(
+                                onDismiss = { showRedeemCenter = false },
+                            )
+                        }
                         // A single overflow menu keeps the collapsed large top
                         // bar's title from being squeezed by multiple action
                         // icons competing for width.
