@@ -1,9 +1,9 @@
 {
-  "versionCode": 203,
-  "versionName": "4.0.0-et.130",
-  "title": "发现新版本 v4.0.0-et.130",
+  "versionCode": 204,
+  "versionName": "4.0.0-et.131",
+  "title": "发现新版本 v4.0.0-et.131",
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
-  "size": 159611042,
-  "sha256": "0285ca888f0007b397505a29f2c4d23a951b698a7b843e62a0ca8c783992a627",
-  "releaseNotes": "et.130: 引擎143自动重启重试2次+stderr独立排空；生成前内存预检自动降档；服务端口可配置并占用顺延；反馈固定写官方ratings仓；登录401明确提示；失败返还额度。versionCode=203。"
+  "size": 159611058,
+  "sha256": "765116803e1f3ebca5a51d9f3edb16e1e0cb36db2f41182f7e0f9ef87ae93365",
+  "releaseNotes": "et.131: 自动更新全链路(update.json->下载->sha256校验->FileProvider安装)自测通过；公告/卡密/反馈链路复核；143保活/端口配置/内存预检/反馈官方仓/401保持。versionCode=204。"
 }
