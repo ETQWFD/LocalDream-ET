@@ -152,8 +152,19 @@ data class Model(
     val isDit: Boolean get() = ditKind.isNotEmpty()
 
     // Per-field priority: code defaults > config.json > global defaults.
+    // et.131追加3: for SDXL models that don't ship their own steps/cfg in
+    // config.json, fall back to SDXL-recommended 28 steps / CFG 5.5 (the
+    // global 16/7 under-steps SDXL -> pale/under-exposed, washed output).
     val defaults: GenerationDefaults
-        get() = codeDefaults.withFallback(configDefaults).resolve()
+        get() {
+            var merged = codeDefaults.withFallback(configDefaults)
+            if (isSdxl) {
+                merged = merged.withFallback(
+                    ModelConfig(steps = 28f, cfg = 5.5f, scheduler = "dpm_karras")
+                )
+            }
+            return merged.resolve()
+        }
 
     // SDXL and Anima both render on a fixed 1024 canvas and reach non-1:1
     // outputs via aspect-ratio inpaint padding; the run screen treats them
