@@ -879,6 +879,17 @@ class BackendService : Service() {
         ldLibraryPath: String,
     ) {
         Thread {
+            // et.131: drain stderr on its own thread. If the engine writes a lot
+            // to stderr and nobody reads it, the 64KB pipe buffer fills and the
+            // engine blocks on write() -> appears hung / gets SIGTERM (code=143).
+            val stderrDrainer = Thread {
+                runCatching {
+                    proc.errorStream.bufferedReader().use { r ->
+                        while (r.readLine() != null) { /* drain & discard */ }
+                    }
+                }
+            }.apply { isDaemon = true; name = "engine-stderr" }
+            stderrDrainer.start()
             // Keep the last native log lines so a startup crash (e.g. a missing
             // model file or a failed driver dlopen) reports the real reason
             // instead of a bare "connection refused / exit code".

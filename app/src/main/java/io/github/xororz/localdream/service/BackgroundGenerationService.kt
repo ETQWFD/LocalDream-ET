@@ -1168,7 +1168,8 @@ class BackgroundGenerationService : Service() {
                     else ->
                         "生成失败(exit=$code)：${e.message ?: "原生退出"}，详见 engine_*.log 末行。"
                 }
-                updateState(GenerationState.Error(msg))
+                // et.131: tell the user the consumed quota was refunded.
+                updateState(GenerationState.Error("$msg\n（生成失败，已返还额度，请重试）"))
             }
             stopSelf()
         } finally {
