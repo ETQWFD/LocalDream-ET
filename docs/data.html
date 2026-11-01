@@ -172,13 +172,40 @@
     $("status").textContent="共 "+all.length+" 个。";
   }
 
+  /* 错误细分 */
+  function errMsg(e){
+    if(!navigator.onLine)return "无网络连接，请检查网络";
+    if(e&&/abort|timeout/i.test(e.message))return "请求超时，请重试";
+    if(e&&/HTTP 403/.test(e.message))return "gh令牌无效或权限不足，请重新输入";
+    if(e&&/HTTP 404/.test(e.message))return "仓库或目录路径错误";
+    return "写入失败："+(e&&e.message?e.message:"未知");
+  }
+  function wFetch(url,opts,retries){
+    retries=retries||2;
+    function attempt(n){
+      var ctrl=AbortController?new AbortController():null;
+      var tid=ctrl?setTimeout(function(){ctrl.abort();},15000):null;
+      var ro=ctrl?Object.assign({signal:ctrl.signal},opts):opts;
+      return fetch(url,ro).then(function(r){
+        if(tid)clearTimeout(tid);
+        if(!r.ok)return r.text().then(function(t){throw new Error("HTTP "+r.status+" "+t.slice(0,100));});
+        return r;
+      }).catch(function(e){
+        if(tid)clearTimeout(tid);
+        if(n<retries){return new Promise(function(res){setTimeout(res,1000*(n+1));}).then(function(){return attempt(n+1);});}
+        throw e;
+      });
+    }
+    return attempt(0);
+  }
+
   function putCode(obj){
     var path="redeem/codes/redeem_"+obj.code+".json";
-    return fetch(API+"/"+path,{method:"PUT",headers:hdr(),body:JSON.stringify({message:"add "+obj.code,content:btoa(unescape(encodeURIComponent(JSON.stringify(obj)))),branch:"main"})}).then(function(r){if(!r.ok)return r.text().then(function(t){throw new Error("HTTP "+r.status+" "+t.slice(0,100));});});
+    return wFetch(API+"/"+path,{method:"PUT",headers:hdr(),body:JSON.stringify({message:"add "+obj.code,content:btoa(unescape(encodeURIComponent(JSON.stringify(obj)))),branch:"main"})}).then(function(r){return r.json();});
   }
   function delCode(code){
-    return fetch(API+"/redeem/codes/redeem_"+code+".json",{headers:hdr()}).then(function(r){if(r.status===404)return null;if(!r.ok)throw new Error("HTTP "+r.status);return r.json();})
-      .then(function(m){if(!m)return;return fetch(API+"/redeem/codes/redeem_"+code+".json",{method:"DELETE",headers:hdr(),body:JSON.stringify({message:"del "+code,sha:m.sha,branch:"main"})}).then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);});});
+    return wFetch(API+"/redeem/codes/redeem_"+code+".json",{headers:hdr()}).then(function(r){if(r.status===404)return null;return r.json();})
+      .then(function(m){if(!m)return;return wFetch(API+"/redeem/codes/redeem_"+code+".json",{method:"DELETE",headers:hdr(),body:JSON.stringify({message:"del "+code,sha:m.sha,branch:"main"})});});
   }
 
   function enter(){
@@ -200,7 +227,8 @@
   $("tbody").addEventListener("click",function(e){
     var b=e.target.closest("[data-del]");if(!b)return;var code=b.getAttribute("data-del");
     if(!confirm("删除卡密 "+code+"？"))return;
-    delCode(code).then(function(){$("status").textContent="已删除。";listCodes();}).catch(function(e){$("status").textContent="删除失败："+e.message;});
+    $("status").textContent="删除中…";
+    delCode(code).then(function(){$("status").textContent="已删除 "+code;listCodes();}).catch(function(e){var m=errMsg(e);$("status").textContent="删除失败："+m;if(confirm(m+"\n\n点确定重试删除 "+code))delCode(code).then(function(){$("status").textContent="已删除 "+code;listCodes();}).catch(function(e2){$("status").textContent="删除失败："+errMsg(e2);});});
   });
 
   /* modal */
@@ -222,7 +250,9 @@
     obj.once=$("mOnce").checked;
     obj.reusable=!$("mOnce").checked;
     $("status").textContent="创建中…";
-    putCode(obj).then(function(){$("modal").classList.remove("open");$("status").textContent="已创建 "+code;listCodes();}).catch(function(e){$("status").textContent="创建失败："+e.message;});
+    var b=$("mOk");b.disabled=true;b.textContent="创建中…";
+    putCode(obj).then(function(){$("modal").classList.remove("open");b.disabled=false;b.textContent="创建";$("status").textContent="已创建 "+code;listCodes();})
+      .catch(function(e){b.disabled=false;b.textContent="创建";var m=errMsg(e);$("status").textContent="创建失败："+m;if(confirm(m+"\n\n点确定重试创建 "+code)){b.disabled=true;b.textContent="重试中…";putCode(obj).then(function(){$("modal").classList.remove("open");b.disabled=false;b.textContent="创建";$("status").textContent="已创建 "+code;listCodes();}).catch(function(e2){b.disabled=false;b.textContent="创建";$("status").textContent="创建失败："+errMsg(e2);});}});
   });
 
   if(tok())enter();
