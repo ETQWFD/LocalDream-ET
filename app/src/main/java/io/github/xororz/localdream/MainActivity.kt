@@ -307,6 +307,7 @@ class MainActivity : ComponentActivity() {
                 val title = o.optString("title", "公告")
                 val text = io.github.xororz.localdream.ui.screens.parseAnnounceContent(o)
                 android.util.Log.i("Announce", "showing new announcement ts=$ts title=$title contentLen=${text.length}")
+                io.github.xororz.localdream.ui.screens.setAnnounceUnread(applicationContext, true)
                 runOnUiThread { announceDialog.value = Triple(title, text, ts) }
             }.onFailure { android.util.Log.w("Announce", "pull failed: ${it.message}") }
         }.start()

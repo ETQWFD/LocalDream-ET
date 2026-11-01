@@ -3,6 +3,7 @@ package io.github.xororz.localdream.ui.screens
 import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -49,7 +50,29 @@ internal fun parseAnnounceTs(o: org.json.JSONObject): Long {
 internal fun parseAnnounceContent(o: org.json.JSONObject): String =
     o.optString("content", "").ifBlank { o.optString("text", "") }
 
+private fun hiddenSet(context: Context): MutableSet<String> =
+    context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+        .getStringSet("hidden_announce_ts", emptySet())?.toMutableSet() ?: mutableSetOf()
+
+/** et.130追加11: mark an announcement hidden on THIS device/account only. */
+internal fun hideAnnounceLocal(context: Context, ts: Long) {
+    val sp = context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+    val s = hiddenSet(context)
+    s.add(ts.toString())
+    sp.edit().putStringSet("hidden_announce_ts", s).apply()
+}
+
+/** et.130追加11: home bell badge. Set/cleared by the dialog + startup popup. */
+internal fun setAnnounceUnread(context: Context, unread: Boolean) {
+    context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+        .edit().putBoolean("announce_unread", unread).apply()
+}
+internal fun hasAnnounceUnread(context: Context): Boolean =
+    context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+        .getBoolean("announce_unread", false)
+
 private fun loadAll(context: Context): List<AnnouncementItem> {
+    val hidden = hiddenSet(context)
     val store = SecureTokenStore(context)
     val tok = store.token(CloudConfig.Provider.GITHUB) ?: return emptyList()
     val repo = "ETQWFD/LocalDream-ET-ratings"
@@ -81,6 +104,7 @@ private fun loadAll(context: Context): List<AnnouncementItem> {
             val title = o.optString("title", "公告")
             val content = parseAnnounceContent(o)
             val ts = parseAnnounceTs(o)
+            if (ts.toString() in hidden) return@runCatching // et.130追加11: hidden locally
             android.util.Log.i("Announce", "loaded $name title=$title ts=$ts contentLen=${content.length}")
             out.add(AnnouncementItem(title, content, ts))
         }
@@ -101,6 +125,8 @@ fun AnnouncementCenterDialog(onDismiss: () -> Unit) {
     var openItem by remember { mutableStateOf<AnnouncementItem?>(null) }
 
     LaunchedEffect(Unit) {
+        // Opening the list = viewed; clear the home bell badge immediately.
+        setAnnounceUnread(context, false)
         items = kotlin.runCatching {
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { loadAll(context) }
         }.getOrElse { emptyList() }
@@ -140,7 +166,19 @@ fun AnnouncementCenterDialog(onDismiss: () -> Unit) {
                             val unread = a.ts > lastRead
                             Row(
                                 modifier = Modifier.fillMaxWidth()
-                                    .clickable { openItem = a; markRead(a.ts) }
+                                    .combinedClickable(
+                                        onClick = { openItem = a; markRead(a.ts) },
+                                        onLongClick = {
+                                            // et.130追加11: hide locally only (no cloud delete).
+                                            hideAnnounceLocal(context, a.ts)
+                                            items = items?.filterNot { it.ts == a.ts }
+                                            Toast.makeText(
+                                                context,
+                                                "已在本机隐藏该公告（不影响其他用户/云端）",
+                                                Toast.LENGTH_LONG,
+                                            ).show()
+                                        },
+                                    )
                                     .padding(vertical = 10.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {

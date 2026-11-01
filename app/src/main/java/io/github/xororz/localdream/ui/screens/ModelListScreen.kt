@@ -1296,11 +1296,30 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                         // top bar (not the generation page).
                         var showAnnHome by remember { mutableStateOf(false) }
                         var showRedeemHome by remember { mutableStateOf(false) }
+                        // et.130追加11: red unread badge on the home bell.
+                        var badgeKey by remember { mutableStateOf(0) }
+                        val ctx = androidx.compose.ui.platform.LocalContext.current
+                        val bellUnread = remember(badgeKey) {
+                            io.github.xororz.localdream.ui.screens.hasAnnounceUnread(ctx)
+                        }
                         IconButton(onClick = { showAnnHome = true }) {
-                            Icon(
-                                imageVector = androidx.compose.material.icons.Icons.Default.Notifications,
-                                contentDescription = "公告",
-                            )
+                            androidx.compose.foundation.layout.Box {
+                                Icon(
+                                    imageVector = androidx.compose.material.icons.Icons.Default.Notifications,
+                                    contentDescription = "公告",
+                                )
+                                if (bellUnread) {
+                                    androidx.compose.foundation.layout.Box(
+                                        Modifier
+                                            .align(androidx.compose.ui.Alignment.TopEnd)
+                                            .size(10.dp)
+                                            .background(
+                                                androidx.compose.ui.graphics.Color(0xFFE53935),
+                                                androidx.compose.foundation.shape.CircleShape,
+                                            ),
+                                    )
+                                }
+                            }
                         }
                         IconButton(onClick = { showRedeemHome = true }) {
                             Icon(
@@ -1315,7 +1334,10 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                         }
                         if (showAnnHome) {
                             io.github.xororz.localdream.ui.screens.AnnouncementCenterDialog(
-                                onDismiss = { showAnnHome = false },
+                                onDismiss = {
+                                    showAnnHome = false
+                                    badgeKey++ // re-read unread flag -> dot cleared after viewing
+                                },
                             )
                         }
                         // A single overflow menu keeps the collapsed large top

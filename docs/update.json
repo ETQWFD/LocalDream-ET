@@ -3,7 +3,7 @@
   "versionName": "4.0.0-et.130",
   "title": "发现新版本 v4.0.0-et.130",
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
-  "size": 159601938,
-  "sha256": "25e512dbb207d4c2711c828daf0015ba89e51bb5418adf8372292757970a5a03",
-  "releaseNotes": "et.130: 首页右上角铃铛+礼盒；公告content+秒/毫秒/ISO；反馈Unix秒ts；兑换9位+超时重试镜像；生成链路加固(bad_alloc三档降档切CPU/toast提示、最外层catch Throwable防闪退、引擎启动超时自动重连)。versionCode=200。"
+  "size": 159606330,
+  "sha256": "fa2455dd4c2820db46e85546384367329c06cfab6e9acd0fffea88a8ced9e0f1",
+  "releaseNotes": "et.130: 首页右上角铃铛(有未读红点)+礼盒；长按公告仅本机隐藏；兑换9位+超时重试镜像；公告content+秒/毫秒/ISO；反馈Unix秒ts。versionCode=200。"
 }
