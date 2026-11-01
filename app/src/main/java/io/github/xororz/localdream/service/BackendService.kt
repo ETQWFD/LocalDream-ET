@@ -661,15 +661,18 @@ class BackendService : Service() {
                 // Same invocation as the standalone upscale screen's private
                 // process; run through this service so host mode gets the
                 // usual reconcile/stop-grace lifecycle and --listen_all.
+                // et.130追加12: resolved engine port (auto-bumped if occupied).
+                val enginePort = io.github.xororz.localdream.utils.EnginePort.enginePort(this)
                 mutableListOf(
                     executableFile.absolutePath,
                     "--upscaler_mode",
                     "--lib_dir",
                     runtimeDir.absolutePath,
                     "--port",
-                    "8081",
+                    enginePort.toString(),
                 )
             } else {
+                val enginePort = io.github.xororz.localdream.utils.EnginePort.enginePort(this)
                 mutableListOf(
                     executableFile.absolutePath,
                     "--type",
@@ -677,7 +680,7 @@ class BackendService : Service() {
                     "--model_dir",
                     modelsDir.absolutePath,
                     "--port",
-                    "8081",
+                    enginePort.toString(),
                 )
             }
             // DiT types load libdit_engine.so and its FastRPC skel from the

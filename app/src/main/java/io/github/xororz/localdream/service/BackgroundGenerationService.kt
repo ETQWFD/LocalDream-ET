@@ -237,7 +237,9 @@ class BackgroundGenerationService : Service() {
         val ultrafixTileSize = data.getIntExtra("ultrafix_tile_size", 512)
         // Backend to talk to: the local backend by default, or a remote host's
         // generation port when running in connected-device mode.
-        val backendHost = data.getStringExtra("backend_host") ?: LOCAL_BACKEND_HOST
+        // et.130追加12: use the resolved (possibly auto-bumped) engine port.
+        val localPort = io.github.xororz.localdream.utils.EnginePort.activeEnginePort(this)
+        val backendHost = data.getStringExtra("backend_host") ?: "localhost:$localPort"
         // et.30: save model context for OOM auto-restart of the engine.
         engineModelId = data.getStringExtra("modelId")
         engineBackendType = data.getStringExtra("backendType") ?: "sd15cpu"
@@ -419,6 +421,29 @@ class BackgroundGenerationService : Service() {
             var attemptSteps = steps
             var attemptWidth = width
             var attemptHeight = height
+            // et.130追加12: pre-generation memory check. If <512MB available, drop to a
+            // smaller resolution first so the engine is less likely to be SIGTERM'd (143).
+            runCatching {
+                val am = getSystemService(android.content.Context.ACTIVITY_SERVICE)
+                    as android.app.ActivityManager
+                val mi = android.app.ActivityManager.MemoryInfo()
+                am.getMemoryInfo(mi)
+                val availMb = mi.availMem / (1024 * 1024)
+                if (availMb < 512L) {
+                    val scale = 256.0 / maxOf(attemptWidth, attemptHeight)
+                    if (scale < 1.0) {
+                        attemptWidth = (Math.round(attemptWidth * scale).toInt() / 8) * 8
+                        attemptHeight = (Math.round(attemptHeight * scale).toInt() / 8) * 8
+                        android.os.Handler(android.os.Looper.getMainLooper()).post {
+                            android.widget.Toast.makeText(
+                                this@BackgroundGenerationService,
+                                "系统内存不足（可用${availMb}MB），已自动降低分辨率",
+                                android.widget.Toast.LENGTH_LONG,
+                            ).show()
+                        }
+                    }
+                }
+            }
             // et.45: HARD request-build-layer tier for extreme-low-end 32-bit devices
             // (armeabi-v7a, ~2-3GB, no fp16/dotprod, e.g. PowerVR GE8320). Regardless of
             // what the UI / saved speed_tier / custom fields say, the params actually sent
@@ -459,6 +484,9 @@ class BackgroundGenerationService : Service() {
             // et.44-patch: a transport hiccup on an otherwise-live engine gets exactly
             // one in-place reconnect (fresh connection, same params) — no process restart.
             var connRetryDone = false
+            // et.130追加12: system-killed engine (SIGTERM 143, e.g. Adreno829
+            // under memory pressure) — restart engine and resend SAME params, up to 2x.
+            var sigtermRetries = 0
 
             attemptLoop@ while (true) {
             try {
@@ -536,17 +564,18 @@ class BackgroundGenerationService : Service() {
             // to 30s before surfacing "引擎未就绪". EditScreen now also
             // starts BackendService first, so this poll waits for it.
             run {
+                val port = io.github.xororz.localdream.utils.EnginePort.activeEnginePort(this@BackgroundGenerationService)
                 var ok = false
                 repeat(30) { _ ->
                     runCatching {
                         java.net.Socket().use {
-                            it.connect(java.net.InetSocketAddress("127.0.0.1", 8081), 1500); ok = true
+                            it.connect(java.net.InetSocketAddress("127.0.0.1", port), 1500); ok = true
                         }
                     }
                     if (ok) return@repeat
                     runCatching { Thread.sleep(1000) }
                 }
-                if (!ok) throw IOException("引擎启动失败：8081 30秒内未就绪，模型文件可能损坏，请重新下载")
+                if (!ok) throw IOException("引擎启动失败：端口 $port 30秒内未就绪，模型文件可能损坏，请重新下载")
             }
             // et.57: optional background music while generating.
             io.github.xororz.localdream.utils.BgmManager.start(this@BackgroundGenerationService)
@@ -1007,6 +1036,35 @@ class BackgroundGenerationService : Service() {
                     )
                     stopSelf()
                     break@attemptLoop
+                }
+                if (engineDied && exitCode == 143 && sigtermRetries < 2) {
+                    // et.130追加12: 143 = system SIGTERM (memory/battery reclaim),
+                    // not a model incompatibility. Restart engine and resend same params.
+                    sigtermRetries++
+                    io.github.xororz.localdream.cloud.LogHub.log(
+                        io.github.xororz.localdream.cloud.LogHub.Category.GENERATE,
+                        "Engine SIGTERM(143) system-killed; auto retry $sigtermRetries/2",
+                    )
+                    android.os.Handler(android.os.Looper.getMainLooper()).post {
+                        android.widget.Toast.makeText(
+                            this@BackgroundGenerationService,
+                            "引擎被系统回收(code=143)，自动重启并重发（请保持前台/关闭电池优化/加锁）…",
+                            android.widget.Toast.LENGTH_LONG,
+                        ).show()
+                    }
+                    runCatching {
+                        if (engineModelId != null) {
+                            startService(android.content.Intent(this@BackgroundGenerationService,
+                                io.github.xororz.localdream.service.BackendService::class.java).apply {
+                                    setAction(io.github.xororz.localdream.service.BackendService.ACTION_RESTART)
+                                    putExtra("modelId", engineModelId)
+                                    putExtra("backendType", engineBackendType)
+                                })
+                        }
+                        Thread.sleep(2000)
+                    }
+                    updateState(GenerationState.Progress(0f))
+                    continue@attemptLoop
                 }
                 if (engineDied && !safeOomRetryDone) {
                     safeOomRetryDone = true
