@@ -507,8 +507,10 @@ class MainActivity : ComponentActivity() {
                                                         .replace("\n", "\\n").replace("\r", "")
                                                     val body = """{"text":"$safeText","model":"${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}","androidVer":"${android.os.Build.VERSION.RELEASE}","ts":$ts}"""
                                                     io.github.xororz.localdream.cloud.CloudClient.uploadContent(
-                                                        provider, tok, auth.owner ?: auth.login,
-                                                        auth.repo ?: io.github.xororz.localdream.cloud.CloudConfig.BACKUP_REPO,
+                                                        provider, tok,
+                                                        // et.130追加11铁证: 反馈必须写到后台读取的
+                                                        // ratings 仓 feedback/, 而非云备份仓.
+                                                        "ETQWFD", "LocalDream-ET-ratings",
                                                         "feedback/feedback_${aid.take(8)}_$tsMs.json", body.toByteArray(), "feedback",
                                                     )
                                                     (true to "")

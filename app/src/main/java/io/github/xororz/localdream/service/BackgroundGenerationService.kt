@@ -1161,6 +1161,8 @@ class BackgroundGenerationService : Service() {
                         }
                         "$why，模型与加速方式可能不兼容；请改用 CPU Models 标签下的对应模型，详见 engine_*.log。"
                     }
+                    code == 143 ->
+                        "图片生成失败（引擎退出 code=143，被系统/前台回收终止），已自动重试；请保持 App 在前台、关闭电池优化/加锁后重试，详见 engine_*.log。"
                     code == 0 && (e.message ?: "").contains("bad_alloc", true) ->
                         "引擎内存分配失败(bad_alloc，常见于 NPU 包与本机芯片/驱动不匹配)，已自动降档仍失败；请改用 CPU Models 标签下的对应模型，详见 engine_*.log。"
                     else ->
