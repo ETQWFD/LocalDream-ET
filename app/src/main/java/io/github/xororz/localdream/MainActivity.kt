@@ -642,6 +642,9 @@ private fun AppContent() {
         composable(Screen.RemoteLink.route) {
             RemoteScreen(navController)
         }
+        composable(Screen.Gallery.route) {
+            io.github.xororz.localdream.ui.screens.GalleryScreen(navController)
+        }
         composable(
             route = Screen.Edit.route,
             arguments = listOf(

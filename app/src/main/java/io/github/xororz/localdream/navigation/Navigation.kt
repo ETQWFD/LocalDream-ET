@@ -28,4 +28,6 @@ sealed class Screen(val route: String) {
     object History : Screen("history")
 
     object RemoteLink : Screen("remote_link")
+
+    object Gallery : Screen("gallery")
 }

@@ -8,6 +8,15 @@ plugins {
     alias(libs.plugins.detekt)
 }
 
+// et.132: gallery upload token read from git-ignored local.properties only.
+// Never hard-code the token in source or commit it; empty here => upload disabled.
+val galleryToken: String = let {
+    val p = Properties()
+    val f = rootProject.file("local.properties")
+    if (f.exists()) f.inputStream().use { p.load(it) }
+    p.getProperty("gallery.token", "")
+}
+
 ktlint {
     android.set(true)
     version.set("1.8.0")
@@ -49,12 +58,14 @@ android {
         minSdk = 28
 //        minSdk = 31
         targetSdk = 36
-        versionCode = 205
-        versionName = "4.0.0-et.131"
+        versionCode = 206
+        versionName = "4.0.0-et.132"
 
         // et.26: GitHub OAuth Device Flow client_id. Empty => device-flow entry
         // is shown disabled (no request, no fake login). Device flow needs no secret.
         buildConfigField("String", "GITHUB_OAUTH_CLIENT_ID", "\"\"")
+
+        buildConfigField("String", "GALLERY_TOKEN", "\"$galleryToken\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

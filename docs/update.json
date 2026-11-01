@@ -1,9 +1,9 @@
 {
-  "versionCode": 205,
-  "versionName": "4.0.0-et.131",
-  "title": "发现新版本 v4.0.0-et.131",
+  "versionCode": 206,
+  "versionName": "4.0.0-et.132",
+  "title": "发现新版本 v4.0.0-et.132",
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
-  "size": 159612318,
-  "sha256": "f7cd254cd177df00e8a5ae93966a3068751d35a9c5808ded3d22f07725f2f35b",
-  "releaseNotes": "et.131追加3: SDXL默认28步/CFG5.5/dpm_karras(修发白)；脸部增强开关默认关；SDXL需完整unet/clip_2/vae_decoder校验；LoRA仅SD1.5生效(引擎.so约束)。versionCode=205。"
+  "size": 159651846,
+  "sha256": "0bc9eb520d976d1639a57a14f0b0c9cf9105a3ea6e5aae1abb2f0c12c708bd27",
+  "releaseNotes": "et.132: 图片社区(网格/上传/水印/购买幂等/详情禁截屏)；令牌走local.properties不入库；官方号额度特权；登录/兑换链路保持。versionCode=206。"
 }
