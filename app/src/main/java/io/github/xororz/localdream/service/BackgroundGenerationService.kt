@@ -360,10 +360,11 @@ class BackgroundGenerationService : Service() {
             } catch (e: CancellationException) {
                 QuotaManager.refund(this@BackgroundGenerationService, quotaCost)
                 throw e
-            } catch (e: Exception) {
-                // True failure / no image -> refund the units consumed for this run.
+            } catch (t: Throwable) {
+                // et.130追加10: catch Throwable (not just Exception) so native
+                // Errors / UnsatisfiedLinkError cannot crash the app; refund + report.
                 QuotaManager.refund(this@BackgroundGenerationService, quotaCost)
-                throw e
+                throw t
             }
         }
 
@@ -950,7 +951,7 @@ class BackgroundGenerationService : Service() {
                     android.os.Handler(android.os.Looper.getMainLooper()).post {
                         android.widget.Toast.makeText(
                             this@BackgroundGenerationService,
-                            "三档分辨率均崩溃，已切换CPU模式",
+                            "NPU内存不足，已切换CPU模式",
                             android.widget.Toast.LENGTH_LONG,
                         ).show()
                     }
