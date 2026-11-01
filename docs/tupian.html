@@ -8,7 +8,7 @@
 <link rel="icon" href="assets/favicon.ico" sizes="any" />
 <link rel="icon" href="assets/icon-192.png" type="image/png" />
 <style>
-  :root{--bg:#fff;--ink:#111418;--mut:#6b7280;--line:#e8eaee;--soft:#f4f5f7}
+  :root{--bg:#fff;--ink:#111418;--mut:#6b7280;--line:#e8eaee;--soft:#f4f5f7;--bad:#d9534f}
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);font:14.5px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif}
   .wrap{max-width:980px;margin:0 auto;padding:0 24px}
@@ -24,9 +24,11 @@
   .card .bd{padding:10px 12px}
   .card .t{font-size:13px;font-weight:600;margin-bottom:4px}
   .card .m{color:var(--mut);font-size:12px;margin-bottom:8px}
-  .card a.dl{display:inline-block;padding:6px 12px;border:1px solid var(--ink);border-radius:8px;font-size:12px;font-weight:600}
+  .card a.dl{display:inline-block;padding:6px 12px;border:1px solid var(--ink);border-radius:8px;font-size:12px;font-weight:600;margin-right:6px}
+  .card button.del{padding:6px 10px;border:1px solid var(--bad);border-radius:8px;background:#fff;color:var(--bad);font-size:12px;cursor:pointer}
   .empty{color:var(--mut);padding:30px;text-align:center}
-  select{padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);font:inherit}
+  select,input{padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);font:inherit}
+  button.go{padding:8px 14px;border:1px solid var(--ink);border-radius:8px;background:var(--ink);color:#fff;font-weight:600;cursor:pointer;font:inherit}
 </style>
 </head>
 <body>
@@ -36,10 +38,14 @@
 <div class="wrap">
   <h1>图片社区</h1>
   <p class="mut">App 内共享图片赚额度，也可花额度购买他人作品；此处免费下载无水印原图。</p>
-  <div class="row" style="display:flex;gap:10px;align-items:center;margin:14px 0">
+  <div style="display:flex;gap:10px;align-items:center;margin:14px 0;flex-wrap:wrap">
     <label class="mut">作者筛选：</label>
     <select id="authorSel"><option value="">全部</option></select>
     <span class="mut" id="status"></span>
+  </div>
+  <div id="adminBar" style="margin:10px 0;display:none;gap:8px;flex-wrap:wrap">
+    <input id="adminTok" type="text" autocomplete="off" spellcheck="false" placeholder="gh 令牌（删除用，可选）" style="flex:1;min-width:240px" />
+    <button class="go" id="adminSave">保存令牌</button>
   </div>
   <div class="grid" id="grid"></div>
 </div>
@@ -47,20 +53,25 @@
 <script>
 (function(){
   "use strict";
-  var API="https://api.github.com/repos/ETQWFD/LocalDream-ET-ratings/contents/png";
-  var RAW="https://raw.githubusercontent.com/ETQWFD/LocalDream-ET-ratings/main/png";
+  var REPO="ETQWFD/LocalDreamET-Gallery";
+  var API="https://api.github.com/repos/"+REPO+"/contents/png";
+  var RAW="https://raw.githubusercontent.com/"+REPO+"/main/png";
   function $(id){return document.getElementById(id);}
   function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;","'":"&quot;"}[c];});}
   function fmtTs(ts){if(!ts)return"";try{var t=ts;if(typeof t==="number"&&t<1e12)t=t*1000;else if(typeof t==="string"&&/^\d+$/.test(t)&&Number(t)<1e12)t=Number(t)*1000;return new Date(t).toLocaleDateString("zh-CN");}catch(e){return "";}}
+  function tok(){try{return sessionStorage.getItem("et_gallery_gh")||"";}catch(e){return "";}}
+  function setTok(t){try{sessionStorage.setItem("et_gallery_gh",t);}catch(e){}}
   var all=[];
+  function hdr(){return tok()?{"Authorization":"Bearer "+tok(),"Accept":"application/vnd.github+json"}:{"Accept":"application/vnd.github+json"};}
+
   function load(){
     $("status").textContent="加载中…";
-    fetch(API).then(function(r){if(r.status===404)throw new Error("empty");if(!r.ok)throw new Error("HTTP "+r.status);return r.json();})
+    fetch(API,{headers:hdr()}).then(function(r){if(r.status===404)throw new Error("empty");if(!r.ok)throw new Error("HTTP "+r.status);return r.json();})
     .then(function(files){
       var imgs=files.filter(function(f){return /\.(png|jpg|jpeg|webp)$/i.test(f.name);});
       return Promise.all(imgs.map(function(f){
         var meta=RAW+"/"+f.name.replace(/\.[a-z]+$/i,".json");
-        return fetch(meta).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}).then(function(m){return {name:f.name,meta:m,url:RAW+"/"+f.name};});
+        return fetch(meta).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}).then(function(m){return {name:f.name,sha:f.sha,meta:m,url:RAW+"/"+f.name};});
       }));
     })
     .then(function(arr){
@@ -81,11 +92,24 @@
     if(!rows.length){$("grid").innerHTML='<div class="empty">暂无图片。</div>';$("status").textContent="共 "+all.length+" 张。";return;}
     $("grid").innerHTML=rows.map(function(x){
       var m=x.meta||{};
-      return '<div class="card"><img src="'+esc(x.url)+'" loading="lazy" alt="'+esc(x.name)+'"/><div class="bd"><div class="t">'+esc(m.title||x.name)+'</div><div class="m">'+esc(m.author||"匿名")+(m.price?" · "+esc(m.price)+" 额度":"")+" · "+esc(fmtTs(m.ts))+'</div><a class="dl" href="'+esc(x.url)+'" target="_blank" rel="noopener">下载原图</a></div></div>';
+      var del=tok()?'<button class="del" data-del="'+esc(x.name)+'" data-sha="'+esc(x.sha)+'">删除</button>':'';
+      return '<div class="card"><img src="'+esc(x.url)+'" loading="lazy" alt="'+esc(x.name)+'"/><div class="bd"><div class="t">'+esc(m.title||x.name)+'</div><div class="m">'+esc(m.author||"匿名")+(m.price?" · "+esc(m.price)+" 额度":"")+" · "+esc(fmtTs(m.ts))+'</div><a class="dl" href="'+esc(x.url)+'" target="_blank" rel="noopener">下载原图</a>'+del+'</div></div>';
     }).join("");
     $("status").textContent="共 "+rows.length+" 张。";
   }
   $("authorSel").addEventListener("change",render);
+  $("adminSave").addEventListener("click",function(){setTok($("adminTok").value.trim());alert(tok()?"令牌已保存，可删除图片。":"已清除令牌。");render();});
+  $("grid").addEventListener("click",function(e){
+    var b=e.target.closest("[data-del]");if(!b)return;
+    if(!tok()){alert("请先输入 gh 令牌");return;}
+    var name=b.getAttribute("data-del"),sha=b.getAttribute("data-sha");
+    if(!confirm("删除 "+name+"？"))return;
+    fetch(API+"/"+name,{method:"DELETE",headers:hdr(),body:JSON.stringify({message:"del "+name,sha:sha,branch:"main"})})
+      .then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);$("status").textContent="已删除";load();})
+      .catch(function(e){$("status").textContent="删除失败："+e.message;});
+  });
+  /* 管理员入口：长按标题或 ?admin=1 */
+  if(/[?&]admin=1/.test(location.search)||tok())$("adminBar").style.display="flex";
   load();
 })();
 </script>
