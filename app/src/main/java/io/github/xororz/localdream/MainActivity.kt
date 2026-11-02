@@ -253,47 +253,45 @@ class MainActivity : ComponentActivity() {
             }
         }.start()
 
-        // et.114: pull announcements/ from ratings repo; newest matching 手机端/全部 -> dialog.
+        // et.212: announcements/ via RAW (no token) — api.github.com is rate-limited
+        // (403) for anonymous mobile IPs and required a GitHub login, which made the
+        // list empty for everyone not logged in. index.json lists file names; each
+        // announce is fetched as plain JSON. Logs print URL/code/count for debugging.
         Thread {
             runCatching {
-                val store = io.github.xororz.localdream.cloud.SecureTokenStore(this)
-                val provider = io.github.xororz.localdream.cloud.CloudConfig.Provider.GITHUB
-                val tok = store.token(provider) ?: return@runCatching
                 val repo = "ETQWFD/LocalDream-ET-ratings"
-                val listConn = (java.net.URL("https://api.github.com/repos/$repo/contents/announcements")
-                    .openConnection() as java.net.HttpURLConnection).apply {
-                    connectTimeout = 8000; readTimeout = 8000
-                    setRequestProperty("Authorization", "token $tok")
-                    setRequestProperty("Accept", "application/vnd.github+json")
-                }
-                if (listConn.responseCode != 200) {
-                    android.util.Log.w("Announce", "list HTTP ${listConn.responseCode}")
-                    return@runCatching
-                }
-                val arr = org.json.JSONArray(listConn.inputStream.bufferedReader().readText())
-                android.util.Log.i("Announce", "pulled ${arr.length()} entries")
+                val rawBase = "https://raw.githubusercontent.com/$repo/main/announcements"
+                fun get(url: String): Pair<Int, String> = runCatching {
+                    val c = (java.net.URL(url).openConnection() as java.net.HttpURLConnection).apply {
+                        connectTimeout = 8000; readTimeout = 8000
+                    }
+                    val code = c.responseCode
+                    val t = (if (code == 200) c.inputStream else c.errorStream)
+                        ?.bufferedReader()?.readText().orEmpty()
+                    c.disconnect()
+                    code to t
+                }.getOrDefault(0 to "")
+                val (ic, idxText) = get("$rawBase/index.json")
+                android.util.Log.i("Announce", "index $rawBase/index.json HTTP=$ic")
+                if (ic != 200) return@runCatching
+                val files = org.json.JSONObject(idxText).optJSONArray("files") ?: return@runCatching
+                android.util.Log.i("Announce", "index lists ${files.length()} files")
                 var best: Pair<Long, String>? = null
-                for (i in 0 until arr.length()) {
-                    val name = arr.getJSONObject(i).optString("name", "")
+                for (i in 0 until files.length()) {
+                    val name = files.optString(i, "")
                     if (!name.startsWith("announce_") || !name.endsWith(".json")) continue
-                    val raw = runCatching {
-                        val c = (java.net.URL("https://api.github.com/repos/$repo/contents/announcements/$name")
-                            .openConnection() as java.net.HttpURLConnection).apply {
-                            connectTimeout = 8000; readTimeout = 8000
-                            setRequestProperty("Authorization", "token $tok")
-                            setRequestProperty("Accept", "application/vnd.github+json")
-                        }
-                        if (c.responseCode != 200) return@runCatching null
-                        val j = org.json.JSONObject(c.inputStream.bufferedReader().readText())
-                        String(android.util.Base64.decode(j.getString("content"), android.util.Base64.DEFAULT))
-                    }.getOrNull() ?: continue
+                    val (fc, raw) = get("$rawBase/$name")
+                    if (fc != 200) continue
                     val o = runCatching { org.json.JSONObject(raw) }.getOrNull() ?: continue
                     val target = o.optString("target", "全部")
                     if (!target.contains("手机") && !target.contains("全部")) continue
                     val ts = io.github.xororz.localdream.ui.screens.parseAnnounceTs(o)
                     if (best == null || ts > best!!.first) best = ts to raw
                 }
-                val b = best ?: return@runCatching
+                val b = best ?: run {
+                    android.util.Log.w("Announce", "no matching announcement")
+                    return@runCatching
+                }
                 val sp = getSharedPreferences("app_prefs", MODE_PRIVATE)
                 val lastTs = sp.getLong("last_announce_ts", 0L)
                 val o = org.json.JSONObject(b.second)
@@ -302,11 +300,9 @@ class MainActivity : ComponentActivity() {
                     android.util.Log.i("Announce", "latest ts=$ts <= lastRead=$lastTs, skip popup")
                     return@runCatching
                 }
-                // et.118/build195: do NOT mark read on pull; write last_announce_ts
-                // only when the user dismisses the dialog (see the "知道了" handler).
                 val title = o.optString("title", "公告")
                 val text = io.github.xororz.localdream.ui.screens.parseAnnounceContent(o)
-                android.util.Log.i("Announce", "showing new announcement ts=$ts title=$title contentLen=${text.length}")
+                android.util.Log.i("Announce", "showing new announcement ts=$ts title=$title len=${text.length}")
                 io.github.xororz.localdream.ui.screens.setAnnounceUnread(applicationContext, true)
                 runOnUiThread { announceDialog.value = Triple(title, text, ts) }
             }.onFailure { android.util.Log.w("Announce", "pull failed: ${it.message}") }
