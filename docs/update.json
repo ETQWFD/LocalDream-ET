@@ -1,9 +1,9 @@
 {
-  "versionCode": 214,
+  "versionCode": 215,
   "versionName": "4.0.0-et.133",
   "title": "发现新版本 v4.0.0-et.133",
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
-  "size": 159676406,
-  "sha256": "2615fc9e9b2c74944ccb1c57d533451d4ce0f9d4b49ed5b05682743ab29000bc",
-  "releaseNotes": "et.133: 移除首页悬浮反馈按钮；上传弹窗加作品名+超9000无法发布提示。versionCode=214。"
+  "size": 159688982,
+  "sha256": "56a4e581037a654338ad728386c1cbf167a3c16b0373d1036129d2a6ccf6b48f",
+  "releaseNotes": "et.133: 设置页加反馈问题(mailto)+自定义存储位置SD卡选择(无损移动)入口。versionCode=215。"
 }

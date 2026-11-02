@@ -4,7 +4,9 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -28,9 +30,14 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.ToggleButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -532,6 +539,42 @@ internal fun AdvancedSettingsDialog(
                                     R.string.use_last_seed,
                                     returnedSeed.toString(),
                                 ),
+                            )
+                        }
+                        // et.215: settings bottom entries.
+                        val ctx = androidx.compose.ui.platform.LocalContext.current
+                        var showSd by remember { mutableStateOf(false) }
+                        val sdRoots = remember { runCatching { io.github.xororz.localdream.utils.Storage.sdCardRoots(ctx) }.getOrDefault(emptyList()) }
+                        OutlinedButton(
+                            onClick = {
+                                val i = android.content.Intent(android.content.Intent.ACTION_SENDTO,
+                                    android.net.Uri.parse("mailto:2416444244@qq.com"))
+                                i.putExtra(android.content.Intent.EXTRA_SUBJECT, "反馈")
+                                runCatching { ctx.startActivity(i) }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) { Text("反馈问题") }
+                        Spacer(Modifier.height(8.dp))
+                        OutlinedButton(onClick = { showSd = true }, modifier = Modifier.fillMaxWidth()) {
+                            Text("自定义存储位置(SD卡)")
+                        }
+                        if (showSd) {
+                            AlertDialog(
+                                onDismissRequest = { showSd = false },
+                                title = { Text("选择存储位置") },
+                                text = {
+                                    if (sdRoots.isEmpty()) Text("未检测到第二张SD卡，仍使用默认存储。")
+                                    else Column { sdRoots.forEach { p ->
+                                        TextButton(onClick = {
+                                            runCatching {
+                                                io.github.xororz.localdream.utils.Storage.moveModelsTo(ctx, p)
+                                                io.github.xororz.localdream.utils.Storage.setOverrideRoot(ctx, p.absolutePath)
+                                            }
+                                            showSd = false
+                                        }) { Text(p.absolutePath) }
+                                    } }
+                                },
+                                confirmButton = { TextButton(onClick = { showSd = false }) { Text("关闭") } },
                             )
                         }
                     }
