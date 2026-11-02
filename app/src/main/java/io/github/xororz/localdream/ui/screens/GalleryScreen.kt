@@ -48,11 +48,18 @@ fun GalleryScreen(navController: NavController) {
     var loading by remember { mutableStateOf(true) }
     var showUpload by remember { mutableStateOf(false) }
     var showFav by remember { mutableStateOf(false) }
+    var q by remember { mutableStateOf("") }
     var showWarn by remember { mutableStateOf(!FavoriteStore.seenWarning(ctx)) }
 
     LaunchedEffect(Unit) {
         items = GalleryClient.list()
         loading = false
+    }
+    // et.213: search by author / image name.
+    val filtered = remember(items, q) {
+        if (q.isBlank()) items else items.filter {
+            it.author.contains(q, true) || it.name.contains(q, true)
+        }
     }
 
     Scaffold(
@@ -82,14 +89,21 @@ fun GalleryScreen(navController: NavController) {
                 CircularProgressIndicator()
             }
         } else {
-            LazyVerticalGrid(
+            Column(Modifier.fillMaxSize().padding(pad)) {
+                // et.213: top search box (by author / image name).
+                OutlinedTextField(
+                    value = q, onValueChange = { q = it },
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
+                    placeholder = { Text("搜索作品 / 作者") }, singleLine = true,
+                )
+                LazyVerticalGrid(
                 columns = GridCells.Fixed(3),
                 contentPadding = PaddingValues(8.dp),
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
-                modifier = Modifier.fillMaxSize().padding(pad),
+                modifier = Modifier.fillMaxSize(),
             ) {
-                items(items, key = { it.name }) { g ->
+                items(filtered, key = { it.name }) { g ->
                     Column(Modifier.clickable {
                         FavoriteStore.add(ctx, "${g.name}|${g.author}|${g.ts}")
                     }) {
@@ -106,6 +120,7 @@ fun GalleryScreen(navController: NavController) {
                         Text("额度 ${g.price}", style = MaterialTheme.typography.labelSmall)
                     }
                 }
+            }
             }
         }
     }

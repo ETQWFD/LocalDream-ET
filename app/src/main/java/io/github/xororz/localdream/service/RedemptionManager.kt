@@ -61,6 +61,9 @@ object RedemptionManager {
 
     /** Mirrors that return the raw file body for a read-only verification. */
     private fun rawMirrors(code: String): List<String> = listOf(
+        // et.213: accept both legacy "redeem_<code>.json" and "<code>.json" naming.
+        "https://raw.githubusercontent.com/$REPO/main/redeem/codes/$code.json",
+        "https://cdn.jsdelivr.net/gh/$REPO@main/redeem/codes/$code.json",
         "https://raw.githubusercontent.com/$REPO/main/redeem/codes/redeem_$code.json",
         "https://cdn.jsdelivr.net/gh/$REPO@main/redeem/codes/redeem_$code.json",
     )
@@ -90,15 +93,27 @@ object RedemptionManager {
         repeat(MAX_NET_TRIES) { attempt ->
             var conn: HttpURLConnection? = null
             try {
-                // 1) authoritative Contents API (provides sha + auth).
-                val apiUrl = "https://api.github.com/repos/$REPO/contents/redeem/codes/redeem_$code.json"
+                // 1) authoritative Contents API (provides sha + auth). Try bare
+                //    "<code>.json" first, legacy "redeem_<code>.json" second.
+                val apiUrl = "https://api.github.com/repos/$REPO/contents/redeem/codes/$code.json"
                 conn = (URL(apiUrl).openConnection() as HttpURLConnection).apply {
                     connectTimeout = CONNECT_MS; readTimeout = READ_MS
                     setRequestProperty("Authorization", "token $tok")
                     setRequestProperty("Accept", "application/vnd.github+json")
                 }
                 when (conn.responseCode) {
-                    404 -> return Lookup.Invalid
+                    404 -> {
+                        // try legacy name, then raw mirrors below.
+                        conn.disconnect()
+                        val legacy = "https://api.github.com/repos/$REPO/contents/redeem/codes/redeem_$code.json"
+                        conn = (URL(legacy).openConnection() as HttpURLConnection).apply {
+                            connectTimeout = CONNECT_MS; readTimeout = READ_MS
+                            setRequestProperty("Authorization", "token $tok")
+                            setRequestProperty("Accept", "application/vnd.github+json")
+                        }
+                        if (conn.responseCode == 404) return Lookup.Invalid
+                        if (conn.responseCode == 403) return Lookup.Forbidden
+                    }
                     403 -> return Lookup.Forbidden
                     200 -> {
                         val j = JSONObject(decodeBody(conn))

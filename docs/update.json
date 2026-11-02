@@ -1,9 +1,9 @@
 {
-  "versionCode": 212,
+  "versionCode": 213,
   "versionName": "4.0.0-et.133",
   "title": "发现新版本 v4.0.0-et.133",
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
-  "size": 159672762,
-  "sha256": "450242d194676f9121d3dd5dd17e1f129119b8c5d4f8709ff7b4819499cb175d",
-  "releaseNotes": "et.133: 首页左上角社区入口；公告改raw无令牌直连(index.json)修复未登录拉不到。versionCode=212。"
+  "size": 159676958,
+  "sha256": "6598ae6a332f25ae3dc1bd65175b8e94d3db36bd1a9c28fdb22a097ae29118a5",
+  "releaseNotes": "et.133: 兑换码文件名兼容(<code>.json 与 redeem_<code>.json)+ETC666码已上线；社区顶部搜索框。versionCode=213。"
 }
