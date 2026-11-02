@@ -201,7 +201,15 @@
 
   function putCode(obj){
     var path="redeem/codes/redeem_"+obj.code+".json";
-    return wFetch(API+"/"+path,{method:"PUT",headers:hdr(),body:JSON.stringify({message:"add "+obj.code,content:btoa(unescape(encodeURIComponent(JSON.stringify(obj)))),branch:"main"})}).then(function(r){return r.json();});
+    return wFetch(API+"/"+path,{headers:hdr()}).then(function(r){
+      if(r.status===404)return null;
+      if(!r.ok)throw new Error("HTTP "+r.status);
+      return r.json();
+    }).then(function(existing){
+      var body={message:"add "+obj.code,content:btoa(unescape(encodeURIComponent(JSON.stringify(obj)))),branch:"main"};
+      if(existing&&existing.sha)body.sha=existing.sha;
+      return wFetch(API+"/"+path,{method:"PUT",headers:hdr(),body:JSON.stringify(body)}).then(function(r){return r.json();});
+    });
   }
   function delCode(code){
     return wFetch(API+"/redeem/codes/redeem_"+code+".json",{headers:hdr()}).then(function(r){if(r.status===404)return null;return r.json();})

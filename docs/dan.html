@@ -257,6 +257,8 @@
             <option value="app">手机端</option>
             <option value="server">服务端</option>
           </select></div>
+        <div><label style="font-size:12px;color:var(--dim,#888);display:block;margin-bottom:4px">GitHub 私人令牌</label>
+          <input id="anToken" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" inputmode="text" placeholder="ghp_..." style="width:100%;padding:9px 12px;border:1px solid var(--line,#d8dde6);border-radius:8px;background:#fff;color:inherit;box-sizing:border-box" /></div>
         <div class="healthline">
           <button class="btn" id="anSend">发送公告</button>
           <button class="btn" id="anLoad">刷新列表</button>
@@ -659,18 +661,19 @@
   }
   $("anLoad").addEventListener("click",loadAnn);
   $("anSend").addEventListener("click",function(){
-    var title=$("anTitle").value.trim(),content=$("anContent").value.trim(),target=$("anTarget").value;
+    var title=$("anTitle").value.trim(),content=$("anContent").value.trim(),target=$("anTarget").value,tok=$("anToken").value.trim();
     if(!title||!content){alert("标题和内容都要填");return;}
+    if(!tok){alert("请填写令牌");return;}
     var b=$("anSend");b.disabled=true;b.textContent="发送中…";
     var ts=Date.now();
     var obj={title:title,content:content,target:target,ts:ts,from:"admin"};
     var path="announcements/announce_"+ts+"_"+Math.random().toString(36).slice(2,7)+".json";
     fetch("https://api.github.com/repos/ETQWFD/LocalDream-ET-ratings/contents/"+path,{
       method:"PUT",
-      headers:{"Authorization":"Bearer "+ghTok(),"Accept":"application/vnd.github+json","Content-Type":"application/json"},
+      headers:{"Authorization":"Bearer "+tok,"Accept":"application/vnd.github+json","Content-Type":"application/json"},
       body:JSON.stringify({message:"announce",content:btoa(unescape(encodeURIComponent(JSON.stringify(obj)))),branch:"main"})
     }).then(function(r){if(!r.ok)return r.text().then(function(t){throw new Error("HTTP "+r.status);});return r.json();})
-      .then(function(){$("anTitle").value="";$("anContent").value="";b.disabled=false;b.textContent="发送公告";$("anStatus").textContent="已发送。";loadAnn();})
+      .then(function(){$("anTitle").value="";$("anContent").value="";b.disabled=false;b.textContent="发送公告";$("anStatus").textContent="公告已发送。";loadAnn();})
       .catch(function(e){b.disabled=false;b.textContent="发送公告";$("anStatus").textContent="发送失败："+(e.message||"");});
   });
   loadAnn();
