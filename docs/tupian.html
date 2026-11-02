@@ -71,7 +71,7 @@
     .then(function(files){
       var imgs=files.filter(function(f){return /\.(png|jpg|jpeg|webp)$/i.test(f.name);});
       return Promise.all(imgs.map(function(f){
-        var meta=RAW+"/"+f.name.replace(/\.[a-z]+$/i,".json");
+        var meta=RAW+"/"+f.name.replace(/\.([a-z]+)$/i,".meta.$1");
         return fetch(meta).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}).then(function(m){return {name:f.name,sha:f.sha,meta:m,url:RAW+"/"+f.name};});
       }));
     })
