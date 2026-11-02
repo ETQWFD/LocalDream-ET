@@ -13,6 +13,10 @@ import io.github.xororz.localdream.cloud.SecureTokenStore
  * days. Consumption scales with steps and resolution. The whole thing is a local
  * cache: reports to the public repo ETQWFD/LocalDreamET-Quota are best-effort and
  * MUST never block or fail the generation flow.
+ *
+ * et.133 中文注释：额度系统。本地 SP 缓存当前额度；每次生成前扣减、兑换码直连
+ * ETQWFD/LocalDreamET-Quota 仓库读取并回写已用状态；官方号 ETQWFD 跳过 128 万额度门控。
+ * 任何网络失败都降级为本地估算，绝不阻塞出图。
  */
 object QuotaManager {
     private const val TAG = "QuotaManager"

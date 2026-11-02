@@ -11,6 +11,11 @@ import java.util.Base64
  * et.132: public image gallery backed by the public repo ETQWFD/LocalDreamET-Gallery.
  * Images live under png/; sidecar <name>.meta.json holds author/price/ts.
  * Upload token comes from BuildConfig.GALLERY_TOKEN (git-ignored local.properties).
+ *
+ * et.133 中文注释：社区上传/下载。list 读 png/ 列表并回读 meta；upload 把 PNG 以
+ * base64 PUT 到 png/pic_<ts>_<rand>.png，再写同名 meta（作者/定价/时间）；购买幂等用
+ * androidId+图片ID 作路径键写入 Quota 仓 purchased/，已存在则不重复扣款。HttpURLConnection
+ * 非 Closeable，手动 disconnect。
  */
 object GalleryClient {
     private const val API = "https://api.github.com/repos/ETQWFD/LocalDreamET-Gallery/contents"
