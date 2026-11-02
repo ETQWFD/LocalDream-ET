@@ -573,15 +573,17 @@ class MainActivity : ComponentActivity() {
                         announceDialog.value?.let { (t, tx, ats) ->
                             androidx.compose.material3.AlertDialog(
                                 onDismissRequest = {
-                                    // et.118/build195: mark read only on user close.
+                                    // et.210: mark read (ts + clear bell dot) on close.
                                     getSharedPreferences("app_prefs", MODE_PRIVATE)
                                         .edit().putLong("last_announce_ts", ats).apply()
+                                    io.github.xororz.localdream.ui.screens.setAnnounceUnread(applicationContext, false)
                                     announceDialog.value = null
                                 },
                                 confirmButton = {
                                     androidx.compose.material3.TextButton(onClick = {
                                         getSharedPreferences("app_prefs", MODE_PRIVATE)
                                             .edit().putLong("last_announce_ts", ats).apply()
+                                        io.github.xororz.localdream.ui.screens.setAnnounceUnread(applicationContext, false)
                                         announceDialog.value = null
                                     }) { Text("知道了") }
                                 },

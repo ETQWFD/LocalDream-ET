@@ -1309,6 +1309,16 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                         // et.130追加11: red unread badge on the home bell.
                         var badgeKey by remember { mutableStateOf(0) }
                         val ctx = androidx.compose.ui.platform.LocalContext.current
+                        // et.210: refresh unread bell on every resume (pull lands
+                        // async after first composition, so remember() alone missed it).
+                        val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+                        androidx.compose.runtime.DisposableEffect(lifecycleOwner, badgeKey) {
+                            val obs = androidx.lifecycle.LifecycleEventObserver { _, e ->
+                                if (e == androidx.lifecycle.Lifecycle.Event.ON_RESUME) badgeKey++
+                            }
+                            lifecycleOwner.lifecycle.addObserver(obs)
+                            onDispose { lifecycleOwner.lifecycle.removeObserver(obs) }
+                        }
                         val bellUnread = remember(badgeKey) {
                             io.github.xororz.localdream.ui.screens.hasAnnounceUnread(ctx)
                         }

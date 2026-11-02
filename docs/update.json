@@ -1,9 +1,9 @@
 {
-  "versionCode": 209,
+  "versionCode": 210,
   "versionName": "4.0.0-et.133",
   "title": "发现新版本 v4.0.0-et.133",
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
-  "size": 159669098,
-  "sha256": "f3a8827dab704b7e9fdca6d6dd1ba9f62ffa16a5b3be009dac487b1b2b98e339",
-  "releaseNotes": "et.133: 新增SD卡/自定义存储位置(无损移动模型,重选识别不重下)；DiT Models标签；safetensors头无符号LE修复。versionCode=209。"
+  "size": 159671094,
+  "sha256": "545deaf2cb7fb64645e5d168255be9d740572b2a12dc3037cd2047c862a856ef",
+  "releaseNotes": "et.133: 修复公告铃铛红点(onResume重读未读+启动弹窗关闭清红点)；SD卡存储；DiT Models标签。versionCode=210。"
 }
