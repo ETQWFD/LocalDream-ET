@@ -462,19 +462,8 @@ class MainActivity : ComponentActivity() {
                         // AppContent in the Surface box let it balloon and swallow all
                         // touches; align it explicitly to BottomEnd and pad it.
                         var feedbackDialog by remember { mutableStateOf(false) }
-                        androidx.compose.foundation.layout.Box(modifier = Modifier.fillMaxSize()) {
-                            androidx.compose.material3.FloatingActionButton(
-                                onClick = { feedbackDialog = true },
-                                modifier = Modifier
-                                    .align(androidx.compose.ui.Alignment.BottomEnd)
-                                    .padding(16.dp),
-                            ) {
-                                androidx.compose.material3.Icon(
-                                    imageVector = androidx.compose.material.icons.Icons.Default.Feedback,
-                                    contentDescription = "反馈问题",
-                                )
-                            }
-                        }
+                        // et.214: floating feedback FAB removed from home; entry is now
+                        // the last item on the settings page. The dialog below stays.
                         if (feedbackDialog) {
                             var fb by remember { mutableStateOf("") }
                             // et.117/build194: explicit Column body with fillMaxWidth.

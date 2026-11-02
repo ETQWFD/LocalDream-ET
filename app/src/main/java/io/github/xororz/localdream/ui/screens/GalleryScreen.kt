@@ -151,12 +151,18 @@ fun GalleryScreen(navController: NavController) {
 @Composable
 private fun UploadDialog(onDismiss: () -> Unit) {
     var price by remember { mutableStateOf("100") }
+    var name by remember { mutableStateOf("") }
     var msg by remember { mutableStateOf("") }
     Dialog(onDismissRequest = onDismiss) {
         Surface(shape = MaterialTheme.shapes.large) {
             Column(Modifier.padding(20.dp)) {
-                Text("上传图片", style = MaterialTheme.typography.titleMedium)
+                Text("上传作品", style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = name, onValueChange = { name = it },
+                    label = { Text("作品名") }, singleLine = true,
+                )
+                Spacer(Modifier.height(8.dp))
                 OutlinedTextField(
                     value = price, onValueChange = { price = it.filter { c -> c.isDigit() } },
                     label = { Text("定价额度（最高9000）") }, singleLine = true,
@@ -167,8 +173,8 @@ private fun UploadDialog(onDismiss: () -> Unit) {
                     TextButton(onClick = onDismiss) { Text("取消") }
                     Button(onClick = {
                         val p = price.toIntOrNull() ?: 0
-                        if (p > 9000) msg = "定价不能超过9000" else onDismiss()
-                    }) { Text("确认") }
+                        if (p > 9000) msg = "超过9000无法发布" else onDismiss()
+                    }) { Text("确认上传") }
                 }
             }
         }
