@@ -58,7 +58,7 @@ fun GalleryScreen(navController: NavController) {
     // et.213: search by author / image name.
     val filtered = remember(items, q) {
         if (q.isBlank()) items else items.filter {
-            it.author.contains(q, true) || it.name.contains(q, true)
+            it.author.contains(q, true) || it.name.contains(q, true) || it.title.contains(q, true)
         }
     }
 
@@ -135,7 +135,13 @@ fun GalleryScreen(navController: NavController) {
             }) { Text("我知道了") } },
         )
     }
-    if (showUpload) UploadDialog { showUpload = false }
+    if (showUpload) UploadDialog(ctx) {
+        showUpload = false
+        // et.144: refresh community list after a successful publish.
+        loading = true
+        items = GalleryClient.list()
+        loading = false
+    }
     if (showFav) {
         AlertDialog(
             onDismissRequest = { showFav = false },
@@ -149,10 +155,17 @@ fun GalleryScreen(navController: NavController) {
 }
 
 @Composable
-private fun UploadDialog(onDismiss: () -> Unit) {
+private fun UploadDialog(ctx: Context, onDismiss: () -> Unit) {
     var price by remember { mutableStateOf("100") }
     var name by remember { mutableStateOf("") }
     var msg by remember { mutableStateOf("") }
+    var showPicker by remember { mutableStateOf(false) }
+    var picked by remember { mutableStateOf<List<java.io.File>>(emptyList()) }
+    // et.144: scan app-generated pngs from filesDir (history output).
+    val allImages = remember(ctx) {
+        ctx.filesDir.walkTopDown().filter { it.isFile && it.name.endsWith(".png") }
+            .sortedByDescending { it.lastModified() }.take(60).toList()
+    }
     Dialog(onDismissRequest = onDismiss) {
         Surface(shape = MaterialTheme.shapes.large) {
             Column(Modifier.padding(20.dp)) {
@@ -165,16 +178,54 @@ private fun UploadDialog(onDismiss: () -> Unit) {
                 Spacer(Modifier.height(8.dp))
                 OutlinedTextField(
                     value = price, onValueChange = { price = it.filter { c -> c.isDigit() } },
-                    label = { Text("定价额度（最高9000）") }, singleLine = true,
+                    label = { Text("售价额度（最高9000）") }, singleLine = true,
                 )
+                Spacer(Modifier.height(8.dp))
+                OutlinedButton(onClick = { showPicker = true }, Modifier.fillMaxWidth()) {
+                    Text(if (picked.isEmpty()) "选择图片" else "已选 ${picked.size} 张（首张为封面）")
+                }
+                if (showPicker) {
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(4),
+                        modifier = Modifier.height(160.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        items(allImages.size) { i ->
+                            val f = allImages[i]
+                            val sel = picked.contains(f)
+                            AsyncImage(
+                                model = f, contentDescription = f.name,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.clickable {
+                                    if (sel) picked = picked - f
+                                    else if (picked.size < 9) picked = picked + f
+                                    else msg = "最多选9张"
+                                }.size(56.dp),
+                            )
+                        }
+                    }
+                }
                 if (msg.isNotEmpty()) Text(msg)
                 Spacer(Modifier.height(16.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TextButton(onClick = onDismiss) { Text("取消") }
                     Button(onClick = {
                         val p = price.toIntOrNull() ?: 0
-                        if (p > 9000) msg = "超过9000无法发布" else onDismiss()
-                    }) { Text("确认上传") }
+                        when {
+                            p > 9000 -> msg = "无法发布"
+                            picked.isEmpty() -> msg = "请先选择图片"
+                            else -> {
+                                // et.144: upload cover (first) straight to GitHub raw repo.
+                                val ok = GalleryClient.upload(
+                                    picked.first().readBytes(),
+                                    author = "ETQWFD", price = p, name = name,
+                                )
+                                msg = if (ok) "发布成功" else "发布失败，请重试"
+                                if (ok) onDismiss()
+                            }
+                        }
+                    }) { Text("确认发布") }
                 }
             }
         }

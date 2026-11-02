@@ -25,6 +25,7 @@ object GalleryClient {
         val name: String,
         val url: String,
         val author: String,
+        val title: String,
         val price: Int,
         val ts: Long,
     )
@@ -66,7 +67,9 @@ object GalleryClient {
             if (!n.endsWith(".png")) continue
             val meta = readMeta(n.substringBeforeLast(".png"))
             out.add(
-                GalleryItem(n, "$RAW/png/$n", meta?.optString("author", "?") ?: "?",
+                GalleryItem(n, "$RAW/png/$n",
+                    meta?.optString("author", "?") ?: "?",
+                    meta?.optString("name", "") ?: "",
                     meta?.optInt("price", 0) ?: 0, meta?.optLong("ts", 0L) ?: 0L)
             )
         }
@@ -81,7 +84,7 @@ object GalleryClient {
             .let { JSONObject(it) }
     } catch (_: Exception) { null }
 
-    fun upload(pngBytes: ByteArray, author: String, price: Int): Boolean = try {
+    fun upload(pngBytes: ByteArray, author: String, price: Int, name: String): Boolean = try {
         val id = "${System.currentTimeMillis()}_${(1000..9999).random()}"
         val imgBody = JSONObject()
             .put("message", "upload $id")
@@ -90,8 +93,10 @@ object GalleryClient {
         val (c1) = http("$API/png/pic_$id.png", "PUT", imgBody)
         if (c1 !in 200..201) false
         else {
+            // et.144: write作品名 into meta.name so it can be searched/filtered.
             val meta = JSONObject().put("author", author).put("price", price)
                 .put("ts", System.currentTimeMillis())
+                .put("name", name.ifBlank { "作品" })
             val metaBody = JSONObject().put("message", "meta $id")
                 .put("content", Base64.getEncoder().encodeToString(meta.toString().toByteArray()))
                 .toString().toByteArray()
