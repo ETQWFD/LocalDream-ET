@@ -21,6 +21,7 @@
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin:18px 0}
   .card{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff}
   .card img{width:100%;height:160px;object-fit:cover;display:block;background:var(--soft)}
+  .card .ph{width:100%;height:160px;background:var(--soft);color:var(--mut);display:none;align-items:center;justify-content:center;font-size:13px}
   .card .bd{padding:10px 12px}
   .card .t{font-size:13px;font-weight:600;margin-bottom:4px}
   .card .m{color:var(--mut);font-size:12px;margin-bottom:8px}
@@ -93,7 +94,7 @@
     $("grid").innerHTML=rows.map(function(x){
       var m=x.meta||{};
       var del=tok()?'<button class="del" data-del="'+esc(x.name)+'" data-sha="'+esc(x.sha)+'">删除</button>':'';
-      return '<div class="card"><img src="'+esc(x.url)+'" loading="lazy" alt="'+esc(x.name)+'"/><div class="bd"><div class="t">'+esc(m.title||x.name)+'</div><div class="m">'+esc(m.author||"匿名")+(m.price?" · "+esc(m.price)+" 额度":"")+" · "+esc(fmtTs(m.ts))+'</div><a class="dl" href="'+esc(x.url)+'" target="_blank" rel="noopener">下载原图</a>'+del+'</div></div>';
+      return '<div class="card"><div class="ph">加载失败</div><img src="'+esc(x.url)+'" loading="lazy" alt="'+esc(x.name)+'" onerror="this.style.display=\'none\';this.previousElementSibling.style.display=\'flex\'"/><div class="bd"><div class="t">'+esc(m.title||x.name)+'</div><div class="m">'+esc(m.author||"匿名")+(m.price?" · "+esc(m.price)+" 额度":"")+" · "+esc(fmtTs(m.ts))+'</div><a class="dl" href="'+esc(x.url)+'" target="_blank" rel="noopener">下载原图</a>'+del+'</div></div>';
     }).join("");
     $("status").textContent="共 "+rows.length+" 张。";
   }
