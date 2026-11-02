@@ -3411,6 +3411,20 @@ fun ModelRunScreen(
                                     Text(label)
                                 }
                             }
+                            // et.216: share the newest generated image via ACTION_SEND.
+                            TextButton(onClick = {
+                                val f = recentHistory.firstOrNull()?.imageFile
+                                if (f != null && f.exists()) {
+                                    val uri = androidx.core.content.FileProvider.getUriForFile(
+                                        context, context.packageName + ".fileprovider", f,
+                                    )
+                                    val i = android.content.Intent(android.content.Intent.ACTION_SEND)
+                                        .setType("image/*")
+                                        .putExtra(android.content.Intent.EXTRA_STREAM, uri)
+                                        .addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                    runCatching { context.startActivity(android.content.Intent.createChooser(i, "分享图片")) }
+                                }
+                            }) { Text("分享") }
                         }
                     },
                 )

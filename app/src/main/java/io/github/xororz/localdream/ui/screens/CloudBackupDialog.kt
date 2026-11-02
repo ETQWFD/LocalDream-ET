@@ -146,8 +146,10 @@ fun CloudBackupDialog(onDismiss: () -> Unit) {
                                 style = MaterialTheme.typography.labelMedium,
                             )
                             Spacer(modifier = Modifier.padding(horizontal = 4.dp))
+                            // et.216: official account ETQWFD shows "不限" instead of number.
+                            val isOfficial = auth?.login.equals("ETQWFD", ignoreCase = true)
                             Text(
-                                text = "额度 ${qUsed}/${qTotal}",
+                                text = if (isOfficial) "额度 不限" else "额度 ${qUsed}/${qTotal}",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
