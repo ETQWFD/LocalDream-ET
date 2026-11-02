@@ -45,7 +45,7 @@
     <span class="mut" id="status"></span>
   </div>
   <div id="adminBar" style="margin:10px 0;display:none;gap:8px;flex-wrap:wrap">
-    <input id="adminTok" type="text" autocomplete="off" spellcheck="false" placeholder="gh 令牌（删除用，可选）" style="flex:1;min-width:240px" />
+    <input id="adminTok" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" inputmode="text" spellcheck="false" placeholder="gh 令牌（删除用，可选）" style="flex:1;min-width:240px" />
     <button class="go" id="adminSave">保存令牌</button>
   </div>
   <div class="grid" id="grid"></div>
@@ -87,20 +87,40 @@
     sel.innerHTML='<option value="">全部</option>'+Object.keys(as).sort().map(function(a){return '<option value="'+esc(a)+'">'+esc(a)+'</option>';}).join("");
     sel.value=cur;
   }
+  function dl(url,name){
+    function fallback(){var a=document.createElement("a");a.href=url;a.download=name;a.target="_blank";a.rel="noopener";document.body.appendChild(a);a.click();a.remove();}
+    fetch(url).then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.blob();})
+      .then(function(b){var u=URL.createObjectURL(b);var a=document.createElement("a");a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(u);},1000);})
+      .catch(function(){fallback();});
+  }
   function render(){
     var au=$("authorSel").value;
     var rows=au?all.filter(function(x){return x.meta&&x.meta.author===au;}):all;
     if(!rows.length){$("grid").innerHTML='<div class="empty">暂无图片。</div>';$("status").textContent="共 "+all.length+" 张。";return;}
-    $("grid").innerHTML=rows.map(function(x){
-      var m=x.meta||{};
+    /* 按批次（同作者+ts差<5s）分组 */
+    rows=rows.slice().sort(function(a,b){return((a.meta&&a.meta.ts)||0)-((b.meta&&b.meta.ts)||0);});
+    var groups=[];var cur=null;
+    rows.forEach(function(x){
+      var t=(x.meta&&x.meta.ts)||0;var a=(x.meta&&x.meta.author)||"";
+      if(cur&&cur.author===a&&Math.abs(t-cur.ts)<5000){cur.items.push(x);}
+      else{cur={author:a,ts:t,items:[x]};groups.push(cur);}
+    });
+    $("grid").innerHTML=groups.map(function(g){
+      var m=g.items[0].meta||{};
+      if(g.items.length>=2){
+        var imgs=g.items.map(function(x,i){return '<div style="position:relative"><div class="ph">加载失败</div><img src="'+esc(x.url)+'" loading="lazy" onerror="this.style.display=\'none\';this.previousElementSibling.style.display=\'flex\'"/><button class="dl" data-dl="'+esc(x.url)+'" data-name="'+esc(x.name)+'" style="position:absolute;bottom:4px;right:4px;padding:3px 8px;font-size:11px">下载</button></div>';}).join("");
+        return '<div class="card" style="grid-column:1/-1"><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px">'+imgs+'</div><div class="bd"><div class="t">'+esc(m.title||"图集")+'</div><div class="m">'+esc(m.author||"匿名")+" · "+g.items.length+" 张 · "+esc(fmtTs(m.ts))+'</div></div></div>';
+      }
+      var x=g.items[0];
       var del=tok()?'<button class="del" data-del="'+esc(x.name)+'" data-sha="'+esc(x.sha)+'">删除</button>':'';
-      return '<div class="card"><div class="ph">加载失败</div><img src="'+esc(x.url)+'" loading="lazy" alt="'+esc(x.name)+'" onerror="this.style.display=\'none\';this.previousElementSibling.style.display=\'flex\'"/><div class="bd"><div class="t">'+esc(m.title||x.name)+'</div><div class="m">'+esc(m.author||"匿名")+(m.price?" · "+esc(m.price)+" 额度":"")+" · "+esc(fmtTs(m.ts))+'</div><a class="dl" href="'+esc(x.url)+'" target="_blank" rel="noopener">下载原图</a>'+del+'</div></div>';
+      return '<div class="card"><div class="ph">加载失败</div><img src="'+esc(x.url)+'" loading="lazy" onerror="this.style.display=\'none\';this.previousElementSibling.style.display=\'flex\'"/><div class="bd"><div class="t">'+esc(m.title||x.name)+'</div><div class="m">'+esc(m.author||"匿名")+(m.price?" · "+esc(m.price)+" 额度":"")+" · "+esc(fmtTs(m.ts))+'</div><button class="dl" data-dl="'+esc(x.url)+'" data-name="'+esc(x.name)+'">下载原图</button>'+del+'</div></div>';
     }).join("");
     $("status").textContent="共 "+rows.length+" 张。";
   }
   $("authorSel").addEventListener("change",render);
   $("adminSave").addEventListener("click",function(){setTok($("adminTok").value.trim());alert(tok()?"令牌已保存，可删除图片。":"已清除令牌。");render();});
   $("grid").addEventListener("click",function(e){
+    var dl=e.target.closest("[data-dl]");if(dl){dl(dl.getAttribute("data-dl"),dl.getAttribute("data-name"));return;}
     var b=e.target.closest("[data-del]");if(!b)return;
     if(!tok()){alert("请先输入 gh 令牌");return;}
     var name=b.getAttribute("data-del"),sha=b.getAttribute("data-sha");
