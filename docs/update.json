@@ -1,9 +1,9 @@
 {
-  "versionCode": 217,
+  "versionCode": 218,
   "versionName": "4.0.0-et.144",
   "title": "发现新版本 v4.0.0-et.144",
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
-  "size": 159699270,
-  "sha256": "0fa54aec827c793fe3c56a02d53db0938f4fc75d80965ccd6b470834cace094e",
-  "releaseNotes": "et.144: 上传弹窗重做(作品名->售价->选图最多9张,首张封面);meta写入name支持搜索;黑图根因=仓内1x1无效PNG已注明。versionCode=217。"
+  "size": 159699590,
+  "sha256": "0c01a191f82b4313d7f4d118c486c03cb5ae4031a3c80fc6872893645c38decf",
+  "releaseNotes": "et.144: 公告/兑换/社区云端读取改 api Contents+令牌优先(实时无raw缓存404),raw兜底;兑换used写入修正为实际文件。versionCode=218。"
 }

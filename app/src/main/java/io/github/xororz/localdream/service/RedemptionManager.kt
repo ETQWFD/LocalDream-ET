@@ -198,9 +198,11 @@ object RedemptionManager {
                         put("used_ts", ts)
                     }.toString()
                     if (l.sha != null) {
+                        // et.144: update the ACTUAL file that was read (bare <code>.json),
+                        // not the legacy redeem_ prefixed name, so status flips correctly.
                         CloudClient.updateContent(
                             provider, tok, "ETQWFD", REPO,
-                            "redeem/codes/redeem_$code.json", marked.toByteArray(), l.sha, "redeem",
+                            "redeem/codes/$code.json", marked.toByteArray(), l.sha, "redeem",
                         )
                     } else {
                         // read-only mirror gave no sha; just append the used record.

@@ -58,7 +58,7 @@ android {
         minSdk = 28
 //        minSdk = 31
         targetSdk = 36
-        versionCode = 217
+        versionCode = 218
         versionName = "4.0.0-et.144"
 
         // et.26: GitHub OAuth Device Flow client_id. Empty => device-flow entry

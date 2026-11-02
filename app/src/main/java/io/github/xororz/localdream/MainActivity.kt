@@ -261,17 +261,35 @@ class MainActivity : ComponentActivity() {
             runCatching {
                 val repo = "ETQWFD/LocalDream-ET-ratings"
                 val rawBase = "https://raw.githubusercontent.com/$repo/main/announcements"
-                fun get(url: String): Pair<Int, String> = runCatching {
-                    val c = (java.net.URL(url).openConnection() as java.net.HttpURLConnection).apply {
+                val tok = io.github.xororz.localdream.BuildConfig.GALLERY_TOKEN
+                // et.144: Contents API + token FIRST (realtime, no raw-cache 404), raw fallback.
+                fun get(path: String): Pair<Int, String> {
+                    if (tok.isNotEmpty()) runCatching {
+                        val a = (java.net.URL(
+                            "https://api.github.com/repos/$repo/contents/announcements/$path"
+                        ).openConnection() as java.net.HttpURLConnection).apply {
+                            connectTimeout = 8000; readTimeout = 8000
+                            setRequestProperty("Authorization", "token $tok")
+                            setRequestProperty("Accept", "application/vnd.github+json")
+                        }
+                        if (a.responseCode == 200) {
+                            val j = org.json.JSONObject(a.inputStream.bufferedReader().readText())
+                            val body = String(android.util.Base64.decode(
+                                j.getString("content"), android.util.Base64.DEFAULT))
+                            a.disconnect(); return 200 to body
+                        }
+                        a.disconnect()
+                    }
+                    val c = (java.net.URL("$rawBase/$path").openConnection() as java.net.HttpURLConnection).apply {
                         connectTimeout = 8000; readTimeout = 8000
                     }
                     val code = c.responseCode
                     val t = (if (code == 200) c.inputStream else c.errorStream)
                         ?.bufferedReader()?.readText().orEmpty()
                     c.disconnect()
-                    code to t
-                }.getOrDefault(0 to "")
-                val (ic, idxText) = get("$rawBase/index.json")
+                    return code to t
+                }
+                val (ic, idxText) = get("index.json")
                 android.util.Log.i("Announce", "index $rawBase/index.json HTTP=$ic")
                 if (ic != 200) return@runCatching
                 val files = org.json.JSONObject(idxText).optJSONArray("files") ?: return@runCatching
@@ -280,7 +298,7 @@ class MainActivity : ComponentActivity() {
                 for (i in 0 until files.length()) {
                     val name = files.optString(i, "")
                     if (!name.startsWith("announce_") || !name.endsWith(".json")) continue
-                    val (fc, raw) = get("$rawBase/$name")
+                    val (fc, raw) = get(name)
                     if (fc != 200) continue
                     val o = runCatching { org.json.JSONObject(raw) }.getOrNull() ?: continue
                     val target = o.optString("target", "全部")
