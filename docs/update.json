@@ -1,9 +1,9 @@
 {
-  "versionCode": 206,
+  "versionCode": 207,
   "versionName": "4.0.0-et.132",
   "title": "发现新版本 v4.0.0-et.132",
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
-  "size": 159651846,
-  "sha256": "0bc9eb520d976d1639a57a14f0b0c9cf9105a3ea6e5aae1abb2f0c12c708bd27",
-  "releaseNotes": "et.132: 图片社区(网格/上传/水印/购买幂等/详情禁截屏)；令牌走local.properties不入库；官方号额度特权；登录/兑换链路保持。versionCode=206。"
+  "size": 159663386,
+  "sha256": "bdfad8f1a1f52ae9f9023110db4bfb7627753fe057deae7cf93549f40fe48f55",
+  "releaseNotes": "et.132追加: 黑图占位防黑块；收藏(本地SP)；首访社区公约警告(持久化)；真实PNG上传链验证；上游仓不可达未并入。versionCode=207。"
 }
