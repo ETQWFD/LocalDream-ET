@@ -305,18 +305,24 @@ object ModelConvertEngine {
                     continue
                 }
 
-                // et.110: validate safetensors header (first 8 bytes = uint64 LE
-                // header length). A .ckpt/Pickle file or truncated download fails
-                // this -> clear message, no hard convert.
+                // et.110/et.133: validate safetensors header (first 8 bytes = uint64
+                // LITTLE-ENDIAN header length). Must read LE unsigned — readLong() is
+                // big-endian signed and misjudged healthy ~2GB files as corrupt.
                 val hdrLen = runCatching {
-                    java.io.DataInputStream(fullFile.inputStream().buffered(8)).use { it.readLong() }
+                    val buf = ByteArray(8)
+                    fullFile.inputStream().use { it.read(buf) }
+                    // unsigned little-endian 64-bit (cap to Long range; header is small)
+                    var v = 0L
+                    for (i in 0 until 8) v = v or ((buf[i].toLong() and 0xFF) shl (i * 8))
+                    v
                 }.getOrNull() ?: -1L
                 val sz = fullFile.length()
-                if (hdrLen !in 16L..(sz - 8L)) {
+                // legal header: 8 .. fileSize-16 (negative/huge = .ckpt/truncated)
+                if (hdrLen < 8L || hdrLen > sz - 16L) {
                     runCatching { fullFile.delete() }
                     clearProgress(context, modelId)
                     throw IOException(
-                        "文件损坏或是 .ckpt 格式（safetensors 头长度=$hdrLen，文件=$sz 字节），请重新下载 safetensors 版本",
+                        "文件损坏或是 .ckpt 格式（safetensors 头长度=$hdrLen，文件=$sz 字节），请下载 safetensors 版本或换镜像源",
                     )
                 }
                 clearProgress(context, modelId)

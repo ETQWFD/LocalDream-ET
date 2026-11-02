@@ -332,6 +332,25 @@ data class Model(
             "Qwen/Qwen3-4B/resolve/main/tokenizer.json|tokenizer.json",
         )
 
+        // et.133: upstream PR #348 FLUX.2 Klein 9B, #349 FLUX.3 Image Klein 6B.
+        // Download sources only (App-side); execution needs v85 QNN skels / new
+        // libdit_engine.so which the current package does NOT ship (如实标注).
+        val KLEIN_9B_PACKAGE_FILES = listOf(
+            "black-forest-labs/FLUX.2-klein-9b-fp8/resolve/main/" +
+                "flux-2-klein-9b-fp8.safetensors|dit.safetensors",
+            "zhiyuanasad/flux2_klein_adreno/resolve/main/llm.gguf|llm.gguf",
+            "zhiyuanasad/flux2_klein_adreno/resolve/main/vae.safetensors|vae.safetensors",
+            "Qwen/Qwen3-4B/resolve/main/tokenizer.json|tokenizer.json",
+        )
+
+        val FLUX3_KLEIN_PACKAGE_FILES = listOf(
+            "black-forest-labs/FLUX.3-klein-6b-fp8/resolve/main/" +
+                "flux-3-klein-6b-fp8.safetensors|dit.safetensors",
+            "zhiyuanasad/flux3_klein_adreno/resolve/main/llm.gguf|llm.gguf",
+            "zhiyuanasad/flux3_klein_adreno/resolve/main/vae.safetensors|vae.safetensors",
+            "Qwen/Qwen3-4B/resolve/main/tokenizer.json|tokenizer.json",
+        )
+
         val QWEN_IMAGE_2_1_PACKAGE_FILES = listOf(
             "leejet/Qwen-Image-2.1-GGUF/resolve/main/" +
                 "qwen_image_2.1-Q4_0.gguf|dit.gguf",

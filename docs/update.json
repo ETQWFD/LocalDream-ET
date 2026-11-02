@@ -1,9 +1,9 @@
 {
-  "versionCode": 207,
-  "versionName": "4.0.0-et.132",
-  "title": "发现新版本 v4.0.0-et.132",
+  "versionCode": 208,
+  "versionName": "4.0.0-et.133",
+  "title": "发现新版本 v4.0.0-et.133",
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
-  "size": 159663386,
-  "sha256": "bdfad8f1a1f52ae9f9023110db4bfb7627753fe057deae7cf93549f40fe48f55",
-  "releaseNotes": "et.132追加: 黑图占位防黑块；收藏(本地SP)；首访社区公约警告(持久化)；真实PNG上传链验证；上游仓不可达未并入。versionCode=207。"
+  "size": 159666130,
+  "sha256": "fefd58e00aacc5500164fc5b484e8fcbe1b270f0138917611d9c056f506aceec",
+  "releaseNotes": "et.133: DiT Models标签(Z-Image/FLUX.2 Klein/Qwen)；safetensors头改无符号LE读取修大文件误判损坏；FLUX.3/9B下载源内置(需新引擎.so)。versionCode=208。"
 }

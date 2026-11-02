@@ -480,6 +480,15 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                 it.description.lowercase().contains(searchQ)
         }
     }
+    // et.133: DiT Models tab (Z-Image / FLUX.2 Klein / FLUX.3 Klein / Qwen Image).
+    val ditModels = remember(npuModels) { npuModels.filter { it.isDit } }
+    val filteredDitModels = remember(ditModels, searchQ) {
+        if (searchQ.isEmpty()) ditModels else ditModels.filter {
+            it.name.lowercase().contains(searchQ) ||
+                it.id.lowercase().contains(searchQ) ||
+                it.description.lowercase().contains(searchQ)
+        }
+    }
 
     val lastViewedPage = remember {
         val preferences = context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
@@ -488,7 +497,7 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
 
     val pagerState = rememberPagerState(
         initialPage = lastViewedPage,
-        pageCount = { 2 },
+        pageCount = { 3 },
     )
 
     LaunchedEffect(pagerState.currentPage) {
@@ -499,6 +508,7 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
     val tabTitles = listOf(
         stringResource(R.string.cpu_models),
         stringResource(R.string.npu_models),
+        stringResource(R.string.dit_models),
     )
 
     if (isSelectionMode) {
@@ -1565,7 +1575,11 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                 state = pagerState,
                 modifier = Modifier.weight(1f),
             ) { page ->
-                val models = if (page == 0) filteredCpuModels else filteredNpuModels
+                val models = when (page) {
+                    0 -> filteredCpuModels
+                    1 -> filteredNpuModels
+                    else -> filteredDitModels
+                }
 
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
@@ -1722,10 +1736,10 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                     Text(
-                                        text = if (page == 0) {
-                                            stringResource(R.string.no_cpu_models)
-                                        } else {
-                                            stringResource(R.string.no_npu_models)
+                                        text = when (page) {
+                                            0 -> stringResource(R.string.no_cpu_models)
+                                            1 -> stringResource(R.string.no_npu_models)
+                                            else -> stringResource(R.string.no_dit_models)
                                         },
                                         style = MaterialTheme.typography.bodyLarge,
                                         textAlign = TextAlign.Center,
