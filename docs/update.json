@@ -1,9 +1,9 @@
 {
-  "versionCode": 221,
-  "versionName": "4.0.0-et.147",
-  "title": "发现新版本 v4.0.0-et.147",
-  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
-  "size": 159907951,
-  "sha256": "ca0454956563a943e10f25af287a51692b3450ab2f37067305e9927745ab2262",
-  "releaseNotes": "et.147: 图片社区点击缩略图预览→确认购买→扣额度→右下角etc水印存相册；登录者自动备份到自己仓库；预览页FLAG_SECURE防截屏；社区每次只能传1张；兑换码/公告改用国内可用镜像(gitmirror/statically/ghproxy)，无网络问题修复；新增可重复卡密 ETC666（群成员奖励）；长按公告本地隐藏。"
+  "versionCode": 222,
+  "versionName": "4.0.0-et.148",
+  "title": "发现新版本 v4.0.0-et.148",
+  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.148/LocalDream-ET.apk",
+  "size": 159908115,
+  "sha256": "d0ed8a5feab2679c26d7be30219cda7953a393e912adab83591f5288402557f4",
+  "releaseNotes": "et.148: 修复兑换码/公告无网络（镜像顺序、jsdelivr 404 问题）；未登录游客 42 万额度/7 天，登录用户 128 万额度/7 天；社区购买水印+防截屏；可重复卡密 ETC666；模型下载镜像顺序优化。"
 }

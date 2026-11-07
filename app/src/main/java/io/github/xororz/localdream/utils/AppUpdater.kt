@@ -179,13 +179,10 @@ object AppUpdater {
             return listOf(origin)
         }
         val proxies = listOf(
-            // et.118/build195b: requested mirror order after GitHub origin.
-            // jsdelivr is tried (release assets usually 404 here -> probed out),
-            // then the ghproxy family, then a couple of extra accelerators.
-            "https://cdn.jsdelivr.net/",
+            // et.148: release 二进制不能走 jsdelivr（404），改用 gh-proxy 系列。
             "https://gh-proxy.com/",
-            "https://ghproxy.net/",
             "https://ghfast.top/",
+            "https://ghproxy.net/",
             "https://mirror.ghproxy.com/",
         )
         // Direct origin first (it is fastest on good networks), then proxies.

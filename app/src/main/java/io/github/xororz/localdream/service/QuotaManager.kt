@@ -21,6 +21,16 @@ import io.github.xororz.localdream.cloud.SecureTokenStore
 object QuotaManager {
     private const val TAG = "QuotaManager"
     const val TOTAL = 1_280_000L
+    // et.148: 未登录游客 42 万 / 7 天；登录用户 128 万 / 7 天；官方号 ETQWFD 无限。
+    const val GUEST_TOTAL = 420_000L
+
+    fun limit(c: Context): Long {
+        val tok = runCatching {
+            SecureTokenStore(c).token(CloudConfig.Provider.GITHUB)
+        }.getOrNull()
+        if (!tok.isNullOrBlank()) return TOTAL
+        return GUEST_TOTAL
+    }
     private const val RESET_DAYS = 7L
     private const val SP = "quota_prefs"
     private const val QUOTA_REPO = "ETQWFD/LocalDreamET-Quota"
@@ -44,12 +54,12 @@ object QuotaManager {
     /** Used units (clamped), reset applied. */
     fun used(c: Context): Long {
         rollover(c)
-        return sp(c).getLong("used", 0L).coerceIn(0L, TOTAL)
+        return sp(c).getLong("used", 0L).coerceIn(0L, limit(c))
     }
 
-    fun remaining(c: Context): Long = (TOTAL - used(c)).coerceAtLeast(0L)
+    fun remaining(c: Context): Long = (limit(c) - used(c)).coerceAtLeast(0L)
 
-    fun available(c: Context): Boolean = used(c) < TOTAL
+    fun available(c: Context): Boolean = used(c) < limit(c)
 
     /** Cost scales with steps and megapixels; ~1 unit per 512px-step. */
     fun cost(steps: Int, width: Int, height: Int): Long {
@@ -58,7 +68,7 @@ object QuotaManager {
     }
 
     fun consume(c: Context, amount: Long) {
-        sp(c).edit().putLong("used", (used(c) + amount).coerceAtMost(TOTAL)).apply()
+        sp(c).edit().putLong("used", (used(c) + amount).coerceAtMost(limit(c))).apply()
     }
 
     fun refund(c: Context, amount: Long) {
