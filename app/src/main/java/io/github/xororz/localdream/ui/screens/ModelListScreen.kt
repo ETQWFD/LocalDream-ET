@@ -5738,11 +5738,36 @@ private fun EtFeedbackDialog(onDismiss: () -> Unit) {
 @androidx.compose.runtime.Composable
 private fun EtStorageDialog(onDismiss: () -> Unit) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
-    val current = ctx.getSharedPreferences("app_prefs", android.content.Context.MODE_PRIVATE)
-        .getString("model_dir", "/storage/emulated/0/LocalDreamET/models") ?: "/storage/emulated/0/LocalDreamET/models"
+    val sp = ctx.getSharedPreferences("app_prefs", android.content.Context.MODE_PRIVATE)
+    var current by androidx.compose.runtime.remember {
+        androidx.compose.runtime.mutableStateOf(sp.getString("model_dir", "/storage/emulated/0/LocalDreamET/models") ?: "/storage/emulated/0/LocalDreamET/models")
+    }
+    val picker = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.OpenDocumentTree()
+    ) { uri ->
+        if (uri != null) {
+            runCatching {
+                ctx.contentResolver.takePersistableUriPermission(
+                    uri,
+                    android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                )
+                sp.edit().putString("model_dir_uri", uri.toString()).apply()
+                sp.edit().putString("model_dir", uri.path ?: uri.toString()).apply()
+                current = uri.toString()
+            }
+            android.widget.Toast.makeText(ctx, "已选择存储目录：$uri", android.widget.Toast.LENGTH_LONG).show()
+        }
+    }
     androidx.compose.material3.AlertDialog(
         onDismissRequest = onDismiss,
-        confirmButton = { androidx.compose.material3.TextButton(onClick = onDismiss) { androidx.compose.material3.Text("关闭") } },
+        confirmButton = {
+            androidx.compose.foundation.layout.Row {
+                androidx.compose.material3.TextButton(onClick = {
+                    picker.launch(android.net.Uri.parse("/storage/emulated/0"))
+                }) { androidx.compose.material3.Text("选择目录") }
+                androidx.compose.material3.TextButton(onClick = onDismiss) { androidx.compose.material3.Text("关闭") }
+            }
+        },
         title = { androidx.compose.material3.Text("自定义存储位置") },
         text = {
             androidx.compose.foundation.layout.Column {
@@ -5751,8 +5776,7 @@ private fun EtStorageDialog(onDismiss: () -> Unit) {
                     color = androidx.compose.material3.MaterialTheme.colorScheme.primary)
                 androidx.compose.foundation.layout.Spacer(androidx.compose.ui.Modifier.height(8.dp))
                 androidx.compose.material3.Text(
-                    "在系统文件管理器里选择一个文件夹，模型会下载到该目录。" +
-                    "后续版本支持把已有模型迁移到新目录。",
+                    "点击「选择目录」挑选存储卡或其他位置；模型下载会写入该目录。",
                     style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
                     color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -5760,3 +5784,4 @@ private fun EtStorageDialog(onDismiss: () -> Unit) {
         },
     )
 }
+

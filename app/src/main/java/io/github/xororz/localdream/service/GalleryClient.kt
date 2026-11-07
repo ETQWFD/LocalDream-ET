@@ -57,8 +57,8 @@ object GalleryClient {
         return try {
             c = (URL(url).openConnection() as HttpURLConnection).apply {
                 requestMethod = method
-                connectTimeout = 15000
-                readTimeout = 30000
+                connectTimeout = 6000
+                readTimeout = 10000
                 setRequestProperty("Accept", "application/vnd.github+json")
                 setRequestProperty("User-Agent", "LocalDream-ET")
                 val t = BuildConfig.GALLERY_TOKEN
@@ -125,15 +125,17 @@ object GalleryClient {
     /** 社区列表；失败返回空列表由 UI 提示。 */
     suspend fun list(): List<GalleryItem> = withContext(Dispatchers.IO) {
         try {
-            // 1) 先试 GitHub contents API；失败/限流时用 jsdelivr 包目录枚举。
-            var names: List<String> = try {
-                val (code, text) = http("$API/png", "GET")
-                if (code != 200) emptyList()
-                else (0 until JSONArray(text).length()).mapNotNull { i ->
-                    JSONArray(text).getJSONObject(i).optString("name", "").takeIf { it.endsWith(".png") }
-                }
-            } catch (_: Exception) { emptyList() }
-            if (names.isEmpty()) names = enumerateViaJsdelivr()
+            // et.152: 国内 jsdelivr 包目录枚举最快（<1s），优先；api.github.com 作为兜底。
+            var names: List<String> = enumerateViaJsdelivr()
+            if (names.isEmpty()) {
+                names = try {
+                    val (code, text) = http("$API/png", "GET")
+                    if (code != 200) emptyList()
+                    else (0 until JSONArray(text).length()).mapNotNull { i ->
+                        JSONArray(text).getJSONObject(i).optString("name", "").takeIf { it.endsWith(".png") }
+                    }
+                } catch (_: Exception) { emptyList() }
+            }
             val metas = fetchMetas(names)
             names.map { n ->
                 val stem = n.substringBeforeLast(".png")
