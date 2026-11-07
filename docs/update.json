@@ -1,9 +1,9 @@
 {
   "versionCode": 218,
-  "versionName": "4.0.0-et.144",
-  "title": "发现新版本 v4.0.0-et.144",
+  "versionName": "4.0.0-et.145",
+  "title": "发现新版本 v4.0.0-et.145",
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
-  "size": 159699590,
-  "sha256": "0c01a191f82b4313d7f4d118c486c03cb5ae4031a3c80fc6872893645c38decf",
-  "releaseNotes": "et.144: 公告/兑换/社区云端读取改 api Contents+令牌优先(实时无raw缓存404),raw兜底;兑换used写入修正为实际文件。versionCode=218。"
+  "size": 159886411,
+  "sha256": "99603c22894cdb6af303c4d1025f9bebafcedb9927f9b16cffc98f0a1ca33c60",
+  "releaseNotes": "et.145: 修复图片社区发布失败(主线程网络导致NetworkOnMainThreadException、令牌缺失401、元数据限流403)，改为协程IO并发读取raw CDN，逐张回显真实失败原因；售价上限提示修正为9000。versionCode=218。"
 }

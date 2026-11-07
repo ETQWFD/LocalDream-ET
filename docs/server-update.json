@@ -1,21 +1,21 @@
 {
   "name": "Local Dream ET Server",
-  "version": "1.1.7",
-  "versionCode": 117,
-  "tag": "server-v1.1.7",
-  "prerelease": true,
+  "version": "1.6.6",
+  "versionCode": 166,
+  "tag": "et.145",
+  "prerelease": false,
   "channel": "github",
   "platforms": {
     "windows": {
-      "file": "LocalDreamET-Server-Setup-1.1.7.exe",
-      "size": 11252666,
-      "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/server-v1.1.7/LocalDreamET-Server-Setup-1.1.7.exe"
+      "file": "LocalDreamET-Server-Setup-1.6.6.exe",
+      "size": 11274789,
+      "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.145/etserver-setup.exe"
     },
     "linux-x86_64": {
-      "file": "LocalDreamET-Server-1.1.7-linux-x86_64.tar.gz",
-      "size": 16520135,
-      "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/server-v1.1.7/LocalDreamET-Server-1.1.7-linux-x86_64.tar.gz"
+      "file": "LocalDreamET-Server-1.6.6-linux-x86_64.tar.gz",
+      "size": 16534919,
+      "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.145/etserver-linux.tar.gz"
     }
   },
-  "notes": "v1.1.7（模型加载慢/加载期界面卡死专项，区分加载慢与生成慢）：①启动改为【先绑定对外端口、引擎与模型在后台加载】，外壳端口秒级可连（旧版会阻塞等待最多约60秒才绑口，期间界面像卡死）；加载期间 GET /healthz 返回 503 且结构化给出 status=loading 与 load_elapsed_s（已用时秒），加载完成才 ready=200。②GUI 与控制台在加载期实时显示“正在加载模型 <名> … 已用时 Ns”，不阻塞消息循环、不刷屏（约1秒一刷）。③看门狗重写：引擎进程活着但仍在加载时耐心等待、不再误判为死亡而反复重启；只有进程真正退出才按 1→2→4…秒指数退避重启，且只报一次。④启动只加载向导选中的那 1 个模型，其余在 GUI 下拉切换时再加载，不预加载；模型加载一次后常驻，后续请求不重新 load。⑤引擎参数仅传 --help 实证存在的 --model/--listen-ip/--listen-port/--threads（--threads 按真实物理核 min(max(核,2),8)），--mmap 为引擎默认权重映射，未臆加 --fp16 等不存在的加速开关。保留 v1.1.6 全部：默认无内容过滤、魔搭+hf-mirror 源（Range 实测）、46位Key持久化与 Bearer/X-API-Key 鉴权、物理/虚拟网卡识别与防火墙提示、Unicode 新宋体、引擎缺失不刷屏、免UAC用户级安装、三滑杆透传、批量 batch_size/n 真出多张、未完整不就绪。Linux 无代理冒烟：外层端口0秒绑定、加载期 healthz=503 结构化 body、错Key=401、对Key=503、看门狗退避不重启不刷屏、外壳RSS约3.7MB。版权归 etc（MIT）。"
+  "notes": "v1.6.6 修复调用慢/无法调用/调用失败：①默认 steps 30→20、batch 6→1、出图后不再杀引擎(unload_after_gen=0)，旧配置自动迁移，消除每次请求数分钟重新加载；②请求体不再用 64KB 栈缓冲，按 Content-Length 堆分配(上限32MB)，并支持 chunked 解码，修掉 img2img/大 JSON 必失败；③send_json 大响应分两次发送，消除栈溢出；④上游 socket 加 300s 收发超时，引擎卡死不再永久挂线程；⑤出图期间健康探测失败不再把 ready 打成 0，/healthz 返回 busy 200，App 不再误判未就绪；⑥/api 出图 base64 缓冲由 4MB 栈改堆分配；⑦引擎响应超 16MB 明确报 502 而非静默截断。已用桩引擎冒烟：100KB/300KB/ chunked 请求体完整转发，/healthz 200，/api/txt2img 正常返回 base64。"
 }

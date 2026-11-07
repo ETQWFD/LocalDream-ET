@@ -20,6 +20,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import io.github.xororz.localdream.navigation.popBackStackIfResumed
 import io.github.xororz.localdream.service.GalleryClient
 
@@ -44,6 +47,7 @@ object FavoriteStore {
 @Composable
 fun GalleryScreen(navController: NavController) {
     val ctx = navController.context
+    val scope = rememberCoroutineScope()
     var items by remember { mutableStateOf<List<GalleryClient.GalleryItem>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
     var showUpload by remember { mutableStateOf(false) }
@@ -137,10 +141,12 @@ fun GalleryScreen(navController: NavController) {
     }
     if (showUpload) UploadDialog(ctx) {
         showUpload = false
-        // et.144: refresh community list after a successful publish.
-        loading = true
-        items = GalleryClient.list()
-        loading = false
+        // et.145: 刷新社区列表改到 IO 协程，绝不阻塞主线程。
+        scope.launch {
+            loading = true
+            items = GalleryClient.list()
+            loading = false
+        }
     }
     if (showFav) {
         AlertDialog(
@@ -156,9 +162,11 @@ fun GalleryScreen(navController: NavController) {
 
 @Composable
 private fun UploadDialog(ctx: Context, onDismiss: () -> Unit) {
+    val scope = rememberCoroutineScope()
     var price by remember { mutableStateOf("100") }
     var name by remember { mutableStateOf("") }
     var msg by remember { mutableStateOf("") }
+    var uploading by remember { mutableStateOf(false) }
     var showPicker by remember { mutableStateOf(false) }
     var picked by remember { mutableStateOf<List<java.io.File>>(emptyList()) }
     // et.144: scan app-generated pngs from filesDir (history output).
@@ -209,23 +217,40 @@ private fun UploadDialog(ctx: Context, onDismiss: () -> Unit) {
                 if (msg.isNotEmpty()) Text(msg)
                 Spacer(Modifier.height(16.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TextButton(onClick = onDismiss) { Text("取消") }
-                    Button(onClick = {
+                    TextButton(onClick = onDismiss, enabled = !uploading) { Text("取消") }
+                    Button(enabled = !uploading, onClick = {
                         val p = price.toIntOrNull() ?: 0
                         when {
-                            p > 9000 -> msg = "无法发布"
+                            p > 9000 -> msg = "售价不能超过 9000"
                             picked.isEmpty() -> msg = "请先选择图片"
                             else -> {
-                                // et.144: upload cover (first) straight to GitHub raw repo.
-                                val ok = GalleryClient.upload(
-                                    picked.first().readBytes(),
-                                    author = "ETQWFD", price = p, name = name,
-                                )
-                                msg = if (ok) "发布成功" else "发布失败，请重试"
-                                if (ok) onDismiss()
+                                // et.145: 上传/读文件全部在 IO 协程；多选时逐张发布。
+                                uploading = true
+                                msg = "正在上传…"
+                                scope.launch {
+                                    var okCount = 0
+                                    var lastReason = ""
+                                    for (f in picked) {
+                                        val bytes = withContext(Dispatchers.IO) {
+                                            runCatching { f.readBytes() }.getOrDefault(ByteArray(0))
+                                        }
+                                        if (bytes.isEmpty()) { lastReason = "读取失败：${f.name}"; continue }
+                                        val res = GalleryClient.upload(
+                                            bytes, author = "ETQWFD", price = p, name = name,
+                                        )
+                                        if (res.ok) okCount++ else lastReason = res.reason
+                                    }
+                                    uploading = false
+                                    msg = when {
+                                        okCount == picked.size -> "发布成功"
+                                        okCount > 0 -> "已发布 $okCount/${picked.size} 张：$lastReason"
+                                        else -> "发布失败：$lastReason"
+                                    }
+                                    if (okCount > 0) onDismiss()
+                                }
                             }
                         }
-                    }) { Text("确认发布") }
+                    }) { Text(if (uploading) "上传中…" else "确认发布") }
                 }
             }
         }

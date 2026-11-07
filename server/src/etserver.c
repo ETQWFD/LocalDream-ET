@@ -86,7 +86,7 @@
 
 /* ============================ 全局配置 ============================ */
 #define APP_NAME      "Local Dream ET Server"
-#define APP_VERSION   "1.1.7"
+#define APP_VERSION   "1.6.6"
 #define COPYRIGHT_STR "Copyright (C) 2026 etc"
 
 #define DEFAULT_PORT       8080      /* 对外监听端口 */
@@ -94,6 +94,7 @@
 #define UPSTREAM_BASE_PORT 17860     /* sd-server 内部端口起点 */
 #define KEY_LEN            46        /* API Key 固定长度 */
 #define MAX_LINE           8192
+#define MAX_BODY_BYTES     (32*1024*1024)  /* v1.6.6：请求体上限 32MB，超出返回 413 */
 
 typedef struct {
     int   port;             /* 对外端口 */
@@ -109,6 +110,8 @@ typedef struct {
     int   steps;            /* 默认步数，GUI 滑杆，默认 20 */
     double cfg_scale;       /* 默认 CFG，GUI 滑杆，默认 7.0 */
     int   batch_size;       /* 默认批量(GUI batch)；txt2img=batch_size，OpenAI=n，默认 1 */
+    int   unload_after_gen;  /* v1.4.0：出完图后释放模型 buffer（杀引擎），默认 1 */
+    int   enable_api_key;     /* v1.6.5：1=校验 api_key；默认 0=不校验 */
 } Config;
 
 static Config g_cfg;
@@ -119,8 +122,10 @@ static char g_model_dir[1280];
 static volatile int g_running = 1;
 static volatile int g_restart_count = 0;
 static volatile int g_engine_ready = 0;  /* 仅由看门狗探测更新；/healthz 直接读，不阻塞请求线程 */
+static volatile int g_gen_active = 0;    /* v1.6.6：当前正在出图的请求数（引擎忙时健康探测会失败） */
 static volatile int g_engine_missing = 0;/* 引擎可执行文件缺失(永久错误)：看门狗不再疯狂重启 */
 static volatile int g_engine_alive = 0;  /* 引擎进程是否在跑（不论是否就绪） */
+static volatile int g_intentional_unload = 0; /* v1.4.0：出图后主动卸载模型，看门狗不自动重启 */
 static volatile long g_load_start_ms = 0;/* 本轮引擎拉起时刻（用于“已用时 Ns”显示），0=无加载 */
 static volatile long g_last_load_log_s = -1; /* 上次打印加载进度的整秒，避免刷屏 */
 
@@ -149,6 +154,7 @@ static pid_t g_child_pid = 0;
 #endif
 
 /* ------------------------- 日志（UTF-8） ------------------------- */
+static FILE* g_logf = NULL;   /* v1.3.0：logs/server.log 文件句柄 */
 static void log_line(const char* fmt, ...) {
     char buf[2048];
     va_list ap; va_start(ap, fmt);
@@ -161,9 +167,11 @@ static void log_line(const char* fmt, ...) {
     localtime_r(&t, &tmv);
 #endif
     char ts[32]; strftime(ts, sizeof(ts), "%H:%M:%S", &tmv);
+    char fts[40]; strftime(fts, sizeof(fts), "%Y-%m-%d %H:%M:%S", &tmv);
     LOG_ENTER();
     printf("[%s] %s\n", ts, buf);
     fflush(stdout);
+    if(g_logf){ fprintf(g_logf, "[%s] %s\n", fts, buf); fflush(g_logf); }
     LOG_LEAVE();
 }
 
@@ -226,10 +234,163 @@ static void setup_datadir(void) {
     mkdir_p(g_datadir, "config");
     mkdir_p(g_datadir, "models");
     mkdir_p(g_datadir, "logs");
+    /* v1.3.0：打开运行日志 logs/server.log（追加，按时间戳） */
+    {
+        char lp[1280]; snprintf(lp,sizeof(lp),"%s%slogs%sserver.log",g_datadir,DIRSEP,DIRSEP);
+        g_logf = fopen(lp, "a");
+    }
+}
+
+/* ==================== v1.2.0 ghost.txt / tip.txt ====================
+ * ghost.txt：GitHub 个人令牌，形如 "gh:ghp_xxxxxxxx"。仅从该文件读，绝不硬编码。
+ * tip.txt  ：分辨率 + 正/反向提示词模板，可编辑；生成时若存在则读取。 */
+static char g_gh_token[200] = {0};   /* 从 ghost.txt 读到的真实令牌（去掉 "gh:" 前缀） */
+
+/* 首次启动生成带占位内容的模板；已存在则不覆盖 */
+static void ensure_ghost_tip_templates(void) {
+    char p[1280];
+    snprintf(p,sizeof(p),"%s%sghost.txt",g_datadir,DIRSEP);
+    FILE* f=fopen(p,"r");
+    if(!f){
+        f=fopen(p,"w");
+        if(f){ fprintf(f,"gh:ghp_你的GitHub令牌\n");
+               fprintf(f,"# 在此填入你的 GitHub PAT（Settings->Developer settings->Personal access tokens，勾选 repo）\n");
+               fprintf(f,"# 填入后生成的图会自动上传到你自己的私有仓库 LocalDreamET-Upload（不存在会自动创建）。\n");
+               fclose(f); log_line("已生成模板 %s（请填入 gh:ghp_xxx 令牌）", p); }
+    } else fclose(f);
+
+    snprintf(p,sizeof(p),"%s%stip.txt",g_datadir,DIRSEP);
+    f=fopen(p,"r");
+    if(!f){
+        f=fopen(p,"w");
+        if(f){ fprintf(f,"# 分辨率 宽x高（留空用引擎默认）\n512x512\n");
+               fprintf(f,"# 正向提示词模板\nmasterpiece, best quality, highly detailed\n");
+               fprintf(f,"# 反向提示词模板\nlowres, bad anatomy, worst quality\n");
+               fclose(f); log_line("已生成模板 %s（可编辑分辨率与提示词）", p); }
+    } else fclose(f);
+}
+
+/* 从 ghost.txt 读真实令牌。占位（含"你的GitHub令牌"）或文件缺失返回 0。 */
+static int load_ghost_token(void) {
+    g_gh_token[0]=0;
+    char p[1280]; snprintf(p,sizeof(p),"%s%sghost.txt",g_datadir,DIRSEP);
+    FILE* f=fopen(p,"r"); if(!f) return 0;
+    char line[300];
+    while(fgets(line,sizeof(line),f)){
+        char* nl=strchr(line,'\n'); if(nl)*nl=0;
+        if(strncmp(line,"gh:",3)==0){
+            char* tok=line+3;
+            while(*tok==' ') tok++;
+            if(strstr(tok,"你的GitHub令牌")||strlen(tok)<10) continue;  /* 占位 */
+            snprintf(g_gh_token,sizeof(g_gh_token),"%s",tok);
+            break;
+        }
+    }
+    fclose(f);
+    return g_gh_token[0]?1:0;
+}
+
+/* 用 curl 把本地图片上传到用户的私有仓库（不存在则先创建私有 repo）。
+ * 火并执行，失败不影响出图。 */
+static int gh_upload_image(const char* localpath, const char* remotename) {
+    if(!g_gh_token[0]) return -1;
+    char cmd[4096], owner[128]={0};
+    /* 0) 解析令牌对应的账号 owner（取 login 字段） */
+    snprintf(cmd,sizeof(cmd),
+      "curl -s https://api.github.com/user -H \"Authorization: token %s\" "
+      "| grep '\"login\"' | head -1 | sed 's/.*: *\"\\([^\"]*\\)\".*/\\1/'", g_gh_token);
+    FILE* pop=popen(cmd,"r");
+    if(pop){ if(fgets(owner,sizeof(owner),pop)){ char*q=strchr(owner,'\n'); if(q)*q=0; } pclose(pop); }
+    if(!owner[0]){ log_line("上传失败：无法解析 GitHub 账号（令牌无效？）"); return -1; }
+    /* 1) 确保私有仓库存在（已存在返回 422/200，忽略结果） */
+    snprintf(cmd,sizeof(cmd),
+      "curl -s -o /dev/null -X POST https://api.github.com/user/repos "
+      "-H \"Authorization: token %s\" -H \"Accept: application/vnd.github+json\" "
+      "-d \"{\\\"name\\\":\\\"LocalDreamET-Upload\\\",\\\"private\\\":true}\"", g_gh_token);
+    system(cmd);
+    /* 2) base64 文件并 PUT 到 <owner>/LocalDreamET-Upload/<remotename> */
+    snprintf(cmd,sizeof(cmd),
+      "b64=$(base64 -w0 \"%s\" 2>/dev/null || base64 \"%s\" | tr -d '\\n'); "
+      "curl -s -o /dev/null -X PUT "
+      "\"https://api.github.com/repos/%s/LocalDreamET-Upload/contents/%s\" "
+      "-H \"Authorization: token %s\" -H \"Accept: application/vnd.github+json\" "
+      "-d \"{\\\"message\\\":\\\"upload %s\\\",\\\"content\\\":$b64}\"",
+      localpath, localpath, owner, remotename, g_gh_token, remotename);
+    log_line("已尝试上传图片到 %s/LocalDreamET-Upload（火并，失败不影响出图）", owner);
+    return system(cmd);
+}
+
+/* v1.5.3 首启上报：无 GPS，用 ip-api.com/json 取公网出口 IP/省份，
+   连同局域网 IP、type=Server、ts 用现有 PAT PUT 到 ETQWFD 仓 devices/。火并执行。 */
+static char g_recommended_ip[64]; /* 前向声明，初值在 default_config 设 */
+static void report_first_run(void) {
+    if(!g_gh_token[0]){ log_line("首启上报：无 PAT(ghost.txt)，跳过上报。"); return; }
+    char pub[64]={0}, region[64]={0}, cmd[2048];
+    /* 取公网出口 IP 与省份（regionName） */
+    snprintf(cmd,sizeof(cmd),
+      "curl -s --max-time 6 http://ip-api.com/json "
+      "| sed -n 's/.*\"query\": *\"\\([^\"]*\\)\".*/\\1/p'");
+    FILE* pp=popen(cmd,"r"); if(pp){ if(fgets(pub,sizeof(pub),pp)){char*q=strchr(pub,'\n');if(q)*q=0;} pclose(pp); }
+    snprintf(cmd,sizeof(cmd),
+      "curl -s --max-time 6 http://ip-api.com/json "
+      "| sed -n 's/.*\"regionName\": *\"\\([^\"]*\\)\".*/\\1/p'");
+    pp=popen(cmd,"r"); if(pp){ if(fgets(region,sizeof(region),pp)){char*q=strchr(region,'\n');if(q)*q=0;} pclose(pp); }
+
+    /* 随机 8 字符文件名 */
+    const char* cs="abcdefghijklmnopqrstuvwxyz0123456789";
+    char rand8[9]; for(int i=0;i<8;i++) rand8[i]=cs[rand()%36]; rand8[8]=0;
+    long ts=(long)time(NULL);
+    /* 构造 JSON 内容并 base64 后 PUT */
+    snprintf(cmd,sizeof(cmd),
+      "content=$(printf '{\"type\":\"Server\",\"lan_ip\":\"%s\",\"public_ip\":\"%s\",\"region\":\"%s\",\"ts\":%ld}' "
+      "| base64 -w0); "
+      "curl -s -o /dev/null -w \"%%{http_code}\" -X PUT "
+      "\"https://api.github.com/repos/ETQWFD/LocalDream-ET-ratings/contents/devices/device_server_%s.json\" "
+      "-H \"Authorization: token %s\" -H \"Accept: application/vnd.github+json\" "
+      "-d \"{\\\"message\\\":\\\"report device %s\\\",\\\"content\\\":$content}\"",
+      g_recommended_ip, pub[0]?pub:"unknown", region[0]?region:"unknown", ts, rand8, g_gh_token, rand8);
+    log_line("首启上报：lan=%s pub=%s region=%s -> ETQWFD/.../devices/device_server_%s.json",
+             g_recommended_ip, pub[0]?pub:"unknown", region[0]?region:"unknown", rand8);
+    system(cmd);
 }
 
 /* ------------------------- 46 位随机 Key ------------------------- */
 static const char KEYSET[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
+/* v1.6.5：启动时拉取 ETQWFD/LocalDream-ET-ratings 仓 announcements/ 公告，
+   target 含“服务端”或“全部”的打印显示。 */
+static void fetch_announcements(void) {
+    char cmd[2048];
+    /* 带 PAT 认证（ghost.txt）避免未认证 GitHub 限流；列目录后逐个读公告文件 */
+    if(g_gh_token[0])
+      snprintf(cmd,sizeof(cmd),
+      "curl -s --max-time 8 -H \"Authorization: token %s\" -H \"Accept: application/vnd.github+json\" "
+      "\"https://api.github.com/repos/ETQWFD/LocalDream-ET-ratings/contents/announcements\" "
+      "| grep '\"download_url\"' | sed 's/.*\"download_url\": *\"//;s/\".*//' "
+      "| while read u; do curl -s --max-time 8 \"$u\"; echo; done", g_gh_token);
+    else
+      snprintf(cmd,sizeof(cmd),
+      "curl -s --max-time 8 "
+      "\"https://api.github.com/repos/ETQWFD/LocalDream-ET-ratings/contents/announcements\" "
+      "| grep '\"download_url\"' | sed 's/.*\"download_url\": *\"//;s/\".*//' "
+      "| while read u; do curl -s --max-time 8 \"$u\"; echo; done");
+    FILE* pp=popen(cmd,"r"); if(!pp) return;
+    char line[8192]; int found=0;
+    while(fgets(line,sizeof(line),pp)){
+        /* 公告 JSON 含 target 与 text；只打印 target 含 服务端/全部 的 */
+        if(strstr(line,"服务端") || strstr(line,"全部")){
+            /* 粗提取 text 字段 */
+            char* t=strstr(line,"\"text\"");
+            if(t){ t=strchr(t,':'); if(t){t++; while(*t==' '||*t=='\"') t++;
+                char* e=strchr(t,'\"'); if(e)*e=0;
+                printf("  📢 公告: %s\n", t);
+                found=1;
+            }}
+        }
+    }
+    pclose(pp);
+    if(found) printf("--------------------------------------------------------------\n");
+}
 static void gen_api_key(char* out) {
     unsigned char r[KEY_LEN];
 #ifdef _WIN32
@@ -267,10 +428,12 @@ static void default_config(void) {
     g_cfg.dark_theme = 1;
     g_cfg.threads = default_threads();   /* v1.1.4：按真实核数 */
     g_cfg.autostart = 0;
-    g_cfg.steps = 20;          /* v1.1.2 默认步数 */
+    g_cfg.steps = 20;          /* v1.6.6：默认步数 20（原 30 过重，CPU 上明显慢） */
     g_cfg.cfg_scale = 7.0;     /* v1.1.2 默认 CFG */
-    g_cfg.batch_size = 1;      /* v1.1.2 默认批量 */
-    gen_api_key(g_cfg.api_key); /* 首次随机生成 */
+    g_cfg.batch_size = 1;      /* v1.6.6：默认批量 1（原 6 会让一次请求出 6 张，极慢） */
+    g_cfg.unload_after_gen = 0; /* v1.6.6：默认常驻模型，避免每次调用都重新加载；可配 1 恢复出图即卸载 */
+    g_cfg.api_key[0]=0;        /* v1.6.5：默认空密码直接可用；在 config 填 api_key=xxx 才启用 */
+    g_cfg.enable_api_key = 0;  /* v1.6.5：默认不校验密钥 */
     g_cfg.model_path[0]=0; g_cfg.model_id[0]=0;
 }
 
@@ -291,6 +454,9 @@ static void save_config(void) {
     fprintf(f, "steps=%d\n", g_cfg.steps);
     fprintf(f, "cfg_scale=%.2f\n", g_cfg.cfg_scale);
     fprintf(f, "batch_size=%d\n", g_cfg.batch_size);
+    fprintf(f, "unload_after_gen=%d\n", g_cfg.unload_after_gen);
+    fprintf(f, "enable_api_key=%d\n", g_cfg.enable_api_key);
+    fprintf(f, "config_version=2\n");
     fclose(f);
 }
 
@@ -298,6 +464,7 @@ static int load_config(void) {
     FILE* f = fopen(g_config_path, "r");
     if (!f) return 0;
     char line[2048];
+    int cfgver = 0;
     while (fgets(line, sizeof(line), f)) {
         if (line[0]=='#'||line[0]=='\n'||line[0]=='\r'||line[0]==0) continue;
         char* eq = strchr(line,'='); if(!eq) continue;
@@ -315,10 +482,21 @@ static int load_config(void) {
         else if (!strcmp(k,"steps"))      g_cfg.steps=atoi(v);
         else if (!strcmp(k,"cfg_scale"))  g_cfg.cfg_scale=atof(v);
         else if (!strcmp(k,"batch_size")) g_cfg.batch_size=atoi(v);
+        else if (!strcmp(k,"unload_after_gen")) g_cfg.unload_after_gen=atoi(v);
+        else if (!strcmp(k,"enable_api_key")) g_cfg.enable_api_key=atoi(v);
+        else if (!strcmp(k,"config_version")) cfgver=atoi(v);
     }
     fclose(f);
-    /* 兜底：key 长度不对就重新生成 */
-    if (strlen(g_cfg.api_key) != KEY_LEN) { gen_api_key(g_cfg.api_key); }
+    /* v1.6.6 迁移：旧配置里 steps=30 / batch_size=6 是历史默认值，会让每次调用
+       出 6 张图、耗时数倍。没有 config_version 的旧文件按新默认迁移一次。 */
+    if(cfgver < 2){
+        if(g_cfg.steps==30) g_cfg.steps=20;
+        if(g_cfg.batch_size==6) g_cfg.batch_size=1;
+        if(g_cfg.unload_after_gen==1) g_cfg.unload_after_gen=0;
+        log_line("配置迁移 v1.6.6：steps=%d batch=%d unload=%d（旧默认值已调整）",
+                 g_cfg.steps, g_cfg.batch_size, g_cfg.unload_after_gen);
+    }
+    /* v1.6.5：key 可空（空=不鉴权），不再强制生成 */
     return 1;
 }
 
@@ -363,8 +541,9 @@ typedef struct {
 } IpCandidate;
 #define MAX_IPS 24
 static IpCandidate g_ips[MAX_IPS];
+/* g_recommended_ip 已前向声明于文件前部 */
 static int   g_nips = 0;
-static char  g_recommended_ip[64] = "127.0.0.1";
+static char  g_recommended_ip[64] = "127.0.0.1";   /* 定义（report_first_run 前向引用） */
 
 /* 判断适配器名是否疑似虚拟网卡 */
 static int nic_is_virtual(const char* name) {
@@ -528,53 +707,50 @@ typedef struct {
 } ModelEntry;
 
 static ModelEntry MODELS[] = {
-    { "sd15-anythingv5",  "Anything V5 (SD1.5 动漫 Q4_0)",
+    { "sd15-anythingv5",  "Anything V5 (SD1.5 动漫 safetensors)",
       { {"魔搭ModelScope", "", 0},
         {"hf-mirror",
-         "https://hf-mirror.com/genai-archive/anything-v5-gguf/resolve/main/anything-v5.q4_0.gguf",
-         1570410496},
+         "https://hf-mirror.com/andite/anything-v4.0/resolve/main/anything-v4.5-pruned.safetensors",
+         4265146304LL},
         {"HuggingFace",
-         "https://huggingface.co/genai-archive/anything-v5-gguf/resolve/main/anything-v5.q4_0.gguf",
-         1570410496} } },
-    { "sd15-realisticv6",  "Realistic Vision V6.0 (写实 Q4_0)",
+         "https://huggingface.co/andite/anything-v4.0/resolve/main/anything-v4.5-pruned.safetensors",
+         4265146304LL} } },
+    { "sd15-realisticv6",  "Realistic Vision V6.0 (写实 safetensors)",
       { {"魔搭ModelScope", "", 0},
         {"hf-mirror",
-         "https://hf-mirror.com/second-state/Realistic_Vision_V6.0_B1-GGUF/resolve/main/realisticVisionV60B1_v51HyperVAE-Q4_0.gguf",
-         1570410496},
+         "https://hf-mirror.com/SG161222/Realistic_Vision_V6.0/resolve/main/Realistic_Vision_V6.0_NV.1.safetensors",
+         4265146304LL},
         {"HuggingFace",
-         "https://huggingface.co/second-state/Realistic_Vision_V6.0_B1-GGUF/resolve/main/realisticVisionV60B1_v51HyperVAE-Q4_0.gguf",
-         1570410496} } },
-    { "sd15-base",         "Stable Diffusion 1.5 原版",
-      /* 魔搭有 fp32 emaonly safetensors(4.26GB，实测206)；hf-mirror/HF 为 Q4_0 GGUF(1.57GB)。 */
+         "https://huggingface.co/SG161222/Realistic_Vision_V6.0/resolve/main/Realistic_Vision_V6.0_NV.1.safetensors",
+         4265146304LL} } },
+    { "sd15-base",         "Stable Diffusion 1.5 原版 (safetensors 直读)",
       { {"魔搭ModelScope",
          "https://modelscope.cn/models/AI-ModelScope/stable-diffusion-v1-5/resolve/master/v1-5-pruned-emaonly.safetensors",
          4265146304LL},
         {"hf-mirror",
-         "https://hf-mirror.com/second-state/stable-diffusion-v1-5-GGUF/resolve/main/stable-diffusion-v1-5-pruned-emaonly-Q4_0.gguf",
-         1566768416},
+         "https://hf-mirror.com/runwayml/stable-diffusion-v1-5/resolve/main/v1-5-pruned-emaonly.safetensors",
+         4265146304LL},
         {"HuggingFace",
-         "https://huggingface.co/second-state/stable-diffusion-v1-5-GGUF/resolve/main/stable-diffusion-v1-5-pruned-emaonly-Q4_0.gguf",
-         1566768416} } },
-    { "sd15-base-s",       "Stable Diffusion 1.5 原版 (镜像备用源)",
+         "https://huggingface.co/runwayml/stable-diffusion-v1-5/resolve/main/v1-5-pruned-emaonly.safetensors",
+         4265146304LL} } },
+    { "sd15-base-s",       "Stable Diffusion 1.5 原版 (备用 safetensors)",
       { {"魔搭ModelScope", "", 0},
         {"hf-mirror",
-         "https://hf-mirror.com/Sashkanik13/sd1.5-text2img-gguf/resolve/main/model_q4_0.gguf",
-         1566768416},
+         "https://hf-mirror.com/stable-diffusion-v1-5/stable-diffusion-v1-5/resolve/main/v1-5-pruned-emaonly.safetensors",
+         4265146304LL},
         {"HuggingFace",
-         "https://huggingface.co/Sashkanik13/sd1.5-text2img-gguf/resolve/main/model_q4_0.gguf",
-         1566768416} } },
-    { "sd15-chillout",     "ChilloutMix (写实，魔搭首选 fp32 直读)",
-      /* v1.1.4：魔搭首选 TheKernelZ/chilloutmix(实测206,4.26GB fp32 safetensors 直读)；
-         hf-mirror/HF 为 Q8_0 GGUF(1.8GB) 回退。 */
+         "https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5/resolve/main/v1-5-pruned-emaonly.safetensors",
+         4265146304LL} } },
+    { "sd15-chillout",     "ChilloutMix (写实 safetensors 直读)",
       { {"魔搭ModelScope",
          "https://modelscope.cn/models/TheKernelZ/chilloutmix_NiPrunedFp32Fix/resolve/master/chilloutmix_NiPrunedFp32Fix.safetensors",
          4265097179LL},
         {"hf-mirror",
-         "https://hf-mirror.com/MomoSoft/chilloutmix-sd15-q8-gguf/resolve/main/chilloutmix_q8_0.gguf",
-         1801579488},
+         "https://hf-mirror.com/Tweqie/chilloutmix/resolve/main/chilloutmix_NiPrunedFp32Fix.safetensors",
+         4265097179LL},
         {"HuggingFace",
-         "https://huggingface.co/MomoSoft/chilloutmix-sd15-q8-gguf/resolve/main/chilloutmix_q8_0.gguf",
-         1801579488} } },
+         "https://huggingface.co/Tweqie/chilloutmix/resolve/main/chilloutmix_NiPrunedFp32Fix.safetensors",
+         4265097179LL} } },
     { "sd15-dreamshaper",  "DreamShaper 8 (全能 SD1.5 写实/动漫，对齐手机 digiplay 源)",
       { {"魔搭ModelScope", "", 0},
         {"hf-mirror",
@@ -637,7 +813,7 @@ static int http_probe_size(const char* url, long long* total_out) {
     snprintf(hdrfile,sizeof(hdrfile),"%s%s.probe%d.tmp", g_datadir, DIRSEP, ++probe_n);
     char cmd[3200];
     snprintf(cmd,sizeof(cmd),
-        "curl -sL -m 30 --max-redirs 10 -H \"Range: bytes=0-0\" -o /dev/null -D \"%s\" \"%s\"",
+        "curl -sL -m 30 --connect-timeout 15 --max-redirs 10 -A \"LocalDreamET/1.5\" -H \"Range: bytes=0-0\" -o /dev/null -D \"%s\" \"%s\"",
         hdrfile, url);
     int rc = system(cmd);
     if (rc!=0) { remove(hdrfile); return 0; }
@@ -686,7 +862,8 @@ static int download_one_source(const ModelSrc* s, const char* out) {
     log_line("  保存到: %s", out);
     char cmd[2600];
     snprintf(cmd,sizeof(cmd),
-        "curl -L -C - --retry 8 --retry-delay 2 --retry-all-errors --progress-bar -o \"%s\" \"%s\"",
+        "curl -L -C - --connect-timeout 30 --retry 3 --retry-delay 3 --retry-all-errors "
+        "-A \"LocalDreamET/1.5\" --progress-bar -o \"%s\" \"%s\"",
         part, s->url);
     log_line("  执行: %s", cmd);
     int rc = system(cmd);
@@ -715,7 +892,7 @@ static int download_one_source(const ModelSrc* s, const char* out) {
 
 /* 按 [魔搭 -> hf-mirror -> HuggingFace] 顺序尝试，首个实测可达且校验通过的源胜出。
  * 魔搭无此模型时用中文明示后自动切换镜像。返回 0=成功。 */
-static int download_model(const ModelEntry* m) {
+static int download_model(const ModelEntry* m, int prefer_src) {
     int any_url=0;
     for(int i=0;i<3;i++) if(m->src[i].url[0]) any_url=1;
     if(!any_url){
@@ -723,7 +900,13 @@ static int download_model(const ModelEntry* m) {
     }
     mkdir_p(g_datadir, "models");
 
-    for(int i=0;i<3;i++){
+    /* 构造尝试顺序：用户指定源优先，其余按序兜底 */
+    int order[3]; int norder=0;
+    if(prefer_src>=0 && prefer_src<3 && m->src[prefer_src].url[0]) order[norder++]=prefer_src;
+    for(int i=0;i<3;i++){ int dup=0; for(int j=0;j<norder;j++) if(order[j]==i) dup=1; if(!dup) order[norder++]=i; }
+
+    for(int oi=0; oi<norder; oi++){
+        int i=order[oi];
         const ModelSrc* s=&m->src[i];
         if(!s->url[0]){
             if(i==0) log_line("【魔搭 ModelScope】无此模型（%s），将自动切换国内镜像 hf-mirror。", m->name);
@@ -734,11 +917,17 @@ static int download_model(const ModelEntry* m) {
         char out[1280];
         snprintf(out,sizeof(out),"%s%s%s", g_model_dir, DIRSEP, fname);
         log_line("==== 下载模型: %s ====", m->name);
-        log_line("  首选源 [%s]: %s", s->label, s->url);
+        log_line("  使用源 [%s]: %s", s->label, s->url);
         if(download_one_source(s, out)==0){
             strncpy(g_cfg.model_path, out, sizeof(g_cfg.model_path)-1);
             strncpy(g_cfg.model_id, m->id, sizeof(g_cfg.model_id)-1);
             save_config();
+            printf("\n");
+            printf("==============================================================\n");
+            printf("  ✅ 模型就绪！\n");
+            printf("  在浏览器打开:  http://%s:%d/\n", g_recommended_ip, g_cfg.port);
+            printf("  连接密码:      %s\n", g_cfg.api_key);
+            printf("==============================================================\n");
             return 0;
         }
         log_line("  源 [%s] 失败，尝试下一个镜像……", s->label);
@@ -785,10 +974,35 @@ static void run_wizard(void) {
             if(has){ if(++k==sel) break; }
             j++;
         }
-        download_model(&MODELS[j]);
+        /* 列出 3 个下载源，用户选一个（0=自动） */
+        printf("\n可用下载源:\n");
+        int avail[3]={0,0,0}; int na=0;
+        for(int t=0;t<3;t++) if(MODELS[j].src[t].url[0]){ avail[t]=1; printf("  [%d] %s\n", t+1, MODELS[j].src[t].label); na++; }
+        printf("选择源编号 [0=自动依次尝试]: "); fflush(stdout);
+        char sbuf[16]={0}; int prefer=-1;
+        if(fgets(sbuf,sizeof(sbuf),stdin)){ int sp=atoi(sbuf); if(sp>=1&&sp<=3&&avail[sp-1]) prefer=sp-1; }
+        download_model(&MODELS[j], prefer);
     } else {
         printf("已跳过下载。可稍后在 config/etserver.conf 手动填 model_path。\n");
     }
+
+    /* v1.5.2：首启只让用户确认/填写局域网 IP（不要公网 IP），手机连这个 */
+    collect_ips();
+    printf("\n----- 局域网连接 IP（手机与电脑连同一 WiFi 时填这个，不要填公网 IP）-----\n");
+    for (int k=0;k<g_nips;k++){
+        if(g_ips[k].virtual_nic) continue;   /* 只列物理网卡局域网 IP */
+        printf("   %s   (%s)\n", g_ips[k].ip, g_ips[k].nic);
+    }
+    printf("请确认局域网 IP，回车使用推荐 [%s]: ", g_recommended_ip);
+    fflush(stdout);
+    char ipbuf[64]={0};
+    if(fgets(ipbuf,sizeof(ipbuf),stdin)){
+        char* nl=strchr(ipbuf,'\n'); if(nl)*nl=0;
+        char* p=ipbuf; while(*p==' '||*p=='\t') p++;
+        if(p[0]){ snprintf(g_recommended_ip,sizeof(g_recommended_ip),"%s",p);
+                  printf("已设局域网连接 IP: http://%s:%d/\n", g_recommended_ip, g_cfg.port); }
+    }
+
     save_config();
 }
 
@@ -939,23 +1153,31 @@ static void* watchdog_thread(void* arg) {
         if(alive){
             int healthy = upstream_healthy();
             int was = g_engine_ready;
+            /* v1.6.6：引擎正在出图时是单线程忙状态，GET / 探测会超时失败。
+               此时不能把 ready 打成 0，否则 App 看到 /healthz=503 会误判“连不上/未就绪”。 */
+            if(!healthy && g_gen_active>0 && was) healthy = 1;
             g_engine_ready = healthy;
             if(healthy && !was) log_line("✅ 模型加载完成，引擎已就绪：%s", g_cfg.model_id);
             if(!healthy){
-                /* 加载中：每秒打印一次“已用时 Ns”，不刷屏 */
+                /* 加载中：仅起始与每 15s 打印一次，避免刷屏 */
                 long el = g_load_start_ms? (long)time(NULL)-g_load_start_ms : 0;
-                long s = el;
-                if(s != g_last_load_log_s){
-                    g_last_load_log_s = s;
-                    log_line("⏳ 正在后台加载模型 %s … 已用时 %lds（加载期间界面不卡死）",
-                             g_cfg.model_id, s);
+                long bucket = el - (el % 15);
+                if(bucket != g_last_load_log_s){
+                    g_last_load_log_s = bucket;
+                    log_line("⏳ 正在加载模型 %s … 已用时 %lds", g_cfg.model_id, el);
                 }
             }
             continue;   /* 活着就绝不重启，避免打断加载/抢占权重 */
         }
 
-        /* 走到这里：进程已退出(alive=0)。按退避重启。 */
-        g_engine_ready=0;
+        /* 走到这里：进程已退出(alive=0)。 */
+        g_engine_ready=0; g_engine_alive=0;
+        /* v1.4.0：出图后主动卸载（省内存），看门狗不自动重启，等下次出图懒加载 */
+        if(g_intentional_unload){
+            g_intentional_unload=0;
+            log_line("引擎处于已卸载状态（省内存），等下一次出图时按需加载。");
+            continue;
+        }
         g_restart_count++;
         log_line("看门狗：引擎进程已退出(alive=0)，第 %d 次重启，退避 %ds",
                  g_restart_count, backoff);
@@ -974,6 +1196,8 @@ static void* watchdog_thread(void* arg) {
 /* ============================ HTTP 鉴权反向代理 ============================ */
 /* 从请求头里取 API Key：Authorization: Bearer xxx / X-API-Key: xxx / ?api_key=xxx */
 static int check_auth(const char* hdr_block, const char* query) {
+    /* v1.6.5：enable_api_key=0（默认）时不校验密钥，直接放行 */
+    if(!g_cfg.enable_api_key) return 1;
     /* 1) Authorization: Bearer <key> */
     const char* p = strcasestr(hdr_block, "authorization:");
     if (p) { p += 14; while(*p==' '||*p=='\t') p++;
@@ -1003,6 +1227,58 @@ static int check_auth(const char* hdr_block, const char* query) {
     return 0;
 }
 
+static void send_html(sock_t c, const char* html) {
+    char hdr[512];
+    int blen=(int)strlen(html);
+    int n=snprintf(hdr,sizeof(hdr),
+        "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\n"
+        "Content-Length: %d\r\nAccess-Control-Allow-Origin: *\r\nConnection: close\r\n\r\n", blen);
+    send(c,hdr,n,MSG_NOSIGNAL);
+    send(c,html,blen,MSG_NOSIGNAL);
+    poll_sleep_ms(1);
+    shutdown(c,SHUT_WR);
+}
+
+/* 浅色圆角首页（Win11 纸片风），展示 API 地址/Key/模型，一键复制 */
+static void serve_home(sock_t c) {
+    char url[128], key[80], model[128];
+    snprintf(url,sizeof(url),"http://%s:%d", g_recommended_ip, g_cfg.port);
+    snprintf(key,sizeof(key),"%s", g_cfg.api_key);
+    snprintf(model,sizeof(model),"%s", g_cfg.model_id[0]?g_cfg.model_id:"(未选择)");
+    char html[4096];
+    snprintf(html,sizeof(html),
+"<!doctype html><html lang=\"zh\"><head><meta charset=\"utf-8\">"
+"<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
+"<title>Local Dream ET Server</title><style>"
+"body{font-family:'Segoe UI','Microsoft YaHei',sans-serif;background:#f3f4f6;margin:0;padding:24px;color:#1f2937}"
+".card{max-width:560px;margin:0 auto;background:#fff;border-radius:16px;box-shadow:0 2px 12px rgba(0,0,0,.08);padding:28px}"
+"h1{font-size:20px;margin:0 0 4px}.sub{color:#6b7280;font-size:13px;margin-bottom:20px}"
+".row{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#f9fafb;border-radius:10px;padding:12px 14px;margin-bottom:10px}"
+".label{font-size:12px;color:#6b7280}.val{font-size:14px;word-break:all;font-family:Consolas,monospace}"
+"button{background:#2563eb;color:#fff;border:0;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:12px;white-space:nowrap}"
+"button:hover{background:#1d4ed8}.ok{color:#16a34a;font-size:12px}"
+"</style></head><body><div class=\"card\">"
+"<h1>Local Dream ET Server</h1><div class=\"sub\">本地离线 AI 出图服务已运行</div>"
+"<div class=\"row\"><div><div class=\"label\">API 地址（其他软件填这个）</div><div class=\"val\">%s</div></div>"
+"<button onclick=\"cp('%s',this)\">复制</button></div>"
+"<div class=\"row\"><div><div class=\"label\">API Key（请求头 Authorization: Bearer）</div><div class=\"val\">%s</div></div>"
+"<button onclick=\"cp('%s',this)\">复制</button></div>"
+"<div class=\"row\"><div><div class=\"label\">当前模型</div><div class=\"val\">%s</div></div></div>"
+"<div class=\"row\"><div><div class=\"label\">出图接口</div><div class=\"val\">POST /api/txt2img<br>POST /api/img2img<br>POST /sdapi/v1/txt2img</div></div></div>"
+"<div class=\"sub\" style=\"margin-top:16px\">手机/其他设备请与本机连同一 WiFi，填上面 API 地址。</div>"
+"</div><script>"
+"var u=document.querySelector('.row .val');if(u)u.textContent=window.location.origin;"
+"function cp(t,b){"
+"function ok(){b.textContent='已复制';setTimeout(()=>b.textContent='复制',1200)}"
+"if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(t).then(ok)}"
+"else{var ta=document.createElement('textarea');ta.value=t;ta.style.position='fixed';ta.style.opacity='0';"
+"document.body.appendChild(ta);ta.select();try{document.execCommand('copy')}catch(e){};document.body.removeChild(ta);ok()}"
+"}</script>"
+"</body></html>",
+ url, url, key, key, model);
+    send_html(c, html);
+}
+
 static void send_json(sock_t c, int code, const char* status, const char* body) {
     char hdr[1024];
     int blen = (int)strlen(body);
@@ -1010,12 +1286,19 @@ static void send_json(sock_t c, int code, const char* status, const char* body) 
         "HTTP/1.1 %d %s\r\nContent-Type: application/json; charset=utf-8\r\n"
         "Content-Length: %d\r\nAccess-Control-Allow-Origin: *\r\nConnection: close\r\n\r\n",
         code, status, blen);
-    /* 合并头+体为一次 send，避免两次 send 间连接被 RST */
-    char all[1400]; memcpy(all, hdr, n); memcpy(all+n, body, blen);
-    int sent = send(c, all, n+blen, MSG_NOSIGNAL);
-    (void)sent;
-    /* 给内核一点时间把响应刷到对端，再半关写方向 */
-    poll_sleep_ms(30);
+    /* v1.6.6 修复：原先用 char all[1400] 栈缓冲直接 memcpy 任意长度的 body，
+       上游错误体/大 JSON 超过 1400 字节就会踩栈崩溃。这里按实际长度动态分配，
+       小响应仍合并一次 send（避免两次 send 被 RST），大响应分两次 send。 */
+    if (n + blen + 1 <= 1400) {
+        char all[1400];
+        memcpy(all, hdr, n);
+        memcpy(all+n, body, blen);
+        send(c, all, n+blen, MSG_NOSIGNAL);
+    } else {
+        send(c, hdr, n, MSG_NOSIGNAL);
+        if (blen > 0) send(c, body, blen, MSG_NOSIGNAL);
+    }
+    poll_sleep_ms(1);
     shutdown(c, SHUT_WR);
 }
 
@@ -1085,6 +1368,13 @@ static void forward_to_upstream(sock_t c, const char* method, const char* target
         send_json(c,503,"Service Unavailable","{\"error\":\"engine not ready, try again\"}");
         return;
     }
+    /* v1.6.6：给上游 socket 加收发超时。旧版 recv 无超时，引擎卡住时
+       该连接线程会永久挂死并占住线程，表现为“调用一直转圈/后续请求排不上”。 */
+    {
+        struct timeval ft; ft.tv_sec=300; ft.tv_usec=0;
+        setsockopt(u,SOL_SOCKET,SO_RCVTIMEO,(char*)&ft,sizeof(ft));
+        setsockopt(u,SOL_SOCKET,SO_SNDTIMEO,(char*)&ft,sizeof(ft));
+    }
     /* 拼转发请求行 + 透传头(去掉 Host/Connection/Authorization)，强制 Connection: close */
     char req[MAX_LINE*4]; int w=0;
     w+=snprintf(req+w,sizeof(req)-w,"%s %s HTTP/1.1\r\nHost: 127.0.0.1:%d\r\nConnection: close\r\n",
@@ -1092,12 +1382,17 @@ static void forward_to_upstream(sock_t c, const char* method, const char* target
     /* 透传 Content-Type / Accept 等（跳过 host/authorization/connection/content-length） */
     char hcopy[4096]; snprintf(hcopy,sizeof(hcopy),"%s",hdr_block);
     char* line=strtok(hcopy,"\r\n");
+    int first_line=1;
     while(line){
-        if(strncasecmp(line,"host:",5) && strncasecmp(line,"authorization:",13) &&
+        /* 第一段是请求行 "POST /path HTTP/1.1"，上面已单独重写，绝不能再当响应头透传，
+           否则上游会收到两个请求行而直接返回 400。 */
+        if(!first_line &&
+           strncasecmp(line,"host:",5) && strncasecmp(line,"authorization:",13) &&
            strncasecmp(line,"connection:",10) &&
            !(override_cl>=0 && strncasecmp(line,"content-length:",15)==0)) {
             w+=snprintf(req+w,sizeof(req)-w,"%s\r\n",line);
         }
+        first_line=0;
         line=strtok(NULL,"\r\n");
     }
     if(override_cl>=0)
@@ -1111,49 +1406,333 @@ static void forward_to_upstream(sock_t c, const char* method, const char* target
     close_socket(u);
 }
 
+/* ---- v1.6.5：/api/txt2img、/api/img2img 真正出图并返回 base64 ---- */
+/* 从 JSON 里取字符串字段值（去掉首尾引号），写入 out。找不到用 def。 */
+static void jstr(const char* body, const char* key, char* out, int outlen, const char* def){
+    char pat[160]; snprintf(pat,sizeof(pat),"\"%s\"",key);
+    const char* p=strstr(body,pat); if(!p){ snprintf(out,outlen,"%s",def); return; }
+    p=strchr(p,':'); if(!p){ snprintf(out,outlen,"%s",def); return; }
+    p++; while(*p==' '||*p=='\t') p++;
+    if(*p!='"'){ /* 数字字段 */ snprintf(out,outlen,"%s",def); return; }
+    p++; int n=0;
+    while(*p && *p!='"' && n<outlen-1) out[n++]=*p++;
+    out[n]=0;
+}
+/* 从 JSON 里取数字字段，找不到用 def。 */
+static double jnum(const char* body, const char* key, double def){
+    char pat[160]; snprintf(pat,sizeof(pat),"\"%s\"",key);
+    const char* p=strstr(body,pat); if(!p) return def;
+    p=strchr(p,':'); if(!p) return def;
+    p++; while(*p==' '||*p=='\t') p++;
+    return atof(p);
+}
+
+/* 向上游 sd-server POST 一个 sdapi JSON，读完整响应，把第一个 base64 图返回。
+   out=返回给客户端的 JSON {"image":"..."}；返回0成功。 */
+static int call_sdapi(sock_t c, const char* sdapi_path, const char* req_json){
+    sock_t u=socket(AF_INET,SOCK_STREAM,0);
+    if(u<0){ send_json(c,502,"Bad Gateway","{\"error\":\"upstream socket\"}"); return -1; }
+    struct timeval tv; tv.tv_sec=300; tv.tv_usec=0;
+    setsockopt(u,SOL_SOCKET,SO_RCVTIMEO,(char*)&tv,sizeof(tv));
+    setsockopt(u,SOL_SOCKET,SO_SNDTIMEO,(char*)&tv,sizeof(tv));
+    struct sockaddr_in a; memset(&a,0,sizeof(a));
+    a.sin_family=AF_INET; a.sin_port=htons((uint16_t)g_cfg.inner_port);
+    a.sin_addr.s_addr=inet_addr("127.0.0.1");
+    if(connect(u,(struct sockaddr*)&a,sizeof(a))!=0){
+        close_socket(u);
+        send_json(c,503,"Service Unavailable","{\"error\":\"engine not ready, model may be loading\"}");
+        return -1;
+    }
+    char hdr[512];
+    int w=snprintf(hdr,sizeof(hdr),
+        "POST %s HTTP/1.1\r\nHost: 127.0.0.1:%d\r\nContent-Type: application/json\r\n"
+        "Content-Length: %d\r\nConnection: close\r\n\r\n",
+        sdapi_path, g_cfg.inner_port, (int)strlen(req_json));
+    send(u,hdr,w,0);
+    send(u,req_json,strlen(req_json),0);
+    /* 读完整响应（可能几 MB base64） */
+    size_t cap=16*1024*1024, len=0;
+    char* rb=malloc(cap); if(!rb){ close_socket(u); send_json(c,500,"OE","{\"error\":\"oom\"}"); return -1; }
+    int r, overflow=0;
+    while((r=recv(u,rb+len,cap-len-1,0))>0){
+        len+=r; rb[len]=0;
+        if(len>=cap-1){ overflow=1; break; }   /* v1.6.6：超限不再静默截断 */
+    }
+    close_socket(u);
+    if(overflow){
+        free(rb);
+        send_json(c,502,"Bad Gateway",
+          "{\"error\":\"引擎响应超过 16MB，图过大或 batch 过多；请降低分辨率/批量后重试\"}");
+        log_line("/api 失败：上游响应超过 16MB 缓冲");
+        return -1;
+    }
+    /* 找 body（\r\n\r\n 之后） */
+    char* bp=strstr(rb,"\r\n\r\n");
+    char* body = bp? bp+4 : rb;
+    /* sdapi 返回 {"images":["<b64>",...]}；OpenAI 返回 {"data":[{"b64_json":"..."}]} */
+    char* img = strstr(body,"\"b64_json\"");
+    const char* tag="\"images\"";
+    if(!img){ img=strstr(body,tag); }
+    if(img){
+        char* q=strchr(img,':'); if(q) img=q+1;
+        /* 跳到第一个引号 */
+        while(img && *img && *img!='"') img++;
+        if(img && *img=='"'){
+            img++;
+            /* 输出 {"image":"<b64>"} */
+            size_t bl=strlen(img);
+            /* 截到收尾引号 */
+            char* end=strchr(img,'"');
+            size_t ilen = end? (size_t)(end-img) : bl;
+            char* out=malloc(ilen+64);
+            if(out){
+                int n=snprintf(out,ilen+64,"{\"image\":\"%.*s\"}",(int)ilen,img);
+                send_json(c,200,"OK",out);
+                log_line("/api 出图成功，base64 长度=%zu", ilen);
+                free(out); free(rb); return 0;
+            }
+        }
+    }
+    /* 上游没出图，把上游错误体原样返回 */
+    send_json(c,502,"Bad Gateway", body[0]? body : "{\"error\":\"engine no image\"}");
+    log_line("/api 出图失败，上游响应: %.200s", body);
+    free(rb);
+    return -1;
+}
+
+/* /api/txt2img 与 /api/img2img：App 字段 -> sdapi 调用 */
+static void handle_api_gen(sock_t c, const char* path, const char* body){
+    /* v1.6.6：原 img_b64 为 4MB 栈数组，线程栈默认 8MB，im2img 大图时容易爆栈。
+       改为按需堆分配，并在所有返回路径释放。 */
+    char prompt[4096]={0}, neg[4096]={0}, seed_s[32]={0};
+    char* img_b64 = NULL;
+    jstr(body,"prompt",prompt,sizeof(prompt),"");
+    jstr(body,"negative_prompt",neg,sizeof(neg),"");
+    /* seed 是数字字段 */
+    { double sd=jnum(body,"seed",-1); if(sd>=0) snprintf(seed_s,sizeof(seed_s),"%lld",(long long)sd); else snprintf(seed_s,sizeof(seed_s),"-1"); }
+    double cfg=jnum(body,"cfg",g_cfg.cfg_scale);
+    double steps=jnum(body,"steps",g_cfg.steps);
+    double wdt=jnum(body,"width",512), hgt=jnum(body,"height",512);
+    double denoise=jnum(body,"denoise_strength",0.75);
+    int is_img2img = !strcmp(path,"/api/img2img");
+    size_t imcap = 0;
+    if(is_img2img){
+        imcap = strlen(body)+1;
+        img_b64 = malloc(imcap);
+        if(!img_b64){ send_json(c,500,"OE","{\"error\":\"oom\"}"); return; }
+        jstr(body,"image",img_b64,(int)imcap,"");
+    }
+
+    /* 无模型：清晰报错，不让用户猜 */
+    if(g_cfg.model_path[0]==0){
+        send_json(c,400,"Bad Request",
+          "{\"error\":\"尚未配置模型。请先在首次启动向导里选择并下载一个模型，或在 config/etserver.conf 填 model_path。\"}");
+        log_line("/api 拒绝：未配置 model_path");
+        free(img_b64);
+        return;
+    }
+    /* 拉起引擎（若未运行） */
+    if(!child_alive()){
+        g_intentional_unload=0;
+        if(spawn_engine()!=0){
+            send_json(c,503,"Service Unavailable",
+              "{\"error\":\"引擎启动失败：找不到 sd-server 或模型文件损坏。请检查安装目录与 model_path。\"}");
+            log_line("/api 拒绝：spawn_engine 失败");
+            free(img_b64);
+            return;
+        }
+        g_engine_alive=1; g_load_start_ms=(long)time(NULL);
+        log_line("按需加载模型出图: %s", g_cfg.model_path);
+        /* 等待就绪；同时检测引擎是否中途退出（模型损坏等） */
+        int w=0; while(g_running && w<180000){
+            if(upstream_healthy()) break;
+            if(!child_alive()){
+                send_json(c,503,"Service Unavailable",
+                  "{\"error\":\"引擎加载模型时退出了：模型文件可能损坏或与引擎不兼容。请重新下载模型。\"}");
+                log_line("/api 失败：引擎在加载模型时退出");
+                free(img_b64);
+                return;
+            }
+            poll_sleep_ms(500); w+=500;
+        }
+        if(!upstream_healthy()){
+            send_json(c,504,"Gateway Timeout","{\"error\":\"模型加载超时（180s）。请检查模型文件。\"}");
+            free(img_b64);
+            return;
+        }
+    }
+    /* 拼 sdapi JSON（按需分配，img2img 含 base64 图才开大缓冲） */
+    size_t reqcap = is_img2img ? (strlen(img_b64)+8192) : 8192;
+    char* req=malloc(reqcap);
+    if(!req){ send_json(c,500,"OE","{\"error\":\"oom\"}"); free(img_b64); return; }
+    if(!is_img2img){
+        snprintf(req,reqcap,
+          "{\"prompt\":\"%s\",\"negative_prompt\":\"%s\",\"steps\":%d,\"cfg_scale\":%.2f,"
+          "\"seed\":%s,\"width\":%d,\"height\":%d,\"batch_size\":1}",
+          prompt, neg, (int)steps, cfg, seed_s, (int)wdt, (int)hgt);
+        call_sdapi(c,"/sdapi/v1/txt2img",req);
+    } else {
+        snprintf(req,reqcap,
+          "{\"prompt\":\"%s\",\"negative_prompt\":\"%s\",\"steps\":%d,\"cfg_scale\":%.2f,"
+          "\"seed\":%s,\"width\":%d,\"height\":%d,\"denoising_strength\":%.2f,"
+          "\"init_images\":[\"%s\"]}",
+          prompt, neg, (int)steps, cfg, seed_s, (int)wdt, (int)hgt, denoise, img_b64);
+        call_sdapi(c,"/sdapi/v1/img2img",req);
+    }
+    free(req);
+    free(img_b64);
+    /* 出完图释放模型 */
+    if(g_cfg.unload_after_gen && child_alive()){
+        g_intentional_unload=1; g_engine_ready=0;
+        log_line("出图完成，卸载模型 buffer 释放内存");
+        kill_engine();
+    }
+}
+
+/* v1.6.6：Chunked 请求体解码。返回 0=成功，-1=格式错误。
+   许多 OpenAI 兼容客户端默认发 Transfer-Encoding: chunked；旧版只认
+   Content-Length，遇到 chunked 会把请求体当成空，导致“调用失败”。 */
+static int dechunk_body(const char* raw, int rawlen, char* out, int outcap, int* outlen){
+    int rp=0, op=0;
+    while(rp < rawlen){
+        /* 读十六进制块长度 */
+        int chunk=0, digits=0;
+        while(rp<rawlen){
+            char ch=raw[rp];
+            int v=-1;
+            if(ch>='0'&&ch<='9') v=ch-'0';
+            else if(ch>='a'&&ch<='f') v=ch-'a'+10;
+            else if(ch>='A'&&ch<='F') v=ch-'A'+10;
+            if(v<0) break;
+            chunk = chunk*16 + v; digits++; rp++;
+            if(digits>8) return -1;
+        }
+        if(!digits) return -1;
+        /* 跳过块长度后的扩展参数与 CRLF */
+        while(rp<rawlen && raw[rp]!='\n') rp++;
+        if(rp<rawlen) rp++;
+        if(chunk==0) break;
+        if(op+chunk > outcap) return -1;
+        if(rp+chunk > rawlen) chunk = rawlen-rp;
+        memcpy(out+op, raw+rp, chunk);
+        op += chunk; rp += chunk;
+        /* 跳过块尾 CRLF */
+        while(rp<rawlen && (raw[rp]=='\r'||raw[rp]=='\n')) rp++;
+    }
+    out[op]=0;
+    *outlen=op;
+    return 0;
+}
+
 /* 单个客户端连接的处理线程 */
+#define CONN_RETURN() do { free(bodyp); close_socket(c); return NULL; } while(0)
 typedef struct { sock_t c; } ConnArg;
 static void* handle_conn(void* arg) {
     sock_t c = ((ConnArg*)arg)->c; free(arg);
     struct timeval tv; tv.tv_sec=120; tv.tv_usec=0;
     setsockopt(c,SOL_SOCKET,SO_RCVTIMEO,(char*)&tv,sizeof(tv));
 
-    char buf[65536]; int total=0;
+    /* v1.6.6 修复：旧版用固定 64KB 栈缓冲读请求体，Content-Length 超过 64KB
+       时请求体被静默截断（img2img / 大 JSON 一律失败）。现改为：
+       头单独读入 64KB 缓冲，请求体按实际 Content-Length 动态分配（上限 32MB），
+       并支持 Transfer-Encoding: chunked。 */
+    char hdrbuf[65536]; int total=0;
     /* 读到 headers 结束 */
-    while(total < (int)sizeof(buf)-1) {
-        int r=recv(c, buf+total, sizeof(buf)-1-total, 0);
+    while(total < (int)sizeof(hdrbuf)-1) {
+        int r=recv(c, hdrbuf+total, sizeof(hdrbuf)-1-total, 0);
         if(r<=0) break;
-        total+=r; buf[total]=0;
-        char* e=strstr(buf,"\r\n\r\n");
-        if(e){ e+=4; break; }
+        total+=r; hdrbuf[total]=0;
+        if(strstr(hdrbuf,"\r\n\r\n")) break;
     }
     if(total<=0){ close_socket(c); return NULL; }
-    buf[total]=0;
-    char* hdrs_end=strstr(buf,"\r\n\r\n");
+    hdrbuf[total]=0;
+    char* hdrs_end=strstr(hdrbuf,"\r\n\r\n");
     if(!hdrs_end){ close_socket(c); return NULL; }
-    *hdrs_end=0;
-    char* body = hdrs_end+4;
-    int hdr_len = (int)(body-buf);
+    int hdr_len = (int)(hdrs_end+4-hdrbuf);
+
+    /* 头单独留一份给下游 check_auth；bodyp 为堆缓冲，CONN_RETURN 统一释放 */
+    char buf[65536];
+    memcpy(buf, hdrbuf, hdr_len); buf[hdr_len]=0;
+    char* bodyp = NULL;
 
     char method[16]={0}, target[4096]={0};
-    if (sscanf(buf,"%15s %4095s",method,target)!=2){ close_socket(c); return NULL; }
+    if (sscanf(buf,"%15s %4095s",method,target)!=2){ CONN_RETURN(); }
 
     /* 拆分 path 与 query */
     char path[4096], query[2048]={0};
     snprintf(path,sizeof(path),"%s",target);
     char* q=strchr(path,'?'); if(q){ *q=0; snprintf(query,sizeof(query),"%s",q+1); }
 
-    /* Content-Length 读 body */
+    /* Content-Length / chunked 读 body */
     int content_len=0;
     char* cl=strcasestr(buf,"content-length:");
     if(cl) content_len=atoi(cl+15);
-    int have_body = (int)(total-hdr_len);
-    while(have_body < content_len) {
-        int r=recv(c, buf+total, sizeof(buf)-1-total, 0);
-        if(r<=0) break;
-        total+=r; have_body+=r;
+    if(content_len<0) content_len=0;
+    int is_chunked = (strcasestr(buf,"transfer-encoding:") && strcasestr(buf,"chunked")) ? 1 : 0;
+    if(content_len > MAX_BODY_BYTES){
+        send_json(c,413,"Payload Too Large",
+            "{\"error\":\"请求体超过 32MB 上限，请降低图片分辨率或拆分请求\"}");
+        log_line("413 请求体过大: %d 字节 (%s)", content_len, path);
+        CONN_RETURN();
     }
-    char* bodyp = buf+hdr_len;
+    int have_body = (int)(total-hdr_len);
+    if(content_len > 0 || is_chunked){
+        if(is_chunked && content_len==0){
+            /* chunked：容量未知，先按首包+1MB 起分配，按需扩容 */
+            size_t cap = (size_t)have_body + 1024*1024;
+            char* raw = malloc(cap);
+            if(!raw){ send_json(c,500,"OE","{\"error\":\"oom\"}"); CONN_RETURN(); }
+            int rl=0;
+            if(have_body>0){ memcpy(raw, hdrbuf+hdr_len, have_body); rl=have_body; }
+            for(;;){
+                if((size_t)rl >= cap-1){
+                    if(cap >= MAX_BODY_BYTES){ free(raw); send_json(c,413,"Payload Too Large",
+                        "{\"error\":\"chunked 请求体超过 32MB 上限\"}"); CONN_RETURN(); }
+                    size_t nc = cap*2 > MAX_BODY_BYTES ? MAX_BODY_BYTES : cap*2;
+                    char* nr = realloc(raw, nc);
+                    if(!nr){ free(raw); send_json(c,500,"OE","{\"error\":\"oom\"}"); CONN_RETURN(); }
+                    raw=nr; cap=nc;
+                }
+                int r=recv(c, raw+rl, (int)(cap-1-rl), 0);
+                if(r<=0) break;
+                rl+=r; raw[rl]=0;
+                /* 结束块：最后一个 chunk 长度为 0，序列为 0\r\n\r\n */
+                if(rl>=5 && strstr(raw+rl-5,"0\r\n\r\n")) break;
+            }
+            bodyp = malloc((size_t)rl + 1);
+            if(!bodyp){ free(raw); send_json(c,500,"OE","{\"error\":\"oom\"}"); CONN_RETURN(); }
+            int bl=0;
+            if(dechunk_body(raw, rl, bodyp, rl, &bl)!=0){
+                free(raw); free(bodyp); bodyp=NULL;
+                send_json(c,400,"Bad Request","{\"error\":\"chunked 请求体格式错误\"}");
+                CONN_RETURN();
+            }
+            free(raw);
+            content_len = bl;
+        } else {
+            size_t cap = (size_t)content_len + 1;
+            bodyp = malloc(cap);
+            if(!bodyp){ send_json(c,500,"OE","{\"error\":\"oom\"}"); CONN_RETURN(); }
+            int bl=0;
+            if(have_body>0){
+                int cp = have_body > content_len ? content_len : have_body;
+                memcpy(bodyp, hdrbuf+hdr_len, cp); bl=cp;
+            }
+            while(bl < content_len){
+                int r=recv(c, bodyp+bl, content_len-bl, 0);
+                if(r<=0) break;
+                bl+=r;
+            }
+            bodyp[bl]=0;
+            if(bl < content_len){
+                log_line("请求体不完整：收到 %d/%d 字节 (%s)", bl, content_len, path);
+                free(bodyp); bodyp=NULL;
+                send_json(c,400,"Bad Request","{\"error\":\"请求体不完整（连接提前关闭）\"}");
+                CONN_RETURN();
+            }
+            content_len = bl;
+        }
+    }
 
     /* ---- 公开健康端点（无需 Key，供看门狗/就绪探测） ---- */
     if(!strcmp(method,"GET") && !strcmp(path,"/healthz")){
@@ -1162,21 +1741,35 @@ static void* handle_conn(void* arg) {
         long el = g_load_start_ms? (long)time(NULL)-g_load_start_ms : 0;
         const char* st;
         if(ok) st="ready";
+        else if(g_gen_active>0) st="busy";       /* v1.6.6：正在出图，视为可用 */
         else if(g_engine_missing) st="engine_missing";
         else if(g_engine_alive) st="loading";   /* 进程活着、模型后台加载中 */
         else st="starting";
+        int code = (ok || g_gen_active>0) ? 200 : 503;
         char out[256]; snprintf(out,sizeof(out),
             "{\"status\":\"%s\",\"engine_restarts\":%d,\"model\":\"%s\",\"load_elapsed_s\":%ld}",
             st, g_restart_count, g_cfg.model_id, el);
-        send_json(c, ok?200:503, ok?"OK":"Service Unavailable", out);
-        close_socket(c); return NULL;
+        send_json(c, code, code==200?"OK":"Service Unavailable", out);
+        CONN_RETURN();
+    }
+
+    /* ---- /api/txt2img、/api/img2img：App 字段，真出图返回 base64 ---- */
+    if(!strcmp(method,"POST") && (!strcmp(path,"/api/txt2img")||!strcmp(path,"/api/img2img"))){
+        if(!check_auth(buf,query)){ send_json(c,401,"Unauthorized","{\"error\":\"未授权：请提供有效 api_key（在 config 设置 api_key 或关闭 enable_api_key）\"}"); CONN_RETURN(); }
+        handle_api_gen(c, path, bodyp);
+        CONN_RETURN();
+    }
+
+    /* ---- 首页（无需 Key，浏览器直接打开） ---- */
+    if(!strcmp(method,"GET") && (!strcmp(path,"/") || !strcmp(path,"/index.html"))){
+        serve_home(c); CONN_RETURN();
     }
 
     /* ---- 其余全部需要鉴权 ---- */
     if(!check_auth(buf, query)){
         send_json(c,401,"Unauthorized","{\"error\":\"missing or invalid API key\"}");
         log_line("401 未授权: %s %s", method, path);
-        close_socket(c); return NULL;
+        CONN_RETURN();
     }
 
     /* ---- 内容限制：对出图类 POST 做本地违禁词扫描 ---- */
@@ -1186,7 +1779,7 @@ static void* handle_conn(void* arg) {
         if(body_triggers_filter(bodyp, content_len>0?content_len:0)){
             send_json(c,400,"Bad Request","{\"error\":\"content blocked by local filter\"}");
             log_line("内容拦截: %s", path);
-            close_socket(c); return NULL;
+            CONN_RETURN();
         }
     }
 
@@ -1203,10 +1796,40 @@ static void* handle_conn(void* arg) {
         }
     }
 
-    log_line("%s %s -> 转发引擎", method, path);
+    int is_gen = (!strcmp(path,"/sdapi/v1/txt2img")||!strcmp(path,"/sdapi/v1/img2img")||!strcmp(path,"/v1/images/generations"));
+    /* v1.6.5：未知 API 路由返回 404 中文，不再 503 */
+    int known_api = !strcmp(path,"/sdapi/v1/txt2img") || !strcmp(path,"/sdapi/v1/img2img")
+                 || !strcmp(path,"/v1/images/generations") || !strcmp(path,"/sdcpp/v1/img_gen");
+    if(!known_api && (strncmp(path,"/api/",5)==0 || strncmp(path,"/sdapi/",7)==0 || strncmp(path,"/v1/",4)==0)){
+        log_line("404 未知路由: %s", path);
+        send_json(c, 404, "Not Found", "{\"error\":\"接口不存在，请检查 URL\"}");
+        CONN_RETURN();
+    }
+    log_line("%s %s -> 转发引擎%s", method, path, is_gen ? "（出图请求）" : "");
+
+    /* v1.4.0 懒加载：出图请求时若引擎已被主动卸载(省内存)，先拉起再转发 */
+    if(is_gen && g_cfg.model_path[0] && !child_alive()){
+        g_intentional_unload=0;
+        if(spawn_engine()==0){
+            g_engine_alive=1; g_load_start_ms=(long)time(NULL);
+            log_line("检测到引擎已卸载，按需拉起并加载模型（出图后将再次释放）……");
+            int w=0; while(g_running && w<120000){ if(upstream_healthy()) break; poll_sleep_ms(500); w+=500; }
+        }
+    }
+
+    if(is_gen) g_gen_active++;
     forward_to_upstream(c, method, target, buf, fwd_body, fwd_len, fwd_len);
+    if(is_gen && g_gen_active>0) g_gen_active--;
     if(injected) free(injected);
+    free(bodyp); bodyp = NULL;
     close_socket(c);
+
+    /* v1.4.0 出完图主动释放模型 buffer：杀引擎进程，OS 回收权重内存，不常驻 */
+    if(is_gen && g_cfg.unload_after_gen && child_alive()){
+        g_intentional_unload=1; g_engine_ready=0;
+        log_line("出图完成，主动卸载模型 buffer（释放内存；下次出图时按需加载）");
+        kill_engine();
+    }
     return NULL;
 }
 
@@ -1214,16 +1837,34 @@ static void* handle_conn(void* arg) {
 static sock_t g_listen=-1;
 static void* listen_thread(void* arg) {
     (void)arg;
+    /* v1.2.0 自动选端口：默认端口被占就逐个探测下一个可用端口，最多试 50 个 */
     g_listen = socket(AF_INET,SOCK_STREAM,0);
     int one=1; setsockopt(g_listen,SOL_SOCKET,SO_REUSEADDR,(char*)&one,sizeof(one));
-    struct sockaddr_in a; memset(&a,0,sizeof(a));
-    a.sin_family=AF_INET; a.sin_addr.s_addr=htonl(INADDR_ANY);
-    a.sin_port=htons((uint16_t)g_cfg.port);
-    if(bind(g_listen,(struct sockaddr*)&a,sizeof(a))!=0){
-        log_line("绑定 0.0.0.0:%d 失败（端口被占？）", g_cfg.port); g_running=0; return NULL;
+    int bound_port = -1;
+    for(int try=0; try<50; try++){
+        struct sockaddr_in a; memset(&a,0,sizeof(a));
+        a.sin_family=AF_INET; a.sin_addr.s_addr=htonl(INADDR_ANY);
+        a.sin_port=htons((uint16_t)(g_cfg.port+try));
+        if(bind(g_listen,(struct sockaddr*)&a,sizeof(a))==0){ bound_port=g_cfg.port+try; break; }
+        log_line("端口 %d 被占用，自动尝试下一个……", g_cfg.port+try);
     }
+    if(bound_port<0){ log_line("自动选端口失败：%d..%d 均不可用", g_cfg.port, g_cfg.port+49); g_running=0; return NULL; }
+    g_cfg.port = bound_port;   /* 把实际绑定端口写回，供 banner/打印 */
     listen(g_listen, 16);
     log_line("对外监听: http://0.0.0.0:%d", g_cfg.port);
+    /* 自动打开本机浏览器 */
+    collect_ips();
+    {
+        char openurl[160];
+        snprintf(openurl,sizeof(openurl),"http://127.0.0.1:%d/", g_cfg.port);
+#ifdef _WIN32
+        ShellExecuteA(NULL,"open",openurl,NULL,NULL,SW_SHOWNORMAL);
+#else
+        char cmd[200]; snprintf(cmd,sizeof(cmd),"xdg-open '%s' >/dev/null 2>&1 &", openurl);
+        system(cmd);
+#endif
+        log_line("已自动在浏览器打开: %s", openurl);
+    }
     while(g_running){
         struct sockaddr_in cl; socklen_t n=sizeof(cl);
         sock_t c=accept(g_listen,(struct sockaddr*)&cl,&n);
@@ -1246,6 +1887,11 @@ static void show_banner(void) {
     printf("   %s  v%s\n", APP_NAME, APP_VERSION);
     printf("   %s\n", COPYRIGHT_STR);
     printf("--------------------------------------------------------------\n");
+    printf("  🌐 在浏览器打开:  http://%s:%d/\n", g_recommended_ip, g_cfg.port);
+    printf("  🔑 连接密码:      %s\n", g_cfg.api_key);
+    printf("--------------------------------------------------------------\n");
+    printf("  当前模型:  %s\n", g_cfg.model_id[0]?g_cfg.model_id:"(未选择，首次运行按提示下载)");
+    printf("--------------------------------------------------------------\n");
     printf("  [推荐局域网地址]  http://%s:%d\n", g_recommended_ip, g_cfg.port);
     printf("  [所有候选 IPv4]（手机请填下面“物理网卡”那个）:\n");
     for (int k = 0; k < g_nips; k++) {
@@ -1257,6 +1903,9 @@ static void show_banner(void) {
     printf("      http://物理网卡IP:端口；Windows 首次弹防火墙请点“允许”，\n");
     printf("      若仍连不上，请在 Windows 防火墙放行本程序或 TCP 端口 %d。\n", g_cfg.port);
     printf("  [模型    ]  %s\n", g_cfg.model_id[0]?g_cfg.model_id:"(未选择)");
+    printf("  [实际端口]  %d（端口被占时自动顺延到下一个可用端口）\n", g_cfg.port);
+    printf("  [API Key]  %s\n", g_cfg.api_key);
+    printf("  [云备份]  ghost.txt: %s\n", g_gh_token[0]?"已载入令牌(自动上传私有仓 LocalDreamET-Upload)":"未配置令牌(在 ghost.txt 填 gh:ghp_xxx)");
     printf("  [内容限制]  %s   [主题] %s   [重启次数] %d\n",
            g_cfg.content_filter?"开启(拦截)":"无限制",
            g_cfg.dark_theme?"暗黑":"明亮", g_restart_count);
@@ -1269,6 +1918,10 @@ static void show_banner(void) {
     printf("  请求时带:  Authorization: Bearer <上面的 Key>\n");
     printf("  [引擎] 直读 safetensors / GGUF，下载并校验完整后即可直接出图，\n");
     printf("          无需像手机端那样转换。\n");
+    printf("  [穿透] 本服务已监听 0.0.0.0:%d（局域网/frp 可连）；\n", g_cfg.port);
+    printf("          frpc.toml 示例：[[proxies]] name=\"ld\" type=\"tcp\"\n");
+    printf("          localIP=\"0.0.0.0\" localPort=%d remotePort=<你服务器端口>\n", g_cfg.port);
+    printf("  [日志] 运行日志按时间戳写入 logs/server.log\n");
     printf("--------------------------------------------------------------\n");
     printf("  命令: r=重启引擎  f=切换内容限制  k=重置Key  i=重新显示  q=退出\n");
     printf("==============================================================\n\n");
@@ -1557,6 +2210,44 @@ static void gui_thread(void){
 }
 #endif
 
+/* v1.6.5：--diag 诊断：打印端口/引擎/模型/网络连通性，不启动服务 */
+static void run_diag(void) {
+    printf("===== Local Dream ET Server 诊断 =====\n");
+    printf("版本: %s\n", APP_VERSION);
+    printf("程序目录: %s\n", g_progdir);
+    printf("数据目录: %s\n", g_datadir);
+    /* 引擎二进制 */
+    const char* ename =
+#ifdef _WIN32
+      "sd-server.exe";
+#else
+      "sd-server";
+#endif
+    char cand[3][1280]; int nc=0;
+    snprintf(cand[nc++],1280,"%s%s%s",g_progdir,DIRSEP,ename);
+    snprintf(cand[nc++],1280,"%s%sbin%s%s",g_progdir,DIRSEP,DIRSEP,ename);
+    int found=-1; for(int i=0;i<nc;i++) if(access(cand[i],X_OK)==0){found=i;break;}
+    printf("引擎 %s: %s\n", ename, found>=0? cand[found] : "未找到!");
+    printf("配置模型路径: %s\n", g_cfg.model_path[0]?g_cfg.model_path:"(未配置)");
+    if(g_cfg.model_path[0]){
+        struct stat st;
+        printf("模型文件存在: %s\n", stat(g_cfg.model_path,&st)==0? "是" : "否! 请重新下载");
+    }
+    printf("对外端口: %d  上游端口: %d\n", g_cfg.port, g_cfg.inner_port);
+    printf("API Key: %s\n", g_cfg.api_key[0]? "已设置(需校验)":"空(无密码)");
+    /* 网络连通性 */
+    printf("网络连通性:\n");
+    const char* hosts[]={"https://hf-mirror.com","https://modelscope.cn","https://huggingface.co"};
+    for(int i=0;i<3;i++){
+        char cmd[512];
+        snprintf(cmd,sizeof(cmd),"curl -s -o /dev/null -w \"%%{http_code}\" --connect-timeout 10 -m 15 %s", hosts[i]);
+        FILE* pp=popen(cmd,"r"); char code[16]={0};
+        if(pp){ fgets(code,sizeof(code),pp); pclose(pp); }
+        printf("  %-25s -> HTTP %s\n", hosts[i], code[0]?code:"超时/失败");
+    }
+    printf("======================================\n");
+}
+
 int main(int argc, char** argv) {
     LOG_INIT();
 #ifdef _WIN32
@@ -1569,6 +2260,8 @@ int main(int argc, char** argv) {
     setup_datadir();   /* 选定可写数据目录(models/config/logs) */
     default_config();
     int has_cfg = load_config();
+    ensure_ghost_tip_templates();          /* v1.2.0 首次生成 ghost.txt/tip.txt 模板 */
+    load_ghost_token();                    /* v1.2.0 从 ghost.txt 读 GitHub 令牌（占位则为空） */
 
     /* 命令行参数优先级高于配置文件，便于无交互部署/冒烟 */
     int no_wizard=0, no_gui=0;
@@ -1584,6 +2277,12 @@ int main(int argc, char** argv) {
             no_wizard=1;
         } else if(!strcmp(argv[i],"--no-gui")){
             no_gui=1;
+        } else if(!strcmp(argv[i],"--enable-api-key")){
+            g_cfg.enable_api_key=1;
+        } else if(!strcmp(argv[i],"--disable-api-key")){
+            g_cfg.enable_api_key=0;
+        } else if(!strcmp(argv[i],"--diag")){
+            run_diag(); return 0;
         } else if(!strcmp(argv[i],"--help") || !strcmp(argv[i],"-h")){
             printf("用法: etserver [--model <路径>] [--port <对外>] [--inner-port <对内>] [--no-wizard] [--no-gui]\n");
             return 0;
@@ -1599,17 +2298,36 @@ int main(int argc, char** argv) {
         run_wizard();
     }
 
-    /* v1.1.7 先监听后加载：立即拉起引擎(非阻塞)并马上绑对外端口；
-       模型在后台加载，加载期间 /healthz=503(loading)，界面不卡死。 */
+    /* v1.5.1 懒加载：启动不预载模型（省内存），对外端口先绑好；
+       引擎在首次出图请求时按需拉起并加载模型。 */
     if (g_cfg.model_path[0]) {
-        if(spawn_engine()==0){
-            g_engine_alive=1; g_load_start_ms=(long)time(NULL); g_last_load_log_s=-1;
-            log_line("已拉起引擎，后台加载模型 %s 中（不阻塞界面）……", g_cfg.model_id);
+        g_intentional_unload = g_cfg.unload_after_gen ? 1 : 0;  /* 看门狗不自动预载 */
+        struct stat mst;
+        if(stat(g_cfg.model_path,&mst)!=0){
+            log_line("⚠ 模型文件不存在或路径错误: %s", g_cfg.model_path);
+            log_line("  请重新下载模型或修正 config/etserver.conf 的 model_path。");
         } else {
-            log_line("引擎启动失败（缺失？见控制台诊断），看门狗将按退避处理。");
+            log_line("模型 %s 将在首次出图时按需加载（启动不预载，省内存）", g_cfg.model_id);
         }
     } else {
         log_line("未配置模型，仅启动代理外壳；下载模型后请在 config 里填 model_path 再重启。");
+    }
+    /* v1.6.5：启动时检查引擎二进制 */
+    {
+        const char* ename =
+#ifdef _WIN32
+          "sd-server.exe";
+#else
+          "sd-server";
+#endif
+        char p1[1280],p2[1280];
+        snprintf(p1,1280,"%s%s%s",g_progdir,DIRSEP,ename);
+        snprintf(p2,1280,"%s%sbin%s%s",g_progdir,DIRSEP,DIRSEP,ename);
+        if(access(p1,X_OK)!=0 && access(p2,X_OK)!=0){
+            log_line("⚠ 引擎二进制缺失: %s（请重新安装或下载引擎）", ename);
+        } else {
+            log_line("引擎二进制: %s 已就绪", ename);
+        }
     }
 
     /* 看门狗 + 对外监听 + 控制台（对外端口此刻即绑定，不必等模型加载完） */
@@ -1622,7 +2340,14 @@ int main(int argc, char** argv) {
     pthread_create(&t,NULL,listen_thread,NULL); pthread_detach(t);
 #endif
     poll_sleep_ms(800);
+    fetch_announcements();
     show_banner();
+    /* v1.5.3 首启上报（火并线程，不阻塞） */
+#ifdef _WIN32
+    _beginthreadex(NULL,0,(unsigned(__stdcall*)(void*))report_first_run,NULL,0,NULL);
+#else
+    { pthread_t _rt; pthread_create(&_rt,NULL,(void*(*)(void*))report_first_run,NULL); pthread_detach(_rt); }
+#endif
 #ifdef _WIN32
     if(no_gui){
         console_thread(NULL);   /* 服务模式：纯控制台，不弹窗 */
@@ -1637,5 +2362,11 @@ int main(int argc, char** argv) {
     kill_engine();
     close_socket(g_listen);
     log_line("已退出。");
+#ifdef _WIN32
+    /* 双击 EXE 退出时不要秒关窗口，让用户看到日志 */
+    printf("\n按回车键关闭窗口……\n");
+    fflush(stdout);
+    getchar();
+#endif
     return 0;
 }

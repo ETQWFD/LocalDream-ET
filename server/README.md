@@ -1,4 +1,4 @@
-# Local Dream ET Server v1.1.1 (Linux x86_64)
+# Local Dream ET Server v1.6.6 (Linux x86_64)
 
 本地离线 AI 出图 API 服务。首次运行在终端按数字选择并下载模型到 models/，
 随后控制台显示【服务地址 / 46 位 API Key / 模型名】，可复制到任意兼容工具调用。
