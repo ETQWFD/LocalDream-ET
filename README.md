@@ -17,7 +17,7 @@
 
 ## 官网与下载
 
-- 官网（GitHub Pages）：<https://etqwfd.github.io/LocalDream-ET/>
+- 官网（GitHub Pages）：<https://etc.tw.kg/>
 - 更新清单：<https://etqwfd.github.io/LocalDream-ET/update.json>
 - 最新安装包：见 [Releases](https://github.com/ETQWFD/LocalDream-ET/releases)，资产固定名 `LocalDream-ET.apk`。
 
@@ -81,4 +81,4 @@ RELEASE_KEY_PASSWORD=...
 
 
 
-<div align="center">定制版 © ET</div>
+<div align="center">作者 © ETC</div>
