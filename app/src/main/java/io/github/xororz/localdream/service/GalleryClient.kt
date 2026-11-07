@@ -26,6 +26,10 @@ import java.util.Base64
  *     contents API 触发 403 限流导致列表为空。
  */
 object GalleryClient {
+    // et.153: 内存缓存，第二次进入社区秒开；下拉刷新时清空。
+    @Volatile
+    private var cached: List<GalleryItem>? = null
+    fun invalidate() { cached = null }
     private const val API = "https://api.github.com/repos/ETQWFD/LocalDreamET-Gallery/contents"
     // et.149: 国内优先 jsdelivr / gitmirror，raw 作为兜底，图片和元数据都走镜像。
     private val IMG_BASES = listOf(
@@ -123,7 +127,8 @@ object GalleryClient {
     }
 
     /** 社区列表；失败返回空列表由 UI 提示。 */
-    suspend fun list(): List<GalleryItem> = withContext(Dispatchers.IO) {
+    suspend fun list(force: Boolean = false): List<GalleryItem> = withContext(Dispatchers.IO) {
+        if (!force) cached?.let { return@withContext it }
         try {
             // et.152: 国内 jsdelivr 包目录枚举最快（<1s），优先；api.github.com 作为兜底。
             var names: List<String> = enumerateViaJsdelivr()
@@ -149,9 +154,9 @@ object GalleryClient {
                     m?.optInt("price", 0) ?: 0,
                     m?.optLong("ts", 0L) ?: 0L,
                 )
-            }.sortedByDescending { it.ts }
+            }.sortedByDescending { it.ts }.also { cached = it }
         } catch (_: Exception) {
-            emptyList()
+            cached ?: emptyList()
         }
     }
 

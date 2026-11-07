@@ -1,9 +1,9 @@
 {
-  "versionCode": 226,
-  "versionName": "4.0.0-et.152",
-  "title": "发现新版本 v4.0.0-et.152",
-  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.152/LocalDream-ET.apk",
-  "size": 159953103,
-  "sha256": "51998ca2d2b5ea8bcbbe9421da8001559d6122d627e5bc1ec1ca43ccd2c22de1",
-  "releaseNotes": "et.152：社区列表改用 jsdelivr 包目录优先（1~2 秒出图，不再卡 api.github.com）；HTTP 超时缩到 6s/10s；自定义存储位置接系统目录选择器（SAF），可选存储卡；兑换码镜像优先。"
+  "versionCode": 227,
+  "versionName": "4.0.0-et.153",
+  "title": "发现新版本 v4.0.0-et.153",
+  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.153/LocalDream-ET.apk",
+  "size": 159953247,
+  "sha256": "dee6ba444ab6d8b414b9ca2488e2052cc2fab855b44d0963a895a1e2b589f168",
+  "releaseNotes": "et.153：社区列表内存缓存（第二次进入秒开）；jsdelivr 优先；兑换码镜像优先。"
 }
