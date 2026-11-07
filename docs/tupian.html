@@ -56,7 +56,10 @@
   "use strict";
   var REPO="ETQWFD/LocalDreamET-Gallery";
   var API="https://api.github.com/repos/"+REPO+"/contents/png";
-  var RAW="https://raw.githubusercontent.com/"+REPO+"/main/png";
+  // et.150: 国内优先 jsdelivr，raw 兜底；图片与 meta 都走这里。
+  var RAW="https://cdn.jsdelivr.net/gh/"+REPO+"@main/png";
+  var RAW_MIRROR="https://raw.gitmirror.com/"+REPO+"/main/png";
+  var JSDIR="https://data.jsdelivr.com/v1/packages/gh/"+REPO+"@main?structure=flat";
   function $(id){return document.getElementById(id);}
   function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;","'":"&quot;"}[c];});}
   function fmtTs(ts){if(!ts)return"";try{var t=ts;if(typeof t==="number"&&t<1e12)t=t*1000;else if(typeof t==="string"&&/^\d+$/.test(t)&&Number(t)<1e12)t=Number(t)*1000;return new Date(t).toLocaleDateString("zh-CN");}catch(e){return "";}}
@@ -65,14 +68,25 @@
   var all=[];
   function hdr(){return tok()?{"Authorization":"Bearer "+tok(),"Accept":"application/vnd.github+json"}:{"Accept":"application/vnd.github+json"};}
 
+  function listViaJsdelivr(){
+    return fetch(JSDIR).then(function(r){if(!r.ok)throw new Error("jsdelivr HTTP "+r.status);return r.json();})
+      .then(function(j){
+        var files=(j.files||[]).filter(function(f){return /^\/png\//.test(f.name)&&/\.(png|jpg|jpeg|webp)$/i.test(f.name);});
+        return files.map(function(f){return {name:f.name.replace(/^\/png\//,""),sha:""};});
+      });
+  }
   function load(){
     $("status").textContent="加载中…";
-    fetch(API,{headers:hdr()}).then(function(r){if(r.status===404)throw new Error("empty");if(!r.ok)throw new Error("HTTP "+r.status);return r.json();})
-    .then(function(files){
+    var listing=fetch(API,{headers:hdr()}).then(function(r){if(r.status===404)throw new Error("empty");if(!r.ok)throw new Error("api HTTP "+r.status);return r.json();})
+      .catch(function(){return listViaJsdelivr();});
+    listing.then(function(files){
       var imgs=files.filter(function(f){return /\.(png|jpg|jpeg|webp)$/i.test(f.name);});
       return Promise.all(imgs.map(function(f){
         var meta=RAW+"/"+f.name.replace(/\.([a-z]+)$/i,".meta.$1");
-        return fetch(meta).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}).then(function(m){return {name:f.name,sha:f.sha,meta:m,url:RAW+"/"+f.name};});
+        var meta2=RAW_MIRROR+"/"+f.name.replace(/\.([a-z]+)$/i,".meta.$1");
+        return fetch(meta).then(function(r){return r.ok?r.json():null;})
+          .catch(function(){return fetch(meta2).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;});})
+          .then(function(m){return {name:f.name,sha:f.sha,meta:m,url:RAW+"/"+f.name};});
       }));
     })
     .then(function(arr){

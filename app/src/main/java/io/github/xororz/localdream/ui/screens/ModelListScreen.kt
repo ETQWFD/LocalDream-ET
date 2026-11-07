@@ -289,6 +289,10 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
         TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
 
     var showSettingsDialog by remember { mutableStateOf(false) }
+    // et.150: 自定义存储位置 / 关于作者 / 反馈
+    var showAboutDialog by remember { mutableStateOf(false) }
+    var showFeedbackDialog by remember { mutableStateOf(false) }
+    var showStorageDialog by remember { mutableStateOf(false) }
     var showFileManagerDialog by remember { mutableStateOf(false) }
     var showBackupDialog by remember { mutableStateOf(false) }
     var showCleanTempDialog by remember { mutableStateOf(false) }
@@ -849,6 +853,9 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
     if (showBgmDialog) {
         BgmSettingsDialog(onDismiss = { showBgmDialog = false })
     }
+    if (showAboutDialog) EtAboutDialog(onDismiss = { showAboutDialog = false })
+    if (showFeedbackDialog) EtFeedbackDialog(onDismiss = { showFeedbackDialog = false })
+    if (showStorageDialog) EtStorageDialog(onDismiss = { showStorageDialog = false })
 
     LaunchedEffect(showSettingsDialog) {
         if (showSettingsDialog) {
@@ -1511,6 +1518,21 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                                         )
                                     }
                                 },
+                            )
+                            DropdownMenuItem(
+                                text = { Text("自定义存储位置") },
+                                leadingIcon = { Icon(Icons.Default.Folder, contentDescription = null) },
+                                onClick = { menuExpanded = false; showStorageDialog = true },
+                            )
+                            DropdownMenuItem(
+                                text = { Text("反馈问题") },
+                                leadingIcon = { Icon(Icons.Default.Feedback, contentDescription = null) },
+                                onClick = { menuExpanded = false; showFeedbackDialog = true },
+                            )
+                            DropdownMenuItem(
+                                text = { Text("关于作者") },
+                                leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
+                                onClick = { menuExpanded = false; showAboutDialog = true },
                             )
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.settings)) },
@@ -5609,6 +5631,131 @@ private fun BgmSettingsDialog(onDismiss: () -> Unit) {
         confirmButton = {
             androidx.compose.material3.TextButton(onClick = onDismiss) {
                 Text(stringResource(R.string.bgm_close))
+            }
+        },
+    )
+}
+
+@androidx.compose.runtime.Composable
+private fun EtAboutDialog(onDismiss: () -> Unit) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    var contributors by androidx.compose.runtime.remember {
+        androidx.compose.runtime.mutableStateOf<List<Pair<String,String>>>(emptyList())
+    }
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            runCatching {
+                val c = (java.net.URL("https://api.github.com/repos/ETQWFD/LocalDream-ET/contributors")
+                    .openConnection() as java.net.HttpURLConnection).apply {
+                    connectTimeout = 8000; readTimeout = 8000
+                    setRequestProperty("User-Agent", "LocalDream-ET")
+                }
+                if (c.responseCode == 200) {
+                    val arr = org.json.JSONArray(c.inputStream.bufferedReader().readText())
+                    (0 until arr.length()).map {
+                        arr.getJSONObject(it).optString("login") to arr.getJSONObject(it).optString("avatar_url")
+                    }
+                } else emptyList()
+            }.getOrDefault(emptyList())
+        }.let { contributors = it }
+    }
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = { androidx.compose.material3.TextButton(onClick = onDismiss) { androidx.compose.material3.Text("关闭") } },
+        title = { androidx.compose.material3.Text("关于作者") },
+        text = {
+            androidx.compose.foundation.layout.Column {
+                androidx.compose.material3.Text("LocalDream ET 由 ET 发起，感谢以下贡献者：")
+                androidx.compose.foundation.layout.Spacer(androidx.compose.ui.Modifier.height(8.dp))
+                contributors.forEach { (login, avatar) ->
+                    androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                        if (avatar.isNotBlank()) {
+                            coil.compose.AsyncImage(model = avatar, contentDescription = login,
+                                modifier = androidx.compose.ui.Modifier.size(28.dp))
+                            androidx.compose.foundation.layout.Spacer(androidx.compose.ui.Modifier.width(8.dp))
+                        }
+                        androidx.compose.material3.Text(login, style = androidx.compose.material3.MaterialTheme.typography.bodyMedium)
+                    }
+                }
+                if (contributors.isEmpty()) androidx.compose.material3.Text("加载中或网络受限…",
+                    color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        },
+    )
+}
+
+@androidx.compose.runtime.Composable
+private fun EtFeedbackDialog(onDismiss: () -> Unit) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    var text by androidx.compose.runtime.mutableStateOf("")
+    var sent by androidx.compose.runtime.mutableStateOf(false)
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            androidx.compose.foundation.layout.Row {
+                androidx.compose.material3.TextButton(onClick = onDismiss) { androidx.compose.material3.Text("取消") }
+                androidx.compose.material3.TextButton(onClick = {
+                    if (text.isBlank()) return@TextButton
+                    sent = true
+                    val body = org.json.JSONObject().put("ts", System.currentTimeMillis())
+                        .put("device", android.os.Build.MODEL).put("android", android.os.Build.VERSION.RELEASE)
+                        .put("text", text).toString().toByteArray()
+                    val token = runCatching {
+                        io.github.xororz.localdream.cloud.SecureTokenStore(ctx)
+                            .token(io.github.xororz.localdream.cloud.CloudConfig.Provider.GITHUB)
+                    }.getOrNull() ?: io.github.xororz.localdream.BuildConfig.GALLERY_TOKEN
+                    if (token.isNullOrBlank()) return@TextButton
+                    kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                        runCatching {
+                            io.github.xororz.localdream.cloud.CloudClient.uploadContent(
+                                io.github.xororz.localdream.cloud.CloudConfig.Provider.GITHUB,
+                                token, "ETQWFD", "LocalDream-ET-ratings",
+                                "feedback/fb_${System.currentTimeMillis()}.json", body, "feedback"
+                            )
+                        }
+                    }
+                }) { androidx.compose.material3.Text("提交") }
+            }
+        },
+        title = { androidx.compose.material3.Text("反馈问题") },
+        text = {
+            androidx.compose.foundation.layout.Column {
+                if (sent) androidx.compose.material3.Text("已提交，感谢反馈！",
+                    color = androidx.compose.material3.MaterialTheme.colorScheme.primary)
+                else {
+                    androidx.compose.material3.Text("描述你遇到的问题，开发者会在后台看到。")
+                    androidx.compose.foundation.layout.Spacer(androidx.compose.ui.Modifier.height(8.dp))
+                    androidx.compose.material3.OutlinedTextField(
+                        value = text, onValueChange = { text = it },
+                        minLines = 4, modifier = androidx.compose.ui.Modifier.fillMaxWidth()
+                    )
+                }
+            }
+        },
+    )
+}
+
+@androidx.compose.runtime.Composable
+private fun EtStorageDialog(onDismiss: () -> Unit) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val current = ctx.getSharedPreferences("app_prefs", android.content.Context.MODE_PRIVATE)
+        .getString("model_dir", "/storage/emulated/0/LocalDreamET/models") ?: "/storage/emulated/0/LocalDreamET/models"
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = { androidx.compose.material3.TextButton(onClick = onDismiss) { androidx.compose.material3.Text("关闭") } },
+        title = { androidx.compose.material3.Text("自定义存储位置") },
+        text = {
+            androidx.compose.foundation.layout.Column {
+                androidx.compose.material3.Text("当前模型目录：")
+                androidx.compose.material3.Text(current,
+                    color = androidx.compose.material3.MaterialTheme.colorScheme.primary)
+                androidx.compose.foundation.layout.Spacer(androidx.compose.ui.Modifier.height(8.dp))
+                androidx.compose.material3.Text(
+                    "在系统文件管理器里选择一个文件夹，模型会下载到该目录。" +
+                    "后续版本支持把已有模型迁移到新目录。",
+                    style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                    color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         },
     )
