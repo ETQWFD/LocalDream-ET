@@ -807,6 +807,22 @@ class BackendService : Service() {
             env["RAYON_NUM_THREADS"] = bigCores.toString()
             env["RAYON_RS_NUM_CPUS"] = bigCores.toString()
             env["OMP_NUM_THREADS"] = bigCores.toString()
+
+            // et.146: 天玑 9400/9400+（Mali Immortalis 新驱动）上 sd15cpu 引擎
+            // 初始化 OpenCL fused projection 时直接退出(exit=0)。检测 MediaTek 平台，
+            // 禁用该 OpenCL 优化路径，回退稳定的 CPU/OpenCL 通用内核。
+            val isMediaTek = runCatching {
+                val cls = Class.forName("android.os.SystemProperties")
+                val get = cls.getMethod("get", String::class.java)
+                val board = (get.invoke(null, "ro.board.platform") as? String).orEmpty()
+                board.startsWith("mt")
+            }.getOrDefault(
+                android.os.Build.HARDWARE.orEmpty().lowercase().startsWith("mt")
+            )
+            if (isMediaTek) {
+                env["MNN_OPENCL_FUSED_PROJ_DISABLE"] = "1"
+                Log.i(TAG, "MediaTek 平台：已禁用 MNN OpenCL fused projection（适配天玑 9400/9400+）")
+            }
             Log.i(TAG, "engine threads: RAYON/OMP=$bigCores of ${Runtime.getRuntime().availableProcessors()} cores (big-core count by max-freq)")
             if (ditEngineDir != null) {
                 // ggml-hexagon asks FastRPC for its skel by bare name, so both

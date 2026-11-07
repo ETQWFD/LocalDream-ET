@@ -174,7 +174,11 @@ object RedemptionManager {
         if (code.isEmpty()) return Result.Invalid
         val store = SecureTokenStore(context)
         val provider = CloudConfig.Provider.GITHUB
-        val tok = store.token(provider) ?: return Result.NeedLogin
+        // et.146: 未做 GitHub 设备登录时，回退到内置 gallery 令牌；该令牌对
+        // LocalDreamET-Quota 仓有读写权限，兑换码不需要用户先登录。
+        var tok = store.token(provider)
+        if (tok.isNullOrBlank()) tok = io.github.xororz.localdream.BuildConfig.GALLERY_TOKEN
+        if (tok.isNullOrBlank()) return Result.NeedLogin
 
         lastNoNetwork = false
         lastForbidden = false

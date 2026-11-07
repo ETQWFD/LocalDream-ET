@@ -74,7 +74,10 @@ internal fun hasAnnounceUnread(context: Context): Boolean =
 private fun loadAll(context: Context): List<AnnouncementItem> {
     val hidden = hiddenSet(context)
     val store = SecureTokenStore(context)
-    val tok = store.token(CloudConfig.Provider.GITHUB) ?: return emptyList()
+    // et.146: 未登录时回退到内置 gallery 令牌，公告中心不再要求先 GitHub 登录。
+    var tok = store.token(CloudConfig.Provider.GITHUB)
+    if (tok.isNullOrBlank()) tok = io.github.xororz.localdream.BuildConfig.GALLERY_TOKEN
+    if (tok.isNullOrBlank()) return emptyList()
     val repo = "ETQWFD/LocalDream-ET-ratings"
     val listConn = (java.net.URL("https://api.github.com/repos/$repo/contents/announcements")
         .openConnection() as java.net.HttpURLConnection).apply {
