@@ -61,14 +61,16 @@ object RedemptionManager {
 
     /** Mirrors that return the raw file body for a read-only verification. */
     private fun rawMirrors(code: String): List<String> {
-        // et.147: 国内 api/raw/jsdelivr 常被拦截，加入 gitmirror/statically/ghproxy。
+        // et.151: 国内可达的镜像优先，按速度排：jsdelivr / bgithub / kkgithub / ghproxy / raw。
         val paths = listOf("redeem/codes/$code.json", "redeem/codes/redeem_$code.json")
         val hosts = listOf<(String) -> String>(
-            { "https://raw.gitmirror.com/$REPO/main/$it" },
-            { "https://cdn.statically.io/gh/$REPO@main/$it" },
-            { "https://raw.githubusercontent.com/$REPO/main/$it" },
             { "https://cdn.jsdelivr.net/gh/$REPO@main/$it" },
+            { "https://raw.bgithub.xyz/$REPO/main/$it" },
+            { "https://raw.kkgithub.com/$REPO/main/$it" },
             { "https://gh-proxy.com/https://raw.githubusercontent.com/$REPO/main/$it" },
+            { "https://ghfast.top/https://raw.githubusercontent.com/$REPO/main/$it" },
+            { "https://raw.gitmirror.com/$REPO/main/$it" },
+            { "https://raw.githubusercontent.com/$REPO/main/$it" },
         )
         return paths.flatMap { p -> hosts.map { h -> h(p) } }
     }
@@ -96,11 +98,49 @@ object RedemptionManager {
     private fun lookup(code: String, tok: String): Lookup {
         var lastTimeout = false
         var lastForbidden = false
+        // et.151: 国内 api.github.com 经常挂起到超时，改为先试只读镜像（快、无 auth），
+        // 拿到结果后再用 API 取 sha 用于回写（仅非 reusable 卡密需要）。
+        for (m in rawMirrors(code)) {
+            var mconn: HttpURLConnection? = null
+            try {
+                mconn = (URL(m).openConnection() as HttpURLConnection).apply {
+                    connectTimeout = 6000; readTimeout = 8000
+                }
+                when (mconn.responseCode) {
+                    200 -> {
+                        val body = decodeBody(mconn)
+                        val parsed = readRawCodeBody(body)
+                        if (parsed is Lookup.Looked) {
+                            // 尝试用 API 取 sha（写回用），失败也不阻塞兑换。
+                            val sha = try {
+                                val ac = (URL("https://api.github.com/repos/$REPO/contents/redeem/codes/$code.json")
+                                    .openConnection() as HttpURLConnection).apply {
+                                    connectTimeout = 4000; readTimeout = 6000
+                                    setRequestProperty("Authorization", "token $tok")
+                                    setRequestProperty("Accept", "application/vnd.github+json")
+                                }
+                                val shaVal = if (ac.responseCode == 200)
+                                    JSONObject(decodeBody(ac)).optString("sha", "") else ""
+                                ac.disconnect(); shaVal
+                            } catch (_: Exception) { "" }
+                            return Lookup.Looked(sha.ifBlank { null }, parsed.effectValue, parsed.reusable)
+                        }
+                        return parsed
+                    }
+                    404 -> return Lookup.Invalid
+                    in 500..599 -> {}
+                }
+            } catch (e: java.net.SocketTimeoutException) {
+                lastTimeout = true
+                Log.w(TAG, "mirror $m timeout: ${e.message}")
+            } catch (e: Exception) {
+                Log.w(TAG, "mirror $m error: ${e.message}")
+            } finally { mconn?.disconnect() }
+        }
+        // 3) 镜像全挂才走 API（带 auth）。
         repeat(MAX_NET_TRIES) { attempt ->
             var conn: HttpURLConnection? = null
             try {
-                // 1) authoritative Contents API (provides sha + auth). Try bare
-                //    "<code>.json" first, legacy "redeem_<code>.json" second.
                 val apiUrl = "https://api.github.com/repos/$REPO/contents/redeem/codes/$code.json"
                 conn = (URL(apiUrl).openConnection() as HttpURLConnection).apply {
                     connectTimeout = CONNECT_MS; readTimeout = READ_MS
@@ -109,7 +149,6 @@ object RedemptionManager {
                 }
                 when (conn.responseCode) {
                     404 -> {
-                        // try legacy name, then raw mirrors below.
                         conn.disconnect()
                         val legacy = "https://api.github.com/repos/$REPO/contents/redeem/codes/redeem_$code.json"
                         conn = (URL(legacy).openConnection() as HttpURLConnection).apply {
@@ -124,50 +163,25 @@ object RedemptionManager {
                     200 -> {
                         val j = JSONObject(decodeBody(conn))
                         val sha = j.optString("sha", "").ifBlank { null }
-                        val raw = String(
-                            android.util.Base64.decode(j.getString("content"), android.util.Base64.DEFAULT),
-                        )
+                        val raw = String(android.util.Base64.decode(j.getString("content"), android.util.Base64.DEFAULT))
                         val o = JSONObject(raw)
                         val status = o.optString("status", "unused")
                         val reusable = o.optBoolean("reusable", false)
-                    if (status.equals("used", ignoreCase = true) && !reusable) return Lookup.Used
+                        if (status.equals("used", ignoreCase = true) && !reusable) return Lookup.Used
                         val eff = o.optJSONObject("effect")
                         val value = if (eff != null &&
                             eff.optString("type", "quota").equals("quota", ignoreCase = true)
                         ) eff.optLong("value", 0L) else 0L
                         return Lookup.Looked(sha, value, reusable)
                     }
-                    in 500..599 -> { /* fall through to mirrors this attempt */ }
                 }
-                // 2/3) read-only mirrors (used when api 5xx or unreachable).
-                for (m in rawMirrors(code)) {
-                    conn?.disconnect()
-                    var mconn: HttpURLConnection? = null
-                    try {
-                        mconn = (URL(m).openConnection() as HttpURLConnection).apply {
-                            connectTimeout = CONNECT_MS; readTimeout = READ_MS
-                        }
-                        when (mconn.responseCode) {
-                            200 -> return readRawCodeBody(decodeBody(mconn))
-                            404 -> return Lookup.Invalid
-                        }
-                    } catch (e: Exception) {
-                        Log.w(TAG, "mirror $m failed: ${e.message}")
-                    } finally {
-                        mconn?.disconnect()
-                    }
-                }
-            } catch (e: SocketTimeoutException) {
+            } catch (e: java.net.SocketTimeoutException) {
                 lastTimeout = true
-                Log.w(TAG, "lookup try ${attempt + 1} timeout: ${e.message}")
             } catch (e: java.net.ConnectException) {
                 lastNoNetwork = true
-                Log.w(TAG, "lookup try ${attempt + 1} no network: ${e.message}")
             } catch (e: Exception) {
                 Log.w(TAG, "lookup try ${attempt + 1} error: ${e.message}")
-            } finally {
-                conn?.disconnect()
-            }
+            } finally { conn?.disconnect() }
         }
         return when {
             lastForbidden -> Lookup.Forbidden

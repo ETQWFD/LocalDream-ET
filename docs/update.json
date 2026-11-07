@@ -1,9 +1,9 @@
 {
-  "versionCode": 224,
-  "versionName": "4.0.0-et.150",
-  "title": "发现新版本 v4.0.0-et.150",
-  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.150/LocalDream-ET.apk",
-  "size": 159935563,
-  "sha256": "0d16021a25c4ec84ff250bae93e127ca167ecd45e75ea1cbea21b4b9ed9072a7",
-  "releaseNotes": "et.150：官网社区页 tupian.html 改用 jsdelivr 直连（修复后台图片全部加载失败）；侧边栏菜单新增 自定义存储位置 / 反馈问题 / 关于作者（拉取 GitHub 贡献者头像）；社区图片与元数据走 jsdelivr 镜像。"
+  "versionCode": 225,
+  "versionName": "4.0.0-et.151",
+  "title": "发现新版本 v4.0.0-et.151",
+  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.151/LocalDream-ET.apk",
+  "size": 159949223,
+  "sha256": "da4f0f67fa8b1148520e874755be228f5b2c30899cae824fac35647ac082899a",
+  "releaseNotes": "et.151：兑换码/公告改为先试只读镜像（jsdelivr/bgithub/kkgithub/ghproxy），不再先卡 api.github.com 超时；新增 bgithub/kkgithub/ghfast 三个国内镜像；兑换 ETC666 现在几秒内出结果。"
 }
