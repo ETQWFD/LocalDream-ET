@@ -51,7 +51,7 @@ object RedemptionManager {
     }
 
     private sealed class Lookup {
-        data class Looked(val sha: String?, val effectValue: Long) : Lookup()
+        data class Looked(val sha: String?, val effectValue: Long, val reusable: Boolean = false) : Lookup()
         object Used : Lookup()
         object Invalid : Lookup()
         object Timeout : Lookup()
@@ -60,13 +60,18 @@ object RedemptionManager {
     }
 
     /** Mirrors that return the raw file body for a read-only verification. */
-    private fun rawMirrors(code: String): List<String> = listOf(
-        // et.213: accept both legacy "redeem_<code>.json" and "<code>.json" naming.
-        "https://raw.githubusercontent.com/$REPO/main/redeem/codes/$code.json",
-        "https://cdn.jsdelivr.net/gh/$REPO@main/redeem/codes/$code.json",
-        "https://raw.githubusercontent.com/$REPO/main/redeem/codes/redeem_$code.json",
-        "https://cdn.jsdelivr.net/gh/$REPO@main/redeem/codes/redeem_$code.json",
-    )
+    private fun rawMirrors(code: String): List<String> {
+        // et.147: 国内 api/raw/jsdelivr 常被拦截，加入 gitmirror/statically/ghproxy。
+        val paths = listOf("redeem/codes/$code.json", "redeem/codes/redeem_$code.json")
+        val hosts = listOf<(String) -> String>(
+            { "https://raw.gitmirror.com/$REPO/main/$it" },
+            { "https://cdn.statically.io/gh/$REPO@main/$it" },
+            { "https://raw.githubusercontent.com/$REPO/main/$it" },
+            { "https://cdn.jsdelivr.net/gh/$REPO@main/$it" },
+            { "https://gh-proxy.com/https://raw.githubusercontent.com/$REPO/main/$it" },
+        )
+        return paths.flatMap { p -> hosts.map { h -> h(p) } }
+    }
 
     private fun decodeBody(conn: HttpURLConnection): String =
         conn.inputStream.bufferedReader().readText()
@@ -75,14 +80,15 @@ object RedemptionManager {
         return runCatching {
             val o = JSONObject(body)
             val status = o.optString("status", "unused")
-            if (status.equals("used", ignoreCase = true)) Lookup.Used
+            val reusable = o.optBoolean("reusable", false)
+            if (status.equals("used", ignoreCase = true) && !reusable) Lookup.Used
             else {
                 val eff = o.optJSONObject("effect")
                 val value = if (eff != null &&
                     eff.optString("type", "quota").equals("quota", ignoreCase = true)
                 ) eff.optLong("value", 0L) else 0L
                 // read-only mirrors have no sha; mark-used then falls back to upload.
-                Lookup.Looked(null, value)
+                Lookup.Looked(null, value, reusable)
             }
         }.getOrDefault(Lookup.Invalid)
     }
@@ -123,12 +129,13 @@ object RedemptionManager {
                         )
                         val o = JSONObject(raw)
                         val status = o.optString("status", "unused")
-                        if (status.equals("used", ignoreCase = true)) return Lookup.Used
+                        val reusable = o.optBoolean("reusable", false)
+                    if (status.equals("used", ignoreCase = true) && !reusable) return Lookup.Used
                         val eff = o.optJSONObject("effect")
                         val value = if (eff != null &&
                             eff.optString("type", "quota").equals("quota", ignoreCase = true)
                         ) eff.optLong("value", 0L) else 0L
-                        return Lookup.Looked(sha, value)
+                        return Lookup.Looked(sha, value, reusable)
                     }
                     in 500..599 -> { /* fall through to mirrors this attempt */ }
                 }
@@ -191,7 +198,8 @@ object RedemptionManager {
                 }
                 // Flip status to used + write a used record. Report a distinct
                 // failure if the write fails (never silently "succeeds").
-                val writeErr = runCatching {
+                // et.147: reusable 卡密不翻转 used 状态（群成员奖励可重复使用）。
+                val writeErr = if (l.reusable) null else runCatching {
                     val aid = android.provider.Settings.Secure.getString(
                         context.contentResolver, android.provider.Settings.Secure.ANDROID_ID,
                     ) ?: "anon"

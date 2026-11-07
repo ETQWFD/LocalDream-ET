@@ -1,0 +1,7 @@
+etc.github.ai.chat.chatclient-pngs-0 /home/user/Doubao/chats/38445171688291330/local-dream/chatclient/build/generated/res/pngs/release
+etc.github.ai.chat.chatclient-updated_navigation_xml-1 /home/user/Doubao/chats/38445171688291330/local-dream/chatclient/build/generated/updated_navigation_xml/release
+etc.github.ai.chat.chatclient-packageReleaseResources-2 /home/user/Doubao/chats/38445171688291330/local-dream/chatclient/build/intermediates/incremental/release/packageReleaseResources/merged.dir
+etc.github.ai.chat.chatclient-packageReleaseResources-3 /home/user/Doubao/chats/38445171688291330/local-dream/chatclient/build/intermediates/incremental/release/packageReleaseResources/stripped.dir
+etc.github.ai.chat.chatclient-release-4 /home/user/Doubao/chats/38445171688291330/local-dream/chatclient/build/intermediates/merged_res/release/mergeReleaseResources
+etc.github.ai.chat.chatclient-main-5 /home/user/Doubao/chats/38445171688291330/local-dream/chatclient/src/main/res
+etc.github.ai.chat.chatclient-release-6 /home/user/Doubao/chats/38445171688291330/local-dream/chatclient/src/release/res

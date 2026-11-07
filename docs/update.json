@@ -1,9 +1,9 @@
 {
-  "versionCode": 220,
-  "versionName": "4.0.0-et.146",
-  "title": "发现新版本 v4.0.0-et.146",
+  "versionCode": 221,
+  "versionName": "4.0.0-et.147",
+  "title": "发现新版本 v4.0.0-et.147",
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk",
-  "size": 159887335,
-  "sha256": "ea4e7ef67f9559af23fa49c5d25777a22a17b29affa557ba66f30a7dda32b65b",
-  "releaseNotes": "et.146: 修复天玑9400/9400+生成失败(exit=0)，Mali新驱动禁用不稳定OpenCL fused projection；公告中心与兑换码不再要求GitHub登录，内置令牌直连；测试兑换码 LOCAL123（100额度）。"
+  "size": 159907951,
+  "sha256": "ca0454956563a943e10f25af287a51692b3450ab2f37067305e9927745ab2262",
+  "releaseNotes": "et.147: 图片社区点击缩略图预览→确认购买→扣额度→右下角etc水印存相册；登录者自动备份到自己仓库；预览页FLAG_SECURE防截屏；社区每次只能传1张；兑换码/公告改用国内可用镜像(gitmirror/statically/ghproxy)，无网络问题修复；新增可重复卡密 ETC666（群成员奖励）；长按公告本地隐藏。"
 }

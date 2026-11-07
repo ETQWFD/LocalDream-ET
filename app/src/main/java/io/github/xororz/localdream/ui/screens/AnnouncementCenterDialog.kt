@@ -72,45 +72,71 @@ internal fun hasAnnounceUnread(context: Context): Boolean =
         .getBoolean("announce_unread", false)
 
 private fun loadAll(context: Context): List<AnnouncementItem> {
-    val hidden = hiddenSet(context)
     val store = SecureTokenStore(context)
-    // et.146: 未登录时回退到内置 gallery 令牌，公告中心不再要求先 GitHub 登录。
     var tok = store.token(CloudConfig.Provider.GITHUB)
     if (tok.isNullOrBlank()) tok = io.github.xororz.localdream.BuildConfig.GALLERY_TOKEN
     if (tok.isNullOrBlank()) return emptyList()
     val repo = "ETQWFD/LocalDream-ET-ratings"
-    val listConn = (java.net.URL("https://api.github.com/repos/$repo/contents/announcements")
-        .openConnection() as java.net.HttpURLConnection).apply {
-        connectTimeout = 8000; readTimeout = 8000
-        setRequestProperty("Authorization", "token $tok")
-        setRequestProperty("Accept", "application/vnd.github+json")
-    }
-    if (listConn.responseCode != 200) return emptyList()
-    val arr = org.json.JSONArray(listConn.inputStream.bufferedReader().readText())
-    val out = ArrayList<AnnouncementItem>()
-    for (i in 0 until arr.length()) {
-        val name = arr.getJSONObject(i).optString("name", "")
-        if (!name.startsWith("announce_") || !name.endsWith(".json")) continue
-        runCatching {
-            val c = (java.net.URL("https://api.github.com/repos/$repo/contents/announcements/$name")
-                .openConnection() as java.net.HttpURLConnection).apply {
+    // et.147: 国内 API 被墙时用镜像拉 index.json 与公告正文。
+    fun mirrorUrls(file: String) = listOf(
+        "https://raw.gitmirror.com/$repo/main/announcements/$file",
+        "https://cdn.statically.io/gh/$repo@main/announcements/$file",
+        "https://raw.githubusercontent.com/$repo/main/announcements/$file",
+        "https://gh-proxy.com/https://raw.githubusercontent.com/$repo/main/announcements/$file",
+    )
+    fun httpGet(url: String): Pair<Int, String> {
+        return try {
+            val c = (java.net.URL(url).openConnection() as java.net.HttpURLConnection).apply {
                 connectTimeout = 8000; readTimeout = 8000
-                setRequestProperty("Authorization", "token $tok")
                 setRequestProperty("Accept", "application/vnd.github+json")
+                setRequestProperty("Authorization", "token " + tok!!)
             }
-            if (c.responseCode != 200) return@runCatching
-            val j = org.json.JSONObject(c.inputStream.bufferedReader().readText())
-            val raw = String(android.util.Base64.decode(j.getString("content"), android.util.Base64.DEFAULT))
-            val o = org.json.JSONObject(raw)
-            val target = o.optString("target", "全部")
-            if (!target.contains("手机") && !target.contains("全部")) return@runCatching
-            val title = o.optString("title", "公告")
-            val content = parseAnnounceContent(o)
-            val ts = parseAnnounceTs(o)
-            if (ts.toString() in hidden) return@runCatching // et.130追加11: hidden locally
-            android.util.Log.i("Announce", "loaded $name title=$title ts=$ts contentLen=${content.length}")
-            out.add(AnnouncementItem(title, content, ts))
+            val code = c.responseCode
+            val body = (if (code == 200) c.inputStream else c.errorStream)
+                ?.bufferedReader()?.readText().orEmpty()
+            c.disconnect(); code to body
+        } catch (e: Exception) { 0 to (e.message ?: "err") }
+    }
+    // 1) 先拿 index.json（镜像优先）
+    var files: List<String> = emptyList()
+    for (u in mirrorUrls("index.json")) {
+        val (code, text) = httpGet(u)
+        if (code == 200) {
+            runCatching {
+                files = org.json.JSONObject(text).optJSONArray("files")?.let { arr ->
+                    (0 until arr.length()).map { arr.optString(it) }
+                } ?: emptyList()
+            }
+            if (files.isNotEmpty()) break
         }
+    }
+    if (files.isEmpty()) return emptyList()
+    val out = ArrayList<AnnouncementItem>()
+    for (name in files) {
+        if (!name.startsWith("announce_") || !name.endsWith(".json")) continue
+        // 2) 正文：镜像优先，失败再试 Contents API
+        var raw: String? = null
+        for (u in mirrorUrls(name)) {
+            val (code, text) = httpGet(u)
+            if (code == 200) { raw = text; break }
+        }
+        if (raw == null) {
+            val (code, text) = httpGet("https://api.github.com/repos/$repo/contents/announcements/$name")
+            if (code == 200) runCatching {
+                val j = org.json.JSONObject(text)
+                raw = String(android.util.Base64.decode(j.getString("content"), android.util.Base64.DEFAULT))
+            }
+        }
+        val r = raw ?: continue
+        val o = runCatching { org.json.JSONObject(r) }.getOrNull() ?: continue
+        val target = o.optString("target", "全部")
+        if (!target.contains("手机") && !target.contains("全部")) continue
+        val title = o.optString("title", "公告")
+        val content = parseAnnounceContent(o)
+        val ts = parseAnnounceTs(o)
+        val hidden = hiddenSet(context)
+        if (ts.toString() in hidden) continue
+        out.add(AnnouncementItem(title, content, ts))
     }
     out.sortByDescending { it.ts }
     return out

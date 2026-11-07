@@ -1,0 +1,178 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="etc.github.ai.chat"
+4    android:versionCode="3"
+5    android:versionName="1.0.2-et" >
+6
+7    <uses-sdk
+7-->INJECTED
+8        android:minSdkVersion="28"
+8-->INJECTED
+9        android:targetSdkVersion="36" />
+9-->INJECTED
+10
+11    <uses-permission android:name="android.permission.INTERNET" />
+11-->/home/user/Doubao/chats/38445171688291330/local-dream/chatclient/src/main/AndroidManifest.xml:4:5-67
+11-->/home/user/Doubao/chats/38445171688291330/local-dream/chatclient/src/main/AndroidManifest.xml:4:22-64
+12    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+12-->/home/user/Doubao/chats/38445171688291330/local-dream/chatclient/src/main/AndroidManifest.xml:5:5-79
+12-->/home/user/Doubao/chats/38445171688291330/local-dream/chatclient/src/main/AndroidManifest.xml:5:22-76
+13    <!-- Saving to gallery on legacy Android <= 10. -->
+14    <uses-permission
+14-->/home/user/Doubao/chats/38445171688291330/local-dream/chatclient/src/main/AndroidManifest.xml:7:5-9:38
+15        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+15-->/home/user/Doubao/chats/38445171688291330/local-dream/chatclient/src/main/AndroidManifest.xml:8:9-65
+16        android:maxSdkVersion="28" />
+16-->/home/user/Doubao/chats/38445171688291330/local-dream/chatclient/src/main/AndroidManifest.xml:9:9-35
+17
+18    <permission
+18-->[androidx.core:core:1.16.0] /home/user/.gradle/caches/9.3.1/transforms/8650d9909346a19d2872253f1f8a8caa/transformed/core-1.16.0/AndroidManifest.xml:22:5-24:47
+19        android:name="etc.github.ai.chat.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+19-->[androidx.core:core:1.16.0] /home/user/.gradle/caches/9.3.1/transforms/8650d9909346a19d2872253f1f8a8caa/transformed/core-1.16.0/AndroidManifest.xml:23:9-81
+20        android:protectionLevel="signature" />
+20-->[androidx.core:core:1.16.0] /home/user/.gradle/caches/9.3.1/transforms/8650d9909346a19d2872253f1f8a8caa/transformed/core-1.16.0/AndroidManifest.xml:24:9-44
+21
+22    <uses-permission android:name="etc.github.ai.chat.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
+22-->[androidx.core:core:1.16.0] /home/user/.gradle/caches/9.3.1/transforms/8650d9909346a19d2872253f1f8a8caa/transformed/core-1.16.0/AndroidManifest.xml:26:5-97
+22-->[androidx.core:core:1.16.0] /home/user/.gradle/caches/9.3.1/transforms/8650d9909346a19d2872253f1f8a8caa/transformed/core-1.16.0/AndroidManifest.xml:26:22-94
+23
+24    <application
+24-->/home/user/Doubao/chats/38445171688291330/local-dream/chatclient/src/main/AndroidManifest.xml:11:5-40:19
+25        android:allowBackup="true"
+25-->/home/user/Doubao/chats/38445171688291330/local-dream/chatclient/src/main/AndroidManifest.xml:12:9-35
+26        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
+26-->[androidx.core:core:1.16.0] /home/user/.gradle/caches/9.3.1/transforms/8650d9909346a19d2872253f1f8a8caa/transformed/core-1.16.0/AndroidManifest.xml:28:18-86
+27        android:extractNativeLibs="false"
+27-->INJECTED
+28        android:icon="@mipmap/ic_launcher"
+28-->/home/user/Doubao/chats/38445171688291330/local-dream/chatclient/src/main/AndroidManifest.xml:13:9-43
+29        android:label="@string/app_name"
+29-->/home/user/Doubao/chats/38445171688291330/local-dream/chatclient/src/main/AndroidManifest.xml:14:9-41
+30        android:networkSecurityConfig="@xml/network_security_config"
+30-->/home/user/Doubao/chats/38445171688291330/local-dream/chatclient/src/main/AndroidManifest.xml:16:9-69
+31        android:roundIcon="@mipmap/ic_launcher_round"
+31-->/home/user/Doubao/chats/38445171688291330/local-dream/chatclient/src/main/AndroidManifest.xml:15:9-54
+32        android:supportsRtl="true"
+32-->/home/user/Doubao/chats/38445171688291330/local-dream/chatclient/src/main/AndroidManifest.xml:17:9-35
+33        android:theme="@style/Theme.ChatClient" >
+33-->/home/user/Doubao/chats/38445171688291330/local-dream/chatclient/src/main/AndroidManifest.xml:18:9-48
+34        <activity
+34-->/home/user/Doubao/chats/38445171688291330/local-dream/chatclient/src/main/AndroidManifest.xml:20:9-29:20
+35            android:name="etc.github.ai.chat.MainActivity"
+35-->/home/user/Doubao/chats/38445171688291330/local-dream/chatclient/src/main/AndroidManifest.xml:21:13-41
+36            android:configChanges="orientation|screenSize|screenLayout|density|uiMode"
+36-->/home/user/Doubao/chats/38445171688291330/local-dream/chatclient/src/main/AndroidManifest.xml:23:13-87
+37            android:exported="true"
+37-->/home/user/Doubao/chats/38445171688291330/local-dream/chatclient/src/main/AndroidManifest.xml:22:13-36
+38            android:windowSoftInputMode="adjustResize" >
+38-->/home/user/Doubao/chats/38445171688291330/local-dream/chatclient/src/main/AndroidManifest.xml:24:13-55
+39            <intent-filter>
+39-->/home/user/Doubao/chats/38445171688291330/local-dream/chatclient/src/main/AndroidManifest.xml:25:13-28:29
+40                <action android:name="android.intent.action.MAIN" />
+40-->/home/user/Doubao/chats/38445171688291330/local-dream/chatclient/src/main/AndroidManifest.xml:26:17-69
+40-->/home/user/Doubao/chats/38445171688291330/local-dream/chatclient/src/main/AndroidManifest.xml:26:25-66
+41
+42                <category android:name="android.intent.category.LAUNCHER" />
+42-->/home/user/Doubao/chats/38445171688291330/local-dream/chatclient/src/main/AndroidManifest.xml:27:17-77
+42-->/home/user/Doubao/chats/38445171688291330/local-dream/chatclient/src/main/AndroidManifest.xml:27:27-74
+43            </intent-filter>
+44        </activity>
+45
+46        <provider
+46-->INJECTED
+47            android:name="androidx.core.content.FileProvider"
+47-->/home/user/Doubao/chats/38445171688291330/local-dream/chatclient/src/main/AndroidManifest.xml:32:13-62
+48            android:authorities="etc.github.ai.chat.fileprovider"
+48-->INJECTED
+49            android:exported="false"
+49-->/home/user/Doubao/chats/38445171688291330/local-dream/chatclient/src/main/AndroidManifest.xml:34:13-37
+50            android:grantUriPermissions="true" >
+50-->/home/user/Doubao/chats/38445171688291330/local-dream/chatclient/src/main/AndroidManifest.xml:35:13-47
+51            <meta-data
+51-->/home/user/Doubao/chats/38445171688291330/local-dream/chatclient/src/main/AndroidManifest.xml:36:13-38:54
+52                android:name="android.support.FILE_PROVIDER_PATHS"
+52-->/home/user/Doubao/chats/38445171688291330/local-dream/chatclient/src/main/AndroidManifest.xml:37:17-67
+53                android:resource="@xml/file_paths" />
+53-->/home/user/Doubao/chats/38445171688291330/local-dream/chatclient/src/main/AndroidManifest.xml:38:17-51
+54        </provider>
+55        <provider
+55-->[androidx.emoji2:emoji2:1.4.0] /home/user/.gradle/caches/9.3.1/transforms/e20d6fb90c65a7c6eaa7d5defe9d9185/transformed/emoji2-1.4.0/AndroidManifest.xml:24:9-32:20
+56            android:name="androidx.startup.InitializationProvider"
+56-->[androidx.emoji2:emoji2:1.4.0] /home/user/.gradle/caches/9.3.1/transforms/e20d6fb90c65a7c6eaa7d5defe9d9185/transformed/emoji2-1.4.0/AndroidManifest.xml:25:13-67
+57            android:authorities="etc.github.ai.chat.androidx-startup"
+57-->[androidx.emoji2:emoji2:1.4.0] /home/user/.gradle/caches/9.3.1/transforms/e20d6fb90c65a7c6eaa7d5defe9d9185/transformed/emoji2-1.4.0/AndroidManifest.xml:26:13-68
+58            android:exported="false" >
+58-->[androidx.emoji2:emoji2:1.4.0] /home/user/.gradle/caches/9.3.1/transforms/e20d6fb90c65a7c6eaa7d5defe9d9185/transformed/emoji2-1.4.0/AndroidManifest.xml:27:13-37
+59            <meta-data
+59-->[androidx.emoji2:emoji2:1.4.0] /home/user/.gradle/caches/9.3.1/transforms/e20d6fb90c65a7c6eaa7d5defe9d9185/transformed/emoji2-1.4.0/AndroidManifest.xml:29:13-31:52
+60                android:name="androidx.emoji2.text.EmojiCompatInitializer"
+60-->[androidx.emoji2:emoji2:1.4.0] /home/user/.gradle/caches/9.3.1/transforms/e20d6fb90c65a7c6eaa7d5defe9d9185/transformed/emoji2-1.4.0/AndroidManifest.xml:30:17-75
+61                android:value="androidx.startup" />
+61-->[androidx.emoji2:emoji2:1.4.0] /home/user/.gradle/caches/9.3.1/transforms/e20d6fb90c65a7c6eaa7d5defe9d9185/transformed/emoji2-1.4.0/AndroidManifest.xml:31:17-49
+62            <meta-data
+62-->[androidx.lifecycle:lifecycle-process:2.9.4] /home/user/.gradle/caches/9.3.1/transforms/3ce8dd0c6fac356bf317c92e01ca0c81/transformed/lifecycle-process-2.9.4/AndroidManifest.xml:29:13-31:52
+63                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
+63-->[androidx.lifecycle:lifecycle-process:2.9.4] /home/user/.gradle/caches/9.3.1/transforms/3ce8dd0c6fac356bf317c92e01ca0c81/transformed/lifecycle-process-2.9.4/AndroidManifest.xml:30:17-78
+64                android:value="androidx.startup" />
+64-->[androidx.lifecycle:lifecycle-process:2.9.4] /home/user/.gradle/caches/9.3.1/transforms/3ce8dd0c6fac356bf317c92e01ca0c81/transformed/lifecycle-process-2.9.4/AndroidManifest.xml:31:17-49
+65            <meta-data
+65-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/user/.gradle/caches/9.3.1/transforms/899e5d70b94e1ba28dfe76f524d758de/transformed/profileinstaller-1.4.0/AndroidManifest.xml:29:13-31:52
+66                android:name="androidx.profileinstaller.ProfileInstallerInitializer"
+66-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/user/.gradle/caches/9.3.1/transforms/899e5d70b94e1ba28dfe76f524d758de/transformed/profileinstaller-1.4.0/AndroidManifest.xml:30:17-85
+67                android:value="androidx.startup" />
+67-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/user/.gradle/caches/9.3.1/transforms/899e5d70b94e1ba28dfe76f524d758de/transformed/profileinstaller-1.4.0/AndroidManifest.xml:31:17-49
+68        </provider>
+69
+70        <uses-library
+70-->[androidx.window:window:1.5.0] /home/user/.gradle/caches/9.3.1/transforms/aa07642b95ae3b545d7c1656cb6b3f28/transformed/window-1.5.0/AndroidManifest.xml:23:9-25:40
+71            android:name="androidx.window.extensions"
+71-->[androidx.window:window:1.5.0] /home/user/.gradle/caches/9.3.1/transforms/aa07642b95ae3b545d7c1656cb6b3f28/transformed/window-1.5.0/AndroidManifest.xml:24:13-54
+72            android:required="false" />
+72-->[androidx.window:window:1.5.0] /home/user/.gradle/caches/9.3.1/transforms/aa07642b95ae3b545d7c1656cb6b3f28/transformed/window-1.5.0/AndroidManifest.xml:25:13-37
+73        <uses-library
+73-->[androidx.window:window:1.5.0] /home/user/.gradle/caches/9.3.1/transforms/aa07642b95ae3b545d7c1656cb6b3f28/transformed/window-1.5.0/AndroidManifest.xml:26:9-28:40
+74            android:name="androidx.window.sidecar"
+74-->[androidx.window:window:1.5.0] /home/user/.gradle/caches/9.3.1/transforms/aa07642b95ae3b545d7c1656cb6b3f28/transformed/window-1.5.0/AndroidManifest.xml:27:13-51
+75            android:required="false" />
+75-->[androidx.window:window:1.5.0] /home/user/.gradle/caches/9.3.1/transforms/aa07642b95ae3b545d7c1656cb6b3f28/transformed/window-1.5.0/AndroidManifest.xml:28:13-37
+76
+77        <receiver
+77-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/user/.gradle/caches/9.3.1/transforms/899e5d70b94e1ba28dfe76f524d758de/transformed/profileinstaller-1.4.0/AndroidManifest.xml:34:9-52:20
+78            android:name="androidx.profileinstaller.ProfileInstallReceiver"
+78-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/user/.gradle/caches/9.3.1/transforms/899e5d70b94e1ba28dfe76f524d758de/transformed/profileinstaller-1.4.0/AndroidManifest.xml:35:13-76
+79            android:directBootAware="false"
+79-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/user/.gradle/caches/9.3.1/transforms/899e5d70b94e1ba28dfe76f524d758de/transformed/profileinstaller-1.4.0/AndroidManifest.xml:36:13-44
+80            android:enabled="true"
+80-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/user/.gradle/caches/9.3.1/transforms/899e5d70b94e1ba28dfe76f524d758de/transformed/profileinstaller-1.4.0/AndroidManifest.xml:37:13-35
+81            android:exported="true"
+81-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/user/.gradle/caches/9.3.1/transforms/899e5d70b94e1ba28dfe76f524d758de/transformed/profileinstaller-1.4.0/AndroidManifest.xml:38:13-36
+82            android:permission="android.permission.DUMP" >
+82-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/user/.gradle/caches/9.3.1/transforms/899e5d70b94e1ba28dfe76f524d758de/transformed/profileinstaller-1.4.0/AndroidManifest.xml:39:13-57
+83            <intent-filter>
+83-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/user/.gradle/caches/9.3.1/transforms/899e5d70b94e1ba28dfe76f524d758de/transformed/profileinstaller-1.4.0/AndroidManifest.xml:40:13-42:29
+84                <action android:name="androidx.profileinstaller.action.INSTALL_PROFILE" />
+84-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/user/.gradle/caches/9.3.1/transforms/899e5d70b94e1ba28dfe76f524d758de/transformed/profileinstaller-1.4.0/AndroidManifest.xml:41:17-91
+84-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/user/.gradle/caches/9.3.1/transforms/899e5d70b94e1ba28dfe76f524d758de/transformed/profileinstaller-1.4.0/AndroidManifest.xml:41:25-88
+85            </intent-filter>
+86            <intent-filter>
+86-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/user/.gradle/caches/9.3.1/transforms/899e5d70b94e1ba28dfe76f524d758de/transformed/profileinstaller-1.4.0/AndroidManifest.xml:43:13-45:29
+87                <action android:name="androidx.profileinstaller.action.SKIP_FILE" />
+87-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/user/.gradle/caches/9.3.1/transforms/899e5d70b94e1ba28dfe76f524d758de/transformed/profileinstaller-1.4.0/AndroidManifest.xml:44:17-85
+87-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/user/.gradle/caches/9.3.1/transforms/899e5d70b94e1ba28dfe76f524d758de/transformed/profileinstaller-1.4.0/AndroidManifest.xml:44:25-82
+88            </intent-filter>
+89            <intent-filter>
+89-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/user/.gradle/caches/9.3.1/transforms/899e5d70b94e1ba28dfe76f524d758de/transformed/profileinstaller-1.4.0/AndroidManifest.xml:46:13-48:29
+90                <action android:name="androidx.profileinstaller.action.SAVE_PROFILE" />
+90-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/user/.gradle/caches/9.3.1/transforms/899e5d70b94e1ba28dfe76f524d758de/transformed/profileinstaller-1.4.0/AndroidManifest.xml:47:17-88
+90-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/user/.gradle/caches/9.3.1/transforms/899e5d70b94e1ba28dfe76f524d758de/transformed/profileinstaller-1.4.0/AndroidManifest.xml:47:25-85
+91            </intent-filter>
+92            <intent-filter>
+92-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/user/.gradle/caches/9.3.1/transforms/899e5d70b94e1ba28dfe76f524d758de/transformed/profileinstaller-1.4.0/AndroidManifest.xml:49:13-51:29
+93                <action android:name="androidx.profileinstaller.action.BENCHMARK_OPERATION" />
+93-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/user/.gradle/caches/9.3.1/transforms/899e5d70b94e1ba28dfe76f524d758de/transformed/profileinstaller-1.4.0/AndroidManifest.xml:50:17-95
+93-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/user/.gradle/caches/9.3.1/transforms/899e5d70b94e1ba28dfe76f524d758de/transformed/profileinstaller-1.4.0/AndroidManifest.xml:50:25-92
+94            </intent-filter>
+95        </receiver>
+96    </application>
+97
+98</manifest>

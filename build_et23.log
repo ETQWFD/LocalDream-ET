@@ -1,0 +1,49 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/9.3.1/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preBasicReleaseBuild UP-TO-DATE
+> Task :app:mergeBasicReleaseJniLibFolders
+> Task :app:mergeBasicReleaseNativeLibs
+
+> Task :app:stripBasicReleaseDebugSymbols
+Unable to strip the following libraries, packaging them as they are: libandroidx.graphics.path.so, libdatastore_shared_counter.so, libdit_engine.so, libstable_diffusion_core.so. Run with --info option to learn more.
+
+> Task :app:extractBasicReleaseNativeSymbolTables
+> Task :app:mergeBasicReleaseNativeDebugMetadata NO-SOURCE
+> Task :app:mergeBasicReleaseArtProfile
+> Task :app:desugarBasicReleaseFileDependencies FROM-CACHE
+> Task :app:generateBasicReleaseBuildConfig
+> Task :app:generateBasicReleaseResources
+> Task :app:packageBasicReleaseResources
+> Task :app:processBasicReleaseNavigationResources
+> Task :app:parseBasicReleaseLocalResources
+> Task :app:generateBasicReleaseRFile
+> Task :app:kspBasicReleaseKotlin
+> Task :app:compileBasicReleaseKotlin
+e: file:///home/user/Doubao/chats/38445171688291330/local-dream/app/src/main/java/io/github/xororz/localdream/data/Model.kt:678:46 Unresolved reference 'hasConvertedSd15Outputs'.
+
+> Task :app:compileBasicReleaseKotlin FAILED
+
+[Incubating] Problems report is available at: file:///home/user/Doubao/chats/38445171688291330/local-dream/build/reports/problems/problems-report.html
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':app:compileBasicReleaseKotlin'.
+> A failure occurred while executing org.jetbrains.kotlin.compilerRunner.btapi.BuildToolsApiCompilationWork
+   > Compilation error. See log for more details
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+> Get more help at https://help.gradle.org.
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.3.1/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD FAILED in 2m 7s
+14 actionable tasks: 13 executed, 1 from cache

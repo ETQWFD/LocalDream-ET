@@ -108,8 +108,11 @@ fun GalleryScreen(navController: NavController) {
                 modifier = Modifier.fillMaxSize(),
             ) {
                 items(filtered, key = { it.name }) { g ->
+                    var preview by remember { mutableStateOf<GalleryClient.GalleryItem?>(null) }
+                    preview?.let { PreviewDialog(ctx, it) { preview = null } }
                     Column(Modifier.clickable {
                         FavoriteStore.add(ctx, "${g.name}|${g.author}|${g.ts}")
+                        preview = g
                     }) {
                         // 黑图修复：加载失败显示灰底占位，不黑块
                         AsyncImage(
@@ -190,7 +193,7 @@ private fun UploadDialog(ctx: Context, onDismiss: () -> Unit) {
                 )
                 Spacer(Modifier.height(8.dp))
                 OutlinedButton(onClick = { showPicker = true }, Modifier.fillMaxWidth()) {
-                    Text(if (picked.isEmpty()) "选择图片" else "已选 ${picked.size} 张（首张为封面）")
+                    Text(if (picked.isEmpty()) "选择图片" else "已选 ${picked.size} 张")
                 }
                 if (showPicker) {
                     LazyVerticalGrid(
@@ -207,8 +210,8 @@ private fun UploadDialog(ctx: Context, onDismiss: () -> Unit) {
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier.clickable {
                                     if (sel) picked = picked - f
-                                    else if (picked.size < 9) picked = picked + f
-                                    else msg = "最多选9张"
+                                    else if (picked.size < 1) picked = picked + f
+                                    else msg = "每次只能发布 1 张"
                                 }.size(56.dp),
                             )
                         }
@@ -255,4 +258,100 @@ private fun UploadDialog(ctx: Context, onDismiss: () -> Unit) {
             }
         }
     }
+}
+
+@Composable
+private fun PreviewDialog(ctx: Context, item: GalleryClient.GalleryItem, onDismiss: () -> Unit) {
+    val scope = rememberCoroutineScope()
+    var busy by remember { mutableStateOf(false) }
+    var msg by remember { mutableStateOf("") }
+    val remaining = remember { io.github.xororz.localdream.service.QuotaManager.remaining(ctx) }
+    // et.147: 预览期间禁止截屏/录屏，防止盗图
+    DisposableEffect(Unit) {
+        val activity = ctx as? android.app.Activity
+        activity?.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
+        onDispose { activity?.window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE) }
+    }
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(shape = MaterialTheme.shapes.large) {
+            Column(Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                AsyncImage(
+                    model = item.url, contentDescription = item.name,
+                    modifier = Modifier.fillMaxWidth().height(280.dp), contentScale = ContentScale.Fit,
+                )
+                Spacer(Modifier.height(8.dp))
+                Text("作者：${item.author}", style = MaterialTheme.typography.bodyMedium)
+                Text("售价：${item.price} 额度（剩余 $remaining）", style = MaterialTheme.typography.bodySmall)
+                if (msg.isNotEmpty()) Text(msg, color = MaterialTheme.colorScheme.error)
+                Spacer(Modifier.height(12.dp))
+                Row {
+                    TextButton(onClick = onDismiss) { Text("关闭") }
+                    Spacer(Modifier.width(8.dp))
+                    Button(enabled = !busy, onClick = {
+                        busy = true; msg = ""
+                        scope.launch {
+                            val r = withContext(Dispatchers.IO) { purchaseItem(ctx, item) }
+                            msg = r; busy = false
+                            if (r.startsWith("已保存")) onDismiss()
+                        }
+                    }) { Text(if (busy) "处理中…" else "确认购买") }
+                }
+            }
+        }
+    }
+}
+
+private suspend fun purchaseItem(ctx: Context, item: GalleryClient.GalleryItem): String {
+    val qm = io.github.xororz.localdream.service.QuotaManager
+    if (qm.remaining(ctx) < item.price) return "额度不足，还差 ${item.price - qm.remaining(ctx)}"
+    return withContext(Dispatchers.IO) {
+        runCatching {
+            val conn = (java.net.URL(item.url).openConnection() as java.net.HttpURLConnection)
+            conn.connectTimeout = 15000; conn.readTimeout = 30000
+            val bytes = conn.inputStream.use { it.readBytes() }
+            val bmp = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                ?: return@withContext "图片加载失败"
+            // 右下角防伪水印：etc 官方 + 作者名
+            val wm = android.graphics.Bitmap.createBitmap(bmp.width, bmp.height, bmp.config ?: android.graphics.Bitmap.Config.ARGB_8888)
+            val canvas = android.graphics.Canvas(wm)
+            canvas.drawBitmap(bmp, 0f, 0f, null)
+            val text = "etc · @${item.author}"
+            val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                color = android.graphics.Color.WHITE; alpha = 180
+                textSize = bmp.width / 28.0f; isFakeBoldText = true
+            }
+            val sw = paint.measureText(text)
+            canvas.drawText(text, bmp.width - sw - bmp.width / 40.0f, bmp.height - bmp.height / 40.0f, paint)
+            val out = java.io.ByteArrayOutputStream()
+            wm.compress(android.graphics.Bitmap.CompressFormat.PNG, 95, out)
+            saveToGallery(ctx, "LocalDreamET_${item.name}", out.toByteArray())
+            qm.consume(ctx, item.price.toLong())
+            // 已登录用户：备份到自己的 Backup 仓，防丢
+            val store = io.github.xororz.localdream.cloud.SecureTokenStore(ctx)
+            val tok = store.token(io.github.xororz.localdream.cloud.CloudConfig.Provider.GITHUB)
+            if (!tok.isNullOrBlank()) {
+                runCatching {
+                    io.github.xororz.localdream.cloud.CloudClient.uploadContent(
+                        io.github.xororz.localdream.cloud.CloudConfig.Provider.GITHUB,
+                        tok, "ETQWFD", "LocalDreamET-Backup",
+                        "png/purchased_${item.name}", bytes, "purchase backup"
+                    )
+                }
+            }
+            "已保存到相册并扣除 ${item.price} 额度"
+        }.getOrElse { "购买失败：${it.message}" }
+    }
+}
+
+private fun saveToGallery(ctx: Context, name: String, png: ByteArray): Boolean {
+    val values = android.content.ContentValues().apply {
+        put(android.provider.MediaStore.Images.Media.DISPLAY_NAME, name)
+        put(android.provider.MediaStore.Images.Media.MIME_TYPE, "image/png")
+        put(android.provider.MediaStore.Images.Media.RELATIVE_PATH, "Pictures/LocalDreamET")
+    }
+    val uri = ctx.contentResolver.insert(
+        android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values
+    ) ?: return false
+    ctx.contentResolver.openOutputStream(uri)?.use { it.write(png) }
+    return true
 }

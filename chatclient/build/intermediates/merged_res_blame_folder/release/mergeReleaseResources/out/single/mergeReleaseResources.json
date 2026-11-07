@@ -1,0 +1,30 @@
+[
+    {
+        "merged": "etc.github.ai.chat.chatclient-release-52:/mipmap-anydpi_ic_launcher.xml.flat",
+        "source": "etc.github.ai.chat.chatclient-main-53:/mipmap-anydpi/ic_launcher.xml"
+    },
+    {
+        "merged": "etc.github.ai.chat.chatclient-release-52:/drawable_ic_launcher_monochrome.xml.flat",
+        "source": "etc.github.ai.chat.chatclient-main-53:/drawable/ic_launcher_monochrome.xml"
+    },
+    {
+        "merged": "etc.github.ai.chat.chatclient-release-52:/drawable_ic_launcher_foreground.xml.flat",
+        "source": "etc.github.ai.chat.chatclient-main-53:/drawable/ic_launcher_foreground.xml"
+    },
+    {
+        "merged": "etc.github.ai.chat.chatclient-release-52:/drawable_ic_launcher_background.xml.flat",
+        "source": "etc.github.ai.chat.chatclient-main-53:/drawable/ic_launcher_background.xml"
+    },
+    {
+        "merged": "etc.github.ai.chat.chatclient-release-52:/xml_file_paths.xml.flat",
+        "source": "etc.github.ai.chat.chatclient-main-53:/xml/file_paths.xml"
+    },
+    {
+        "merged": "etc.github.ai.chat.chatclient-release-52:/mipmap-anydpi_ic_launcher_round.xml.flat",
+        "source": "etc.github.ai.chat.chatclient-main-53:/mipmap-anydpi/ic_launcher_round.xml"
+    },
+    {
+        "merged": "etc.github.ai.chat.chatclient-release-52:/xml_network_security_config.xml.flat",
+        "source": "etc.github.ai.chat.chatclient-main-53:/xml/network_security_config.xml"
+    }
+]

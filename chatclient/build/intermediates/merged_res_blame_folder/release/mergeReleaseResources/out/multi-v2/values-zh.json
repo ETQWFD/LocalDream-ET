@@ -1,0 +1,26 @@
+{
+    "logs": [
+        {
+            "outputFile": "etc.github.ai.chat.chatclient-mergeReleaseResources-50:/values-zh/values-zh.xml",
+            "map": [
+                {
+                    "source": "/home/user/Doubao/chats/38445171688291330/local-dream/chatclient/src/main/res/values-zh/strings.xml",
+                    "from": {
+                        "startLines": "1",
+                        "startColumns": "4",
+                        "startOffsets": "16",
+                        "endColumns": "44",
+                        "endOffsets": "56"
+                    },
+                    "to": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "44",
+                        "endOffsets": "95"
+                    }
+                }
+            ]
+        }
+    ]
+}

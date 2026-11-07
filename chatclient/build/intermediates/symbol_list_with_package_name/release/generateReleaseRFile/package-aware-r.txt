@@ -1,0 +1,10 @@
+etc.github.ai.chat
+drawable ic_launcher_background
+drawable ic_launcher_foreground
+drawable ic_launcher_monochrome
+mipmap ic_launcher
+mipmap ic_launcher_round
+string app_name
+style Theme_ChatClient
+xml file_paths
+xml network_security_config
