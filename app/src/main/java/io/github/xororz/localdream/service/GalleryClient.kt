@@ -27,7 +27,17 @@ import java.util.Base64
  */
 object GalleryClient {
     private const val API = "https://api.github.com/repos/ETQWFD/LocalDreamET-Gallery/contents"
-    private const val RAW = "https://raw.githubusercontent.com/ETQWFD/LocalDreamET-Gallery/main"
+    // et.149: 国内优先 jsdelivr / gitmirror，raw 作为兜底，图片和元数据都走镜像。
+    private val IMG_BASES = listOf(
+        "https://cdn.jsdelivr.net/gh/ETQWFD/LocalDreamET-Gallery@main",
+        "https://raw.gitmirror.com/ETQWFD/LocalDreamET-Gallery/main",
+        "https://raw.githubusercontent.com/ETQWFD/LocalDreamET-Gallery/main",
+    )
+    private val META_BASES = listOf(
+        "https://cdn.jsdelivr.net/gh/ETQWFD/LocalDreamET-Gallery@main",
+        "https://raw.gitmirror.com/ETQWFD/LocalDreamET-Gallery/main",
+        "https://raw.githubusercontent.com/ETQWFD/LocalDreamET-Gallery/main",
+    )
 
     data class GalleryItem(
         val name: String,
@@ -88,21 +98,50 @@ object GalleryClient {
         return if (msg.isBlank()) reason else "$reason：$msg"
     }
 
+    /** et.149: 多镜像取字节，返回 200 时的 body。 */
+    private fun httpAny(urls: List<String>): Pair<Int, String> {
+        for (u in urls) {
+            val (c, t) = http(u, "GET")
+            if (c in 200..299) return c to t
+        }
+        return -1 to "all mirrors failed"
+    }
+
+    private fun enumerateViaJsdelivr(): List<String> {
+        return try {
+            val (code, text) = http(
+                "https://data.jsdelivr.com/v1/packages/gh/ETQWFD/LocalDreamET-Gallery@main?structure=flat",
+                "GET"
+            )
+            if (code != 200) return emptyList()
+            val arr = JSONObject(text).optJSONArray("files") ?: return emptyList()
+            (0 until arr.length()).mapNotNull {
+                val name = arr.getJSONObject(it).optString("name", "")
+                if (name.startsWith("/png/") && name.endsWith(".png")) name.substringAfterLast("/") else null
+            }
+        } catch (_: Exception) { emptyList() }
+    }
+
     /** 社区列表；失败返回空列表由 UI 提示。 */
     suspend fun list(): List<GalleryItem> = withContext(Dispatchers.IO) {
         try {
-            val (code, text) = http("$API/png", "GET")
-            if (code != 200) return@withContext emptyList()
-            val arr = JSONArray(text)
-            val names = (0 until arr.length()).mapNotNull { i ->
-                arr.getJSONObject(i).optString("name", "").takeIf { it.endsWith(".png") }
-            }
+            // 1) 先试 GitHub contents API；失败/限流时用 jsdelivr 包目录枚举。
+            var names: List<String> = try {
+                val (code, text) = http("$API/png", "GET")
+                if (code != 200) emptyList()
+                else (0 until JSONArray(text).length()).mapNotNull { i ->
+                    JSONArray(text).getJSONObject(i).optString("name", "").takeIf { it.endsWith(".png") }
+                }
+            } catch (_: Exception) { emptyList() }
+            if (names.isEmpty()) names = enumerateViaJsdelivr()
             val metas = fetchMetas(names)
             names.map { n ->
                 val stem = n.substringBeforeLast(".png")
                 val m = metas[stem]
+                // 图片地址：jsdelivr 优先（国内可达）。
+                val imgUrl = "https://cdn.jsdelivr.net/gh/ETQWFD/LocalDreamET-Gallery@main/png/$n"
                 GalleryItem(
-                    n, "$RAW/png/$n",
+                    n, imgUrl,
                     m?.optString("author", "?") ?: "?",
                     m?.optString("name", "") ?: "",
                     m?.optInt("price", 0) ?: 0,
@@ -114,13 +153,14 @@ object GalleryClient {
         }
     }
 
-    /** 元数据走 raw CDN 并发读取（无 API 限额），单张失败不影响整页。 */
+    /** et.149: 元数据走多镜像并发读，单张失败不影响整页。 */
     private suspend fun fetchMetas(names: List<String>): Map<String, JSONObject> = coroutineScope {
         val subset = names.take(200)
         subset.map { n ->
             async(Dispatchers.IO) {
                 val stem = n.substringBeforeLast(".png")
-                val (code, text) = http("$RAW/png/$stem.meta.json", "GET")
+                val urls = META_BASES.map { "$it/png/$stem.meta.json" }
+                val (code, text) = httpAny(urls)
                 if (code == 200) stem to (try { JSONObject(text) } catch (_: Exception) { null })
                 else stem to null
             }

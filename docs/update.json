@@ -1,9 +1,9 @@
 {
-  "versionCode": 222,
-  "versionName": "4.0.0-et.148",
-  "title": "发现新版本 v4.0.0-et.148",
-  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.148/LocalDream-ET.apk",
-  "size": 159908115,
-  "sha256": "d0ed8a5feab2679c26d7be30219cda7953a393e912adab83591f5288402557f4",
-  "releaseNotes": "et.148: 修复兑换码/公告无网络（镜像顺序、jsdelivr 404 问题）；未登录游客 42 万额度/7 天，登录用户 128 万额度/7 天；社区购买水印+防截屏；可重复卡密 ETC666；模型下载镜像顺序优化。"
+  "versionCode": 223,
+  "versionName": "4.0.0-et.149",
+  "title": "发现新版本 v4.0.0-et.149",
+  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.149/LocalDream-ET.apk",
+  "size": 159910319,
+  "sha256": "4d188d9d011e058f32b72c7a79b139bcf7575b67582b7660dd95b9bda48926e3",
+  "releaseNotes": "et.149: 修复社区图片全部显示问号/加载失败——图片与元数据改用 jsdelivr CDN 直连，api.github.com 被墙时自动用 jsdelivr 包目录枚举；兑换码/公告多镜像兜底；游客42万、登录128万额度/7天。"
 }
