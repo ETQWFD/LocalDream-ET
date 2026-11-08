@@ -1,9 +1,9 @@
 {
-  "versionCode": 227,
-  "versionName": "4.0.0-et.153",
-  "title": "发现新版本 v4.0.0-et.153",
-  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.153/LocalDream-ET.apk",
-  "size": 159953247,
-  "sha256": "dee6ba444ab6d8b414b9ca2488e2052cc2fab855b44d0963a895a1e2b589f168",
-  "releaseNotes": "et.153：社区列表内存缓存（第二次进入秒开）；jsdelivr 优先；兑换码镜像优先。"
+  "versionCode": 228,
+  "versionName": "4.0.0-et.154",
+  "title": "发现新版本 v4.0.0-et.154",
+  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.154/LocalDream-ET.apk",
+  "size": 159953451,
+  "sha256": "05326cfdc1dba2de65baeffb4a509694ad1cf49555502f8cc22163da27a5b6d8",
+  "releaseNotes": "et.154：兑换码镜像并发竞速（6s 内出结果，不再串行等 30s+）；社区列表内存缓存；jsdelivr 优先。"
 }

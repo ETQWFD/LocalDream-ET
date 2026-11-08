@@ -96,48 +96,55 @@ object RedemptionManager {
     }
 
     private fun lookup(code: String, tok: String): Lookup {
-        var lastTimeout = false
-        var lastForbidden = false
-        // et.151: 国内 api.github.com 经常挂起到超时，改为先试只读镜像（快、无 auth），
-        // 拿到结果后再用 API 取 sha 用于回写（仅非 reusable 卡密需要）。
-        for (m in rawMirrors(code)) {
-            var mconn: HttpURLConnection? = null
-            try {
-                mconn = (URL(m).openConnection() as HttpURLConnection).apply {
-                    connectTimeout = 6000; readTimeout = 8000
-                }
-                when (mconn.responseCode) {
-                    200 -> {
-                        val body = decodeBody(mconn)
-                        val parsed = readRawCodeBody(body)
-                        if (parsed is Lookup.Looked) {
-                            // 尝试用 API 取 sha（写回用），失败也不阻塞兑换。
-                            val sha = try {
-                                val ac = (URL("https://api.github.com/repos/$REPO/contents/redeem/codes/$code.json")
-                                    .openConnection() as HttpURLConnection).apply {
-                                    connectTimeout = 4000; readTimeout = 6000
-                                    setRequestProperty("Authorization", "token $tok")
-                                    setRequestProperty("Accept", "application/vnd.github+json")
-                                }
-                                val shaVal = if (ac.responseCode == 200)
-                                    JSONObject(decodeBody(ac)).optString("sha", "") else ""
-                                ac.disconnect(); shaVal
-                            } catch (_: Exception) { "" }
-                            return Lookup.Looked(sha.ifBlank { null }, parsed.effectValue, parsed.reusable)
-                        }
-                        return parsed
+        // et.154: 所有镜像并发竞速，谁先 200 用谁；总等待上限 6s，不再串行 6×6s。
+        val urls = rawMirrors(code)
+        // et.154: 并发竞速所有镜像，6s 内谁先 200 用谁。
+        val found = arrayOfNulls<Lookup>(1)
+        val any404 = booleanArrayOf(false)
+        val latch = java.util.concurrent.CountDownLatch(urls.size)
+        for (u in urls) {
+            Thread {
+                var c: HttpURLConnection? = null
+                try {
+                    c = (URL(u).openConnection() as HttpURLConnection).apply {
+                        connectTimeout = 4000; readTimeout = 5000
                     }
-                    404 -> return Lookup.Invalid
-                    in 500..599 -> {}
-                }
-            } catch (e: java.net.SocketTimeoutException) {
-                lastTimeout = true
-                Log.w(TAG, "mirror $m timeout: ${e.message}")
-            } catch (e: Exception) {
-                Log.w(TAG, "mirror $m error: ${e.message}")
-            } finally { mconn?.disconnect() }
+                    val code = c.responseCode
+                    synchronized(found) {
+                        if (found[0] != null) return@Thread
+                        when (code) {
+                            200 -> {
+                                val body = decodeBody(c)
+                                val parsed = readRawCodeBody(body)
+                                if (parsed is Lookup.Looked) {
+                                    val sha = try {
+                                        val ac = (URL("https://api.github.com/repos/$REPO/contents/redeem/codes/$code.json")
+                                            .openConnection() as HttpURLConnection).apply {
+                                            connectTimeout = 3000; readTimeout = 4000
+                                            setRequestProperty("Authorization", "token $tok")
+                                            setRequestProperty("Accept", "application/vnd.github+json")
+                                        }
+                                        val v = if (ac.responseCode == 200)
+                                            JSONObject(decodeBody(ac)).optString("sha","") else ""
+                                        ac.disconnect(); v
+                                    } catch (_: Exception) { "" }
+                                    found[0] = Lookup.Looked((sha as String).ifBlank { null }, parsed.effectValue, parsed.reusable)
+                                } else found[0] = parsed
+                            }
+                            404 -> any404[0] = true
+                        }
+                    }
+                } catch (_: Exception) { } finally { try { c?.disconnect() } catch (_: Exception) {}; latch.countDown() }
+            }.start()
         }
+        try { latch.await(6, java.util.concurrent.TimeUnit.SECONDS) } catch (_: Exception) {}
+        synchronized(found) {
+            if (found[0] != null) return found[0]!!
+            if (any404[0]) return Lookup.Invalid
+        }
+
         // 3) 镜像全挂才走 API（带 auth）。
+        var lastTimeout = false
         repeat(MAX_NET_TRIES) { attempt ->
             var conn: HttpURLConnection? = null
             try {
