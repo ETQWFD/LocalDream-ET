@@ -7,9 +7,9 @@
   "channel": "github",
   "platforms": {
     "windows": {
-      "file": "etserver.exe",
-      "size": 429568,
-      "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/server-1.6.8/etserver.exe"
+      "file": "LocalDreamET-Server-1.6.8-windows-x86_64.zip",
+      "size": 18560001,
+      "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/server-1.6.8/LocalDreamET-Server-1.6.8-windows-x86_64.zip"
     },
     "linux-x86_64": {
       "file": "LocalDreamET-Server-1.6.8-linux-x86_64.tar.gz",
@@ -17,5 +17,5 @@
       "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/server-1.6.8/LocalDreamET-Server-1.6.8-linux-x86_64.tar.gz"
     }
   },
-  "notes": "v1.6.8 Web 管理页新增：①API Key 一键启用/关闭（首次启用自动生成随机 Key）；②自定义监听端口输入框，保存后重启生效；③/engine 缺失检测改用 F_OK，多路径搜索。"
+  "notes": "v1.6.8 Windows 完整包（含全部 ggml/sd-webp DLL、sd-server.exe、Start-Server.bat），解压即用；Web 管理页新增 API Key 开关与自定义端口。"
 }
