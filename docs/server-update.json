@@ -1,21 +1,21 @@
 {
   "name": "Local Dream ET Server",
-  "version": "1.6.8",
-  "versionCode": 168,
-  "tag": "server-1.6.8",
+  "version": "1.6.9",
+  "versionCode": 169,
+  "tag": "server-1.6.9",
   "prerelease": false,
   "channel": "github",
   "platforms": {
     "windows": {
-      "file": "LocalDreamET-Server-1.6.8-windows-x86_64.zip",
-      "size": 18560001,
-      "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/server-1.6.8/LocalDreamET-Server-1.6.8-windows-x86_64.zip"
+      "file": "LocalDreamET-Server-1.6.9-windows-x86_64.zip",
+      "size": 18593175,
+      "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/server-1.6.9/LocalDreamET-Server-1.6.9-windows-x86_64.zip"
     },
     "linux-x86_64": {
-      "file": "LocalDreamET-Server-1.6.8-linux-x86_64.tar.gz",
+      "file": "LocalDreamET-Server-1.6.9-linux-x86_64.tar.gz",
       "size": 16569138,
-      "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/server-1.6.8/LocalDreamET-Server-1.6.8-linux-x86_64.tar.gz"
+      "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/server-1.6.9/LocalDreamET-Server-1.6.9-linux-x86_64.tar.gz"
     }
   },
-  "notes": "v1.6.8 Windows 完整包（含全部 ggml/sd-webp DLL、sd-server.exe、Start-Server.bat），解压即用；Web 管理页新增 API Key 开关与自定义端口。"
+  "notes": "v1.6.9 修复 Web 管理页 API Key 开关 / 自定义端口按钮 %d 未渲染导致 JS 报错的问题，现在真正可用。"
 }

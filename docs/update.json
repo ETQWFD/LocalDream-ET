@@ -1,9 +1,9 @@
 {
-  "versionCode": 228,
-  "versionName": "4.0.0-et.154",
-  "title": "发现新版本 v4.0.0-et.154",
-  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.154/LocalDream-ET.apk",
-  "size": 159953451,
-  "sha256": "05326cfdc1dba2de65baeffb4a509694ad1cf49555502f8cc22163da27a5b6d8",
-  "releaseNotes": "et.154：兑换码镜像并发竞速（6s 内出结果，不再串行等 30s+）；社区列表内存缓存；jsdelivr 优先。"
+  "versionCode": 229,
+  "versionName": "4.0.0-et.155",
+  "title": "发现新版本 v4.0.0-et.155",
+  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.155/LocalDream-ET.apk",
+  "size": 159953551,
+  "sha256": "7382829c99dadf65e2c0384ed9fc7a765ea2ccc26de9afddcf88d4bec5e12fe3",
+  "releaseNotes": "et.155：天玑 9400/9400+ 强制 CPU 后端，修复 NPU 段错误 code=139；兑换码镜像并发竞速；社区秒开。"
 }
