@@ -1,9 +1,9 @@
 {
-  "versionCode": 229,
-  "versionName": "4.0.0-et.155",
-  "title": "发现新版本 v4.0.0-et.155",
-  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.155/LocalDream-ET.apk",
-  "size": 159953551,
-  "sha256": "7382829c99dadf65e2c0384ed9fc7a765ea2ccc26de9afddcf88d4bec5e12fe3",
-  "releaseNotes": "et.155：天玑 9400/9400+ 强制 CPU 后端，修复 NPU 段错误 code=139；兑换码镜像并发竞速；社区秒开。"
+  "versionCode": 230,
+  "versionName": "4.0.0-et.156",
+  "title": "发现新版本 v4.0.0-et.156",
+  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.156/LocalDream-ET.apk",
+  "size": 159953767,
+  "sha256": "2e9222e5a76e4be7ebe33f3dfa6707b91487753c2adce4e0664c3a616bb299fd",
+  "releaseNotes": "et.156：ETC666=40万额度；卡密赠送进独立额度池不被吞；社区清理无内容图片。"
 }

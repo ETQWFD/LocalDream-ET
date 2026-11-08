@@ -1,21 +1,13 @@
 {
   "name": "Local Dream ET Server",
-  "version": "1.6.9",
-  "versionCode": 169,
-  "tag": "server-1.6.9",
+  "version": "1.6.10",
+  "versionCode": 170,
+  "tag": "server-1.6.10",
   "prerelease": false,
   "channel": "github",
   "platforms": {
-    "windows": {
-      "file": "LocalDreamET-Server-1.6.9-windows-x86_64.zip",
-      "size": 18593175,
-      "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/server-1.6.9/LocalDreamET-Server-1.6.9-windows-x86_64.zip"
-    },
-    "linux-x86_64": {
-      "file": "LocalDreamET-Server-1.6.9-linux-x86_64.tar.gz",
-      "size": 16569138,
-      "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/server-1.6.9/LocalDreamET-Server-1.6.9-linux-x86_64.tar.gz"
-    }
+    "windows": {"file": "LocalDreamET-Server-1.6.10-windows-x86_64.zip", "size": 18593520, "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/server-1.6.10/LocalDreamET-Server-1.6.10-windows-x86_64.zip"},
+    "linux-x86_64": {"file": "LocalDreamET-Server-1.6.10-linux-x86_64.tar.gz", "size": 16569659, "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/server-1.6.10/LocalDreamET-Server-1.6.10-linux-x86_64.tar.gz"}
   },
-  "notes": "v1.6.9 修复 Web 管理页 API Key 开关 / 自定义端口按钮 %d 未渲染导致 JS 报错的问题，现在真正可用。"
+  "notes": "v1.6.10 新增 /gen 简易在线出图网页（端口可通过配置改为 8548）；修复 Web 管理页按钮。"
 }
