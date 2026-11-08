@@ -650,6 +650,9 @@ private fun AppContent() {
         composable(Screen.Gallery.route) {
             io.github.xororz.localdream.ui.screens.GalleryScreen(navController)
         }
+        composable("chat") {
+            io.github.xororz.localdream.ui.screens.ChatScreen(onBack = { navController.popBackStack() })
+        }
         composable(
             route = Screen.Edit.route,
             arguments = listOf(

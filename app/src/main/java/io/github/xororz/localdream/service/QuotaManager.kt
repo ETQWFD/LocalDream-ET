@@ -57,7 +57,11 @@ object QuotaManager {
         return sp(c).getLong("used", 0L).coerceIn(0L, limit(c))
     }
 
-    fun remaining(c: Context): Long = (limit(c) - used(c)).coerceAtLeast(0L)
+    /** et.156: 卡密赠送的独立额度池，不随 7 天重置清零。 */
+    fun bonusPool(c: Context): Long = sp(c).getLong("bonus_pool", 0L)
+
+    fun remaining(c: Context): Long =
+        (limit(c) - used(c) + bonusPool(c)).coerceAtLeast(0L)
 
     fun available(c: Context): Boolean = used(c) < limit(c)
 
@@ -68,17 +72,24 @@ object QuotaManager {
     }
 
     fun consume(c: Context, amount: Long) {
-        sp(c).edit().putLong("used", (used(c) + amount).coerceAtMost(limit(c))).apply()
+        var rem = amount
+        val pool = sp(c).getLong("bonus_pool",0L)
+        if (pool > 0L) {
+            val draw = minOf(pool, rem)
+            sp(c).edit().putLong("bonus_pool", pool - draw).apply()
+            rem -= draw
+        }
+        if (rem > 0L) sp(c).edit().putLong("used", (used(c) + rem).coerceAtMost(limit(c))).apply()
     }
 
     fun refund(c: Context, amount: Long) {
         sp(c).edit().putLong("used", (used(c) - amount).coerceAtLeast(0L)).apply()
     }
 
-    /** et.119/build197: credit quota from a redemption code (lowers used, floor 0). */
+    /** et.156: 卡密赠送额度进独立 bonus_pool，避免 used=0 时赠额被吞掉。 */
     fun bonus(c: Context, value: Long) {
         if (value <= 0L) return
-        sp(c).edit().putLong("used", (used(c) - value).coerceAtLeast(0L)).apply()
+        sp(c).edit().putLong("bonus_pool", sp(c).getLong("bonus_pool",0L) + value).apply()
     }
 
     /** Next reset instant (epoch_ms + 7 days from current epoch); 0 if unset. */

@@ -1268,6 +1268,10 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                         IconButton(onClick = { navController.navigate(io.github.xororz.localdream.navigation.Screen.Gallery.route) }) {
                             Icon(androidx.compose.material.icons.Icons.Default.Share, "图片社区")
                         }
+                        // et.157: 公共聊天入口
+                        IconButton(onClick = { navController.navigate("chat") }) {
+                            Icon(androidx.compose.material.icons.Icons.Default.Chat, "公共聊天")
+                        }
                     }
                 },
                 actions = {

@@ -1,9 +1,9 @@
 {
-  "versionCode": 230,
-  "versionName": "4.0.0-et.156",
-  "title": "发现新版本 v4.0.0-et.156",
-  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.156/LocalDream-ET.apk",
-  "size": 159953767,
-  "sha256": "2e9222e5a76e4be7ebe33f3dfa6707b91487753c2adce4e0664c3a616bb299fd",
-  "releaseNotes": "et.156：ETC666=40万额度；卡密赠送进独立额度池不被吞；社区清理无内容图片。"
+  "versionCode": 231,
+  "versionName": "4.0.0-et.157",
+  "title": "发现新版本 v4.0.0-et.157",
+  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.157/LocalDream-ET.apk",
+  "size": 159982803,
+  "sha256": "78bd48b46eddb037f847237eb7e31f2a465f62d815740920980c37eec592ce6a",
+  "releaseNotes": "et.157：新增公共聊天（顶部栏聊天图标）；参考 nightmare-mobile 优化 MediaTek 兜底逻辑。"
 }

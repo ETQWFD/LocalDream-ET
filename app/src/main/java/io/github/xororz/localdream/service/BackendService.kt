@@ -821,7 +821,11 @@ class BackendService : Service() {
             )
             if (isMediaTek) {
                 env["MNN_OPENCL_FUSED_PROJ_DISABLE"] = "1"
-                Log.i(TAG, "MediaTek 平台：已禁用 MNN OpenCL fused projection（适配天玑 9400/9400+）")
+                // et.155: 天玑全系（含 9400/9400+）强制 CPU 后端，避免 Mali 驱动
+                // 在 sd15cpu/MNN 里段错误(code=139)。用户在 UI 选 GPU 也不生效。
+                env["MNN_FORCE_CPU"] = "1"
+                env["MNN_GPU_POLICY"] = "0"
+                Log.i(TAG, "MediaTek 平台：强制 CPU 后端，已禁用 OpenCL fused projection（适配天玑 9400/9400+）")
             }
             Log.i(TAG, "engine threads: RAYON/OMP=$bigCores of ${Runtime.getRuntime().availableProcessors()} cores (big-core count by max-freq)")
             if (ditEngineDir != null) {
