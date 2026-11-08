@@ -1,21 +1,21 @@
 {
   "name": "Local Dream ET Server",
-  "version": "1.6.6",
-  "versionCode": 166,
-  "tag": "et.145",
+  "version": "1.6.7",
+  "versionCode": 167,
+  "tag": "server-1.6.7",
   "prerelease": false,
   "channel": "github",
   "platforms": {
     "windows": {
-      "file": "LocalDreamET-Server-Setup-1.6.6.exe",
-      "size": 11274789,
-      "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.145/etserver-setup.exe"
+      "file": "etserver.exe",
+      "size": 427008,
+      "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/server-1.6.7/etserver.exe"
     },
     "linux-x86_64": {
-      "file": "LocalDreamET-Server-1.6.6-linux-x86_64.tar.gz",
-      "size": 16534919,
-      "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.145/etserver-linux.tar.gz"
+      "file": "LocalDreamET-Server-1.6.7-linux-x86_64.tar.gz",
+      "size": 16568056,
+      "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/server-1.6.7/LocalDreamET-Server-1.6.7-linux-x86_64.tar.gz"
     }
   },
-  "notes": "v1.6.6 修复调用慢/无法调用/调用失败：①默认 steps 30→20、batch 6→1、出图后不再杀引擎(unload_after_gen=0)，旧配置自动迁移，消除每次请求数分钟重新加载；②请求体不再用 64KB 栈缓冲，按 Content-Length 堆分配(上限32MB)，并支持 chunked 解码，修掉 img2img/大 JSON 必失败；③send_json 大响应分两次发送，消除栈溢出；④上游 socket 加 300s 收发超时，引擎卡死不再永久挂线程；⑤出图期间健康探测失败不再把 ready 打成 0，/healthz 返回 busy 200，App 不再误判未就绪；⑥/api 出图 base64 缓冲由 4MB 栈改堆分配；⑦引擎响应超 16MB 明确报 502 而非静默截断。已用桩引擎冒烟：100KB/300KB/ chunked 请求体完整转发，/healthz 200，/api/txt2img 正常返回 base64。"
+  "notes": "v1.6.7 修复：引擎明明存在却报「引擎缺失」——看门狗改用 access(F_OK) 检查文件存在（Windows 上 X_OK 可执行位误报），并新增 server/runtime/datadir/engines 等搜索路径。Windows 替换 etserver.exe，Linux 解压覆盖即可。"
 }
