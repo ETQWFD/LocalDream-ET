@@ -1268,13 +1268,13 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                         IconButton(onClick = { navController.navigate(io.github.xororz.localdream.navigation.Screen.Gallery.route) }) {
                             Icon(androidx.compose.material.icons.Icons.Default.Share, "图片社区")
                         }
-                        // et.157: 公共聊天入口
-                        IconButton(onClick = { navController.navigate("chat") }) {
-                            Icon(androidx.compose.material.icons.Icons.Default.Chat, "公共聊天")
-                        }
                     }
                 },
                 actions = {
+                        // et.158: 公共聊天入口（右上角，避免与图片社区重叠）
+                        IconButton(onClick = { navController.navigate("chat") }) {
+                            Icon(androidx.compose.material.icons.Icons.Default.Chat, "公共聊天")
+                        }
                     if (isSelectionMode) {
                         if (selectedModels.isNotEmpty()) {
                             // Left to right: pin, rename (single custom only), delete.

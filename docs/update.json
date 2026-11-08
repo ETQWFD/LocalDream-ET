@@ -1,9 +1,9 @@
 {
-  "versionCode": 231,
-  "versionName": "4.0.0-et.157",
-  "title": "发现新版本 v4.0.0-et.157",
-  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.157/LocalDream-ET.apk",
-  "size": 159982803,
-  "sha256": "78bd48b46eddb037f847237eb7e31f2a465f62d815740920980c37eec592ce6a",
-  "releaseNotes": "et.157：新增公共聊天（顶部栏聊天图标）；参考 nightmare-mobile 优化 MediaTek 兜底逻辑。"
+  "versionCode": 232,
+  "versionName": "4.0.0-et.158",
+  "title": "发现新版本 v4.0.0-et.158",
+  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.158/LocalDream-ET.apk",
+  "size": 159982851,
+  "sha256": "c0c82eb29984f17552eecf67b6ebdcaf3dde4a6e2bbc6c1d826c56e3954559ae",
+  "releaseNotes": "et.158：聊天入口移到右上角，避免与图片社区重叠；Adreno 829 引擎启动参数修正。"
 }
