@@ -1,9 +1,9 @@
 {
-  "versionCode": 232,
-  "versionName": "4.0.0-et.158",
-  "title": "发现新版本 v4.0.0-et.158",
-  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.158/LocalDream-ET.apk",
-  "size": 159982851,
-  "sha256": "c0c82eb29984f17552eecf67b6ebdcaf3dde4a6e2bbc6c1d826c56e3954559ae",
-  "releaseNotes": "et.158：聊天入口移到右上角，避免与图片社区重叠；Adreno 829 引擎启动参数修正。"
+  "versionCode": 233,
+  "versionName": "4.0.0-et.159",
+  "title": "发现新版本 v4.0.0-et.159",
+  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.159/LocalDream-ET.apk",
+  "size": 159984955,
+  "sha256": "5dd5b5fe6f1730c3659a8353fd9364c724b2202bffb39c614f52f7bd1dc16c7d",
+  "releaseNotes": "et.159：聊天发送超时加长；新增公告「加群领卡」；后台 /liaoti.html（密码 1234）。"
 }

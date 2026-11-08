@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>公共聊天后台</title>
+<style>
+body{font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;background:#0f172a;color:#e2e8f0;max-width:820px;margin:0 auto;padding:24px}
+.box{background:#1e293b;border-radius:12px;padding:20px;margin-bottom:16px}
+input,button{background:#334155;color:#fff;border:0;border-radius:8px;padding:10px 14px;font-size:14px}
+button{background:#2563eb;cursor:pointer}
+.msg{padding:10px 14px;border-bottom:1px solid #334155}
+.msg b{color:#93c5fd}
+.msg .ts{color:#94a3b8;font-size:12px;margin-left:8px}
+.admin{color:#22c55e;font-size:12px;margin-left:6px}
+.err{color:#f87171}
+h2{margin:0 0 12px;font-size:18px}
+</style>
+</head>
+<body>
+<h2>公共聊天后台</h2>
+<div class="box" id="loginBox">
+  <p>请输入管理员密码</p>
+  <input type="password" id="pwd" placeholder="密码" onkeydown="if(event.key==='Enter')login()">
+  <button onclick="login()">登录</button>
+  <p class="err" id="loginErr"></p>
+</div>
+<div class="box" id="mainBox" style="display:none">
+  <h2>消息列表（近 7 天）</h2>
+  <div id="msgs"></div>
+  <hr style="border-color:#334155;margin:16px 0">
+  <p>默认密码：1234</p>
+</div>
+<script>
+function login(){
+  const v=document.getElementById('pwd').value;
+  if(v==='1234'){
+    document.getElementById('loginBox').style.display='none';
+    document.getElementById('mainBox').style.display='block';
+    loadMsgs();
+  } else {
+    document.getElementById('loginErr').textContent='密码错误';
+  }
+}
+async function loadMsgs(){
+  try{
+    const r=await fetch('https://cdn.jsdelivr.net/gh/ETQWFD/LocalDreamET-Chat@main/messages.json');
+    const arr=await r.json();
+    const cutoff=Date.now()/1000-7*86400;
+    const list=arr.filter(m=>m.ts>=cutoff).reverse();
+    document.getElementById('msgs').innerHTML=list.map(m=>
+      `<div class="msg"><b>${esc(m.author)}</b>${m.admin?'<span class="admin">管理员</span>':''}<span class="ts">${fmt(m.ts)}</span><br>${esc(m.text)}</div>`
+    ).join('')||'<p class="err">近 7 天无消息</p>';
+  } catch(e){ document.getElementById('msgs').innerHTML='<p class="err">加载失败: '+e+'</p>' }
+}
+function esc(s){return (s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}
+function fmt(ts){const d=new Date(ts*1000);return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`}
+</script>
+</body>
+</html>
