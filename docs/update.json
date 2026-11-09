@@ -1,9 +1,9 @@
 {
-  "versionCode": 238,
-  "versionName": "4.0.0-et.164",
-  "title": "发现新版本 v4.0.0-et.164",
-  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.164/LocalDream-ET.apk",
-  "size": 159991587,
-  "sha256": "3b7f2af0bfb9af63d0533e05df8001d335d4bf03493a9949d477a17926fd0929",
-  "releaseNotes": "et.164：启动时申请录音和媒体读取权限，为语音消息和图片选择做准备。"
+  "versionCode": 239,
+  "versionName": "4.0.0-et.165",
+  "title": "发现新版本 v4.0.0-et.165",
+  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.165/LocalDream-ET.apk",
+  "size": 159991603,
+  "sha256": "abba8b6a367d4eb7f971b25d8af163f439d367cb352db7866fde3ab91d120bf6",
+  "releaseNotes": "et.165：全局开启 FLAG_SECURE，阻止截图和录屏，保护图片社区和聊天内容。"
 }
