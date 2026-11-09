@@ -1,9 +1,9 @@
 {
-  "versionCode": 240,
-  "versionName": "4.0.0-et.166",
-  "title": "发现新版本 v4.0.0-et.166",
-  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.166/LocalDream-ET.apk",
-  "size": 159991471,
-  "sha256": "c290195d1f6d950dee4e964ac3492f45ae7feab45921a2c20f532d18a3847f75",
-  "releaseNotes": "et.166：右上角三点菜单宽度自适应，菜单项对齐更整齐。"
+  "versionCode": 241,
+  "versionName": "4.0.0-et.167",
+  "title": "发现新版本 v4.0.0-et.167",
+  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.167/LocalDream-ET.apk",
+  "size": 159991483,
+  "sha256": "8344e261d61a1660916829bad1829b1fed01f4f5d582e5e8debbc6d79bae141d",
+  "releaseNotes": "et.167：稳定版，继续修复中。"
 }
