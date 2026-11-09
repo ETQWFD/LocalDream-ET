@@ -2816,9 +2816,11 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                 )
 
                 Text(
-                    text = "${(progress.progress * 100).toInt()}% - ${formatBytes(progress.downloadedBytes)} / ${
-                        formatBytes(progress.totalBytes)
-                    }",
+                    text = if (progress.totalBytes <= 0L) {
+                        "${formatBytes(progress.downloadedBytes)} / 未知大小"
+                    } else {
+                        "${(progress.progress * 100).toInt()}% - ${formatBytes(progress.downloadedBytes)} / ${formatBytes(progress.totalBytes)}"
+                    },
                     style = MaterialTheme.typography.bodyMedium.copy(
                         fontFeatureSettings = "tnum",
                     ),
