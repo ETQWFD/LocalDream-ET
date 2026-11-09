@@ -59,7 +59,10 @@ internal fun hideAnnounceLocal(context: Context, ts: Long) {
     val sp = context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
     val s = hiddenSet(context)
     s.add(ts.toString())
-    sp.edit().putStringSet("hidden_announce_ts", s).apply()
+    // et.161: 本地隐藏最多保留 50 条，老的自动清理，避免无限膨胀
+    val sorted = s.mapNotNull { it.toLongOrNull() }.sorted().toMutableSet()
+    while (sorted.size > 50) sorted.remove(sorted.first())
+    sp.edit().putStringSet("hidden_announce_ts", sorted.map { it.toString() }.toSet()).apply()
 }
 
 /** et.130追加11: home bell badge. Set/cleared by the dialog + startup popup. */

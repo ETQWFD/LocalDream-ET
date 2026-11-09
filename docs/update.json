@@ -1,9 +1,9 @@
 {
-  "versionCode": 234,
-  "versionName": "4.0.0-et.160",
-  "title": "发现新版本 v4.0.0-et.160",
-  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.160/LocalDream-ET.apk",
-  "size": 159986011,
-  "sha256": "b7d40979ad40ba036b91ecabcc6b467658594c66661bde7fcb302a07d78bcfc9",
-  "releaseNotes": "et.160：修复兑换卡密主线程网络请求导致的卡顿/闪退（ANR）；兑换改到 IO 线程。"
+  "versionCode": 235,
+  "versionName": "4.0.0-et.161",
+  "title": "发现新版本 v4.0.0-et.161",
+  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.161/LocalDream-ET.apk",
+  "size": 159986451,
+  "sha256": "6fed1bdc93ec94de573f05cab007f2e927f9423872573cd894c9f3cca95ee4d2",
+  "releaseNotes": "et.161：公告本地隐藏列表自动清理（最多 50 条，老公告不再被吞）；发布图片社区 15% 分成公告。"
 }
