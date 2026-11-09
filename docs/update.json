@@ -1,9 +1,9 @@
 {
-  "versionCode": 237,
-  "versionName": "4.0.0-et.163",
-  "title": "发现新版本 v4.0.0-et.163",
-  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.163/LocalDream-ET.apk",
-  "size": 159989855,
-  "sha256": "31d199480d17b34b4d50b97a051a6d60f36bc6a8298ee1fdf9479630d8b295c2",
-  "releaseNotes": "et.163：聊天输入框左侧 + 按钮可选图；消息里链接染成蓝色，点击跳浏览器。"
+  "versionCode": 238,
+  "versionName": "4.0.0-et.164",
+  "title": "发现新版本 v4.0.0-et.164",
+  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.164/LocalDream-ET.apk",
+  "size": 159991587,
+  "sha256": "3b7f2af0bfb9af63d0533e05df8001d335d4bf03493a9949d477a17926fd0929",
+  "releaseNotes": "et.164：启动时申请录音和媒体读取权限，为语音消息和图片选择做准备。"
 }

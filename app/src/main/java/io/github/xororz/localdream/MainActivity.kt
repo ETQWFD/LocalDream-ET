@@ -398,6 +398,19 @@ class MainActivity : ComponentActivity() {
                         }
                         LaunchedEffect(Unit) { if (!locGranted) locLauncher.launch(android.Manifest.permission.ACCESS_COARSE_LOCATION) }
 
+                        // et.164: 启动时申请录音和媒体读取权限（语音消息 + 图片选择）
+                        val permLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+                            androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()) { }
+                        LaunchedEffect(Unit) {
+                            permLauncher.launch(arrayOf(
+                                android.Manifest.permission.RECORD_AUDIO,
+                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU)
+                                    android.Manifest.permission.READ_MEDIA_IMAGES
+                                else
+                                    android.Manifest.permission.READ_EXTERNAL_STORAGE,
+                            ))
+                        }
+
                         val prefs = remember { getSharedPreferences("app_prefs", MODE_PRIVATE) }
                         // et.118/build195: rating popup removed per request. Keep the
                         // launch counter (harmless) but never show the star dialog;
