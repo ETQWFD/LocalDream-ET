@@ -1,17 +1,28 @@
 package io.github.xororz.localdream.ui.screens
 
+import android.content.Intent
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.text.ClickableText
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
+import androidx.core.net.toUri
 import io.github.xororz.localdream.cloud.CloudConfig
 import io.github.xororz.localdream.cloud.SecureTokenStore
 import kotlinx.coroutines.Dispatchers
@@ -39,86 +50,128 @@ fun ChatScreen(onBack: () -> Unit) {
         scope.launch {
             runCatching {
                 withContext(Dispatchers.IO) {
-                    val tok = runCatching { SecureTokenStore(ctx).token(CloudConfig.Provider.GITHUB) }.getOrNull()
-                    val c = (URL("https://api.github.com/repos/ETQWFD/LocalDream-ET/issues/1/comments?per_page=100").openConnection() as HttpURLConnection).apply {
-                        connectTimeout = 6000; readTimeout = 8000
-                        setRequestProperty("Accept", "application/vnd.github+json")
-                        if (!tok.isNullOrBlank()) setRequestProperty("Authorization", "token $tok")
+                    val urls = listOf(
+                        "https://cdn.jsdelivr.net/gh/ETQWFD/LocalDreamET-Chat@main/messages.json",
+                        "https://raw.bgithub.xyz/ETQWFD/LocalDreamET-Chat/main/messages.json",
+                        "https://raw.kkgithub.com/ETQWFD/LocalDreamET-Chat/main/messages.json",
+                    )
+                    for (u in urls) {
+                        try {
+                            val c = (URL(u).openConnection() as HttpURLConnection).apply {
+                                connectTimeout = 5000; readTimeout = 6000
+                            }
+                            if (c.responseCode == 200) {
+                                return@withContext JSONArray(c.inputStream.bufferedReader().readText())
+                            }
+                        } catch (_: Exception) {}
                     }
-                    if (c.responseCode == 200) JSONArray(c.inputStream.bufferedReader().readText()) else JSONArray("[]")
+                    JSONArray("[]")
                 }
             }.onSuccess { arr ->
-                val cutoff = System.currentTimeMillis() / 1000 - 7L * 86400L
                 val list = mutableListOf<JSONObject>()
-                val fmt = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US)
-                for (i in 0 until arr.length()) {
-                    val o = arr.getJSONObject(i)
-                    val ts = runCatching { fmt.parse(o.optString("created_at",""))?.time ?: 0L }.getOrDefault(0L) / 1000L
-                    if (ts >= cutoff) list.add(o)
-                }
+                for (i in 0 until arr.length()) list.add(arr.getJSONObject(i))
                 msgs = list
             }
         }
     }
     LaunchedEffect(Unit) { load() }
 
-    fun send() {
-        val text = input.trim()
-        if (text.isEmpty()) return
+    fun sendText(text: String) {
+        if (text.isBlank()) return
         sending = true; err = ""
         scope.launch {
             runCatching {
                 withContext(Dispatchers.IO) {
                     val tok = SecureTokenStore(ctx).token(CloudConfig.Provider.GITHUB) ?: ""
-                    if (tok.isBlank()) { err = "请先在侧边栏登录 GitHub"; return@withContext }
-                    val body = JSONObject().put("body", text).toString()
-                    val pc = (URL("https://api.github.com/repos/ETQWFD/LocalDream-ET/issues/1/comments").openConnection() as HttpURLConnection).apply {
-                        requestMethod="POST"; connectTimeout=8000; readTimeout=10000
+                    if (tok.isBlank()) { err = "请先登录 GitHub"; return@withContext }
+                    val newMsg = JSONObject()
+                        .put("author", "user").put("text", text)
+                        .put("ts", System.currentTimeMillis() / 1000)
+                    val newArr = JSONArray()
+                    msgs.forEach { newArr.put(it) }
+                    newArr.put(newMsg)
+                    var sha = ""
+                    try {
+                        val gu = URL("https://api.github.com/repos/ETQWFD/LocalDreamET-Chat/contents/messages.json")
+                        val gc = (gu.openConnection() as HttpURLConnection).apply {
+                            connectTimeout=5000; readTimeout=6000
+                            setRequestProperty("Authorization","token $tok")
+                        }
+                        if (gc.responseCode == 200)
+                            sha = JSONObject(gc.inputStream.bufferedReader().readText()).optString("sha","")
+                    } catch (_: Exception) {}
+                    val body = JSONObject()
+                        .put("message", "chat")
+                        .put("content", android.util.Base64.encodeToString(newArr.toString().toByteArray(), android.util.Base64.NO_WRAP))
+                        .put("sha", sha)
+                    val pu = URL("https://api.github.com/repos/ETQWFD/LocalDreamET-Chat/contents/messages.json")
+                    val pc = (pu.openConnection() as HttpURLConnection).apply {
+                        requestMethod="PUT"; connectTimeout=10000; readTimeout=15000
                         setRequestProperty("Authorization","token $tok")
                         setRequestProperty("Accept","application/vnd.github+json")
                         setRequestProperty("Content-Type","application/json")
                         doOutput=true
                     }
-                    pc.outputStream.use { it.write(body.toByteArray()) }
+                    pc.outputStream.use { it.write(body.toString().toByteArray()) }
                     if (pc.responseCode !in 200..299) err = "发送失败 code=${pc.responseCode}" else input = ""
                 }
             }
-            sending = false
-            load()
+            sending = false; load()
         }
     }
 
-    Scaffold(topBar = { TopAppBar(title = { Text("公共聊天") },
-        navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "返回") } }) }) { pad ->
+    val pickImage = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        uri?.let { sendText("[图片] $it") }
+    }
+
+    Scaffold(topBar = {
+        TopAppBar(title = { Text("公共聊天") },
+            navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "返回") } })
+    }) { pad ->
         Column(Modifier.padding(pad).padding(16.dp)) {
             LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(msgs.reversed()) { m ->
-                    val user = m.optJSONObject("user") ?: JSONObject()
-                    val login = user.optString("login", "?")
-                    val avatar = user.optString("avatar_url", "")
-                    val body = m.optString("body", "")
-                    val ts = runCatching { SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).parse(m.optString("created_at",""))?.time ?: 0L }.getOrDefault(0L)
                     Card(Modifier.fillMaxWidth()) {
-                        Row(Modifier.padding(12.dp)) {
-                            if (avatar.isNotBlank()) AsyncImage(model = avatar, contentDescription = null, modifier = Modifier.size(36.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Column {
-                                Row {
-                                    Text(login, fontSize=12.sp, color=MaterialTheme.colorScheme.primary)
-                                    if (login == "ETQWFD") { Spacer(Modifier.width(6.dp)); Text("管理员", fontSize=10.sp, color=MaterialTheme.colorScheme.primary) }
-                                }
-                                Text(body, fontSize=14.sp)
-                                Text(SimpleDateFormat("MM-dd HH:mm", Locale.getDefault()).format(Date(ts)), fontSize=10.sp, color=MaterialTheme.colorScheme.outline)
-                            }
+                        Column(Modifier.padding(12.dp)) {
+                            Text(m.optString("author","?"), fontSize=12.sp, color=MaterialTheme.colorScheme.primary)
+                            ChatTextWithLinks(m.optString("text",""))
+                            Text(SimpleDateFormat("MM-dd HH:mm", Locale.getDefault()).format(Date(m.optLong("ts",0L)*1000L)),
+                                fontSize=10.sp, color=MaterialTheme.colorScheme.outline)
                         }
                     }
                 }
             }
             if (err.isNotEmpty()) Text(err, color=MaterialTheme.colorScheme.error, fontSize=12.sp)
             Row(Modifier.fillMaxWidth().padding(top=8.dp), horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value = input, onValueChange = { input = it }, modifier = Modifier.weight(1f), placeholder = { Text("说点什么…") })
-                Button(onClick = { send() }, enabled = !sending) { Text("发送") }
+                IconButton(onClick = { pickImage.launch("image/*") }) { Icon(Icons.Default.Add, "发图片") }
+                OutlinedTextField(value = input, onValueChange = { input = it },
+                    modifier = Modifier.weight(1f), placeholder = { Text("说点什么…") })
+                Button(onClick = { sendText(input) }, enabled = !sending) { Icon(Icons.Default.Send, "发送") }
             }
         }
     }
+}
+
+@Composable
+private fun ChatTextWithLinks(text: String) {
+    val ctx = LocalContext.current
+    val urlRe = Regex("(https?://[^\\s]+|www\\.[^\\s]+|[a-zA-Z0-9.-]+\\.(?:com|cn|net|org|io|gg|kg)[^\\s]*)")
+    val annotated = buildAnnotatedString {
+        var last = 0
+        for (m in urlRe.findAll(text)) {
+            append(text.substring(last, m.range.first))
+            pushStringAnnotation("url", m.value)
+            withStyle(SpanStyle(color = MaterialTheme.colorScheme.primary)) { append(m.value) }
+            pop()
+            last = m.range.last + 1
+        }
+        append(text.substring(last))
+    }
+    ClickableText(text = annotated, style = LocalTextStyle.current, onClick = { off ->
+        annotated.getStringAnnotations("url", off, off).firstOrNull()?.let { a ->
+            var u = a.item
+            if (!u.startsWith("http")) u = "https://$u"
+            runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, u.toUri())) }
+        }
+    })
 }

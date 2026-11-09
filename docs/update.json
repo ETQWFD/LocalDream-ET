@@ -1,9 +1,9 @@
 {
-  "versionCode": 236,
-  "versionName": "4.0.0-et.162",
-  "title": "发现新版本 v4.0.0-et.162",
-  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.162/LocalDream-ET.apk",
-  "size": 159986551,
-  "sha256": "80c8dfeaeb864f01c7725b156e3bd874e9fc4d6d2e2a8bf8fd0f435641000783",
-  "releaseNotes": "et.162：下载进度在未知大小时显示「已下载 / 未知大小」，不再显示 0% - 0B / 0B。"
+  "versionCode": 237,
+  "versionName": "4.0.0-et.163",
+  "title": "发现新版本 v4.0.0-et.163",
+  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.163/LocalDream-ET.apk",
+  "size": 159989855,
+  "sha256": "31d199480d17b34b4d50b97a051a6d60f36bc6a8298ee1fdf9479630d8b295c2",
+  "releaseNotes": "et.163：聊天输入框左侧 + 按钮可选图；消息里链接染成蓝色，点击跳浏览器。"
 }
