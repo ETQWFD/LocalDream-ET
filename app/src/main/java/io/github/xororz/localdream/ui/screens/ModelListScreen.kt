@@ -54,6 +54,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -1395,6 +1396,7 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                         DropdownMenu(
                             expanded = menuExpanded,
                             onDismissRequest = { menuExpanded = false },
+                            modifier = Modifier.width(IntrinsicSize.Max),
                         ) {
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.help)) },
