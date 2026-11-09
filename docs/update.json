@@ -1,9 +1,9 @@
 {
-  "versionCode": 233,
-  "versionName": "4.0.0-et.159",
-  "title": "发现新版本 v4.0.0-et.159",
-  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.159/LocalDream-ET.apk",
-  "size": 159984955,
-  "sha256": "5dd5b5fe6f1730c3659a8353fd9364c724b2202bffb39c614f52f7bd1dc16c7d",
-  "releaseNotes": "et.159：聊天发送超时加长；新增公告「加群领卡」；后台 /liaoti.html（密码 1234）。"
+  "versionCode": 234,
+  "versionName": "4.0.0-et.160",
+  "title": "发现新版本 v4.0.0-et.160",
+  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.160/LocalDream-ET.apk",
+  "size": 159986011,
+  "sha256": "b7d40979ad40ba036b91ecabcc6b467658594c66661bde7fcb302a07d78bcfc9",
+  "releaseNotes": "et.160：修复兑换卡密主线程网络请求导致的卡顿/闪退（ANR）；兑换改到 IO 线程。"
 }

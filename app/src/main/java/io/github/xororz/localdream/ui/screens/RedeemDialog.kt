@@ -32,9 +32,12 @@ fun RedeemDialog(onDismiss: () -> Unit) {
                         return@TextButton
                     }
                     busy = true
-                    val result = kotlin.runCatching {
-                        io.github.xororz.localdream.service.RedemptionManager.redeem(context, input)
-                    }.getOrElse { RedemptionManager.Result.Invalid }
+                    // et.160: 兑换必须在 IO 线程，否则主线程网络请求会 ANR 闪退
+                    val result = kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.IO) {
+                        kotlin.runCatching {
+                            io.github.xororz.localdream.service.RedemptionManager.redeem(context, input)
+                        }.getOrElse { RedemptionManager.Result.Invalid }
+                    }
                     busy = false
                     when (result) {
                         is RedemptionManager.Result.Ok -> {
