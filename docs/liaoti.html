@@ -26,24 +26,25 @@ h2{margin:0 0 12px;font-size:18px}
 <body>
 <h2>公共聊天后台</h2>
 <div class="box" id="loginBox">
-  <p>请输入管理员密码</p>
-  <input type="password" id="pwd" placeholder="密码" onkeydown="if(event.key==='Enter')login()">
-  <button onclick="login()">登录</button>
+  <p>输入 GitHub 令牌确认身份（需 repo 权限，例如 ETQWFD 的令牌）</p>
+  <input type="password" id="tok" placeholder="ghp_… 或 github_pat_…" style="min-width:320px" onkeydown="if(event.key==='Enter')login()">
+  <button onclick="login()">确认令牌</button>
   <p class="err" id="loginErr"></p>
 </div>
 <div class="box" id="mainBox" style="display:none">
+  <p class="ok" id="who"></p>
   <div class="row">
     <input id="pat" type="password" placeholder="GitHub 令牌（需 repo 权限，用于禁言/管理员写入）" style="flex:1;min-width:260px">
     <button onclick="saveToken()">保存令牌</button>
     <button class="ghost" onclick="loadAll()">刷新</button>
   </div>
   <p class="err" id="status"></p>
-  <h2>成员（来自近 7 天聊天）</h2>
+  <h2>成员（所有使用过公共聊天的人）</h2>
   <div id="users"></div>
   <hr style="border-color:#334155;margin:16px 0">
-  <h2>消息列表（近 7 天）</h2>
+  <h2>消息列表（全部历史，最多显示最近 200 条）</h2>
   <div id="msgs"></div>
-  <p style="color:#94a3b8;font-size:12px">默认密码 1234；写入操作全部通过 GitHub Contents API，令牌只存在本机 localStorage。</p>
+  <p style="color:#94a3b8;font-size:12px">入口改为 GitHub 令牌确认；写入操作全部通过 Contents API，令牌只存在本机 localStorage。</p>
 </div>
 <script>
 const CHAT='ETQWFD/LocalDreamET-Chat';
@@ -51,15 +52,25 @@ let policy={admins:['ETQWFD'],mutes:{}};
 let messages=[];
 let pat=localStorage.getItem('ld_pat')||'';
 
-function login(){
-  const v=document.getElementById('pwd').value;
-  if(v==='1234'){
+async function login(){
+  const t=(document.getElementById('tok').value||pat||'').trim();
+  if(!t){ document.getElementById('loginErr').textContent='请输入 GitHub 令牌'; return }
+  try{
+    pat=t;
+    const r=await fetch('https://api.github.com/user',{headers:{Authorization:'Bearer '+pat}});
+    if(!r.ok) throw new Error('令牌无效或已过期 (HTTP '+r.status+')');
+    const u=await r.json();
+    // Verify the token can actually write this repo before showing the panel.
+    const c=await fetch('https://api.github.com/repos/'+CHAT+'/contents/admin.json',{headers:{Authorization:'Bearer '+pat}});
+    if(!c.ok && c.status!==404) throw new Error('该令牌没有 '+CHAT+' 的写权限 (HTTP '+c.status+')');
+    localStorage.setItem('ld_pat',pat);
     document.getElementById('loginBox').style.display='none';
     document.getElementById('mainBox').style.display='block';
     document.getElementById('pat').value=pat;
+    document.getElementById('who').textContent='当前令牌：'+u.login;
     loadAll();
-  } else {
-    document.getElementById('loginErr').textContent='密码错误';
+  }catch(e){
+    document.getElementById('loginErr').textContent=e.message;
   }
 }
 function saveToken(){
@@ -132,14 +143,13 @@ function muteLeft(u){
   return Math.max(0,until-Date.now()/1000);
 }
 function renderUsers(){
-  const cutoff=Date.now()/1000-7*86400;
   const seen=new Map();
-  messages.filter(m=>m.ts>=cutoff).forEach(m=>{
+  messages.forEach(m=>{
     if(!m.author) return;
     if(!seen.has(m.author)) seen.set(m.author,{last:m.ts,avatar:m.avatar||''});
     else if(m.ts>seen.get(m.author).last) seen.get(m.author).last=m.ts;
   });
-  if(!seen.size){ document.getElementById('users').innerHTML='<p class="err">近 7 天没有发言用户</p>'; return }
+  if(!seen.size){ document.getElementById('users').innerHTML='<p class="err">还没有人使用过公共聊天</p>'; return }
   let html='';
   for(const [name,info] of seen){
     const admin=isAdmin(name);
@@ -156,15 +166,14 @@ function renderUsers(){
   document.getElementById('users').innerHTML=html;
 }
 function renderMsgs(){
-  const cutoff=Date.now()/1000-7*86400;
-  const list=messages.filter(m=>m.ts>=cutoff).slice().reverse();
+  const list=messages.slice().reverse().slice(0,200);
   document.getElementById('msgs').innerHTML=list.map(m=>{
     const left=muteLeft(m.author);
     return '<div class="msg"><div style="flex:1"><b>'+esc(m.author)+'</b>'
       + (isAdmin(m.author)?'<span class="admin">管理员</span>':'')
       + (left>0?'<span class="muted">禁言中</span>':'')
       + '<span class="ts">'+fmt(m.ts)+'</span><br>'+esc(m.text||('['+(m.kind||'MEDIA')+']'))+'</div></div>'
-  }).join('')||'<p class="err">近 7 天无消息</p>';
+  }).join('')||'<p class="err">暂无消息</p>';
 }
 async function writePolicy(){
   if(!pat) { setStatus('请先填写 GitHub 令牌（必须是有 repo 写权限的账号，例如 ETQWFD）',false); return false }

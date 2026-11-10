@@ -184,7 +184,7 @@ fun ChatScreen(onBack: () -> Unit) {
         }
     }
 
-    fun post(message: ChatMessage) {
+    fun post(message: ChatMessage, clearInput: Boolean = true) {
         sending = true
         status = ""
         scope.launch {
@@ -192,7 +192,8 @@ fun ChatScreen(onBack: () -> Unit) {
             sending = false
             result.onSuccess {
                 messages = messages + message
-                input = ""
+                // Media sends must not eat the text the user is still drafting.
+                if (clearInput) input = ""
                 refresh()
             }.onFailure {
                 status = it.message ?: "发送失败"
@@ -256,6 +257,7 @@ fun ChatScreen(onBack: () -> Unit) {
                     cdnUrl = up.cdn,
                     avatar = meAvatar,
                 ),
+                clearInput = false,
             )
         }
     }
@@ -326,6 +328,7 @@ fun ChatScreen(onBack: () -> Unit) {
                     durationSec = seconds,
                     avatar = meAvatar,
                 ),
+                clearInput = false,
             )
         }
     }
@@ -389,6 +392,7 @@ fun ChatScreen(onBack: () -> Unit) {
                     durationSec = seconds,
                     avatar = meAvatar,
                 ),
+                clearInput = false,
             )
         }
     }
@@ -477,11 +481,7 @@ fun ChatScreen(onBack: () -> Unit) {
         if (uri != null) {
             scope.launch {
                 localPreview = withContext(Dispatchers.IO) {
-                    runCatching {
-                        ctx.contentResolver.openInputStream(uri)?.use {
-                            android.graphics.BitmapFactory.decodeStream(it)
-                        }
-                    }.getOrNull()
+                    io.github.xororz.localdream.utils.ImageDecode.decodeSampledUri(ctx, uri, 1024)
                 }
             }
             sendImage(uri)

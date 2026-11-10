@@ -269,7 +269,7 @@ fun HistoryScreen(navController: NavController) {
         val imagePath = item.imageFile.absolutePath
         val previewBitmap by produceState<Bitmap?>(null, imagePath) {
             value = withContext(Dispatchers.IO) {
-                BitmapFactory.decodeFile(imagePath)
+                io.github.xororz.localdream.utils.ImageDecode.decodeSampledFile(imagePath, 1280)
             }
         }
         ZoomableImageOverlay(

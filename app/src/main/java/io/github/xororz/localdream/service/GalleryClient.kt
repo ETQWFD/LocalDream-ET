@@ -278,7 +278,14 @@ object GalleryClient {
                 val api = "$API/png/$stem.meta.json"
                 val (apiCode, apiText) = http(api, "GET")
                 if (apiCode == 200) {
-                    return@async stem to (try { JSONObject(apiText) } catch (_: Exception) { null })
+                    // The Contents API wraps the file in a JSON envelope; decode
+                    // its base64 payload before parsing the meta itself.
+                    val obj = runCatching { JSONObject(apiText) }.getOrNull()
+                    val b64 = obj?.optString("content", "")?.replace("\n", "").orEmpty()
+                    val meta = runCatching {
+                        JSONObject(String(Base64.getDecoder().decode(b64), Charsets.UTF_8))
+                    }.getOrNull()
+                    return@async stem to meta
                 }
                 val urls = META_BASES.map { "$it/png/$stem.meta.json" }
                 val (code, text) = httpAny(urls)

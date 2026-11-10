@@ -317,9 +317,7 @@ private fun UploadDialog(ctx: Context, onPublished: () -> Unit = {}, onDismiss: 
         if (uri != null) {
             pickedFile = null
             pickedUri = uri
-            pickedBitmap = runCatching {
-                ctx.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it) }
-            }.getOrNull()
+            pickedBitmap = io.github.xororz.localdream.utils.ImageDecode.decodeSampledUri(ctx, uri, 1024)
         }
     }
 
@@ -534,7 +532,7 @@ private fun encodeForGallery(ctx: Context, uri: Uri?, file: File?): ByteArray? {
             val opts = BitmapFactory.Options().apply { inSampleSize = sample }
             ctx.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, opts) }
         } else if (file != null) {
-            BitmapFactory.decodeFile(file.absolutePath)
+            io.github.xororz.localdream.utils.ImageDecode.decodeSampledFile(file.absolutePath, 2048)
         } else {
             null
         }) ?: return null
