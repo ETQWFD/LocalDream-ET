@@ -41,7 +41,7 @@ object ChatRepository {
     private const val MEDIA_DIR = "media"
 
     /** GitHub's contents API rejects files above 100 MB; keep a margin. */
-    const val MAX_VIDEO_BYTES = 15L * 1024 * 1024
+    const val MAX_VIDEO_BYTES = 100L * 1024 * 1024
     const val MAX_AUDIO_BYTES = 8L * 1024 * 1024
 
     private val client = OkHttpClient.Builder()
@@ -206,6 +206,9 @@ object ChatRepository {
                 }
             }
             MediaUpload(rawUrl(path), cdnUrl(path), "")
+        } catch (e: OutOfMemoryError) {
+            // A 100 MB clip becomes ~133 MB of base64; low-RAM phones can die.
+            MediaUpload(null, null, "视频过大，内存不足，请压缩后再发")
         } catch (e: Exception) {
             MediaUpload(null, null, e.message ?: e.javaClass.simpleName)
         }
