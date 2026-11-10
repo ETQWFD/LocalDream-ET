@@ -124,7 +124,7 @@ object ChatMerge {
     }
 
     /** Messages newest-last, trimmed to the newest [limit] entries. */
-    fun latest(list: List<ChatMessage>, limit: Int = 300): List<ChatMessage> =
+    fun latest(list: List<ChatMessage>, limit: Int = 500): List<ChatMessage> =
         dedupe(list).takeLast(limit.coerceAtLeast(1))
 }
 

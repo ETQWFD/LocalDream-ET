@@ -167,7 +167,7 @@ function renderMsgs(){
   }).join('')||'<p class="err">近 7 天无消息</p>';
 }
 async function writePolicy(){
-  if(!pat) { setStatus('请先填写 GitHub 令牌（repo 权限）',false); return false }
+  if(!pat) { setStatus('请先填写 GitHub 令牌（必须是有 repo 写权限的账号，例如 ETQWFD）',false); return false }
   try{
     let sha='';
     try{
@@ -182,8 +182,13 @@ async function writePolicy(){
       headers:{Authorization:'Bearer '+pat,'Accept':'application/vnd.github+json','Content-Type':'application/json'},
       body:JSON.stringify(body)
     });
-    if(!r.ok) throw new Error('写入失败 HTTP '+r.status);
-    setStatus('已保存到仓库',true);
+    if(!r.ok){
+      const hint = (r.status===401||r.status===403||r.status===404)
+        ? '（令牌没有该仓库写权限，请换成 ETQWFD 的 repo 令牌）'
+        : (r.status===409 ? '（仓库同时被修改，请再点一次）' : '');
+      throw new Error('写入失败 HTTP '+r.status+hint);
+    }
+    setStatus('已保存到仓库，App 端约 30 秒内自动生效',true);
     return true;
   }catch(e){ setStatus(e.message,false); return false }
 }

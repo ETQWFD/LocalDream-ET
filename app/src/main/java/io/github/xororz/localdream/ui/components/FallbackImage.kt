@@ -1,6 +1,7 @@
 package io.github.xororz.localdream.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
@@ -10,6 +11,9 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import coil.compose.AsyncImage
 
@@ -28,14 +32,31 @@ fun FallbackImage(
     contentDescription: String?,
     modifier: Modifier = Modifier,
     contentScale: ContentScale = ContentScale.Crop,
+    zoomable: Boolean = false,
 ) {
     var index by remember(urls) { mutableIntStateOf(0) }
+    var scale by remember { androidx.compose.runtime.mutableFloatStateOf(1f) }
+    var offset by remember { androidx.compose.runtime.mutableStateOf(Offset.Zero) }
     Box(modifier = modifier.background(MaterialTheme.colorScheme.surfaceContainerHighest)) {
         AsyncImage(
             model = urls.getOrNull(index),
             contentDescription = contentDescription,
             contentScale = contentScale,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize().then(
+                if (!zoomable) Modifier else Modifier
+                    .pointerInput(Unit) {
+                        detectTransformGestures { _, pan, zoom, _ ->
+                            scale = (scale * zoom).coerceIn(1f, 5f)
+                            offset = if (scale <= 1f) Offset.Zero else offset + pan
+                        }
+                    }
+                    .graphicsLayer(
+                        scaleX = scale,
+                        scaleY = scale,
+                        translationX = offset.x,
+                        translationY = offset.y,
+                    )
+            ),
             onError = {
                 when {
                     index < urls.lastIndex -> index++

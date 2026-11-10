@@ -161,12 +161,19 @@ fun ChatScreen(onBack: () -> Unit) {
 
     // Everyone should see new messages without pressing refresh: poll gently.
     LaunchedEffect(Unit) {
+        var tick = 0
         while (true) {
-            delay(5_000)
+            delay(3_000)
             if (!sending) {
                 val loaded = withContext(Dispatchers.IO) { ChatRepository.load(ctx) }
-                messages = ChatWindow.recent(loaded)
+                if (loaded.isNotEmpty()) messages = ChatWindow.recent(loaded)
             }
+            // Pick up admin/mute changes made in the backend without a restart.
+            if (tick % 10 == 0) {
+                val fresh = withContext(Dispatchers.IO) { ChatPolicyRepo.load() }
+                if (fresh != null) policy = fresh
+            }
+            tick++
         }
     }
 
@@ -828,6 +835,27 @@ fun ChatScreen(onBack: () -> Unit) {
                     val iAmAdmin = policy.isAdmin(meLogin)
                     val targetIsAdmin = policy.isAdmin(target.author)
                     val isSelf = ChatIdentity.isMine(target.author, meLogin)
+                    if (iAmAdmin && !isSelf && target.author.isNotBlank() && target.author != "ETQWFD") {
+                        HorizontalDivider()
+                        TextButton(onClick = {
+                            actionFor = null
+                            scope.launch {
+                                val admins = policy.admins.toMutableSet()
+                                if (targetIsAdmin) admins.remove(target.author) else admins.add(target.author)
+                                val newPolicy = policy.copy(admins = admins)
+                                ChatPolicyRepo.save(ctx, newPolicy).onSuccess {
+                                    policy = newPolicy
+                                    Toast.makeText(
+                                        ctx,
+                                        if (targetIsAdmin) "已取消 ${target.author} 的管理员" else "已设为管理员：${target.author}",
+                                        Toast.LENGTH_SHORT,
+                                    ).show()
+                                }.onFailure { status = it.message ?: "管理员设置失败" }
+                            }
+                        }, modifier = Modifier.fillMaxWidth()) {
+                            Text(if (targetIsAdmin) "取消管理员" else "设为管理员")
+                        }
+                    }
                     if (iAmAdmin && !targetIsAdmin && !isSelf) {
                         HorizontalDivider()
                         Text(
@@ -889,12 +917,35 @@ fun ChatScreen(onBack: () -> Unit) {
                             WebView(c).apply {
                                 settings.javaScriptEnabled = true
                                 settings.domStorageEnabled = true
-                                webViewClient = WebViewClient()
+                                settings.useWideViewPort = true
+                                settings.loadWithOverviewMode = true
+                                settings.builtInZoomControls = true
+                                settings.displayZoomControls = false
+                                webViewClient = object : WebViewClient() {
+                                    override fun onReceivedError(
+                                        view: WebView?,
+                                        request: android.webkit.WebResourceRequest?,
+                                        error: android.webkit.WebResourceError?,
+                                    ) {
+                                        Toast.makeText(ctx, "网页加载失败：${error?.description ?: "网络错误"}", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                                android.webkit.WebChromeClient()
                             }
                         },
                         update = { it.loadUrl(url) },
                         modifier = Modifier.fillMaxWidth().height(460.dp),
                     )
+                    TextButton(
+                        onClick = {
+                            runCatching {
+                                ctx.startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
+                            }.onFailure {
+                                Toast.makeText(ctx, "没有可用的浏览器", Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { Text("用系统浏览器打开") }
                 }
             }
         }
@@ -909,6 +960,7 @@ fun ChatScreen(onBack: () -> Unit) {
                         contentDescription = "查看大图",
                         modifier = Modifier.fillMaxWidth().heightIn(max = 520.dp),
                         contentScale = ContentScale.Fit,
+                        zoomable = true,
                     )
                     IconButton(onClick = { viewerImages = emptyList() }) {
                         Icon(Icons.Default.Close, contentDescription = "关闭")
@@ -930,7 +982,29 @@ fun ChatScreen(onBack: () -> Unit) {
  */
 @Composable
 private fun InAppVideoDialog(urls: List<String>, onDismiss: () -> Unit) {
+    val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
     var index by remember(urls) { mutableIntStateOf(0) }
+    var downloadTrigger by remember(urls) { mutableIntStateOf(0) }
+    var localFile by remember(urls) { mutableStateOf<java.io.File?>(null) }
+    var failed by remember(urls) { mutableStateOf(false) }
+
+    // If every mirror refuses to stream, pull the clip through the
+    // authenticated API and play the local file (MediaPlayer handles it).
+    LaunchedEffect(downloadTrigger) {
+        if (downloadTrigger == 0) return@LaunchedEffect
+        val bytes = withContext(Dispatchers.IO) { ChatRepository.fetchRepoFile(urls.lastOrNull()) }
+        if (bytes == null || bytes.isEmpty()) {
+            failed = true
+            return@LaunchedEffect
+        }
+        val f = withContext(Dispatchers.IO) {
+            java.io.File(ctx.cacheDir, "video_play_${System.currentTimeMillis()}.mp4")
+                .also { it.writeBytes(bytes) }
+        }
+        localFile = f
+    }
+
     Dialog(onDismissRequest = onDismiss) {
         Surface(shape = MaterialTheme.shapes.large) {
             Box(contentAlignment = Alignment.TopEnd) {
@@ -942,19 +1016,36 @@ private fun InAppVideoDialog(urls: List<String>, onDismiss: () -> Unit) {
                             setMediaController(controller)
                             setOnPreparedListener { controller.show() }
                             setOnErrorListener { _, _, _ ->
-                                if (index < urls.lastIndex) index += 1
+                                if (index < urls.lastIndex) {
+                                    index += 1
+                                } else if (localFile == null) {
+                                    downloadTrigger += 1
+                                } else {
+                                    failed = true
+                                }
                                 true
                             }
                         }
                     },
                     update = { view ->
                         runCatching {
-                            view.setVideoURI(android.net.Uri.parse(urls[index]))
-                            view.start()
+                            val src = localFile?.absolutePath ?: urls.getOrNull(index)
+                            if (src != null) {
+                                view.setVideoURI(android.net.Uri.parse(src))
+                                view.start()
+                            }
                         }
                     },
                     modifier = Modifier.fillMaxWidth().height(320.dp),
                 )
+                if (failed) {
+                    Text(
+                        "视频加载失败，请检查网络后重试",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.labelSmall,
+                        modifier = Modifier.align(Alignment.BottomCenter).padding(8.dp),
+                    )
+                }
                 IconButton(onClick = onDismiss) {
                     Icon(Icons.Default.Close, contentDescription = "关闭")
                 }

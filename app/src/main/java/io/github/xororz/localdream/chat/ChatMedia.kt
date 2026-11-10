@@ -139,6 +139,21 @@ object ChatRepository {
 
     /** Loads the log; never throws, returns an empty list on total failure. */
     suspend fun load(context: Context): List<ChatMessage> = withContext(Dispatchers.IO) {
+        // The authenticated Contents API is the authoritative read: raw/CDN
+        // mirrors can serve a stale copy for minutes, which is why messages
+        // "did not arrive" until the user pressed refresh.
+        runCatching {
+            val api = "https://api.github.com/repos/$OWNER/$REPO/contents/$FILE"
+            val (code, text) = readWithToken(api, BuildConfig.GALLERY_TOKEN)
+            if (code == 200) {
+                val obj = JSONObject(text)
+                val b64 = obj.optString("content", "").replace("\n", "")
+                if (b64.isNotBlank()) {
+                    val body = String(Base64.getDecoder().decode(b64), Charsets.UTF_8)
+                    return@withContext ChatMerge.latest(ChatMessage.listFromJson(body))
+                }
+            }
+        }
         // Cache-buster defeats the CDN's few-minutes staleness after a write.
         val bust = System.currentTimeMillis()
         for ((i, url) in READ_URLS.withIndex()) {

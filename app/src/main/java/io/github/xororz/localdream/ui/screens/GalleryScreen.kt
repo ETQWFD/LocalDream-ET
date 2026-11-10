@@ -119,6 +119,14 @@ fun GalleryScreen(navController: NavController) {
         }
     }
 
+    // Other people's uploads should appear without a manual refresh.
+    LaunchedEffect(Unit) {
+        while (true) {
+            kotlinx.coroutines.delay(15_000)
+            if (!loading && !showUpload) items = GalleryClient.list(true)
+        }
+    }
+
     LaunchedEffect(Unit) {
         io.github.xororz.localdream.service.SharedRepos.ensure(ctx)
         reload(false)
@@ -211,6 +219,9 @@ fun GalleryScreen(navController: NavController) {
     }
     if (showUpload) UploadDialog(ctx, onPublished = {
         GalleryClient.invalidate()
+        // Refresh behind the dialog immediately, so closing it shows the new
+        // picture instead of an old cached list.
+        reload(true)
     }) {
         showUpload = false
         // et.168: invalidate the in-memory list so the freshly uploaded picture
@@ -568,6 +579,7 @@ private fun PreviewDialog(ctx: Context, item: GalleryClient.GalleryItem, onDismi
                     contentDescription = item.name,
                     modifier = Modifier.fillMaxWidth().height(280.dp),
                     contentScale = ContentScale.Fit,
+                    zoomable = true,
                 )
                 Spacer(Modifier.height(8.dp))
                 Text("作者：${item.author}", style = MaterialTheme.typography.bodyMedium)
