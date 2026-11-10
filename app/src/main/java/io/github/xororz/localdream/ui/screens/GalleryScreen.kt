@@ -16,7 +16,9 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -98,6 +100,13 @@ fun GalleryScreen(navController: NavController) {
     var showUpload by remember { mutableStateOf(false) }
     var showFav by remember { mutableStateOf(false) }
     var q by remember { mutableStateOf("") }
+    // et.168: 图片社区整页禁止截图/录屏（预览弹窗另有同样保护），
+    // 公共聊天不再被全局 FLAG_SECURE 连坐。
+    DisposableEffect(Unit) {
+        val activity = ctx as? android.app.Activity
+        activity?.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
+        onDispose { activity?.window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE) }
+    }
     var showWarn by remember { mutableStateOf(!FavoriteStore.seenWarning(ctx)) }
     var previewItem by remember { mutableStateOf<GalleryClient.GalleryItem?>(null) }
 
@@ -283,6 +292,7 @@ private fun UploadDialog(ctx: Context, onDismiss: () -> Unit) {
     var msg by remember { mutableStateOf("") }
     var uploading by remember { mutableStateOf(false) }
     var showPicker by remember { mutableStateOf(false) }
+    var progress by remember { mutableFloatStateOf(-1f) }
     var pickedUri by remember { mutableStateOf<Uri?>(null) }
     var pickedBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var pickedFile by remember { mutableStateOf<File?>(null) }
@@ -386,13 +396,42 @@ private fun UploadDialog(ctx: Context, onDismiss: () -> Unit) {
                         }
                     }
                 }
+                if (uploading) {
+                    Spacer(Modifier.height(8.dp))
+                    if (progress >= 0f) {
+                        LinearProgressIndicator(
+                            progress = { progress.coerceIn(0f, 1f) },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        Text(
+                            "上传中 ${(progress * 100).toInt()}%",
+                            style = MaterialTheme.typography.labelSmall,
+                        )
+                    } else {
+                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                        Text("正在压缩图片…", style = MaterialTheme.typography.labelSmall)
+                    }
+                }
                 if (msg.isNotEmpty()) {
                     Spacer(Modifier.height(6.dp))
                     Text(msg, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                 }
                 Spacer(Modifier.height(16.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TextButton(onClick = onDismiss, enabled = !uploading) { Text("取消") }
+                    if (uploading) {
+                        TextButton(onClick = {
+                            GalleryClient.cancelUpload()
+                            uploading = false
+                            progress = -1f
+                            msg = "已取消上传"
+                        }) {
+                            Icon(Icons.Default.Close, contentDescription = "取消上传", modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text("取消上传")
+                        }
+                    } else {
+                        TextButton(onClick = onDismiss) { Text("取消") }
+                    }
                     Button(enabled = !uploading, onClick = {
                         val p = price.toIntOrNull() ?: 0
                         when {
@@ -400,7 +439,8 @@ private fun UploadDialog(ctx: Context, onDismiss: () -> Unit) {
                             pickedUri == null && pickedFile == null -> msg = "请先选择图片"
                             else -> {
                                 uploading = true
-                                msg = "正在上传…"
+                                msg = "正在压缩并上传…"
+                                progress = -1f
                                 scope.launch {
                                     val bytes = withContext(Dispatchers.IO) {
                                         encodeForGallery(ctx, pickedUri, pickedFile)
@@ -411,13 +451,22 @@ private fun UploadDialog(ctx: Context, onDismiss: () -> Unit) {
                                         return@launch
                                     }
                                     val author = login ?: "ETQWFD"
+                                    var lastPct = -1
                                     val res = GalleryClient.upload(
                                         bytes,
                                         author = author,
                                         price = p,
                                         name = name.ifBlank { "作品" },
                                         userToken = token,
+                                        onProgress = { v ->
+                                            val pct = (v * 100).toInt().coerceIn(0, 100)
+                                            if (pct != lastPct) {
+                                                lastPct = pct
+                                                progress = v
+                                            }
+                                        },
                                     )
+                                    progress = -1f
                                     uploading = false
                                     msg = if (res.ok) {
                                         if (res.reason.isBlank()) "发布成功" else res.reason

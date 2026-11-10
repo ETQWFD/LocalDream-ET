@@ -193,9 +193,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // et.165: 防止截图/录屏（含图片社区、聊天内容）
-        window.setFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE,
-            android.view.WindowManager.LayoutParams.FLAG_SECURE)
+        // et.168: 只有图片社区需要防截图/录屏；全局 FLAG_SECURE 会把公共聊天
+        // 也一起锁死，导致用户“聊天不能截图”。聊天保持可截图，社区页单独加锁
+        // （见 GalleryScreen 的 DisposableEffect）。
         // et.109: global crash handler — dump stack to clipboard, toast feedback, no silent crash.
         val prev = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { t, e ->

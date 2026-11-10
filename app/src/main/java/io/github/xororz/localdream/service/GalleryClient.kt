@@ -1,6 +1,7 @@
 package io.github.xororz.localdream.service
 
 import io.github.xororz.localdream.BuildConfig
+import io.github.xororz.localdream.net.ProgressBody
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -11,6 +12,10 @@ import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.Base64
+import java.util.concurrent.TimeUnit
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
 
 /**
  * et.132: public image gallery backed by the public repo ETQWFD/LocalDreamET-Gallery.
@@ -26,6 +31,50 @@ import java.util.Base64
  *     contents API 触发 403 限流导致列表为空。
  */
 object GalleryClient {
+    /** Upload in flight, exposed so the UI can cancel it with a real cross. */
+    @Volatile
+    private var uploadCall: okhttp3.Call? = null
+
+    fun cancelUpload() {
+        runCatching { uploadCall?.cancel() }
+        uploadCall = null
+    }
+
+    private val uploadHttp = OkHttpClient.Builder()
+        .connectTimeout(10, TimeUnit.SECONDS)
+        .writeTimeout(90, TimeUnit.SECONDS)
+        .readTimeout(30, TimeUnit.SECONDS)
+        .build()
+
+    /** PUT with byte-level progress; cancellation goes through uploadCall. */
+    private fun putWithProgress(
+        url: String,
+        bytes: ByteArray,
+        token: String,
+        onProgress: ((Float) -> Unit)?,
+    ): Pair<Int, String> {
+        return try {
+            val body = ProgressBody(bytes, "application/json".toMediaType(), onProgress)
+            val call = uploadHttp.newCall(
+                Request.Builder().url(url)
+                    .put(body)
+                    .addHeader("Authorization", "token $token")
+                    .addHeader("Accept", "application/vnd.github+json")
+                    .addHeader("User-Agent", "LocalDream-ET")
+                    .build(),
+            )
+            uploadCall = call
+            call.execute().use { resp ->
+                resp.code to resp.body?.string().orEmpty()
+            }
+        } catch (e: Exception) {
+            val cancelled = e.message?.contains("Canceled") == true
+            -1 to (if (cancelled) "已取消上传" else (e.message ?: e.javaClass.simpleName))
+        } finally {
+            uploadCall = null
+        }
+    }
+
     // et.153: 内存缓存，第二次进入社区秒开；下拉刷新时清空。
     @Volatile
     private var cached: List<GalleryItem>? = null
@@ -127,7 +176,7 @@ object GalleryClient {
             -1 -> "网络异常"
             401 -> "上传令牌无效或已过期"
             403 -> "GitHub 拒绝访问（限流或令牌无仓库写权限）"
-            404 -> "仓库或目录不存在"
+            404 -> "仓库/目录不存在或令牌无写权限（HTTP 404）"
             409 -> "文件冲突，请重试"
             422 -> "GitHub 校验失败（内容或文件名不合法）"
             else -> "HTTP $code"
@@ -222,6 +271,7 @@ object GalleryClient {
         price: Int,
         name: String,
         userToken: String? = null,
+        onProgress: ((Float) -> Unit)? = null,
     ): UploadResult = withContext(Dispatchers.IO) {
         try {
             // et.168: the baked-in owner token is only a fallback. A signed-in
@@ -239,8 +289,15 @@ object GalleryClient {
                 .put("message", "upload $id")
                 .put("content", Base64.getEncoder().encodeToString(pngBytes))
                 .toString().toByteArray()
-            val (c1, t1) = httpWithToken("$API/png/pic_$id.png", "PUT", imgBody, token)
-            if (c1 !in 200..201) return@withContext UploadResult(false, brief(c1, t1))
+            val (c1, t1) = putWithProgress("$API/png/pic_$id.png", imgBody, token, onProgress)
+            if (c1 == -1 && t1 == "已取消上传") return@withContext UploadResult(false, "已取消上传")
+            if (c1 !in 200..201) {
+                return@withContext UploadResult(
+                    false,
+                    brief(c1, t1) + (if (c1 == 404) "（请确认内置令牌有 repo 写权限）" else ""),
+                )
+            }
+            onProgress?.invoke(1f)
 
             val meta = JSONObject().put("author", author).put("price", price)
                 .put("ts", System.currentTimeMillis())
@@ -248,7 +305,7 @@ object GalleryClient {
             val metaBody = JSONObject().put("message", "meta $id")
                 .put("content", Base64.getEncoder().encodeToString(meta.toString().toByteArray()))
                 .toString().toByteArray()
-            val (c2, t2) = httpWithToken("$API/png/pic_$id.meta.json", "PUT", metaBody, token)
+            val (c2, t2) = putWithProgress("$API/png/pic_$id.meta.json", metaBody, token, null)
             if (c2 !in 200..201) {
                 // 图片已落库但 meta 失败：仍算发布成功，价格/作者稍后补
                 return@withContext UploadResult(true, "作品已上传，但作品信息写入失败：${brief(c2, t2)}")

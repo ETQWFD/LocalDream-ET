@@ -9,6 +9,7 @@ import androidx.core.content.edit
 import io.github.xororz.localdream.BuildConfig
 import io.github.xororz.localdream.cloud.CloudConfig
 import io.github.xororz.localdream.cloud.SecureTokenStore
+import io.github.xororz.localdream.net.ProgressBody
 import java.io.File
 import java.util.Base64
 import java.util.concurrent.TimeUnit
@@ -43,6 +44,15 @@ object ChatRepository {
     /** GitHub's contents API rejects files above 100 MB; keep a margin. */
     const val MAX_VIDEO_BYTES = 100L * 1024 * 1024
     const val MAX_AUDIO_BYTES = 8L * 1024 * 1024
+
+    /** The upload currently in flight, so the UI can offer a real cancel. */
+    @Volatile
+    private var activeCall: okhttp3.Call? = null
+
+    fun cancelUpload() {
+        runCatching { activeCall?.cancel() }
+        activeCall = null
+    }
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(8, TimeUnit.SECONDS)
@@ -148,11 +158,14 @@ object ChatRepository {
                         lastError = when (resp.code) {
                             401 -> "GitHub 令牌无效或已过期"
                             403 -> "GitHub 拒绝写入（令牌缺少 repo 权限或被限流）"
+                            404 -> "聊天仓库不存在或令牌无写权限（HTTP 404）"
                             409 -> "有人同时发言，正在重试…"
                             422 -> "消息格式被 GitHub 拒绝"
                             else -> "发送失败 HTTP ${resp.code}"
                         }
-                        if (resp.code == 403) return@withContext Result.failure(IllegalStateException(lastError))
+                        if (resp.code == 403 || resp.code == 404) {
+                            return@withContext Result.failure(IllegalStateException(lastError))
+                        }
                     }
                 } catch (e: Exception) {
                     lastError = e.message ?: e.javaClass.simpleName
@@ -172,6 +185,7 @@ object ChatRepository {
         bytes: ByteArray,
         extension: String,
         kindTag: String,
+        onProgress: ((Float) -> Unit)? = null,
     ): MediaUpload = withContext(Dispatchers.IO) {
         val token = writeToken(context)
         if (token.isBlank()) {
@@ -181,11 +195,13 @@ object ChatRepository {
         val safeExt = extension.lowercase().filter { it.isLetterOrDigit() }.ifBlank { "bin" }
         val path = "$MEDIA_DIR/${kindTag}_${System.currentTimeMillis()}_${(1000..9999).random()}.$safeExt"
         try {
-            val body = JSONObject()
+            val json = JSONObject()
                 .put("message", "media: $path")
                 .put("content", Base64.getEncoder().encodeToString(bytes))
                 .toString()
-                .toRequestBody("application/json".toMediaType())
+                .toByteArray()
+            // Report progress on the raw base64 payload (that is what is sent).
+            val body = ProgressBody(json, "application/json".toMediaType(), onProgress)
             val req = Request.Builder()
                 .url("https://api.github.com/repos/$OWNER/$REPO/contents/$path")
                 .put(body)
@@ -193,24 +209,32 @@ object ChatRepository {
                 .addHeader("Accept", "application/vnd.github+json")
                 .addHeader("User-Agent", "LocalDream-ET")
                 .build()
-            client.newCall(req).execute().use { resp ->
+            val call = client.newCall(req)
+            activeCall = call
+            call.execute().use { resp ->
                 if (!resp.isSuccessful) {
                     val detail = resp.body?.string().orEmpty()
                     val reason = when (resp.code) {
-                        401 -> "上传令牌无效"
-                        403 -> "令牌无仓库写权限"
+                        401 -> "上传令牌无效，请到设置重新登录 GitHub"
+                        403 -> "令牌无仓库写权限（需要 repo 权限）"
+                        404 -> "聊天仓库不存在或令牌无写权限（HTTP 404）"
                         413 -> "文件太大，GitHub 拒绝接收"
                         else -> "上传失败 HTTP ${resp.code} ${detail.take(80)}"
                     }
                     return@withContext MediaUpload(null, null, reason)
                 }
             }
+            onProgress?.invoke(1f)
             MediaUpload(rawUrl(path), cdnUrl(path), "")
+        } catch (e: java.io.IOException) {
+            MediaUpload(null, null, if (e.message?.contains("Canceled") == true) "已取消上传" else (e.message ?: "网络错误"))
         } catch (e: OutOfMemoryError) {
             // A 100 MB clip becomes ~133 MB of base64; low-RAM phones can die.
             MediaUpload(null, null, "视频过大，内存不足，请压缩后再发")
         } catch (e: Exception) {
             MediaUpload(null, null, e.message ?: e.javaClass.simpleName)
+        } finally {
+            activeCall = null
         }
     }
 

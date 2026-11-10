@@ -17,6 +17,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -36,6 +37,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
@@ -94,6 +96,7 @@ fun ChatScreen(onBack: () -> Unit) {
     var recording by remember { mutableStateOf(false) }
     var recordSeconds by remember { mutableIntStateOf(0) }
     var uploadingVoice by remember { mutableStateOf(false) }
+    var uploadProgress by remember { mutableFloatStateOf(-1f) }
     var policy by remember { mutableStateOf(ChatPolicy()) }
     var actionFor by remember { mutableStateOf<ChatMessage?>(null) }
     var webUrl by remember { mutableStateOf<String?>(null) }
@@ -121,6 +124,17 @@ fun ChatScreen(onBack: () -> Unit) {
             messages = ChatWindow.recent(ChatRepository.load(ctx))
             policy = ChatPolicyRepo.load()
             loading = false
+        }
+    }
+
+    // Progress callbacks arrive on an IO thread and can be very frequent
+    // (one per 32 KB); only push a new value when the whole percent changes.
+    var lastPct = -1
+    fun publishProgress(p: Float) {
+        val pct = (p * 100).toInt().coerceIn(0, 100)
+        if (pct != lastPct) {
+            lastPct = pct
+            uploadProgress = p
         }
     }
 
@@ -195,7 +209,9 @@ fun ChatScreen(onBack: () -> Unit) {
                 status = "图片读取失败，换一张试试"
                 return@launch
             }
-            val up = ChatRepository.uploadMedia(ctx, bytes, "jpg", "img")
+            uploadProgress = 0f
+            val up = ChatRepository.uploadMedia(ctx, bytes, "jpg", "img") { publishProgress(it) }
+            uploadProgress = -1f
             if (up.raw == null) {
                 sending = false
                 status = up.error.ifBlank { "图片上传失败" }
@@ -247,7 +263,9 @@ fun ChatScreen(onBack: () -> Unit) {
             val ext = runCatching { uri.lastPathSegment?.substringAfterLast('.') }.getOrNull()
                 ?.lowercase()
                 ?.takeIf { it in listOf("mp4", "mov", "webm", "m4v", "3gp") } ?: "mp4"
-            val up = ChatRepository.uploadMedia(ctx, bytes, ext, "vid")
+            uploadProgress = 0f
+            val up = ChatRepository.uploadMedia(ctx, bytes, ext, "vid") { publishProgress(it) }
+            uploadProgress = -1f
             if (up.raw == null) {
                 sending = false
                 status = up.error.ifBlank { "视频上传失败" }
@@ -313,7 +331,9 @@ fun ChatScreen(onBack: () -> Unit) {
                 file.delete()
                 return@launch
             }
-            val up = ChatRepository.uploadMedia(ctx, bytes, "m4a", "aud")
+            uploadProgress = 0f
+            val up = ChatRepository.uploadMedia(ctx, bytes, "m4a", "aud") { publishProgress(it) }
+            uploadProgress = -1f
             file.delete()
             uploadingVoice = false
             if (up.raw == null) {
@@ -510,13 +530,44 @@ fun ChatScreen(onBack: () -> Unit) {
                 )
             }
 
-            if (status.isNotEmpty()) {
-                Text(
-                    status,
+            if (sending && uploadProgress >= 0f) {
+                Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp)) {
+                    LinearProgressIndicator(
+                        progress = { uploadProgress.coerceIn(0f, 1f) },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Text(
+                        "上传中 ${(uploadProgress * 100).toInt()}%",
+                        style = MaterialTheme.typography.labelSmall,
+                    )
+                }
+            }
+            if (status.isNotEmpty() || sending) {
+                Row(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error,
-                )
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        status.ifEmpty { "正在发送…" },
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (status.isEmpty()) MaterialTheme.colorScheme.onSurfaceVariant
+                        else MaterialTheme.colorScheme.error,
+                    )
+                    if (sending || uploadingVoice) {
+                        TextButton(onClick = {
+                            ChatRepository.cancelUpload()
+                            uploadingVoice = false
+                            sending = false
+                            uploadProgress = -1f
+                            status = "已取消上传"
+                        }) {
+                            Icon(Icons.Default.Close, contentDescription = "取消上传", modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(2.dp))
+                            Text("取消")
+                        }
+                    }
+                }
             }
 
             if (localPreview != null && sending) {
@@ -557,31 +608,56 @@ fun ChatScreen(onBack: () -> Unit) {
                 verticalAlignment = Alignment.Bottom,
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                IconButton(
-                    enabled = !uploadingVoice && !sending,
-                    onClick = {
-                        if (recording) {
-                            stopRecordingAndSend()
-                        } else {
-                            val granted = ContextCompat.checkSelfPermission(
-                                ctx, Manifest.permission.RECORD_AUDIO,
-                            ) == PackageManager.PERMISSION_GRANTED
-                            if (granted) {
-                                if (recorder.start()) {
-                                    recording = true
-                                    recordSeconds = 0
-                                } else {
-                                    status = "麦克风被占用，录音启动失败"
-                                }
-                            } else {
-                                permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                            }
-                        }
-                    },
+                // WeChat-style hold-to-talk: press starts the recorder, release
+                // sends, sliding away cancels. A tap still toggles for users
+                // who prefer the old two-step flow.
+                val micStart: () -> Boolean = {
+                    val granted = ContextCompat.checkSelfPermission(
+                        ctx, Manifest.permission.RECORD_AUDIO,
+                    ) == PackageManager.PERMISSION_GRANTED
+                    if (!granted) {
+                        permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                        false
+                    } else if (uploadingVoice || sending) {
+                        false
+                    } else if (recorder.start()) {
+                        recording = true
+                        recordSeconds = 0
+                        true
+                    } else {
+                        status = "麦克风被占用，录音启动失败"
+                        false
+                    }
+                }
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .pointerInput(recording, uploadingVoice, sending) {
+                            detectTapGestures(
+                                onPress = {
+                                    if (recording) {
+                                        // second tap while recording = send
+                                        stopRecordingAndSend()
+                                        return@detectTapGestures
+                                    }
+                                    if (!micStart()) return@detectTapGestures
+                                    val released = tryAwaitRelease()
+                                    if (released) {
+                                        stopRecordingAndSend()
+                                    } else {
+                                        recorder.cancel()
+                                        recording = false
+                                        recordSeconds = 0
+                                        status = "已取消录音"
+                                    }
+                                },
+                            )
+                        },
+                    contentAlignment = Alignment.Center,
                 ) {
                     Icon(
                         imageVector = if (recording) Icons.Default.Stop else Icons.Default.Mic,
-                        contentDescription = "语音",
+                        contentDescription = "按住说话，松开发送",
                         tint = if (recording) MaterialTheme.colorScheme.error
                         else MaterialTheme.colorScheme.onSurfaceVariant,
                     )
