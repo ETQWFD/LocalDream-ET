@@ -1272,10 +1272,6 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                     }
                 },
                 actions = {
-                        // et.158: 公共聊天入口（右上角，避免与图片社区重叠）
-                        IconButton(onClick = { navController.navigate("chat") }) {
-                            Icon(androidx.compose.material.icons.Icons.Default.Chat, "公共聊天")
-                        }
                     if (isSelectionMode) {
                         if (selectedModels.isNotEmpty()) {
                             // Left to right: pin, rename (single custom only), delete.
@@ -1358,12 +1354,6 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                                 }
                             }
                         }
-                        IconButton(onClick = { showRedeemHome = true }) {
-                            Icon(
-                                imageVector = androidx.compose.material.icons.Icons.Default.ConfirmationNumber,
-                                contentDescription = "兑换奖品",
-                            )
-                        }
                         if (showRedeemHome) {
                             io.github.xororz.localdream.ui.screens.RedeemDialog(
                                 onDismiss = { showRedeemHome = false },
@@ -1387,18 +1377,46 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                                 contentDescription = stringResource(R.string.edit_photo_title),
                             )
                         }
-                        IconButton(onClick = { menuExpanded = true }) {
-                            Icon(
-                                Icons.Default.MoreVert,
-                                contentDescription = stringResource(R.string.more_options),
-                            )
-                        }
-                        DropdownMenu(
-                            expanded = menuExpanded,
-                            onDismissRequest = { menuExpanded = false },
-                            modifier = Modifier.width(IntrinsicSize.Max),
-                        ) {
-                            DropdownMenuItem(
+                        Box {
+                            IconButton(onClick = { menuExpanded = true }) {
+                                Icon(
+                                    Icons.Default.MoreVert,
+                                    contentDescription = stringResource(R.string.more_options),
+                                )
+                            }
+                            // et.168: the menu is anchored to its own icon. Before,
+                            // it hung off the whole actions Row, so it opened shifted
+                            // left of the three-dot button ("列表偏移").
+                            DropdownMenu(
+                                expanded = menuExpanded,
+                                onDismissRequest = { menuExpanded = false },
+                                modifier = Modifier.width(220.dp),
+                                offset = androidx.compose.ui.unit.DpOffset(x = (-172).dp, y = 0.dp),
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("公共聊天") },
+                                    leadingIcon = {
+                                        Icon(androidx.compose.material.icons.Icons.Default.Chat, null)
+                                    },
+                                    onClick = {
+                                        menuExpanded = false
+                                        navController.navigate("chat")
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("兑换奖品") },
+                                    leadingIcon = {
+                                        Icon(
+                                            androidx.compose.material.icons.Icons.Default.ConfirmationNumber,
+                                            null,
+                                        )
+                                    },
+                                    onClick = {
+                                        menuExpanded = false
+                                        showRedeemHome = true
+                                    },
+                                )
+                                DropdownMenuItem(
                                 text = { Text(stringResource(R.string.help)) },
                                 leadingIcon = {
                                     Icon(Icons.AutoMirrored.Filled.Help, contentDescription = null)
@@ -1545,11 +1563,12 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                                 leadingIcon = {
                                     Icon(Icons.Default.Settings, contentDescription = null)
                                 },
-                                onClick = {
-                                    menuExpanded = false
-                                    showSettingsDialog = true
-                                },
-                            )
+                                    onClick = {
+                                        menuExpanded = false
+                                        showSettingsDialog = true
+                                    },
+                                )
+                            }
                         }
                     }
                 },
@@ -5759,9 +5778,24 @@ private fun EtStorageDialog(onDismiss: () -> Unit) {
                     uri,
                     android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION
                 )
+                // et.168 fix: tree URIs like content://.../tree/primary%3ALocalDreamET
+                // are NOT filesystem paths. Storing uri.path made downloads write
+                // into "/tree/primary:..." (missing), so a picked model still
+                // showed as "未下载". Convert the document id back to a real path.
+                val docId = runCatching {
+                    android.provider.DocumentsContract.getTreeDocumentId(uri)
+                }.getOrNull().orEmpty()
+                val realPath = if (docId.contains(':')) {
+                    val volume = docId.substringBefore(':')
+                    val inner = docId.substringAfter(':').trim('/')
+                    if (volume == "primary") "/storage/emulated/0/$inner"
+                    else "/storage/$volume/$inner"
+                } else {
+                    uri.path ?: uri.toString()
+                }
                 sp.edit().putString("model_dir_uri", uri.toString()).apply()
-                sp.edit().putString("model_dir", uri.path ?: uri.toString()).apply()
-                current = uri.toString()
+                sp.edit().putString("model_dir", realPath).apply()
+                current = realPath
             }
             android.widget.Toast.makeText(ctx, "已选择存储目录：$uri", android.widget.Toast.LENGTH_LONG).show()
         }
@@ -5771,7 +5805,9 @@ private fun EtStorageDialog(onDismiss: () -> Unit) {
         confirmButton = {
             androidx.compose.foundation.layout.Row {
                 androidx.compose.material3.TextButton(onClick = {
-                    picker.launch(android.net.Uri.parse("/storage/emulated/0"))
+                    // Passing a raw path Uri makes some pickers crash/return null;
+                // null lets the system open at its default location.
+                picker.launch(null)
                 }) { androidx.compose.material3.Text("选择目录") }
                 androidx.compose.material3.TextButton(onClick = onDismiss) { androidx.compose.material3.Text("关闭") }
             }

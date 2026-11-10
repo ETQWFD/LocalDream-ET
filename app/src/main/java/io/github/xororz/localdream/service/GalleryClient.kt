@@ -50,6 +50,8 @@ object GalleryClient {
         val title: String,
         val price: Int,
         val ts: Long,
+        /** Mirror chain: jsDelivr -> gitmirror -> raw. [url] is the first entry. */
+        val urls: List<String> = listOf(url),
     )
 
     /** 上传结果：ok=false 时 reason 可直接展示给用户。 */
@@ -72,6 +74,37 @@ object GalleryClient {
                     setRequestProperty("Content-Type", "application/json")
                     outputStream.use { it.write(body) }
                 }
+            }
+            val code = c.responseCode
+            val text = (if (code in 200..299) c.inputStream else c.errorStream)
+                ?.bufferedReader()?.readText().orEmpty()
+            code to text
+        } catch (e: Exception) {
+            -1 to (e.message ?: e.javaClass.simpleName)
+        } finally {
+            c?.disconnect()
+        }
+    }
+
+    /** Same as [http] but with an explicit bearer token (see upload). */
+    private fun httpWithToken(
+        url: String,
+        method: String,
+        body: ByteArray,
+        token: String,
+    ): Pair<Int, String> {
+        var c: HttpURLConnection? = null
+        return try {
+            c = (URL(url).openConnection() as HttpURLConnection).apply {
+                requestMethod = method
+                connectTimeout = 8000
+                readTimeout = 20000
+                setRequestProperty("Accept", "application/vnd.github+json")
+                setRequestProperty("User-Agent", "LocalDream-ET")
+                setRequestProperty("Authorization", "token $token")
+                doOutput = true
+                setRequestProperty("Content-Type", "application/json")
+                outputStream.use { it.write(body) }
             }
             val code = c.responseCode
             val text = (if (code in 200..299) c.inputStream else c.errorStream)
@@ -145,14 +178,19 @@ object GalleryClient {
             names.map { n ->
                 val stem = n.substringBeforeLast(".png")
                 val m = metas[stem]
-                // 图片地址：jsdelivr 优先（国内可达）。
-                val imgUrl = "https://cdn.jsdelivr.net/gh/ETQWFD/LocalDreamET-Gallery@main/png/$n"
+                // Mirror chain, jsDelivr first because it is reachable in China.
+                val mirrors = listOf(
+                    "https://cdn.jsdelivr.net/gh/ETQWFD/LocalDreamET-Gallery@main/png/$n",
+                    "https://raw.gitmirror.com/ETQWFD/LocalDreamET-Gallery/main/png/$n",
+                    "https://raw.githubusercontent.com/ETQWFD/LocalDreamET-Gallery/main/png/$n",
+                )
                 GalleryItem(
-                    n, imgUrl,
+                    n, mirrors.first(),
                     m?.optString("author", "?") ?: "?",
                     m?.optString("name", "") ?: "",
                     m?.optInt("price", 0) ?: 0,
                     m?.optLong("ts", 0L) ?: 0L,
+                    mirrors,
                 )
             }.sortedByDescending { it.ts }.also { cached = it }
         } catch (_: Exception) {
@@ -183,10 +221,17 @@ object GalleryClient {
         author: String,
         price: Int,
         name: String,
+        userToken: String? = null,
     ): UploadResult = withContext(Dispatchers.IO) {
         try {
-            if (BuildConfig.GALLERY_TOKEN.isBlank()) {
-                return@withContext UploadResult(false, "未配置社区上传令牌（gallery.token）")
+            // et.168: the baked-in owner token is only a fallback. A signed-in
+            // user's PAT is preferred, so a build without local.properties
+            // (gallery.token empty) can still publish instead of failing every
+            // time with "未配置社区上传令牌".
+            val token = userToken?.takeIf { it.isNotBlank() }
+                ?: BuildConfig.GALLERY_TOKEN.takeIf { it.isNotBlank() }
+            if (token == null) {
+                return@withContext UploadResult(false, "请先登录 GitHub 再发布作品")
             }
             if (pngBytes.isEmpty()) return@withContext UploadResult(false, "图片文件为空")
             val id = "${System.currentTimeMillis()}_${(1000..9999).random()}"
@@ -194,7 +239,7 @@ object GalleryClient {
                 .put("message", "upload $id")
                 .put("content", Base64.getEncoder().encodeToString(pngBytes))
                 .toString().toByteArray()
-            val (c1, t1) = http("$API/png/pic_$id.png", "PUT", imgBody)
+            val (c1, t1) = httpWithToken("$API/png/pic_$id.png", "PUT", imgBody, token)
             if (c1 !in 200..201) return@withContext UploadResult(false, brief(c1, t1))
 
             val meta = JSONObject().put("author", author).put("price", price)
@@ -203,7 +248,7 @@ object GalleryClient {
             val metaBody = JSONObject().put("message", "meta $id")
                 .put("content", Base64.getEncoder().encodeToString(meta.toString().toByteArray()))
                 .toString().toByteArray()
-            val (c2, t2) = http("$API/png/pic_$id.meta.json", "PUT", metaBody)
+            val (c2, t2) = httpWithToken("$API/png/pic_$id.meta.json", "PUT", metaBody, token)
             if (c2 !in 200..201) {
                 // 图片已落库但 meta 失败：仍算发布成功，价格/作者稍后补
                 return@withContext UploadResult(true, "作品已上传，但作品信息写入失败：${brief(c2, t2)}")

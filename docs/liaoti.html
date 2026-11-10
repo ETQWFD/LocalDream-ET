@@ -5,16 +5,22 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>公共聊天后台</title>
 <style>
-body{font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;background:#0f172a;color:#e2e8f0;max-width:820px;margin:0 auto;padding:24px}
+body{font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;background:#0f172a;color:#e2e8f0;max-width:880px;margin:0 auto;padding:24px}
 .box{background:#1e293b;border-radius:12px;padding:20px;margin-bottom:16px}
-input,button{background:#334155;color:#fff;border:0;border-radius:8px;padding:10px 14px;font-size:14px}
-button{background:#2563eb;cursor:pointer}
-.msg{padding:10px 14px;border-bottom:1px solid #334155}
+input,button,select{background:#334155;color:#fff;border:0;border-radius:8px;padding:9px 12px;font-size:14px}
+button{background:#2563eb;cursor:pointer;margin:2px}
+button.danger{background:#b91c1c}
+button.ghost{background:#475569}
+.msg{padding:10px 14px;border-bottom:1px solid #334155;display:flex;gap:10px;align-items:flex-start}
 .msg b{color:#93c5fd}
 .msg .ts{color:#94a3b8;font-size:12px;margin-left:8px}
 .admin{color:#22c55e;font-size:12px;margin-left:6px}
+.muted{color:#f59e0b;font-size:12px;margin-left:6px}
 .err{color:#f87171}
+.ok{color:#34d399}
 h2{margin:0 0 12px;font-size:18px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:6px 0}
+.tag{background:#0ea5e9;border-radius:999px;padding:2px 10px;font-size:12px}
 </style>
 </head>
 <body>
@@ -26,35 +32,178 @@ h2{margin:0 0 12px;font-size:18px}
   <p class="err" id="loginErr"></p>
 </div>
 <div class="box" id="mainBox" style="display:none">
+  <div class="row">
+    <input id="pat" type="password" placeholder="GitHub 令牌（需 repo 权限，用于禁言/管理员写入）" style="flex:1;min-width:260px">
+    <button onclick="saveToken()">保存令牌</button>
+    <button class="ghost" onclick="loadAll()">刷新</button>
+  </div>
+  <p class="err" id="status"></p>
+  <h2>成员（来自近 7 天聊天）</h2>
+  <div id="users"></div>
+  <hr style="border-color:#334155;margin:16px 0">
   <h2>消息列表（近 7 天）</h2>
   <div id="msgs"></div>
-  <hr style="border-color:#334155;margin:16px 0">
-  <p>默认密码：1234</p>
+  <p style="color:#94a3b8;font-size:12px">默认密码 1234；写入操作全部通过 GitHub Contents API，令牌只存在本机 localStorage。</p>
 </div>
 <script>
+const CHAT='ETQWFD/LocalDreamET-Chat';
+let policy={admins:['ETQWFD'],mutes:{}};
+let messages=[];
+let pat=localStorage.getItem('ld_pat')||'';
+
 function login(){
   const v=document.getElementById('pwd').value;
   if(v==='1234'){
     document.getElementById('loginBox').style.display='none';
     document.getElementById('mainBox').style.display='block';
-    loadMsgs();
+    document.getElementById('pat').value=pat;
+    loadAll();
   } else {
     document.getElementById('loginErr').textContent='密码错误';
   }
 }
-async function loadMsgs(){
-  try{
-    const r=await fetch('https://cdn.jsdelivr.net/gh/ETQWFD/LocalDreamET-Chat@main/messages.json');
-    const arr=await r.json();
-    const cutoff=Date.now()/1000-7*86400;
-    const list=arr.filter(m=>m.ts>=cutoff).reverse();
-    document.getElementById('msgs').innerHTML=list.map(m=>
-      `<div class="msg"><b>${esc(m.author)}</b>${m.admin?'<span class="admin">管理员</span>':''}<span class="ts">${fmt(m.ts)}</span><br>${esc(m.text)}</div>`
-    ).join('')||'<p class="err">近 7 天无消息</p>';
-  } catch(e){ document.getElementById('msgs').innerHTML='<p class="err">加载失败: '+e+'</p>' }
+function saveToken(){
+  pat=document.getElementById('pat').value.trim();
+  localStorage.setItem('ld_pat',pat);
+  setStatus('令牌已保存在本机');
+  loadAll();
 }
-function esc(s){return (s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}
-function fmt(ts){const d=new Date(ts*1000);return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`}
+function setStatus(t,ok){
+  const s=document.getElementById('status');
+  s.textContent=t||'';
+  s.className=ok?'ok':'err';
+}
+async function jget(url,withToken){
+  const headers=withToken&&pat?{Authorization:'Bearer '+pat,'Accept':'application/vnd.github+json'}:{};
+  const r=await fetch(url,{headers, cache:'no-store'});
+  if(!r.ok) throw new Error('HTTP '+r.status);
+  return r.json();
+}
+async function loadMessages(){
+  const paths=[
+    'https://raw.githubusercontent.com/'+CHAT+'/main/messages.json',
+    'https://cdn.jsdelivr.net/gh/'+CHAT+'@main/messages.json',
+    'https://raw.gitmirror.com/'+CHAT+'/main/messages.json',
+    'https://api.github.com/repos/'+CHAT+'/contents/messages.json'
+  ];
+  let lastErr='';
+  for(const p of paths){
+    try{
+      const data=await jget(p,true);
+      if(Array.isArray(data)) return data;
+      if(data&&data.content) return JSON.parse(atob(data.content.replace(/\n/g,'') .replace(/-/g,'+').replace(/_/g,'/')));
+    }catch(e){ lastErr=e.message }
+  }
+  throw new Error(lastErr||'加载失败');
+}
+async function loadPolicy(){
+  const paths=[
+    'https://raw.githubusercontent.com/'+CHAT+'/main/admin.json',
+    'https://cdn.jsdelivr.net/gh/'+CHAT+'@main/admin.json',
+    'https://api.github.com/repos/'+CHAT+'/contents/admin.json'
+  ];
+  for(const p of paths){
+    try{
+      const data=await jget(p,true);
+      if(data&&data.content){
+        return JSON.parse(atob(data.content.replace(/\n/g,'').replace(/-/g,'+').replace(/_/g,'/')));
+      }
+      if(data&&typeof data==='object'&&!data.content&&!Array.isArray(data)) return data;
+    }catch(e){}
+  }
+  return {admins:['ETQWFD'],mutes:{}};
+}
+async function loadAll(){
+  setStatus('加载中…',true);
+  try{
+    messages=await loadMessages();
+    policy=await loadPolicy();
+    if(!policy.admins) policy.admins=['ETQWFD'];
+    if(!policy.mutes) policy.mutes={};
+    renderUsers();
+    renderMsgs();
+    setStatus('已加载 '+messages.length+' 条消息',true);
+  }catch(e){ setStatus('加载失败：'+e.message,false) }
+}
+function isAdmin(u){ return policy.admins.some(a=>a.toLowerCase()===String(u).toLowerCase()) }
+function muteLeft(u){
+  const m=policy.mutes[u]; if(!m) return 0;
+  const until=(typeof m==='number')?m:(m.until||0);
+  return Math.max(0,until-Date.now()/1000);
+}
+function renderUsers(){
+  const cutoff=Date.now()/1000-7*86400;
+  const seen=new Map();
+  messages.filter(m=>m.ts>=cutoff).forEach(m=>{
+    if(!m.author) return;
+    if(!seen.has(m.author)) seen.set(m.author,{last:m.ts,avatar:m.avatar||''});
+    else if(m.ts>seen.get(m.author).last) seen.get(m.author).last=m.ts;
+  });
+  if(!seen.size){ document.getElementById('users').innerHTML='<p class="err">近 7 天没有发言用户</p>'; return }
+  let html='';
+  for(const [name,info] of seen){
+    const admin=isAdmin(name);
+    const left=muteLeft(name);
+    html+='<div class="row"><span class="tag">'+esc(name)+'</span>'
+      + (admin?'<span class="admin">管理员</span>':'')
+      + (left>0?'<span class="muted">禁言剩余 '+fmtLeft(left)+'</span>':'')
+      + '<button class="ghost" onclick="toggleAdmin(\''+esc(name)+'\')">'+(admin?'取消管理员':'设为管理员')+'</button>'
+      + '<button class="danger" onclick="mute(\''+esc(name)+'\',600)">禁言10分钟</button>'
+      + '<button class="danger" onclick="mute(\''+esc(name)+'\',3600)">1小时</button>'
+      + '<button class="danger" onclick="mute(\''+esc(name)+'\',21600)">6小时</button>'
+      + '<button class="ghost" onclick="unmute(\''+esc(name)+'\')">解除禁言</button></div>';
+  }
+  document.getElementById('users').innerHTML=html;
+}
+function renderMsgs(){
+  const cutoff=Date.now()/1000-7*86400;
+  const list=messages.filter(m=>m.ts>=cutoff).slice().reverse();
+  document.getElementById('msgs').innerHTML=list.map(m=>{
+    const left=muteLeft(m.author);
+    return '<div class="msg"><div style="flex:1"><b>'+esc(m.author)+'</b>'
+      + (isAdmin(m.author)?'<span class="admin">管理员</span>':'')
+      + (left>0?'<span class="muted">禁言中</span>':'')
+      + '<span class="ts">'+fmt(m.ts)+'</span><br>'+esc(m.text||('['+(m.kind||'MEDIA')+']'))+'</div></div>'
+  }).join('')||'<p class="err">近 7 天无消息</p>';
+}
+async function writePolicy(){
+  if(!pat) { setStatus('请先填写 GitHub 令牌（repo 权限）',false); return false }
+  try{
+    let sha='';
+    try{
+      const meta=await jget('https://api.github.com/repos/'+CHAT+'/contents/admin.json',true);
+      sha=meta.sha||'';
+    }catch(e){}
+    const content=btoa(unescape(encodeURIComponent(JSON.stringify(policy,null,2))));
+    const body={message:'policy: admins/mutes',content};
+    if(sha) body.sha=sha;
+    const r=await fetch('https://api.github.com/repos/'+CHAT+'/contents/admin.json',{
+      method:'PUT',
+      headers:{Authorization:'Bearer '+pat,'Accept':'application/vnd.github+json','Content-Type':'application/json'},
+      body:JSON.stringify(body)
+    });
+    if(!r.ok) throw new Error('写入失败 HTTP '+r.status);
+    setStatus('已保存到仓库',true);
+    return true;
+  }catch(e){ setStatus(e.message,false); return false }
+}
+async function toggleAdmin(name){
+  if(isAdmin(name)) policy.admins=policy.admins.filter(a=>a.toLowerCase()!==name.toLowerCase());
+  else policy.admins.push(name);
+  if(await writePolicy()){ renderUsers(); renderMsgs() }
+}
+async function mute(name,seconds){
+  if(isAdmin(name)){ setStatus('管理员不能禁言管理员',false); return }
+  policy.mutes[name]={until:Math.floor(Date.now()/1000)+seconds,by:'web-admin',reason:''};
+  if(await writePolicy()){ renderUsers(); renderMsgs() }
+}
+async function unmute(name){
+  delete policy.mutes[name];
+  if(await writePolicy()){ renderUsers(); renderMsgs() }
+}
+function fmtLeft(s){ if(s>=3600) return Math.ceil(s/3600)+' 小时'; return Math.ceil(s/60)+' 分钟' }
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function fmt(ts){const d=new Date(ts*1000);return (d.getMonth()+1)+'/'+d.getDate()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')}
 </script>
 </body>
 </html>
