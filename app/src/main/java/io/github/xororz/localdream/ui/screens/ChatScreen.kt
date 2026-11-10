@@ -23,6 +23,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -86,11 +87,13 @@ fun ChatScreen(onBack: () -> Unit) {
     val meAvatar = remember { store.state(CloudConfig.Provider.GITHUB)?.avatarUrl }
 
     var messages by remember { mutableStateOf<List<ChatMessage>>(emptyList()) }
+    val chatListState = rememberLazyListState()
     var loading by remember { mutableStateOf(true) }
     var input by remember { mutableStateOf("") }
     var sending by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf("") }
-    var viewerUrl by remember { mutableStateOf<String?>(null) }
+    var viewerImages by remember { mutableStateOf<List<String>>(emptyList()) }
+    var videoUrls by remember { mutableStateOf<List<String>>(emptyList()) }
     var localPreview by remember { mutableStateOf<Bitmap?>(null) }
 
     val recorder = remember { VoiceRecorder(ctx) }
@@ -393,8 +396,35 @@ fun ChatScreen(onBack: () -> Unit) {
         val candidates = listOfNotNull(message.cdnUrl, message.mediaUrl)
         fun tryAt(index: Int) {
             val url = candidates.getOrNull(index) ?: run {
-                playingKey = null
-                status = "语音加载失败"
+                // Mirrors can be blocked in mainland China: pull the file through
+                // the authenticated API into cache and play it from disk.
+                scope.launch {
+                    val bytes = ChatRepository.fetchRepoFile(message.mediaUrl)
+                    if (bytes == null || bytes.isEmpty()) {
+                        playingKey = null
+                        status = "语音加载失败"
+                        return@launch
+                    }
+                    val f = java.io.File(ctx.cacheDir, "voice_play_${message.ts}.m4a")
+                    withContext(Dispatchers.IO) { f.writeBytes(bytes) }
+                    runCatching {
+                        val mp = MediaPlayer()
+                        mp.setAudioAttributes(
+                            AudioAttributes.Builder()
+                                .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                                .setUsage(AudioAttributes.USAGE_MEDIA)
+                                .build(),
+                        )
+                        mp.setDataSource(f.absolutePath)
+                        mp.setOnPreparedListener { it.start() }
+                        mp.setOnCompletionListener { stopPlayback() }
+                        player = mp
+                        mp.prepare()
+                    }.onFailure {
+                        playingKey = null
+                        status = "语音播放失败"
+                    }
+                }
                 return
             }
             runCatching {
@@ -514,6 +544,8 @@ fun ChatScreen(onBack: () -> Unit) {
             }
 
             LazyColumn(
+                state = chatListState,
+                reverseLayout = true,
                 modifier = Modifier.weight(1f).fillMaxWidth(),
                 contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -538,12 +570,8 @@ fun ChatScreen(onBack: () -> Unit) {
                         admin = policy.isAdmin(m.author),
                         playing = playingKey == m.key,
                         onPlayAudio = { playAudio(m) },
-                        onOpenMedia = { url -> viewerUrl = url },
-                        onOpenVideo = { url ->
-                            runCatching {
-                                ctx.startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
-                            }
-                        },
+                        onOpenMedia = { urls -> viewerImages = urls },
+                        onOpenVideo = { urls -> videoUrls = urls },
                         onLink = { url -> webUrl = url },
                         onLongPress = { actionFor = m },
                     )
@@ -766,6 +794,12 @@ fun ChatScreen(onBack: () -> Unit) {
         }
     }
 
+    LaunchedEffect(messages.size) {
+        if (messages.isNotEmpty()) {
+            runCatching { chatListState.animateScrollToItem(0) }
+        }
+    }
+
     // Long-press actions: copy / quote / @mention / mute (admins only).
     actionFor?.let { target ->
         AlertDialog(
@@ -866,19 +900,63 @@ fun ChatScreen(onBack: () -> Unit) {
         }
     }
 
-    viewerUrl?.let { url ->
-        Dialog(onDismissRequest = { viewerUrl = null }) {
+    if (viewerImages.isNotEmpty()) {
+        Dialog(onDismissRequest = { viewerImages = emptyList() }) {
             Surface(shape = MaterialTheme.shapes.large) {
                 Box(contentAlignment = Alignment.TopEnd) {
-                    AsyncImage(
-                        model = url,
+                    io.github.xororz.localdream.ui.components.FallbackImage(
+                        urls = viewerImages,
                         contentDescription = "查看大图",
                         modifier = Modifier.fillMaxWidth().heightIn(max = 520.dp),
                         contentScale = ContentScale.Fit,
                     )
-                    IconButton(onClick = { viewerUrl = null }) {
+                    IconButton(onClick = { viewerImages = emptyList() }) {
                         Icon(Icons.Default.Close, contentDescription = "关闭")
                     }
+                }
+            }
+        }
+    }
+
+    if (videoUrls.isNotEmpty()) {
+        InAppVideoDialog(videoUrls) { videoUrls = emptyList() }
+    }
+}
+
+/**
+ * Built-in player: chat videos must not kick the user out to an external app
+ * (many devices have no video player installed at all). Tries the mirror chain
+ * in order if the first URL fails.
+ */
+@Composable
+private fun InAppVideoDialog(urls: List<String>, onDismiss: () -> Unit) {
+    var index by remember(urls) { mutableIntStateOf(0) }
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(shape = MaterialTheme.shapes.large) {
+            Box(contentAlignment = Alignment.TopEnd) {
+                androidx.compose.ui.viewinterop.AndroidView(
+                    factory = { c ->
+                        android.widget.VideoView(c).apply {
+                            val controller = android.widget.MediaController(c)
+                            controller.setAnchorView(this)
+                            setMediaController(controller)
+                            setOnPreparedListener { controller.show() }
+                            setOnErrorListener { _, _, _ ->
+                                if (index < urls.lastIndex) index += 1
+                                true
+                            }
+                        }
+                    },
+                    update = { view ->
+                        runCatching {
+                            view.setVideoURI(android.net.Uri.parse(urls[index]))
+                            view.start()
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth().height(320.dp),
+                )
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Default.Close, contentDescription = "关闭")
                 }
             }
         }
@@ -894,8 +972,8 @@ private fun MessageRow(
     admin: Boolean,
     playing: Boolean,
     onPlayAudio: () -> Unit,
-    onOpenMedia: (String) -> Unit,
-    onOpenVideo: (String) -> Unit,
+    onOpenMedia: (List<String>) -> Unit,
+    onOpenVideo: (List<String>) -> Unit,
     onLink: (String) -> Unit,
     onLongPress: () -> Unit,
 ) {
@@ -963,7 +1041,7 @@ private fun MessageRow(
                                     .widthIn(max = 220.dp)
                                     .heightIn(max = 260.dp)
                                     .clip(RoundedCornerShape(6.dp))
-                                    .clickable { urls.firstOrNull()?.let(onOpenMedia) },
+                                    .clickable { onOpenMedia(urls) },
                             )
                         }
 
@@ -975,8 +1053,7 @@ private fun MessageRow(
                                     .width(180.dp)
                                     .height(110.dp)
                                     .clickable {
-                                        listOfNotNull(message.cdnUrl, message.mediaUrl)
-                                            .firstOrNull()?.let(onOpenVideo)
+                                        onOpenVideo(listOfNotNull(message.cdnUrl, message.mediaUrl))
                                     },
                             ) {
                                 Box(contentAlignment = Alignment.Center) {

@@ -209,12 +209,33 @@ object GalleryClient {
         } catch (_: Exception) { emptyList() }
     }
 
+    /**
+     * One authenticated request lists every path in the repo. jsDelivr's
+     * package index is cached and can miss files uploaded minutes ago, which
+     * made the community look empty even though the upload had succeeded.
+     */
+    private fun enumerateViaApi(): List<String> {
+        return try {
+            val (code, text) = http(
+                "https://api.github.com/repos/ETQWFD/LocalDreamET-Gallery/git/trees/main?recursive=1",
+                "GET",
+            )
+            if (code != 200) return emptyList()
+            val tree = JSONObject(text).optJSONArray("tree") ?: return emptyList()
+            (0 until tree.length()).mapNotNull { i ->
+                val path = tree.getJSONObject(i).optString("path", "")
+                if (path.startsWith("png/") && path.endsWith(".png")) path.substringAfterLast('/') else null
+            }
+        } catch (_: Exception) { emptyList() }
+    }
+
     /** 社区列表；失败返回空列表由 UI 提示。 */
     suspend fun list(force: Boolean = false): List<GalleryItem> = withContext(Dispatchers.IO) {
         if (!force) cached?.let { return@withContext it }
         try {
             // et.152: 国内 jsdelivr 包目录枚举最快（<1s），优先；api.github.com 作为兜底。
-            var names: List<String> = enumerateViaJsdelivr()
+            var names: List<String> = enumerateViaApi()
+            if (names.isEmpty()) names = enumerateViaJsdelivr()
             if (names.isEmpty()) {
                 names = try {
                     val (code, text) = http("$API/png", "GET")
@@ -254,6 +275,11 @@ object GalleryClient {
         subset.map { n ->
             async(Dispatchers.IO) {
                 val stem = n.substringBeforeLast(".png")
+                val api = "$API/png/$stem.meta.json"
+                val (apiCode, apiText) = http(api, "GET")
+                if (apiCode == 200) {
+                    return@async stem to (try { JSONObject(apiText) } catch (_: Exception) { null })
+                }
                 val urls = META_BASES.map { "$it/png/$stem.meta.json" }
                 val (code, text) = httpAny(urls)
                 if (code == 200) stem to (try { JSONObject(text) } catch (_: Exception) { null })

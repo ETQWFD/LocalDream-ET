@@ -69,6 +69,26 @@ object ChatRepository {
         "https://raw.kkgithub.com/$OWNER/$REPO/main/$FILE",
     )
 
+    /** Fetch a chat media file through the authenticated Contents API. */
+    suspend fun fetchRepoFile(mediaUrl: String?): ByteArray? = withContext(Dispatchers.IO) {
+        val path = mediaUrl.orEmpty().substringAfter("/main/", "")
+        if (path.isBlank()) return@withContext null
+        runCatching {
+            val req = Request.Builder()
+                .url("https://api.github.com/repos/$OWNER/$REPO/contents/$path")
+                .addHeader("Authorization", "Bearer ${BuildConfig.GALLERY_TOKEN}")
+                .addHeader("Accept", "application/vnd.github+json")
+                .addHeader("User-Agent", "LocalDream-ET")
+                .build()
+            client.newCall(req).execute().use { resp ->
+                if (!resp.isSuccessful) return@use null
+                val obj = JSONObject(resp.body?.string().orEmpty())
+                val b64 = obj.optString("content", "").replace("\n", "")
+                if (b64.isBlank()) null else Base64.getDecoder().decode(b64)
+            }
+        }.getOrNull()
+    }
+
     fun rawUrl(path: String): String = "https://raw.githubusercontent.com/$OWNER/$REPO/main/$path"
 
     fun cdnUrl(path: String): String = "https://cdn.jsdelivr.net/gh/$OWNER/$REPO@main/$path"
