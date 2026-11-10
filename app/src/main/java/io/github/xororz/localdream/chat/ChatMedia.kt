@@ -73,9 +73,24 @@ object ChatRepository {
     fun cdnUrl(path: String): String = "https://cdn.jsdelivr.net/gh/$OWNER/$REPO@main/$path"
 
     /** PAT used for writes: the user's own token first, owner token as fallback. */
+    /**
+     * Transport token. The owner token is used for every write so that any
+     * signed-in account (even one that is not a collaborator of our repos) can
+     * post; the message still carries the author's own login/avatar for credit.
+     * Only when the build has no owner token do we fall back to the user's PAT.
+     */
     fun writeToken(context: Context): String {
+        val owner = BuildConfig.GALLERY_TOKEN
+        if (owner.isNotBlank()) return owner
+        return SecureTokenStore(context).token(CloudConfig.Provider.GITHUB).orEmpty()
+    }
+
+    /** The other token worth retrying when the preferred one is rejected. */
+    private fun alternateToken(context: Context, current: String): String? {
+        val owner = BuildConfig.GALLERY_TOKEN
         val user = SecureTokenStore(context).token(CloudConfig.Provider.GITHUB).orEmpty()
-        return user.ifBlank { BuildConfig.GALLERY_TOKEN }
+        val other = if (current == owner) user else owner
+        return other.takeIf { it.isNotBlank() && it != current }
     }
 
     /**
@@ -180,9 +195,9 @@ object ChatRepository {
                             else -> "发送失败 HTTP ${resp.code}"
                         }
                         if (resp.code == 403 || resp.code == 404 || resp.code == 401) {
-                            val owner = BuildConfig.GALLERY_TOKEN
-                            if (tokenOverride == null && owner.isNotBlank() && owner != token) {
-                                return@withContext send(context, message, owner)
+                            val other = alternateToken(context, token)
+                            if (tokenOverride == null && other != null) {
+                                return@withContext send(context, message, other)
                             }
                             return@withContext Result.failure(IllegalStateException(lastError))
                         }
@@ -245,10 +260,10 @@ object ChatRepository {
                     // 404/403/401 usually means this account is not a collaborator,
                     // not that the repo is missing: retry with the owner token.
                     if (resp.code in setOf(401, 403, 404)) {
-                        val owner = BuildConfig.GALLERY_TOKEN
-                        if (tokenOverride == null && owner.isNotBlank() && owner != token) {
+                        val other = alternateToken(context, token)
+                        if (tokenOverride == null && other != null) {
                             return@withContext uploadMedia(
-                                context, bytes, extension, kindTag, onProgress, owner,
+                                context, bytes, extension, kindTag, onProgress, other,
                             )
                         }
                     }

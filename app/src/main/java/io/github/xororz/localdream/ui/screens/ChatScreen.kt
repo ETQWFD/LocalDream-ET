@@ -62,6 +62,7 @@ import io.github.xororz.localdream.chat.ChatRepository
 import io.github.xororz.localdream.chat.ChatTime
 import io.github.xororz.localdream.chat.ChatWindow
 import io.github.xororz.localdream.chat.VoiceRecorder
+import io.github.xororz.localdream.service.SharedRepos
 import io.github.xororz.localdream.cloud.CloudConfig
 import io.github.xororz.localdream.cloud.SecureTokenStore
 import kotlinx.coroutines.Dispatchers
@@ -148,7 +149,22 @@ fun ChatScreen(onBack: () -> Unit) {
         return false
     }
 
-    LaunchedEffect(Unit) { refresh() }
+    LaunchedEffect(Unit) {
+        // Make sure the shared repos/files exist before we read or write.
+        SharedRepos.ensure(ctx)
+        refresh()
+    }
+
+    // Everyone should see new messages without pressing refresh: poll gently.
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(15_000)
+            if (!sending) {
+                val loaded = withContext(Dispatchers.IO) { ChatRepository.load(ctx) }
+                messages = ChatWindow.recent(loaded)
+            }
+        }
+    }
 
     LaunchedEffect(recording) {
         while (recording) {

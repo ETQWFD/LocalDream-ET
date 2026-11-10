@@ -120,6 +120,7 @@ fun GalleryScreen(navController: NavController) {
     }
 
     LaunchedEffect(Unit) {
+        io.github.xororz.localdream.service.SharedRepos.ensure(ctx)
         reload(false)
         // Credit any new picture sales to this device's quota (85% share).
         val earned = io.github.xororz.localdream.service.GalleryEarnings.sync(ctx)

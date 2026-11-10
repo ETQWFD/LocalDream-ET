@@ -277,9 +277,12 @@ object GalleryClient {
         // A signed-in account that is not a collaborator gets 404 on write
         // (seen in the field with login ET972). Try its token first so the work
         // is attributed to the author, then fall back to the built-in token.
+        // Owner token first: every signed-in user publishes through the same
+        // account that owns the gallery, so a normal account never hits 404.
+        // The author field still keeps the uploader's own login.
         val candidates = listOfNotNull(
-            userToken?.takeIf { it.isNotBlank() },
             BuildConfig.GALLERY_TOKEN.takeIf { it.isNotBlank() },
+            userToken?.takeIf { it.isNotBlank() },
         ).distinct()
         if (candidates.isEmpty()) {
             return@withContext UploadResult(false, "请先登录 GitHub 再发布作品")
