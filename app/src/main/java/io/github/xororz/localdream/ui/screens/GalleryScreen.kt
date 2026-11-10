@@ -624,6 +624,25 @@ private suspend fun purchaseItem(ctx: Context, item: GalleryClient.GalleryItem):
                     lastReason = e.message ?: "网络错误"
                 }
             }
+            // Mirrors can lag or be blocked in mainland China. The Contents API
+            // with the owner token is the guaranteed source of the bytes.
+            if (bytes == null) {
+                runCatching {
+                    val conn = (java.net.URL(
+                        "https://api.github.com/repos/ETQWFD/LocalDreamET-Gallery/contents/png/${item.name}"
+                    ).openConnection() as java.net.HttpURLConnection)
+                    conn.connectTimeout = 12000
+                    conn.readTimeout = 30000
+                    conn.setRequestProperty("Authorization", "token ${io.github.xororz.localdream.BuildConfig.GALLERY_TOKEN}")
+                    conn.setRequestProperty("Accept", "application/vnd.github+json")
+                    conn.setRequestProperty("User-Agent", "LocalDream-ET")
+                    if (conn.responseCode in 200..299) {
+                        val obj = org.json.JSONObject(conn.inputStream.use { it.readBytes().toString(Charsets.UTF_8) })
+                        val b64 = obj.optString("content", "").replace("\n", "")
+                        if (b64.isNotBlank()) bytes = java.util.Base64.getDecoder().decode(b64)
+                    }
+                }.onFailure { lastReason = it.message ?: "下载失败" }
+            }
             val data = bytes ?: return@withContext lastReason
             val bmp = android.graphics.BitmapFactory.decodeByteArray(data, 0, data.size)
                 ?: return@withContext "图片解码失败"

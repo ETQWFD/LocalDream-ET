@@ -98,6 +98,7 @@ fun ChatScreen(onBack: () -> Unit) {
     var recordSeconds by remember { mutableIntStateOf(0) }
     var uploadingVoice by remember { mutableStateOf(false) }
     var uploadProgress by remember { mutableFloatStateOf(-1f) }
+    var pendingVideo by remember { mutableStateOf<String?>(null) }
     var policy by remember { mutableStateOf(ChatPolicy()) }
     var actionFor by remember { mutableStateOf<ChatMessage?>(null) }
     var webUrl by remember { mutableStateOf<String?>(null) }
@@ -222,6 +223,7 @@ fun ChatScreen(onBack: () -> Unit) {
             val bytes = ChatRepository.compressImage(ctx, uri)
             if (bytes == null) {
                 sending = false
+                localPreview = null
                 status = "图片读取失败，换一张试试"
                 return@launch
             }
@@ -230,6 +232,7 @@ fun ChatScreen(onBack: () -> Unit) {
             uploadProgress = -1f
             if (up.raw == null) {
                 sending = false
+                localPreview = null
                 status = up.error.ifBlank { "图片上传失败" }
                 return@launch
             }
@@ -255,6 +258,7 @@ fun ChatScreen(onBack: () -> Unit) {
         }
         if (blockedByMute()) return
         sending = true
+        pendingVideo = runCatching { uri.lastPathSegment?.substringAfterLast('/') }.getOrNull() ?: "视频"
         status = "正在上传视频…"
         scope.launch {
             val length = withContext(Dispatchers.IO) {
@@ -265,6 +269,7 @@ fun ChatScreen(onBack: () -> Unit) {
             }
             if (length > ChatRepository.MAX_VIDEO_BYTES) {
                 sending = false
+                pendingVideo = null
                 status = "视频超过 ${ChatRepository.MAX_VIDEO_BYTES / 1024 / 1024}MB，请压缩后再发"
                 return@launch
             }
@@ -273,6 +278,7 @@ fun ChatScreen(onBack: () -> Unit) {
             }
             if (bytes == null || bytes.isEmpty()) {
                 sending = false
+                pendingVideo = null
                 status = "视频读取失败"
                 return@launch
             }
@@ -284,6 +290,7 @@ fun ChatScreen(onBack: () -> Unit) {
             uploadProgress = -1f
             if (up.raw == null) {
                 sending = false
+                pendingVideo = null
                 status = up.error.ifBlank { "视频上传失败" }
                 return@launch
             }
@@ -417,6 +424,16 @@ fun ChatScreen(onBack: () -> Unit) {
             }
         }
         tryAt(0)
+    }
+
+    fun cancelPendingUpload() {
+        ChatRepository.cancelUpload()
+        sending = false
+        uploadingVoice = false
+        uploadProgress = -1f
+        localPreview = null
+        pendingVideo = null
+        status = "已取消上传"
     }
 
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
@@ -589,12 +606,52 @@ fun ChatScreen(onBack: () -> Unit) {
             }
 
             if (localPreview != null && sending) {
-                Image(
-                    bitmap = localPreview!!.asImageBitmap(),
-                    contentDescription = "正在发送",
-                    modifier = Modifier.height(80.dp).fillMaxWidth().padding(horizontal = 12.dp),
-                    contentScale = ContentScale.Fit,
-                )
+                Box(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+                ) {
+                    Image(
+                        bitmap = localPreview!!.asImageBitmap(),
+                        contentDescription = "正在发送",
+                        modifier = Modifier.height(88.dp).fillMaxWidth(),
+                        contentScale = ContentScale.Fit,
+                    )
+                    // Cancel before it reaches the shared chat (wrong pick / bad file).
+                    IconButton(
+                        onClick = { cancelPendingUpload() },
+                        modifier = Modifier.align(Alignment.TopEnd).size(28.dp),
+                    ) {
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = "取消这张图片",
+                            tint = Color.White,
+                            modifier = Modifier
+                                .size(18.dp)
+                                .background(Color(0x99000000), CircleShape),
+                        )
+                    }
+                }
+            }
+
+            if (pendingVideo != null && sending) {
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    shape = MaterialTheme.shapes.medium,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Videocam, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            "视频上传中 ${pendingVideo}" +
+                                if (uploadProgress >= 0f) " ${(uploadProgress * 100).toInt()}%" else "",
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.weight(1f),
+                        )
+                        IconButton(onClick = { cancelPendingUpload() }, modifier = Modifier.size(32.dp)) {
+                            Icon(Icons.Default.Close, contentDescription = "取消这个视频")
+                        }
+                    }
+                }
             }
 
             if (recording) {

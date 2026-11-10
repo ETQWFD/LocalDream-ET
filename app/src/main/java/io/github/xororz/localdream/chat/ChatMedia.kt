@@ -7,6 +7,7 @@ import android.media.MediaRecorder
 import android.net.Uri
 import androidx.core.content.edit
 import io.github.xororz.localdream.BuildConfig
+import io.github.xororz.localdream.net.MirrorPurge
 import io.github.xororz.localdream.cloud.CloudConfig
 import io.github.xororz.localdream.cloud.SecureTokenStore
 import io.github.xororz.localdream.net.ProgressBody
@@ -260,17 +261,30 @@ object ChatRepository {
                     // 404/403/401 usually means this account is not a collaborator,
                     // not that the repo is missing: retry with the owner token.
                     if (resp.code in setOf(401, 403, 404)) {
-                        val other = alternateToken(context, token)
+                        // Only a user token can be upgraded to the owner token;
+                        // never fall back from owner to a normal account.
+                        val other = if (token != BuildConfig.GALLERY_TOKEN) {
+                            alternateToken(context, token)
+                        } else {
+                            null
+                        }
                         if (tokenOverride == null && other != null) {
                             return@withContext uploadMedia(
                                 context, bytes, extension, kindTag, onProgress, other,
                             )
                         }
                     }
+                    io.github.xororz.localdream.cloud.LogHub.log(
+                        io.github.xororz.localdream.cloud.LogHub.Category.UPLOAD,
+                        "chat media failed HTTP ${resp.code} $path ${detail.take(120)}",
+                    )
                     return@withContext MediaUpload(null, null, reason)
                 }
             }
             onProgress?.invoke(1f)
+            // A file uploaded seconds ago is not in jsDelivr's cache yet; purge it
+            // so other members do not see a broken image/video.
+            MirrorPurge.jsdelivr("LocalDreamET-Chat", path)
             MediaUpload(rawUrl(path), cdnUrl(path), "")
         } catch (e: java.io.IOException) {
             MediaUpload(null, null, if (e.message?.contains("Canceled") == true) "已取消上传" else (e.message ?: "网络错误"))
@@ -343,69 +357,91 @@ class VoiceRecorder(private val context: Context) {
     var lastError: String? = null
 
     val isRecording: Boolean get() = recorder != null
+    val elapsedMs: Long get() = if (startedAt == 0L) 0L else System.currentTimeMillis() - startedAt
 
     fun start(): Boolean {
         if (recorder != null) return true
-        val file = File(context.cacheDir, "voice_${System.currentTimeMillis()}.m4a")
-        return try {
-            val r = if (android.os.Build.VERSION.SDK_INT >= 31) {
-                MediaRecorder(context)
-            } else {
-                @Suppress("DEPRECATION")
-                MediaRecorder()
+        lastError = null
+        // Some OEM encoders reject 44.1 kHz / 96 kbps; retry with common presets
+        // before giving up, so "mic is allowed but recording fails" disappears.
+        val presets = listOf(44100 to 96000, 48000 to 64000, 44100 to 64000)
+        for ((rate, bitrate) in presets) {
+            val file = File(context.cacheDir, "voice_${System.currentTimeMillis()}.m4a")
+            val r = try {
+                if (android.os.Build.VERSION.SDK_INT >= 31) MediaRecorder(context) else {
+                    @Suppress("DEPRECATION")
+                    MediaRecorder()
+                }
+            } catch (e: Exception) {
+                lastError = e.message ?: e.javaClass.simpleName
+                return false
             }
-            r.setAudioSource(MediaRecorder.AudioSource.MIC)
-            r.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
-            r.setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
-            r.setAudioSamplingRate(44100)
-            r.setAudioEncodingBitRate(96000)
-            r.setAudioChannels(1)
-            r.setOutputFile(file.absolutePath)
-            r.prepare()
-            r.start()
-            recorder = r
-            target = file
-            startedAt = System.currentTimeMillis()
-            true
-        } catch (e: Exception) {
-            lastError = e.message ?: e.javaClass.simpleName
-            runCatching { recorder?.release() }
-            recorder = null
-            target = null
-            runCatching { file.delete() }
-            false
+            try {
+                r.setAudioSource(MediaRecorder.AudioSource.MIC)
+                r.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
+                r.setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+                r.setAudioSamplingRate(rate)
+                r.setAudioEncodingBitRate(bitrate)
+                r.setAudioChannels(1)
+                r.setOutputFile(file.absolutePath)
+                r.prepare()
+                r.start()
+                recorder = r
+                target = file
+                startedAt = System.currentTimeMillis()
+                return true
+            } catch (e: Exception) {
+                lastError = e.message ?: e.javaClass.simpleName
+                runCatching { r.release() }
+                runCatching { file.delete() }
+            }
         }
+        recorder = null
+        target = null
+        startedAt = 0L
+        return false
     }
 
     /** Stops and returns (file, durationSec); null when nothing usable. */
     fun stop(): Pair<File, Int>? {
         val r = recorder ?: return null
         val file = target
-        val elapsed = ((System.currentTimeMillis() - startedAt) / 1000L).toInt()
+        val ms = elapsedMs
         recorder = null
         target = null
-        return try {
+        startedAt = 0L
+        var stopped = true
+        try {
             r.stop()
-            r.release()
-            if (file != null && file.exists() && file.length() > 0) {
-                file to elapsed.coerceAtLeast(1)
-            } else {
-                file?.delete()
-                null
-            }
         } catch (e: Exception) {
+            // "stop failed" is common when the press was shorter than ~1s and
+            // the codec has not produced a frame yet; the file is then empty.
+            stopped = false
+            lastError = e.message ?: e.javaClass.simpleName
+        } finally {
             runCatching { r.release() }
-            file?.delete()
-            null
         }
+        if (file != null && file.exists() && file.length() > 0) {
+            val seconds = (ms / 1000L).toInt().coerceAtLeast(1)
+            if (!stopped) lastError = null
+            return file to seconds
+        }
+        runCatching { file?.delete() }
+        if (ms < 1200L) {
+            lastError = "说话时间太短（请按住超过 1 秒）"
+        } else if (lastError == null) {
+            lastError = "录音没有产生数据，可能被其他应用占用麦克风"
+        }
+        return null
     }
 
     fun cancel() {
-        val r = recorder ?: return
+        val r = recorder
         recorder = null
-        runCatching { r.stop() }
-        runCatching { r.release() }
-        target?.delete()
+        startedAt = 0L
+        runCatching { r?.stop() }
+        runCatching { r?.release() }
+        runCatching { target?.delete() }
         target = null
     }
 }
@@ -420,11 +456,14 @@ object ChatPolicyRepo {
     private const val FILE = "admin.json"
     private const val OWNER_LOGIN = "ETQWFD"
 
-    private fun readUrls(): List<String> = listOf(
-        "https://raw.githubusercontent.com/ETQWFD/LocalDreamET-Chat/main/$FILE",
-        "https://cdn.jsdelivr.net/gh/ETQWFD/LocalDreamET-Chat@main/$FILE",
-        "https://raw.gitmirror.com/ETQWFD/LocalDreamET-Chat/main/$FILE",
-    )
+    private fun readUrls(): List<String> {
+        val cb = System.currentTimeMillis() / 60_000
+        return listOf(
+            "https://raw.githubusercontent.com/ETQWFD/LocalDreamET-Chat/main/$FILE?cb=$cb",
+            "https://cdn.jsdelivr.net/gh/ETQWFD/LocalDreamET-Chat@main/$FILE?cb=$cb",
+            "https://raw.gitmirror.com/ETQWFD/LocalDreamET-Chat/main/$FILE?cb=$cb",
+        )
+    }
 
     suspend fun load(): ChatPolicy = withContext(Dispatchers.IO) {
         for (url in readUrls()) {

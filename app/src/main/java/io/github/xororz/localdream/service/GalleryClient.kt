@@ -1,6 +1,7 @@
 package io.github.xororz.localdream.service
 
 import io.github.xororz.localdream.BuildConfig
+import io.github.xororz.localdream.net.MirrorPurge
 import io.github.xororz.localdream.net.ProgressBody
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -318,9 +319,13 @@ object GalleryClient {
             val (c1, t1) = putWithProgress("$API/png/pic_$id.png", imgBody, token, onProgress)
             if (c1 == -1 && t1 == "已取消上传") return@withContext UploadResult(false, "已取消上传")
             if (c1 !in 200..201) {
+                io.github.xororz.localdream.cloud.LogHub.log(
+                    io.github.xororz.localdream.cloud.LogHub.Category.UPLOAD,
+                    "gallery upload failed HTTP $c1 ${t1.take(120)}",
+                )
                 return@withContext UploadResult(
                     false,
-                    brief(c1, t1) + (if (c1 == 404) "（账号无写权限，已尝试备用令牌）" else ""),
+                    brief(c1, t1) + (if (c1 == 404) "（令牌无写权限）" else ""),
                 )
             }
             onProgress?.invoke(1f)
@@ -332,12 +337,22 @@ object GalleryClient {
                 .put("content", Base64.getEncoder().encodeToString(meta.toString().toByteArray()))
                 .toString().toByteArray()
             val (c2, t2) = putWithProgress("$API/png/pic_$id.meta.json", metaBody, token, null)
+            MirrorPurge.jsdelivr("LocalDreamET-Gallery", "png/pic_$id.png")
+            MirrorPurge.jsdelivr("LocalDreamET-Gallery", "png/pic_$id.meta.json")
             if (c2 !in 200..201) {
                 // Image landed but meta failed: still a successful publish.
                 return@withContext UploadResult(true, "作品已上传，但作品信息写入失败：${brief(c2, t2)}")
             }
+            io.github.xororz.localdream.cloud.LogHub.log(
+                io.github.xororz.localdream.cloud.LogHub.Category.UPLOAD,
+                "gallery upload ok pic_$id.png (${pngBytes.size} bytes)",
+            )
             UploadResult(true, "")
         } catch (e: Exception) {
+            io.github.xororz.localdream.cloud.LogHub.log(
+                io.github.xororz.localdream.cloud.LogHub.Category.UPLOAD,
+                "gallery upload exception ${e.message}",
+            )
             UploadResult(false, e.message ?: e.javaClass.simpleName)
         }
     }
