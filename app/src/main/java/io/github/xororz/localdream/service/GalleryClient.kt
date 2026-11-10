@@ -339,15 +339,26 @@ object GalleryClient {
             val (c2, t2) = putWithProgress("$API/png/pic_$id.meta.json", metaBody, token, null)
             MirrorPurge.jsdelivr("LocalDreamET-Gallery", "png/pic_$id.png")
             MirrorPurge.jsdelivr("LocalDreamET-Gallery", "png/pic_$id.meta.json")
+            // Read the file back so "发布成功" can never be a lie: if the commit
+            // did not land (409 race, revoked token) we report it immediately.
+            val verified = runCatching {
+                var ok = false
+                repeat(3) { attempt ->
+                    val (vc, vt) = http("$API/png/pic_$id.png", "GET")
+                    if (vc == 200 && vt.contains("\"size\"")) { ok = true; return@repeat }
+                    if (attempt < 2) Thread.sleep(1200)
+                }
+                ok
+            }.getOrDefault(false)
             if (c2 !in 200..201) {
                 // Image landed but meta failed: still a successful publish.
                 return@withContext UploadResult(true, "作品已上传，但作品信息写入失败：${brief(c2, t2)}")
             }
             io.github.xororz.localdream.cloud.LogHub.log(
                 io.github.xororz.localdream.cloud.LogHub.Category.UPLOAD,
-                "gallery upload ok pic_$id.png (${pngBytes.size} bytes)",
+                "gallery upload ok pic_$id.png (${pngBytes.size} bytes, verified=$verified)",
             )
-            UploadResult(true, "")
+            UploadResult(true, if (verified) "" else "已上传，仓库索引稍有延迟，请下拉刷新")
         } catch (e: Exception) {
             io.github.xororz.localdream.cloud.LogHub.log(
                 io.github.xororz.localdream.cloud.LogHub.Category.UPLOAD,

@@ -63,14 +63,16 @@ class ChatModelTest {
     }
 
     @Test
-    fun recentKeepsOnlySevenDays() {
+    fun recentKeepsFullHistoryNotJustSevenDays() {
         val now = 1_000_000L
         val list = listOf(
             m("old", now - 8 * ChatWindow.DAY_SECONDS),
             m("edge", now - 7 * ChatWindow.DAY_SECONDS),
             m("new", now - 60),
         )
-        assertEquals(listOf("edge", "new"), ChatWindow.recent(list, now).map { it.author })
+        // Shared chat shows every post, otherwise long-running rooms look
+        // like they lost everything older than a week.
+        assertEquals(listOf("old", "edge", "new"), ChatWindow.recent(list, now).map { it.author })
     }
 
     @Test

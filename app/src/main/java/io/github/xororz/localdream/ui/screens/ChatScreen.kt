@@ -159,7 +159,7 @@ fun ChatScreen(onBack: () -> Unit) {
     // Everyone should see new messages without pressing refresh: poll gently.
     LaunchedEffect(Unit) {
         while (true) {
-            delay(15_000)
+            delay(5_000)
             if (!sending) {
                 val loaded = withContext(Dispatchers.IO) { ChatRepository.load(ctx) }
                 messages = ChatWindow.recent(loaded)

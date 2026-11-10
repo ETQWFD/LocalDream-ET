@@ -209,7 +209,9 @@ fun GalleryScreen(navController: NavController) {
             }) { Text("我知道了") } },
         )
     }
-    if (showUpload) UploadDialog(ctx) {
+    if (showUpload) UploadDialog(ctx, onPublished = {
+        GalleryClient.invalidate()
+    }) {
         showUpload = false
         // et.168: invalidate the in-memory list so the freshly uploaded picture
         // shows up immediately instead of after an app restart.
@@ -286,7 +288,7 @@ private data class LocalArt(val file: File)
  * folders.
  */
 @Composable
-private fun UploadDialog(ctx: Context, onDismiss: () -> Unit) {
+private fun UploadDialog(ctx: Context, onPublished: () -> Unit = {}, onDismiss: () -> Unit) {
     val scope = rememberCoroutineScope()
     var price by remember { mutableStateOf("100") }
     var name by remember { mutableStateOf("") }
@@ -474,7 +476,10 @@ private fun UploadDialog(ctx: Context, onDismiss: () -> Unit) {
                                     } else {
                                         "发布失败：${res.reason}"
                                     }
-                                    if (res.ok) onDismiss()
+                                    if (res.ok) {
+                                        onPublished()
+                                        onDismiss()
+                                    }
                                 }
                             }
                         }

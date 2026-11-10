@@ -162,7 +162,13 @@ data class ChatPolicy(
 object ChatWindow {
     const val DAY_SECONDS = 24L * 60 * 60
 
-    /** Only the last 7 days are shown, as requested; keeps the list fast. */
+    /**
+     * Full history, newest last. The old build trimmed everything older than
+     * 7 days, which made long-running shared chats look like they "lost" posts.
+     * Cap only for rendering cost, never by date.
+     */
     fun recent(list: List<ChatMessage>, now: Long = System.currentTimeMillis() / 1000L): List<ChatMessage> =
-        list.filter { it.ts >= now - 7 * DAY_SECONDS }
+        list.sortedBy { it.ts }.takeLast(MAX_KEPT)
+
+    private const val MAX_KEPT = 500
 }
