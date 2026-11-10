@@ -115,7 +115,10 @@ object GalleryEarnings {
     suspend fun record(ctx: Context, author: String, price: Int): Boolean =
         withContext(Dispatchers.IO) {
             if (price <= 0) return@withContext false
-            val token = runCatching { ChatRepository.writeToken(ctx) }.getOrDefault("")
+            // Repo writes must use the account that owns the repo: a normal
+            // signed-in buyer gets 404 on write, so prefer the built-in token.
+            val token = io.github.xororz.localdream.BuildConfig.GALLERY_TOKEN
+                .ifBlank { runCatching { ChatRepository.writeToken(ctx) }.getOrDefault("") }
             if (token.isBlank()) return@withContext false
             val authorPart = price.toLong() * AUTHOR_PERCENT / 100
             val platformPart = price.toLong() - authorPart
@@ -132,7 +135,8 @@ object GalleryEarnings {
         val login = runCatching {
             SecureTokenStore(ctx).state(CloudConfig.Provider.GITHUB)?.login
         }.getOrNull() ?: return@withContext 0L
-        val token = runCatching { ChatRepository.writeToken(ctx) }.getOrDefault("")
+        val token = io.github.xororz.localdream.BuildConfig.GALLERY_TOKEN
+            .ifBlank { runCatching { ChatRepository.writeToken(ctx) }.getOrDefault("") }
         if (token.isBlank()) return@withContext 0L
         val remote = runCatching { read(safeName(login), token).first }.getOrDefault(0L)
         if (remote <= 0L) return@withContext 0L

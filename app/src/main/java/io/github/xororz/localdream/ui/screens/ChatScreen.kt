@@ -210,7 +210,7 @@ fun ChatScreen(onBack: () -> Unit) {
                 return@launch
             }
             uploadProgress = 0f
-            val up = ChatRepository.uploadMedia(ctx, bytes, "jpg", "img") { publishProgress(it) }
+            val up = ChatRepository.uploadMedia(ctx, bytes, "jpg", "img", onProgress = { publishProgress(it) })
             uploadProgress = -1f
             if (up.raw == null) {
                 sending = false
@@ -264,7 +264,7 @@ fun ChatScreen(onBack: () -> Unit) {
                 ?.lowercase()
                 ?.takeIf { it in listOf("mp4", "mov", "webm", "m4v", "3gp") } ?: "mp4"
             uploadProgress = 0f
-            val up = ChatRepository.uploadMedia(ctx, bytes, ext, "vid") { publishProgress(it) }
+            val up = ChatRepository.uploadMedia(ctx, bytes, ext, "vid", onProgress = { publishProgress(it) })
             uploadProgress = -1f
             if (up.raw == null) {
                 sending = false
@@ -302,7 +302,12 @@ fun ChatScreen(onBack: () -> Unit) {
         recording = false
         recordSeconds = 0
         if (result == null) {
-            status = "录音失败，请检查麦克风权限"
+            val reason = recorder.lastError
+            status = if (reason.isNullOrBlank()) {
+                "录音失败：请检查麦克风权限或是否有其他应用占用麦克风"
+            } else {
+                "录音失败：$reason"
+            }
             return
         }
         val (file, seconds) = result
@@ -332,7 +337,7 @@ fun ChatScreen(onBack: () -> Unit) {
                 return@launch
             }
             uploadProgress = 0f
-            val up = ChatRepository.uploadMedia(ctx, bytes, "m4a", "aud") { publishProgress(it) }
+            val up = ChatRepository.uploadMedia(ctx, bytes, "m4a", "aud", onProgress = { publishProgress(it) })
             uploadProgress = -1f
             file.delete()
             uploadingVoice = false
@@ -419,12 +424,9 @@ fun ChatScreen(onBack: () -> Unit) {
         ActivityResultContracts.RequestPermission(),
     ) { granted ->
         if (granted) {
-            if (recorder.start()) {
-                recording = true
-                recordSeconds = 0
-            } else {
-                status = "麦克风被占用，录音启动失败"
-            }
+            // The finger has already been lifted while the dialog was up, so do
+            // not start a stranded recording; ask for another press instead.
+            status = "麦克风权限已开启，请再按住说话"
         } else {
             status = "需要麦克风权限才能发语音"
         }

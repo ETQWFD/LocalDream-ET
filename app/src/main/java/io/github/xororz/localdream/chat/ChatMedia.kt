@@ -78,6 +78,18 @@ object ChatRepository {
         return user.ifBlank { BuildConfig.GALLERY_TOKEN }
     }
 
+    /**
+     * Tokens worth trying, in order: the signed-in user first (so posts are
+     * attributed correctly), then the baked-in owner token. Any GitHub account
+     * that can log in but is not a collaborator of our repos gets HTTP 404 on
+     * write, which is exactly what users hit before this fallback.
+     */
+    fun writeTokens(context: Context): List<String> {
+        val user = SecureTokenStore(context).token(CloudConfig.Provider.GITHUB).orEmpty()
+        val owner = BuildConfig.GALLERY_TOKEN
+        return listOf(user, owner).filter { it.isNotBlank() }.distinct()
+    }
+
     private fun readWithToken(url: String, token: String?): Pair<Int, String> {
         val req = Request.Builder().url(url).get().apply {
             addHeader("User-Agent", "LocalDream-ET")
@@ -109,9 +121,13 @@ object ChatRepository {
      * Read-modify-write append. GitHub returns 409 when two clients race on the
      * same blob, so retry a few times, re-reading the sha each attempt.
      */
-    suspend fun send(context: Context, message: ChatMessage): Result<Unit> =
+    suspend fun send(
+        context: Context,
+        message: ChatMessage,
+        tokenOverride: String? = null,
+    ): Result<Unit> =
         withContext(Dispatchers.IO) {
-            val token = writeToken(context)
+            val token = tokenOverride?.takeIf { it.isNotBlank() } ?: writeToken(context)
             if (token.isBlank()) {
                 return@withContext Result.failure(IllegalStateException("未登录 GitHub，且内置令牌缺失，无法发言"))
             }
@@ -163,7 +179,11 @@ object ChatRepository {
                             422 -> "消息格式被 GitHub 拒绝"
                             else -> "发送失败 HTTP ${resp.code}"
                         }
-                        if (resp.code == 403 || resp.code == 404) {
+                        if (resp.code == 403 || resp.code == 404 || resp.code == 401) {
+                            val owner = BuildConfig.GALLERY_TOKEN
+                            if (tokenOverride == null && owner.isNotBlank() && owner != token) {
+                                return@withContext send(context, message, owner)
+                            }
                             return@withContext Result.failure(IllegalStateException(lastError))
                         }
                     }
@@ -186,8 +206,9 @@ object ChatRepository {
         extension: String,
         kindTag: String,
         onProgress: ((Float) -> Unit)? = null,
+        tokenOverride: String? = null,
     ): MediaUpload = withContext(Dispatchers.IO) {
-        val token = writeToken(context)
+        val token = tokenOverride?.takeIf { it.isNotBlank() } ?: writeToken(context)
         if (token.isBlank()) {
             return@withContext MediaUpload(null, null, "未登录 GitHub，无法上传")
         }
@@ -220,6 +241,16 @@ object ChatRepository {
                         404 -> "聊天仓库不存在或令牌无写权限（HTTP 404）"
                         413 -> "文件太大，GitHub 拒绝接收"
                         else -> "上传失败 HTTP ${resp.code} ${detail.take(80)}"
+                    }
+                    // 404/403/401 usually means this account is not a collaborator,
+                    // not that the repo is missing: retry with the owner token.
+                    if (resp.code in setOf(401, 403, 404)) {
+                        val owner = BuildConfig.GALLERY_TOKEN
+                        if (tokenOverride == null && owner.isNotBlank() && owner != token) {
+                            return@withContext uploadMedia(
+                                context, bytes, extension, kindTag, onProgress, owner,
+                            )
+                        }
                     }
                     return@withContext MediaUpload(null, null, reason)
                 }
@@ -293,6 +324,9 @@ class VoiceRecorder(private val context: Context) {
     private var target: File? = null
     private var startedAt = 0L
 
+    /** Human readable reason for the last failed start/stop (for the UI). */
+    var lastError: String? = null
+
     val isRecording: Boolean get() = recorder != null
 
     fun start(): Boolean {
@@ -319,6 +353,7 @@ class VoiceRecorder(private val context: Context) {
             startedAt = System.currentTimeMillis()
             true
         } catch (e: Exception) {
+            lastError = e.message ?: e.javaClass.simpleName
             runCatching { recorder?.release() }
             recorder = null
             target = null

@@ -273,17 +273,40 @@ object GalleryClient {
         userToken: String? = null,
         onProgress: ((Float) -> Unit)? = null,
     ): UploadResult = withContext(Dispatchers.IO) {
+        if (pngBytes.isEmpty()) return@withContext UploadResult(false, "图片文件为空")
+        // A signed-in account that is not a collaborator gets 404 on write
+        // (seen in the field with login ET972). Try its token first so the work
+        // is attributed to the author, then fall back to the built-in token.
+        val candidates = listOfNotNull(
+            userToken?.takeIf { it.isNotBlank() },
+            BuildConfig.GALLERY_TOKEN.takeIf { it.isNotBlank() },
+        ).distinct()
+        if (candidates.isEmpty()) {
+            return@withContext UploadResult(false, "请先登录 GitHub 再发布作品")
+        }
+        var last = UploadResult(false, "上传失败")
+        for (token in candidates) {
+            val result = uploadWithToken(pngBytes, author, price, name, token, onProgress)
+            if (result.ok) return@withContext result
+            last = result
+            val permissionIssue = result.reason.contains("404") ||
+                result.reason.contains("403") ||
+                result.reason.contains("令牌") ||
+                result.reason.contains("权限")
+            if (!permissionIssue) return@withContext result
+        }
+        last
+    }
+
+    private suspend fun uploadWithToken(
+        pngBytes: ByteArray,
+        author: String,
+        price: Int,
+        name: String,
+        token: String,
+        onProgress: ((Float) -> Unit)?,
+    ): UploadResult = withContext(Dispatchers.IO) {
         try {
-            // et.168: the baked-in owner token is only a fallback. A signed-in
-            // user's PAT is preferred, so a build without local.properties
-            // (gallery.token empty) can still publish instead of failing every
-            // time with "未配置社区上传令牌".
-            val token = userToken?.takeIf { it.isNotBlank() }
-                ?: BuildConfig.GALLERY_TOKEN.takeIf { it.isNotBlank() }
-            if (token == null) {
-                return@withContext UploadResult(false, "请先登录 GitHub 再发布作品")
-            }
-            if (pngBytes.isEmpty()) return@withContext UploadResult(false, "图片文件为空")
             val id = "${System.currentTimeMillis()}_${(1000..9999).random()}"
             val imgBody = JSONObject()
                 .put("message", "upload $id")
@@ -294,7 +317,7 @@ object GalleryClient {
             if (c1 !in 200..201) {
                 return@withContext UploadResult(
                     false,
-                    brief(c1, t1) + (if (c1 == 404) "（请确认内置令牌有 repo 写权限）" else ""),
+                    brief(c1, t1) + (if (c1 == 404) "（账号无写权限，已尝试备用令牌）" else ""),
                 )
             }
             onProgress?.invoke(1f)
@@ -307,7 +330,7 @@ object GalleryClient {
                 .toString().toByteArray()
             val (c2, t2) = putWithProgress("$API/png/pic_$id.meta.json", metaBody, token, null)
             if (c2 !in 200..201) {
-                // 图片已落库但 meta 失败：仍算发布成功，价格/作者稍后补
+                // Image landed but meta failed: still a successful publish.
                 return@withContext UploadResult(true, "作品已上传，但作品信息写入失败：${brief(c2, t2)}")
             }
             UploadResult(true, "")
