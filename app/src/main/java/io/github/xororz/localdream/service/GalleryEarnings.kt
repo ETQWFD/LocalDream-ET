@@ -47,8 +47,18 @@ object GalleryEarnings {
     private fun apiUrl(name: String) =
         "https://api.github.com/repos/$REPO/contents/$DIR/$name.json"
 
-    /** Reads a totals file; returns (total, sha). total = 0 when the file is absent. */
-    private fun read(name: String, token: String): Pair<Long, String> {
+    /** Everything needed to tell the author what just sold. */
+    data class EarningInfo(
+        val total: Long,
+        val item: String,
+        val share: Long,
+        val price: Long,
+        val sales: Int,
+        val sha: String,
+    )
+
+    /** Reads a totals file; total = 0 when the file is absent. */
+    private fun readInfo(name: String, token: String): EarningInfo {
         val req = Request.Builder().url(apiUrl(name))
             .addHeader("Authorization", "Bearer $token")
             .addHeader("User-Agent", "LocalDream-ET")
@@ -62,7 +72,14 @@ object GalleryEarnings {
                     val json = runCatching {
                         JSONObject(String(Base64.getDecoder().decode(body)))
                     }.getOrNull()
-                    return json?.optLong("total", 0L)!! to sha
+                    return EarningInfo(
+                        total = json?.optLong("total", 0L) ?: 0L,
+                        item = json?.optString("lastItem", "") ?: "",
+                        share = json?.optLong("lastShare", 0L) ?: 0L,
+                        price = json?.optLong("lastPrice", 0L) ?: 0L,
+                        sales = json?.optInt("sales", 0) ?: 0,
+                        sha = sha,
+                    )
                 }
             }
         }
@@ -73,19 +90,39 @@ object GalleryEarnings {
             conn.readTimeout = 12000
             if (conn.responseCode in 200..299) {
                 val json = JSONObject(conn.inputStream.use { it.readBytes().decodeToString() })
-                return json.optLong("total", 0L) to ""
+                return EarningInfo(
+                    json.optLong("total", 0L),
+                    json.optString("lastItem", ""),
+                    json.optLong("lastShare", 0L),
+                    json.optLong("lastPrice", 0L),
+                    json.optInt("sales", 0),
+                    "",
+                )
             }
         }
-        return 0L to ""
+        return EarningInfo(0L, "", 0L, 0L, 0, "")
     }
 
-    private fun write(name: String, total: Long, sales: Int, token: String): Boolean {
+    private fun write(
+        name: String,
+        total: Long,
+        sales: Int,
+        item: String,
+        price: Long,
+        share: Long,
+        token: String,
+    ): Boolean {
         repeat(3) { attempt ->
-            val (existing, sha) = read(name, token)
+            val info = readInfo(name, token)
+            val existing = info.total
+            val sha = info.sha
             val base = if (existing > 0L) existing else 0L
             val payload = JSONObject()
                 .put("total", base + total)
                 .put("sales", sales)
+                .put("lastItem", item)
+                .put("lastPrice", price)
+                .put("lastShare", share)
                 .put("updated", System.currentTimeMillis() / 1000L)
                 .put("unit", "quota")
                 .toString()
@@ -112,7 +149,7 @@ object GalleryEarnings {
     }
 
     /** Splits a completed purchase between the author and the platform. */
-    suspend fun record(ctx: Context, author: String, price: Int): Boolean =
+    suspend fun record(ctx: Context, author: String, price: Int, itemName: String = ""): Boolean =
         withContext(Dispatchers.IO) {
             if (price <= 0) return@withContext false
             // Repo writes must use the account that owns the repo: a normal
@@ -122,8 +159,8 @@ object GalleryEarnings {
             if (token.isBlank()) return@withContext false
             val authorPart = price.toLong() * AUTHOR_PERCENT / 100
             val platformPart = price.toLong() - authorPart
-            val authorOk = write(safeName(author), authorPart, 1, token)
-            val platformOk = write("__platform", platformPart, 1, token)
+            val authorOk = write(safeName(author), authorPart, 1, itemName, price.toLong(), authorPart, token)
+            val platformOk = write("__platform", platformPart, 1, itemName, price.toLong(), authorPart, token)
             authorOk && platformOk
         }
 
@@ -131,24 +168,26 @@ object GalleryEarnings {
      * Applies newly earned quota to this device. Idempotent: remembers the
      * remote total it already credited, so a re-check never double-pays.
      */
-    suspend fun sync(ctx: Context): Long = withContext(Dispatchers.IO) {
+    suspend fun sync(ctx: Context): EarningInfo? = withContext(Dispatchers.IO) {
         val login = runCatching {
             SecureTokenStore(ctx).state(CloudConfig.Provider.GITHUB)?.login
-        }.getOrNull() ?: return@withContext 0L
+        }.getOrNull() ?: return@withContext null
         val token = io.github.xororz.localdream.BuildConfig.GALLERY_TOKEN
             .ifBlank { runCatching { ChatRepository.writeToken(ctx) }.getOrDefault("") }
-        if (token.isBlank()) return@withContext 0L
-        val remote = runCatching { read(safeName(login), token).first }.getOrDefault(0L)
-        if (remote <= 0L) return@withContext 0L
+        if (token.isBlank()) return@withContext null
+        val info = runCatching { readInfo(safeName(login), token) }.getOrNull()
+            ?: return@withContext null
+        val remote = info.total
+        if (remote <= 0L) return@withContext null
         val sp = ctx.getSharedPreferences("quota_prefs", Context.MODE_PRIVATE)
         val applied = sp.getLong("earnings_applied", 0L)
-        if (remote <= applied) return@withContext 0L
+        if (remote <= applied) return@withContext null
         val delta = remote - applied
         sp.edit()
             .putLong("earnings_applied", remote)
             .putLong("bonus_pool", sp.getLong("bonus_pool", 0L) + delta)
             .apply()
         Log.i(TAG, "credited $delta quota from gallery earnings")
-        delta
+        info.copy(total = delta)
     }
 }

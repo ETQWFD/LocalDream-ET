@@ -22,6 +22,8 @@ import androidx.compose.foundation.text.ClickableText
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -92,6 +94,14 @@ fun ChatScreen(onBack: () -> Unit) {
     var input by remember { mutableStateOf("") }
     var sending by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf("") }
+    var atPicker by remember { mutableStateOf(false) }
+    var mentionMessage by remember { mutableStateOf<ChatMessage?>(null) }
+    var lastMentionTs by remember {
+        mutableStateOf(ctx.getSharedPreferences("chat_prefs", Context.MODE_PRIVATE).getLong("last_mention_ts", 0L))
+    }
+    var profileFor by remember { mutableStateOf<String?>(null) }
+    var profileData by remember { mutableStateOf<io.github.xororz.localdream.chat.ChatProfile?>(null) }
+    var editingProfile by remember { mutableStateOf<io.github.xororz.localdream.chat.ChatProfile?>(null) }
     var viewerImages by remember { mutableStateOf<List<String>>(emptyList()) }
     var videoUrls by remember { mutableStateOf<List<String>>(emptyList()) }
     var localPreview by remember { mutableStateOf<Bitmap?>(null) }
@@ -166,7 +176,26 @@ fun ChatScreen(onBack: () -> Unit) {
             delay(3_000)
             if (!sending) {
                 val loaded = withContext(Dispatchers.IO) { ChatRepository.load(ctx) }
-                if (loaded.isNotEmpty()) messages = ChatWindow.recent(loaded)
+                if (loaded.isNotEmpty()) {
+                    messages = ChatWindow.recent(loaded)
+                    val newest = loaded.maxOfOrNull { it.ts } ?: 0L
+                    if (lastMentionTs == 0L) {
+                        lastMentionTs = newest
+                        ctx.getSharedPreferences("chat_prefs", Context.MODE_PRIVATE)
+                            .edit().putLong("last_mention_ts", newest).apply()
+                    } else {
+                        val me = meLogin
+                        val mention = loaded.lastOrNull {
+                            it.ts > lastMentionTs && !ChatIdentity.isMine(it.author, me) &&
+                                (it.text.contains("@全体人员") || it.text.contains("@全体") ||
+                                    (me != null && it.text.contains("@$me")))
+                        }
+                        if (mention != null) mentionMessage = mention
+                        lastMentionTs = maxOf(lastMentionTs, newest)
+                        ctx.getSharedPreferences("chat_prefs", Context.MODE_PRIVATE)
+                            .edit().putLong("last_mention_ts", lastMentionTs).apply()
+                    }
+                }
             }
             // Pick up admin/mute changes made in the backend without a restart.
             if (tick % 10 == 0) {
@@ -210,6 +239,11 @@ fun ChatScreen(onBack: () -> Unit) {
             return
         }
         if (blockedByMute()) return
+        val wantsAll = text.contains("@全体人员") || text.contains("@全体") || text.contains("@all")
+        if (wantsAll && !policy.isAdmin(meLogin)) {
+            status = "只有管理员可以 @全体人员"
+            return
+        }
         post(
             ChatMessage(
                 author = author,
@@ -521,6 +555,9 @@ fun ChatScreen(onBack: () -> Unit) {
                     }
                 },
                 actions = {
+                    IconButton(onClick = { profileFor = meLogin }) {
+                        Icon(Icons.Default.Person, contentDescription = "我的主页")
+                    }
                     IconButton(onClick = { refresh() }, enabled = !loading) {
                         Icon(Icons.Default.Refresh, contentDescription = "刷新")
                     }
@@ -577,6 +614,7 @@ fun ChatScreen(onBack: () -> Unit) {
                         admin = policy.isAdmin(m.author),
                         playing = playingKey == m.key,
                         onPlayAudio = { playAudio(m) },
+                        onAvatar = { login -> profileFor = login },
                         onOpenMedia = { urls -> viewerImages = urls },
                         onOpenVideo = { urls -> videoUrls = urls },
                         onLink = { url -> webUrl = url },
@@ -781,6 +819,12 @@ fun ChatScreen(onBack: () -> Unit) {
                 )
                 IconButton(
                     enabled = !sending && !recording,
+                    onClick = { atPicker = true },
+                ) {
+                    Icon(Icons.Default.AlternateEmail, contentDescription = "@某人")
+                }
+                IconButton(
+                    enabled = !sending && !recording,
                     onClick = { imagePicker.launch("image/*") },
                 ) {
                     Icon(Icons.Default.Image, contentDescription = "图片")
@@ -808,6 +852,79 @@ fun ChatScreen(onBack: () -> Unit) {
     }
 
     // Long-press actions: copy / quote / @mention / mute (admins only).
+    if (atPicker) {
+        val people = messages.map { it.author }.filter { it.isNotBlank() }.distinct()
+        AlertDialog(
+            onDismissRequest = { atPicker = false },
+            title = { Text("选择要 @ 的人") },
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState())) {
+                    if (policy.isAdmin(meLogin)) {
+                        TextButton(onClick = {
+                            input = (input + " @全体人员 ").trimStart()
+                            atPicker = false
+                        }) { Text("@全体人员（管理员）") }
+                    }
+                    people.forEach { name ->
+                        TextButton(onClick = {
+                            input = (input + " @$name ").trimStart()
+                            atPicker = false
+                        }, modifier = Modifier.fillMaxWidth()) { Text("@$name") }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { atPicker = false }) { Text("关闭") } },
+        )
+    }
+
+    mentionMessage?.let { m ->
+        AlertDialog(
+            onDismissRequest = { mentionMessage = null },
+            title = { Text("有人 @ 你") },
+            text = { Text("${m.author}：${m.text.ifBlank { "[${m.kind.name}]" }}") },
+            confirmButton = { TextButton(onClick = { mentionMessage = null }) { Text("知道了") } },
+        )
+    }
+
+    LaunchedEffect(profileFor) {
+        val login = profileFor
+        if (login.isNullOrBlank()) {
+            profileData = null
+        } else {
+            profileData = io.github.xororz.localdream.chat.ChatProfileRepo.cached(login)
+            val loaded = io.github.xororz.localdream.chat.ChatProfileRepo.load(login)
+            if (profileFor == login) profileData = loaded
+        }
+    }
+
+    profileFor?.let { login ->
+        val p = profileData ?: io.github.xororz.localdream.chat.ChatProfile(login)
+        ProfileViewDialog(
+            profile = p,
+            isSelf = ChatIdentity.isMine(login, meLogin),
+            onEdit = { editingProfile = p },
+            onDismiss = { profileFor = null },
+        )
+    }
+
+    editingProfile?.let { initial ->
+        ProfileEditDialog(
+            initial = initial,
+            onDismiss = { editingProfile = null },
+            onSave = { updated ->
+                scope.launch {
+                    io.github.xororz.localdream.chat.ChatProfileRepo.save(ctx, updated).onSuccess {
+                        Toast.makeText(ctx, "主页已保存", Toast.LENGTH_SHORT).show()
+                        profileData = updated
+                        editingProfile = null
+                    }.onFailure {
+                        Toast.makeText(ctx, it.message ?: "保存失败", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            },
+        )
+    }
+
     actionFor?.let { target ->
         AlertDialog(
             onDismissRequest = { actionFor = null },
@@ -815,11 +932,72 @@ fun ChatScreen(onBack: () -> Unit) {
             text = {
                 Column {
                     val clipboard = LocalClipboardManager.current
+                    if (target.kind == ChatKind.IMAGE || target.kind == ChatKind.VIDEO) {
+                        TextButton(onClick = {
+                            actionFor = null
+                            scope.launch {
+                                val bytes = withContext(Dispatchers.IO) {
+                                    ChatRepository.fetchRepoFile(target.mediaUrl)
+                                }
+                                if (bytes == null || bytes.isEmpty()) {
+                                    Toast.makeText(ctx, "文件下载失败", Toast.LENGTH_SHORT).show()
+                                    return@launch
+                                }
+                                val ext = if (target.kind == ChatKind.VIDEO) "mp4" else "png"
+                                val mime = if (target.kind == ChatKind.VIDEO) "video/mp4" else "image/png"
+                                val ok = withContext(Dispatchers.IO) {
+                                    saveBytesToGallery(ctx, bytes, "LocalDreamET_${target.ts}.$ext", mime)
+                                }
+                                Toast.makeText(
+                                    ctx,
+                                    if (ok) "已保存到相册" else "保存失败，请检查存储权限",
+                                    Toast.LENGTH_SHORT,
+                                ).show()
+                            }
+                        }, modifier = Modifier.fillMaxWidth()) { Text("保存到相册") }
+
+                        TextButton(onClick = {
+                            actionFor = null
+                            val url = listOfNotNull(target.cdnUrl, target.mediaUrl).firstOrNull().orEmpty()
+                            val send = Intent(Intent.ACTION_SEND).apply {
+                                type = if (target.kind == ChatKind.VIDEO) "video/*" else "image/*"
+                                putExtra(Intent.EXTRA_TEXT, url)
+                            }
+                            runCatching {
+                                ctx.startActivity(Intent.createChooser(send, "分享"))
+                            }.onFailure { Toast.makeText(ctx, "没有可分享的应用", Toast.LENGTH_SHORT).show() }
+                        }, modifier = Modifier.fillMaxWidth()) { Text("分享") }
+
+                        TextButton(onClick = {
+                            actionFor = null
+                            val me = meLogin ?: return@TextButton
+                            post(
+                                target.copy(
+                                    author = me,
+                                    ts = nowSeconds(),
+                                    avatar = meAvatar,
+                                    text = "",
+                                ),
+                                clearInput = false,
+                            )
+                        }, modifier = Modifier.fillMaxWidth()) { Text("转发到聊天") }
+                        HorizontalDivider()
+                    }
+
                     TextButton(onClick = {
                         clipboard.setText(AnnotatedString(target.text.ifBlank { "[${target.kind.name}]" }))
                         Toast.makeText(ctx, "已复制", Toast.LENGTH_SHORT).show()
                         actionFor = null
                     }, modifier = Modifier.fillMaxWidth()) { Text("复制文字") }
+
+                    TextButton(onClick = {
+                        actionFor = null
+                        val me = meLogin ?: return@TextButton
+                        post(
+                            target.copy(author = me, ts = nowSeconds(), avatar = meAvatar),
+                            clearInput = false,
+                        )
+                    }, modifier = Modifier.fillMaxWidth()) { Text("转发到聊天") }
 
                     TextButton(onClick = {
                         val quoted = "「${target.author}：${target.text.take(50).ifBlank { "[${target.kind.name}]" }}」\n"
@@ -975,6 +1153,87 @@ fun ChatScreen(onBack: () -> Unit) {
     }
 }
 
+@Composable
+private fun ProfileViewDialog(
+    profile: io.github.xororz.localdream.chat.ChatProfile,
+    isSelf: Boolean,
+    onEdit: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(shape = MaterialTheme.shapes.large) {
+            Column(
+                Modifier.padding(20.dp).fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Avatar(name = profile.login, avatarUrl = profile.avatar.ifBlank { null }, size = 72)
+                Spacer(Modifier.height(10.dp))
+                Text(profile.displayName, style = MaterialTheme.typography.titleMedium)
+                Text("@${profile.login}", style = MaterialTheme.typography.labelMedium)
+                if (profile.bio.isNotBlank()) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(profile.bio, style = MaterialTheme.typography.bodySmall)
+                }
+                Spacer(Modifier.height(16.dp))
+                Row {
+                    TextButton(onClick = onDismiss) { Text("关闭") }
+                    if (isSelf) {
+                        Spacer(Modifier.width(8.dp))
+                        Button(onClick = onEdit) { Text("编辑我的主页") }
+                    } else {
+                        Text("只能编辑自己的主页", style = MaterialTheme.typography.labelSmall)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProfileEditDialog(
+    initial: io.github.xororz.localdream.chat.ChatProfile,
+    onDismiss: () -> Unit,
+    onSave: (io.github.xororz.localdream.chat.ChatProfile) -> Unit,
+) {
+    var nickname by remember { mutableStateOf(initial.nickname) }
+    var bio by remember { mutableStateOf(initial.bio) }
+    var avatar by remember { mutableStateOf(initial.avatar) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("编辑我的主页") },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = nickname,
+                    onValueChange = { nickname = it },
+                    label = { Text("昵称（默认显示账号名）") },
+                    singleLine = true,
+                )
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = bio,
+                    onValueChange = { bio = it },
+                    label = { Text("个人简介") },
+                    maxLines = 3,
+                )
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = avatar,
+                    onValueChange = { avatar = it },
+                    label = { Text("头像图片链接（可留空）") },
+                    singleLine = true,
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                onSave(initial.copy(nickname = nickname.trim(), bio = bio.trim(), avatar = avatar.trim()))
+            }) { Text("保存") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } },
+    )
+}
+
 /**
  * Built-in player: chat videos must not kick the user out to an external app
  * (many devices have no video player installed at all). Tries the mirror chain
@@ -1054,6 +1313,28 @@ private fun InAppVideoDialog(urls: List<String>, onDismiss: () -> Unit) {
     }
 }
 
+/** Saves bytes into the public Pictures/LocalDreamET album. */
+private fun saveBytesToGallery(ctx: android.content.Context, bytes: ByteArray, name: String, mime: String): Boolean {
+    return runCatching {
+        val values = android.content.ContentValues().apply {
+            put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, name)
+            put(android.provider.MediaStore.MediaColumns.MIME_TYPE, mime)
+            put(android.provider.MediaStore.MediaColumns.RELATIVE_PATH,
+                if (mime.startsWith("video")) "Movies/LocalDreamET" else "Pictures/LocalDreamET")
+            put(android.provider.MediaStore.MediaColumns.IS_PENDING, 1)
+        }
+        val collection = if (mime.startsWith("video"))
+            android.provider.MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+        else android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+        val uri = ctx.contentResolver.insert(collection, values) ?: return false
+        ctx.contentResolver.openOutputStream(uri)?.use { it.write(bytes) }
+        values.clear()
+        values.put(android.provider.MediaStore.MediaColumns.IS_PENDING, 0)
+        ctx.contentResolver.update(uri, values, null, null)
+        true
+    }.getOrDefault(false)
+}
+
 private fun nowSeconds(): Long = System.currentTimeMillis() / 1000L
 
 @Composable
@@ -1063,6 +1344,7 @@ private fun MessageRow(
     admin: Boolean,
     playing: Boolean,
     onPlayAudio: () -> Unit,
+    onAvatar: (String) -> Unit,
     onOpenMedia: (List<String>) -> Unit,
     onOpenVideo: (List<String>) -> Unit,
     onLink: (String) -> Unit,
@@ -1074,7 +1356,12 @@ private fun MessageRow(
         verticalAlignment = Alignment.Top,
     ) {
         if (!mine) {
-            Avatar(name = message.author, avatarUrl = message.avatar, size = 36)
+            Avatar(
+                name = message.author,
+                avatarUrl = message.avatar,
+                size = 36,
+                modifier = Modifier.clickable { onAvatar(message.author) },
+            )
             Spacer(Modifier.width(6.dp))
         }
         Column(horizontalAlignment = if (mine) Alignment.End else Alignment.Start) {
@@ -1197,7 +1484,12 @@ private fun MessageRow(
         }
         if (mine) {
             Spacer(Modifier.width(6.dp))
-            Avatar(name = message.author, avatarUrl = message.avatar, size = 36)
+            Avatar(
+                name = message.author,
+                avatarUrl = message.avatar,
+                size = 36,
+                modifier = Modifier.clickable { onAvatar(message.author) },
+            )
         }
     }
 }
@@ -1246,7 +1538,12 @@ private fun LinkText(
 }
 
 @Composable
-private fun Avatar(name: String, avatarUrl: String?, size: Int) {
+private fun Avatar(
+    name: String,
+    avatarUrl: String?,
+    size: Int,
+    modifier: Modifier = Modifier,
+) {
     val colors = listOf(
         Color(0xFF7E57C2), Color(0xFF42A5F5), Color(0xFF26A69A),
         Color(0xFFEF5350), Color(0xFFFFA726), Color(0xFF66BB6A),
@@ -1256,12 +1553,12 @@ private fun Avatar(name: String, avatarUrl: String?, size: Int) {
         AsyncImage(
             model = avatarUrl,
             contentDescription = name,
-            modifier = Modifier.size(size.dp).clip(CircleShape),
+            modifier = modifier.size(size.dp).clip(CircleShape),
             contentScale = ContentScale.Crop,
         )
     } else {
         Box(
-            modifier = Modifier.size(size.dp).clip(CircleShape).background(color),
+            modifier = modifier.size(size.dp).clip(CircleShape).background(color),
             contentAlignment = Alignment.Center,
         ) {
             Text(

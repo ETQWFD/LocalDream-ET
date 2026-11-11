@@ -102,6 +102,8 @@ object GalleryClient {
         val ts: Long,
         /** Mirror chain: jsDelivr -> gitmirror -> raw. [url] is the first entry. */
         val urls: List<String> = listOf(url),
+        /** Small JPEG previews; empty means the full PNG is used. */
+        val thumbUrls: List<String> = emptyList(),
     )
 
     /** 上传结果：ok=false 时 reason 可直接展示给用户。 */
@@ -255,6 +257,10 @@ object GalleryClient {
                     "https://raw.gitmirror.com/ETQWFD/LocalDreamET-Gallery/main/png/$n",
                     "https://raw.githubusercontent.com/ETQWFD/LocalDreamET-Gallery/main/png/$n",
                 )
+                val thumbs = listOf(
+                    "https://cdn.jsdelivr.net/gh/ETQWFD/LocalDreamET-Gallery@main/thumb/$stem.jpg",
+                    "https://raw.githubusercontent.com/ETQWFD/LocalDreamET-Gallery/main/thumb/$stem.jpg",
+                )
                 GalleryItem(
                     n, mirrors.first(),
                     m?.optString("author", "?") ?: "?",
@@ -262,6 +268,7 @@ object GalleryClient {
                     m?.optInt("price", 0) ?: 0,
                     m?.optLong("ts", 0L) ?: 0L,
                     mirrors,
+                    thumbs,
                 )
             }.sortedByDescending { it.ts }.also { cached = it }
         } catch (_: Exception) {
@@ -285,7 +292,7 @@ object GalleryClient {
                     val meta = runCatching {
                         JSONObject(String(Base64.getDecoder().decode(b64), Charsets.UTF_8))
                     }.getOrNull()
-                    return@async stem to meta
+                    if (meta != null) return@async stem to meta
                 }
                 val urls = META_BASES.map { "$it/png/$stem.meta.json" }
                 val (code, text) = httpAny(urls)
@@ -335,6 +342,20 @@ object GalleryClient {
         last
     }
 
+    private fun makeThumb(png: ByteArray): ByteArray? = runCatching {
+        val bounds = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        android.graphics.BitmapFactory.decodeByteArray(png, 0, png.size, bounds)
+        var sample = 1
+        while (bounds.outWidth / sample > 480 || bounds.outHeight / sample > 480) sample *= 2
+        val opts = android.graphics.BitmapFactory.Options().apply { inSampleSize = sample }
+        val bmp = android.graphics.BitmapFactory.decodeByteArray(png, 0, png.size, opts)
+            ?: return@runCatching null
+        val out = java.io.ByteArrayOutputStream()
+        bmp.compress(android.graphics.Bitmap.CompressFormat.JPEG, 82, out)
+        bmp.recycle()
+        out.toByteArray()
+    }.getOrNull()
+
     private suspend fun uploadWithToken(
         pngBytes: ByteArray,
         author: String,
@@ -370,6 +391,17 @@ object GalleryClient {
                 .put("content", Base64.getEncoder().encodeToString(meta.toString().toByteArray()))
                 .toString().toByteArray()
             val (c2, t2) = putWithProgress("$API/png/pic_$id.meta.json", metaBody, token, null)
+            // Small preview so the community grid does not download 1-2 MB PNGs.
+            runCatching {
+                val jpeg = makeThumb(pngBytes)
+                if (jpeg != null) {
+                    val thumbBody = JSONObject().put("message", "thumb $id")
+                        .put("content", Base64.getEncoder().encodeToString(jpeg))
+                        .toString().toByteArray()
+                    putWithProgress("$API/thumb/pic_$id.jpg", thumbBody, token, null)
+                    MirrorPurge.jsdelivr("LocalDreamET-Gallery", "thumb/pic_$id.jpg")
+                }
+            }
             MirrorPurge.jsdelivr("LocalDreamET-Gallery", "png/pic_$id.png")
             MirrorPurge.jsdelivr("LocalDreamET-Gallery", "png/pic_$id.meta.json")
             // Read the file back so "发布成功" can never be a lie: if the commit

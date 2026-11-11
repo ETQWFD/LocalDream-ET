@@ -109,6 +109,7 @@ fun GalleryScreen(navController: NavController) {
     }
     var showWarn by remember { mutableStateOf(!FavoriteStore.seenWarning(ctx)) }
     var previewItem by remember { mutableStateOf<GalleryClient.GalleryItem?>(null) }
+    var saleNotice by remember { mutableStateOf<io.github.xororz.localdream.service.GalleryEarnings.EarningInfo?>(null) }
 
     fun reload(force: Boolean) {
         scope.launch {
@@ -132,13 +133,29 @@ fun GalleryScreen(navController: NavController) {
         reload(false)
         // Credit any new picture sales to this device's quota (85% share).
         val earned = io.github.xororz.localdream.service.GalleryEarnings.sync(ctx)
-        if (earned > 0) {
-            android.widget.Toast.makeText(
-                ctx,
-                "图片分成到账 +$earned 额度",
-                android.widget.Toast.LENGTH_LONG,
-            ).show()
-        }
+        if (earned != null && earned.total > 0) saleNotice = earned
+    }
+
+    saleNotice?.let { info ->
+        AlertDialog(
+            onDismissRequest = { saleNotice = null },
+            title = { Text("作品售出通知") },
+            text = {
+                Column {
+                    Text("您发布的《${info.item.ifBlank { "作品" }}》被购买了。")
+                    Spacer(Modifier.height(8.dp))
+                    Text("售价：${info.price} 额度")
+                    Text("官方抽取 15%：${info.price - info.share} 额度")
+                    Text("您获得 85%：${info.share} 额度")
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "已到账 +${info.total} 额度，永久计入你的账号，可在生成时使用。",
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+            },
+            confirmButton = { TextButton(onClick = { saleNotice = null }) { Text("知道了") } },
+        )
     }
     // et.213: search by author / image name.
     val filtered = remember(items, q) {
@@ -193,7 +210,7 @@ fun GalleryScreen(navController: NavController) {
                             // Mirror chain instead of a single URL: a stale
                             // jsDelivr entry no longer shows as a black tile.
                             FallbackImage(
-                                urls = g.urls,
+                                urls = g.thumbUrls.ifEmpty { g.urls } + g.urls,
                                 contentDescription = g.name,
                                 modifier = Modifier.aspectRatio(1f).fillMaxWidth(),
                                 contentScale = ContentScale.Crop,
@@ -680,7 +697,7 @@ private suspend fun purchaseItem(ctx: Context, item: GalleryClient.GalleryItem):
             // buyer from getting the picture they paid for.
             runCatching {
                 io.github.xororz.localdream.service.GalleryEarnings
-                    .record(ctx, item.author, item.price)
+                    .record(ctx, item.author, item.price, item.title)
             }
             // 已登录用户：备份到自己的 Backup 仓，防丢
             val store = SecureTokenStore(ctx)
