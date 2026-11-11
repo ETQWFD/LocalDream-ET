@@ -223,11 +223,67 @@ fun ChatScreen(onBack: () -> Unit) {
                 messages = messages + message
                 // Media sends must not eat the text the user is still drafting.
                 if (clearInput) input = ""
+                // The pending upload card must disappear; otherwise the next
+                // message looks like it is still attached / sent together.
+                when (message.kind) {
+                    ChatKind.IMAGE -> localPreview = null
+                    ChatKind.VIDEO -> pendingVideo = null
+                    else -> Unit
+                }
                 refresh()
             }.onFailure {
                 status = it.message ?: "发送失败"
             }
         }
+    }
+
+    fun copyMessage(m: ChatMessage) {
+        val text = m.text.ifBlank { "[${m.kind.name}]" }
+        val clipboard = ctx.getSystemService(android.content.ClipboardManager::class.java)
+        clipboard?.setPrimaryClip(android.content.ClipData.newPlainText("message", text))
+        Toast.makeText(ctx, "已复制", Toast.LENGTH_SHORT).show()
+    }
+
+    fun quoteMessage(m: ChatMessage) {
+        input = "「${m.author}：${m.text.take(50).ifBlank { "[${m.kind.name}]" }}」\n" + input
+    }
+
+    fun forwardMessage(m: ChatMessage) {
+        val me = meLogin ?: return
+        post(m.copy(author = me, ts = nowSeconds(), avatar = meAvatar, text = ""), clearInput = false)
+    }
+
+    fun saveMessageMedia(m: ChatMessage) {
+        val kind = m.kind
+        if (kind != ChatKind.IMAGE && kind != ChatKind.VIDEO) return
+        scope.launch {
+            val bytes = withContext(Dispatchers.IO) { ChatRepository.fetchRepoFile(m.mediaUrl) }
+            if (bytes == null || bytes.isEmpty()) {
+                Toast.makeText(ctx, "文件下载失败", Toast.LENGTH_SHORT).show()
+                return@launch
+            }
+            val ext = if (kind == ChatKind.VIDEO) "mp4" else "png"
+            val mime = if (kind == ChatKind.VIDEO) "video/mp4" else "image/png"
+            // Prefer the original scene/format when the URL exposes one.
+            val ok = withContext(Dispatchers.IO) {
+                saveBytesToGallery(ctx, bytes, "LocalDreamET_${m.ts}.$ext", mime)
+            }
+            Toast.makeText(
+                ctx,
+                if (ok) "已保存到相册" else "保存失败，请检查存储权限",
+                Toast.LENGTH_SHORT,
+            ).show()
+        }
+    }
+
+    fun shareMessageMedia(m: ChatMessage) {
+        val url = listOfNotNull(m.mediaUrl, m.cdnUrl).firstOrNull().orEmpty()
+        val send = Intent(Intent.ACTION_SEND).apply {
+            type = if (m.kind == ChatKind.VIDEO) "video/*" else "image/*"
+            putExtra(Intent.EXTRA_TEXT, url)
+        }
+        runCatching { ctx.startActivity(Intent.createChooser(send, "分享")) }
+            .onFailure { Toast.makeText(ctx, "没有可分享的应用", Toast.LENGTH_SHORT).show() }
     }
 
     fun sendText() {
@@ -438,7 +494,7 @@ fun ChatScreen(onBack: () -> Unit) {
         }
         stopPlayback()
         playingKey = message.key
-        val candidates = listOfNotNull(message.cdnUrl, message.mediaUrl)
+        val candidates = listOfNotNull(message.mediaUrl, message.cdnUrl)
         fun tryAt(index: Int) {
             val url = candidates.getOrNull(index) ?: run {
                 // Mirrors can be blocked in mainland China: pull the file through
@@ -615,6 +671,11 @@ fun ChatScreen(onBack: () -> Unit) {
                         playing = playingKey == m.key,
                         onPlayAudio = { playAudio(m) },
                         onAvatar = { login -> profileFor = login },
+                        onCopy = { m -> copyMessage(m) },
+                        onQuote = { m -> quoteMessage(m) },
+                        onForward = { m -> forwardMessage(m) },
+                        onSaveMedia = { m -> saveMessageMedia(m) },
+                        onShareMedia = { m -> shareMessageMedia(m) },
                         onOpenMedia = { urls -> viewerImages = urls },
                         onOpenVideo = { urls -> videoUrls = urls },
                         onLink = { url -> webUrl = url },
@@ -958,7 +1019,7 @@ fun ChatScreen(onBack: () -> Unit) {
 
                         TextButton(onClick = {
                             actionFor = null
-                            val url = listOfNotNull(target.cdnUrl, target.mediaUrl).firstOrNull().orEmpty()
+                            val url = listOfNotNull(target.mediaUrl, target.cdnUrl).firstOrNull().orEmpty()
                             val send = Intent(Intent.ACTION_SEND).apply {
                                 type = if (target.kind == ChatKind.VIDEO) "video/*" else "image/*"
                                 putExtra(Intent.EXTRA_TEXT, url)
@@ -1073,6 +1134,8 @@ fun ChatScreen(onBack: () -> Unit) {
 
     // In-app browser: chat links must not kick the user out to the system browser.
     webUrl?.let { url ->
+        var webView by remember(url) { mutableStateOf<WebView?>(null) }
+        var canGoBack by remember(url) { mutableStateOf(false) }
         Dialog(onDismissRequest = { webUrl = null }) {
             Surface(shape = MaterialTheme.shapes.large) {
                 Column {
@@ -1080,6 +1143,12 @@ fun ChatScreen(onBack: () -> Unit) {
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
+                        IconButton(
+                            enabled = canGoBack,
+                            onClick = { webView?.goBack() },
+                        ) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回上一页")
+                        }
                         Text(
                             url,
                             style = MaterialTheme.typography.labelSmall,
@@ -1093,6 +1162,7 @@ fun ChatScreen(onBack: () -> Unit) {
                     AndroidView(
                         factory = { c ->
                             WebView(c).apply {
+                                webView = this
                                 settings.javaScriptEnabled = true
                                 settings.domStorageEnabled = true
                                 settings.useWideViewPort = true
@@ -1100,6 +1170,9 @@ fun ChatScreen(onBack: () -> Unit) {
                                 settings.builtInZoomControls = true
                                 settings.displayZoomControls = false
                                 webViewClient = object : WebViewClient() {
+                                    override fun onPageFinished(view: WebView?, url: String?) {
+                                        canGoBack = view?.canGoBack() == true
+                                    }
                                     override fun onReceivedError(
                                         view: WebView?,
                                         request: android.webkit.WebResourceRequest?,
@@ -1345,11 +1418,17 @@ private fun MessageRow(
     playing: Boolean,
     onPlayAudio: () -> Unit,
     onAvatar: (String) -> Unit,
+    onCopy: (ChatMessage) -> Unit,
+    onQuote: (ChatMessage) -> Unit,
+    onForward: (ChatMessage) -> Unit,
+    onSaveMedia: (ChatMessage) -> Unit,
+    onShareMedia: (ChatMessage) -> Unit,
     onOpenMedia: (List<String>) -> Unit,
     onOpenVideo: (List<String>) -> Unit,
     onLink: (String) -> Unit,
     onLongPress: () -> Unit,
 ) {
+    var showMenu by remember { mutableStateOf(false) }
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = if (mine) Arrangement.End else Arrangement.Start,
@@ -1394,10 +1473,37 @@ private fun MessageRow(
                         }
                     }
             }
+            Box {
+                DropdownMenu(
+                    expanded = showMenu,
+                    onDismissRequest = { showMenu = false },
+                ) {
+                    DropdownMenuItem(text = { Text("复制") }, onClick = { showMenu = false; onCopy(message) })
+                    DropdownMenuItem(text = { Text("引用") }, onClick = { showMenu = false; onQuote(message) })
+                    DropdownMenuItem(text = { Text("转发") }, onClick = { showMenu = false; onForward(message) })
+                    if (message.kind == ChatKind.IMAGE || message.kind == ChatKind.VIDEO) {
+                        DropdownMenuItem(text = { Text("下载") }, onClick = { showMenu = false; onSaveMedia(message) })
+                        DropdownMenuItem(text = { Text("分享") }, onClick = { showMenu = false; onShareMedia(message) })
+                    }
+                    DropdownMenuItem(
+                        text = { Text("更多（@TA / 管理员）") },
+                        onClick = { showMenu = false; onLongPress() },
+                    )
+                }
             Surface(
                 modifier = Modifier
                     .widthIn(max = 272.dp)
-                    .combinedClickable(onClick = {}, onLongClick = onLongPress),
+                    .combinedClickable(
+                        onClick = {
+                            when (message.kind) {
+                                ChatKind.IMAGE -> onOpenMedia(listOfNotNull(message.mediaUrl, message.cdnUrl))
+                                ChatKind.VIDEO -> onOpenVideo(listOfNotNull(message.mediaUrl, message.cdnUrl))
+                                ChatKind.AUDIO -> onPlayAudio()
+                                else -> Unit
+                            }
+                        },
+                        onLongClick = { showMenu = true },
+                    ),
                 color = if (mine) Color(0xFF95EC69) else MaterialTheme.colorScheme.surfaceContainerHigh,
                 shape = RoundedCornerShape(
                     topStart = if (mine) 10.dp else 2.dp,
@@ -1417,7 +1523,7 @@ private fun MessageRow(
                         )
 
                         ChatKind.IMAGE -> {
-                            val urls = listOfNotNull(message.cdnUrl, message.mediaUrl)
+                            val urls = listOfNotNull(message.mediaUrl, message.cdnUrl)
                             RemoteImage(
                                 urls = urls,
                                 modifier = Modifier
@@ -1436,7 +1542,7 @@ private fun MessageRow(
                                     .width(180.dp)
                                     .height(110.dp)
                                     .clickable {
-                                        onOpenVideo(listOfNotNull(message.cdnUrl, message.mediaUrl))
+                                        onOpenVideo(listOfNotNull(message.mediaUrl, message.cdnUrl))
                                     },
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
@@ -1486,6 +1592,7 @@ private fun MessageRow(
                     }
                 }
             }
+        }
         }
         if (mine) {
             Spacer(Modifier.width(6.dp))
@@ -1554,23 +1661,25 @@ private fun Avatar(
         Color(0xFFEF5350), Color(0xFFFFA726), Color(0xFF66BB6A),
     )
     val color = colors[(name.hashCode().absoluteValue) % colors.size]
-    if (avatarUrl != null) {
-        AsyncImage(
-            model = avatarUrl,
-            contentDescription = name,
-            modifier = modifier.size(size.dp).clip(CircleShape),
-            contentScale = ContentScale.Crop,
+    Box(
+        modifier = modifier.size(size.dp).clip(CircleShape).background(color),
+        contentAlignment = Alignment.Center,
+    ) {
+        // Always draw the initial underneath: if the remote avatar 404s or
+        // fails to decode, the avatar must not turn into an empty hole.
+        Text(
+            text = name.take(1).uppercase().ifBlank { "?" },
+            color = Color.White,
+            fontSize = (size / 2.5f).sp,
+            fontWeight = FontWeight.Bold,
         )
-    } else {
-        Box(
-            modifier = modifier.size(size.dp).clip(CircleShape).background(color),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = name.take(1).uppercase().ifBlank { "?" },
-                color = Color.White,
-                fontSize = (size / 2.5f).sp,
-                fontWeight = FontWeight.Bold,
+        if (!avatarUrl.isNullOrBlank()) {
+            AsyncImage(
+                model = avatarUrl,
+                contentDescription = name,
+                modifier = Modifier.fillMaxSize().clip(CircleShape),
+                contentScale = ContentScale.Crop,
+                onError = { /* initial stays visible */ },
             )
         }
     }

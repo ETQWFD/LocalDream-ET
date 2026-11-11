@@ -290,6 +290,37 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
         TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
 
     var showSettingsDialog by remember { mutableStateOf(false) }
+    // Privacy switches: hide the community entries from the home screen.
+    val privacyPrefs = remember { context.getSharedPreferences("community_privacy", Context.MODE_PRIVATE) }
+    var hideGallery by remember { mutableStateOf(privacyPrefs.getBoolean("hide_gallery", false)) }
+    var hideChat by remember { mutableStateOf(privacyPrefs.getBoolean("hide_chat", false)) }
+    var pendingUnhide by remember { mutableStateOf<String?>(null) }
+    fun setHidden(key: String, hidden: Boolean) {
+        privacyPrefs.edit().putBoolean(key, hidden).apply()
+        if (key == "hide_gallery") hideGallery = hidden else hideChat = hidden
+    }
+    val credentialLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult(),
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            pendingUnhide?.let { setHidden(it, false) }
+        } else {
+            android.widget.Toast.makeText(context, "未通过密码验证，入口仍保持隐藏", android.widget.Toast.LENGTH_SHORT).show()
+        }
+        pendingUnhide = null
+    }
+    fun requestUnhide(key: String) {
+        pendingUnhide = key
+        val km = context.getSystemService(Context.KEYGUARD_SERVICE) as android.app.KeyguardManager
+        val intent = km.createConfirmDeviceCredentialIntent("验证手机密码", "验证后重新显示社区入口")
+        if (intent != null) {
+            credentialLauncher.launch(intent)
+        } else {
+            setHidden(key, false)
+            pendingUnhide = null
+            android.widget.Toast.makeText(context, "设备未设置锁屏密码，已直接显示入口", android.widget.Toast.LENGTH_SHORT).show()
+        }
+    }
     // et.150: 自定义存储位置 / 关于作者 / 反馈
     var showAboutDialog by remember { mutableStateOf(false) }
     var showFeedbackDialog by remember { mutableStateOf(false) }
@@ -1266,8 +1297,10 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                         }
                     } else {
                         // et.212: top-left entry into the image community.
-                        IconButton(onClick = { navController.navigate(io.github.xororz.localdream.navigation.Screen.Gallery.route) }) {
-                            Icon(androidx.compose.material.icons.Icons.Default.Share, "图片社区")
+                        if (!hideGallery) {
+                            IconButton(onClick = { navController.navigate(io.github.xororz.localdream.navigation.Screen.Gallery.route) }) {
+                                Icon(androidx.compose.material.icons.Icons.Default.Share, "图片社区")
+                            }
                         }
                     }
                 },
@@ -1393,16 +1426,18 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                                 modifier = Modifier.width(220.dp),
                                 offset = androidx.compose.ui.unit.DpOffset(x = (-172).dp, y = 0.dp),
                             ) {
-                                DropdownMenuItem(
-                                    text = { Text("公共聊天") },
-                                    leadingIcon = {
-                                        Icon(androidx.compose.material.icons.Icons.Default.Chat, null)
-                                    },
-                                    onClick = {
-                                        menuExpanded = false
-                                        navController.navigate("chat")
-                                    },
-                                )
+                                if (!hideChat) {
+                                    DropdownMenuItem(
+                                        text = { Text("公共聊天") },
+                                        leadingIcon = {
+                                            Icon(androidx.compose.material.icons.Icons.Default.Chat, null)
+                                        },
+                                        onClick = {
+                                            menuExpanded = false
+                                            navController.navigate("chat")
+                                        },
+                                    )
+                                }
                                 DropdownMenuItem(
                                     text = { Text("兑换奖品") },
                                     leadingIcon = {
@@ -1885,6 +1920,52 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                     verticalArrangement = Arrangement.spacedBy(24.dp),
                     contentPadding = PaddingValues(vertical = 16.dp),
                 ) {
+                    item {
+                        Column {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.padding(bottom = 8.dp),
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.VisibilityOff,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                                Text("隐私：隐藏社区入口", style = MaterialTheme.typography.titleMedium)
+                            }
+                            Text(
+                                "勾选后首页不再显示对应入口；别人仍可正常聊天。取消勾选需要验证手机锁屏密码。",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                            ) {
+                                Text("隐藏图片社区入口", modifier = Modifier.weight(1f))
+                                Switch(
+                                    checked = hideGallery,
+                                    onCheckedChange = { checked ->
+                                        if (checked) setHidden("hide_gallery", true) else requestUnhide("hide_gallery")
+                                    },
+                                )
+                            }
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text("隐藏共享聊天入口", modifier = Modifier.weight(1f))
+                                Switch(
+                                    checked = hideChat,
+                                    onCheckedChange = { checked ->
+                                        if (checked) setHidden("hide_chat", true) else requestUnhide("hide_chat")
+                                    },
+                                )
+                            }
+                        }
+                    }
                     // Download source settings section
                     item {
                         Column {
