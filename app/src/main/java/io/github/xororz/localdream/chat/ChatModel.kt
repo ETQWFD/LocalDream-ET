@@ -36,6 +36,9 @@ data class ChatMessage(
     val durationSec: Int = 0,
     /** GitHub avatar URL captured at send time, so other users see the real face. */
     val avatar: String? = null,
+    /** Quoted message header, rendered as a small reply card instead of a new post. */
+    val quoteAuthor: String = "",
+    val quoteText: String = "",
 ) {
     /** Stable identity for de-duplication when two clients merge the same file. */
     val key: String get() = "$ts|$author|${kind.name}|${mediaUrl.orEmpty()}|$text"
@@ -50,6 +53,8 @@ data class ChatMessage(
             cdnUrl?.takeIf { it.isNotBlank() }?.let { put("cdn", it) }
             avatar?.takeIf { it.isNotBlank() }?.let { put("avatar", it) }
             if (durationSec > 0) put("dur", durationSec)
+            quoteAuthor.takeIf { it.isNotBlank() }?.let { put("qauthor", it) }
+            quoteText.takeIf { it.isNotBlank() }?.let { put("qtext", it) }
         }
 
     companion object {
@@ -82,6 +87,8 @@ data class ChatMessage(
                     cdnUrl = cdn,
                     durationSec = o.optInt("dur", 0),
                     avatar = o.optString("avatar", "").takeIf { it.isNotBlank() },
+                    quoteAuthor = o.optString("qauthor", ""),
+                    quoteText = o.optString("qtext", ""),
                 )
             }
         }

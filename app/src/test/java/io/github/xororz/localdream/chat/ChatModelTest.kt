@@ -63,6 +63,25 @@ class ChatModelTest {
     }
 
     @Test
+    fun quoteFieldsRoundTripThroughJson() {
+        val original = ChatMessage(
+            author = "me", text = "同意", ts = 6,
+            quoteAuthor = "alice", quoteText = "今晚八点集合",
+        )
+        val back = ChatMessage.fromJson(original.toJson())
+        assertEquals("alice", back.quoteAuthor)
+        assertEquals("今晚八点集合", back.quoteText)
+        assertEquals("同意", back.text)
+    }
+
+    @Test
+    fun messageWithoutQuoteKeepsEmptyQuoteFields() {
+        val back = ChatMessage.fromJson(ChatMessage(author = "a", text = "x", ts = 1).toJson())
+        assertEquals("", back.quoteAuthor)
+        assertEquals("", back.quoteText)
+    }
+
+    @Test
     fun recentKeepsFullHistoryNotJustSevenDays() {
         val now = 1_000_000L
         val list = listOf(

@@ -92,6 +92,7 @@ fun ChatScreen(onBack: () -> Unit) {
     val chatListState = rememberLazyListState()
     var loading by remember { mutableStateOf(true) }
     var input by remember { mutableStateOf("") }
+    var quoting by remember { mutableStateOf<ChatMessage?>(null) }
     var sending by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf("") }
     var atPicker by remember { mutableStateOf(false) }
@@ -245,7 +246,7 @@ fun ChatScreen(onBack: () -> Unit) {
     }
 
     fun quoteMessage(m: ChatMessage) {
-        input = "「${m.author}：${m.text.take(50).ifBlank { "[${m.kind.name}]" }}」\n" + input
+        quoting = m
     }
 
     fun forwardMessage(m: ChatMessage) {
@@ -300,6 +301,7 @@ fun ChatScreen(onBack: () -> Unit) {
             status = "只有管理员可以 @全体人员"
             return
         }
+        val q = quoting
         post(
             ChatMessage(
                 author = author,
@@ -307,8 +309,20 @@ fun ChatScreen(onBack: () -> Unit) {
                 ts = nowSeconds(),
                 kind = ChatKind.TEXT,
                 avatar = meAvatar,
+                quoteAuthor = q?.author.orEmpty(),
+                quoteText = q?.text.orEmpty().ifBlank {
+                    q?.let {
+                        when (it.kind) {
+                            ChatKind.IMAGE -> "[图片]"
+                            ChatKind.VIDEO -> "[视频]"
+                            ChatKind.AUDIO -> "[语音]"
+                            ChatKind.TEXT -> ""
+                        }
+                    }.orEmpty()
+                },
             ),
         )
+        quoting = null
     }
 
     fun sendImage(uri: Uri) {
@@ -621,7 +635,7 @@ fun ChatScreen(onBack: () -> Unit) {
             )
         },
     ) { padding ->
-        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+        Column(modifier = Modifier.fillMaxSize().padding(padding).imePadding()) {
             if (meLogin != null) {
                 Row(
                     modifier = Modifier
@@ -808,6 +822,36 @@ fun ChatScreen(onBack: () -> Unit) {
                             recordSeconds = 0
                         }) { Text("取消") }
                         Button(onClick = { stopRecordingAndSend() }) { Text("发送") }
+                    }
+                }
+            }
+
+            quoting?.let { q ->
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    shape = RoundedCornerShape(6.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 2.dp),
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(start = 8.dp, end = 2.dp, top = 4.dp, bottom = 4.dp),
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                "回复 ${q.author}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                            Text(
+                                q.text.ifBlank { "[${q.kind.name}]" },
+                                style = MaterialTheme.typography.bodySmall,
+                                maxLines = 2,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                            )
+                        }
+                        IconButton(onClick = { quoting = null }, modifier = Modifier.size(28.dp)) {
+                            Icon(Icons.Default.Close, contentDescription = "取消引用", modifier = Modifier.size(16.dp))
+                        }
                     }
                 }
             }
@@ -1061,8 +1105,7 @@ fun ChatScreen(onBack: () -> Unit) {
                     }, modifier = Modifier.fillMaxWidth()) { Text("转发到聊天") }
 
                     TextButton(onClick = {
-                        val quoted = "「${target.author}：${target.text.take(50).ifBlank { "[${target.kind.name}]" }}」\n"
-                        input = quoted + input
+                        quoting = target
                         actionFor = null
                     }, modifier = Modifier.fillMaxWidth()) { Text("引用这条消息") }
 
@@ -1136,6 +1179,15 @@ fun ChatScreen(onBack: () -> Unit) {
     webUrl?.let { url ->
         var webView by remember(url) { mutableStateOf<WebView?>(null) }
         var canGoBack by remember(url) { mutableStateOf(false) }
+        // A WebView holds a whole renderer process; destroying it when the
+        // dialog closes is what keeps repeated link opens from leaking memory.
+        DisposableEffect(url) {
+            onDispose {
+                runCatching { webView?.stopLoading() }
+                runCatching { webView?.destroy() }
+                webView = null
+            }
+        }
         Dialog(onDismissRequest = { webUrl = null }) {
             Surface(shape = MaterialTheme.shapes.large) {
                 Column {
@@ -1320,6 +1372,13 @@ private fun InAppVideoDialog(urls: List<String>, onDismiss: () -> Unit) {
     var downloadTrigger by remember(urls) { mutableIntStateOf(0) }
     var localFile by remember(urls) { mutableStateOf<java.io.File?>(null) }
     var failed by remember(urls) { mutableStateOf(false) }
+    var videoView by remember(urls) { mutableStateOf<android.widget.VideoView?>(null) }
+    DisposableEffect(urls) {
+        onDispose {
+            runCatching { videoView?.stopPlayback() }
+            videoView = null
+        }
+    }
 
     // If every mirror refuses to stream, pull the clip through the
     // authenticated API and play the local file (MediaPlayer handles it).
@@ -1343,6 +1402,7 @@ private fun InAppVideoDialog(urls: List<String>, onDismiss: () -> Unit) {
                 androidx.compose.ui.viewinterop.AndroidView(
                     factory = { c ->
                         android.widget.VideoView(c).apply {
+                            videoView = this
                             val controller = android.widget.MediaController(c)
                             controller.setAnchorView(this)
                             setMediaController(controller)
@@ -1514,6 +1574,29 @@ private fun MessageRow(
                 tonalElevation = if (mine) 0.dp else 1.dp,
             ) {
                 Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
+                    if (message.quoteAuthor.isNotBlank()) {
+                        Surface(
+                            color = if (mine) Color(0x33000000) else MaterialTheme.colorScheme.surfaceVariant,
+                            shape = RoundedCornerShape(4.dp),
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp),
+                        ) {
+                            Column(Modifier.padding(horizontal = 6.dp, vertical = 4.dp)) {
+                                Text(
+                                    message.quoteAuthor,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = if (mine) Color(0xFF1A5AA0) else MaterialTheme.colorScheme.primary,
+                                    maxLines = 1,
+                                )
+                                Text(
+                                    message.quoteText,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = if (mine) Color(0xFF333333) else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 2,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                )
+                            }
+                        }
+                    }
                     when (message.kind) {
                         ChatKind.TEXT -> LinkText(
                             text = message.text,
