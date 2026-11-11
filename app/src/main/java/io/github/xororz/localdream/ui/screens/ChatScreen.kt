@@ -79,7 +79,7 @@ import kotlinx.coroutines.withContext
  *  - everyone else on the left on the surface colour,
  *  - text / image / short video / voice, all real uploads to the public repo.
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun ChatScreen(onBack: () -> Unit) {
     val ctx = LocalContext.current
@@ -952,6 +952,15 @@ fun ChatScreen(onBack: () -> Unit) {
 
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) {
+            runCatching { chatListState.animateScrollToItem(0) }
+        }
+    }
+
+    // Keyboard like WeChat: when the IME opens, keep the newest bubble just
+    // above the input instead of leaving the list scrolled behind the keyboard.
+    val imeVisible = WindowInsets.isImeVisible
+    LaunchedEffect(imeVisible) {
+        if (imeVisible && messages.isNotEmpty()) {
             runCatching { chatListState.animateScrollToItem(0) }
         }
     }
