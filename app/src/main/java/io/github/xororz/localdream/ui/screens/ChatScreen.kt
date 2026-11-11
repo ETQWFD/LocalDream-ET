@@ -1365,16 +1365,20 @@ private fun MessageRow(
             Spacer(Modifier.width(6.dp))
         }
         Column(horizontalAlignment = if (mine) Alignment.End else Alignment.Start) {
-            if (!mine) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
-                ) {
-                    Text(
-                        message.author.ifBlank { "匿名" },
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+            // Every message keeps its header, including my own long messages:
+            // an unbounded bubble used to push the avatar/name off-screen.
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
+            ) {
+                Text(
+                    message.author.ifBlank { "匿名" },
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    modifier = Modifier.widthIn(max = 180.dp),
+                )
                     if (admin) {
                         Spacer(Modifier.width(4.dp))
                         Surface(
@@ -1389,10 +1393,11 @@ private fun MessageRow(
                             )
                         }
                     }
-                }
             }
             Surface(
-                modifier = Modifier.combinedClickable(onClick = {}, onLongClick = onLongPress),
+                modifier = Modifier
+                    .widthIn(max = 272.dp)
+                    .combinedClickable(onClick = {}, onLongClick = onLongPress),
                 color = if (mine) Color(0xFF95EC69) else MaterialTheme.colorScheme.surfaceContainerHigh,
                 shape = RoundedCornerShape(
                     topStart = if (mine) 10.dp else 2.dp,
