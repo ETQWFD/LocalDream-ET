@@ -2,6 +2,7 @@ package io.github.xororz.localdream.ui.screens
 
 import android.content.ContentValues
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
@@ -87,6 +88,7 @@ import io.github.xororz.localdream.R
 import io.github.xororz.localdream.data.*
 import io.github.xororz.localdream.data.DarkModePreference
 import io.github.xororz.localdream.navigation.Screen
+import io.github.xororz.localdream.service.BackendService
 import io.github.xororz.localdream.service.ModelDownloadService
 import io.github.xororz.localdream.ui.components.BlockingProgressOverlay
 import io.github.xororz.localdream.ui.components.SmoothCircularWavyProgressIndicator
@@ -294,6 +296,29 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
     val privacyPrefs = remember { context.getSharedPreferences("community_privacy", Context.MODE_PRIVATE) }
     var hideGallery by remember { mutableStateOf(privacyPrefs.getBoolean("hide_gallery", false)) }
     var hideChat by remember { mutableStateOf(privacyPrefs.getBoolean("hide_chat", false)) }
+    // et.181: second generation backend (Nightmare fork). Packaged only for arm64.
+    val enginePrefs = remember { context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE) }
+    var useNightmareEngine by remember {
+        mutableStateOf(enginePrefs.getBoolean(BackendService.PREF_NIGHTMARE_ENGINE, false))
+    }
+    val nightmareAvailable = remember {
+        Build.SUPPORTED_ABIS.contains("arm64-v8a")
+    }
+    fun setGenerationEngine(useNightmare: Boolean) {
+        if (useNightmare && !nightmareAvailable) {
+            Toast.makeText(context, "当前设备为 32 位，Nightmare 引擎仅支持 arm64，继续使用内置引擎", Toast.LENGTH_LONG).show()
+            return
+        }
+        enginePrefs.edit().putBoolean(BackendService.PREF_NIGHTMARE_ENGINE, useNightmare).apply()
+        useNightmareEngine = useNightmare
+        // Kill the live engine so the next generation starts the selected binary.
+        context.stopService(Intent(context, BackendService::class.java))
+        Toast.makeText(
+            context,
+            if (useNightmare) "已切换到 Nightmare 引擎，下次生成生效" else "已切回内置引擎，下次生成生效",
+            Toast.LENGTH_SHORT,
+        ).show()
+    }
     var pendingUnhide by remember { mutableStateOf<String?>(null) }
     fun setHidden(key: String, hidden: Boolean) {
         privacyPrefs.edit().putBoolean(key, hidden).apply()
@@ -1594,6 +1619,20 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                                 onClick = { menuExpanded = false; showAboutDialog = true },
                             )
                             DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        if (useNightmareEngine) "切换生成图片：Nightmare" else "切换生成图片：内置",
+                                    )
+                                },
+                                leadingIcon = {
+                                    Icon(Icons.Default.Memory, contentDescription = null)
+                                },
+                                onClick = {
+                                    menuExpanded = false
+                                    setGenerationEngine(!useNightmareEngine)
+                                },
+                            )
+                            DropdownMenuItem(
                                 text = { Text(stringResource(R.string.settings)) },
                                 leadingIcon = {
                                     Icon(Icons.Default.Settings, contentDescription = null)
@@ -1962,6 +2001,47 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                                     onCheckedChange = { checked ->
                                         if (checked) setHidden("hide_chat", true) else requestUnhide("hide_chat")
                                     },
+                                )
+                            }
+                        }
+                    }
+                    // Generation engine selector
+                    item {
+                        Column {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.padding(bottom = 8.dp),
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Memory,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                                Text("切换生成图片引擎", style = MaterialTheme.typography.titleMedium)
+                            }
+                            Text(
+                                if (nightmareAvailable) {
+                                    "Nightmare（64 位）：使用 Nightmare 后端与 QNN/DiT 管线；关闭则使用内置引擎。切换后下次生成生效。"
+                                } else {
+                                    "当前为 32 位设备，Nightmare 引擎仅提供 arm64 版本，继续使用内置引擎。"
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                            ) {
+                                Text(
+                                    if (useNightmareEngine) "Nightmare 引擎（已开启）" else "内置引擎",
+                                    modifier = Modifier.weight(1f),
+                                )
+                                Switch(
+                                    checked = useNightmareEngine,
+                                    enabled = nightmareAvailable,
+                                    onCheckedChange = { setGenerationEngine(it) },
                                 )
                             }
                         }

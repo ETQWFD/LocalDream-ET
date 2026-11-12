@@ -1,9 +1,9 @@
 {
-  "versionCode": 255,
-  "versionName": "4.0.0-et.181",
-  "title": "发现新版本 v4.0.0-et.181",
-  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.181/LocalDream-ET.apk",
-  "size": 160344038,
-  "sha256": "b2e928b8e194cbf18bdaf678a6cc75df28f98594067323a2c11449cc1b95f801",
-  "releaseNotes": "et.181（versionCode 255）：\n1) 生成进度新增“预计剩余时间”：第一页生成时，进度条和百分比下方会显示“预计剩余约 N 秒 / M 分 S 秒”，接近完成时显示“预计即将完成”，按当前批次实际进度动态换算。\n2) 聊天输入框继续跟随输入法：键盘弹起时列表和输入栏整体上移，键盘收起自动落回，不再挡住正在输入的内容。\n3) 引用消息保持回复卡片样式，不再把引用内容拼成新消息。\n4) 签名不变，可直接覆盖安装。"
+  "versionCode": 256,
+  "versionName": "4.0.0-et.182",
+  "title": "发现新版本 v4.0.0-et.182",
+  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.182/LocalDream-ET.apk",
+  "size": 164619300,
+  "sha256": "6eaf2d54f6a66ec3b515ceddd8383e6c0e81f116654608f1cad093e558c6bc12",
+  "releaseNotes": "et.182（versionCode 256）：\n1) 新增第二生成引擎切换：设置页和右上角菜单均可切换“内置引擎 / Nightmare 引擎”，切换后下次生成生效，随时可以切回。\n2) 接入 Nightmare 的 arm64-v8a 后端二进制（QNN/DiT 管线），支持 sd15cpu、sd15npu、sdxl、anima、zimage/klein/qwen21 等类型；Nightmare 后端未实现 sdxlmnn，该类型会自动继续使用内置引擎，不会报 Invalid --type。\n3) 32 位 / x86 设备不显示可用的 Nightmare 开关，继续使用内置引擎，避免加载不兼容二进制导致崩溃。\n4) 生成进度继续显示预计剩余时间；聊天输入框跟随输入法、引用回复卡片保留。\n5) 签名不变，可直接覆盖安装。"
 }

@@ -64,6 +64,11 @@ class BackendService : Service() {
     companion object {
         private const val TAG = "BackendService"
         private const val EXECUTABLE_NAME = "libstable_diffusion_core.so"
+        // et.181: Nightmare fork backend (same HTTP protocol, extra QNN/DiT
+        // pipelines). Only packaged for arm64-v8a; 32-bit/x86 fall back to the
+        // built-in core below.
+        private const val NIGHTMARE_EXECUTABLE_NAME = "libstable_diffusion_core_nm.so"
+        const val PREF_NIGHTMARE_ENGINE = "generation_engine_nightmare"
         const val RUNTIME_DIR = "runtime_libs"
         private const val RUNTIME_VERSION = "qnn_2_50_0_260828"
         private const val RUNTIME_VERSION_FILE = ".runtime_version"
@@ -619,7 +624,18 @@ class BackendService : Service() {
             // we surface the real exit code + engine log tail (et.48/et.51 classification)
             // instead of a pre-launch "model incomplete" gate.
 
-            val executableFile = File(nativeDir, EXECUTABLE_NAME)
+            val nightmareRequested = getSharedPreferences("app_prefs", MODE_PRIVATE)
+                .getBoolean(PREF_NIGHTMARE_ENGINE, false)
+            val nightmareFile = File(nativeDir, NIGHTMARE_EXECUTABLE_NAME)
+            // Nightmare's backend does not implement the MNN SDXL type; keep
+            // sdxlmnn on the built-in core instead of failing with Invalid --type.
+            val useNightmare = nightmareRequested && nightmareFile.exists() &&
+                backendType != "sdxlmnn"
+            if (nightmareRequested && !nightmareFile.exists()) {
+                Log.w(TAG, "Nightmare engine requested but not packaged for this ABI; using built-in core")
+            }
+            val executableFile = if (useNightmare) nightmareFile else File(nativeDir, EXECUTABLE_NAME)
+            if (useNightmare) Log.i(TAG, "Using Nightmare backend: ${executableFile.absolutePath}")
 
             // et.26: x86_64 native core is now packaged. On an x86_64 device the
             // system extracts lib/x86_64 and nativeLibraryDir already points at it,
