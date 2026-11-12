@@ -30,6 +30,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -1188,6 +1189,8 @@ fun ChatScreen(onBack: () -> Unit) {
     webUrl?.let { url ->
         var webView by remember(url) { mutableStateOf<WebView?>(null) }
         var canGoBack by remember(url) { mutableStateOf(false) }
+        var canGoForward by remember(url) { mutableStateOf(false) }
+        var currentUrl by remember(url) { mutableStateOf(url) }
         // A WebView holds a whole renderer process; destroying it when the
         // dialog closes is what keeps repeated link opens from leaking memory.
         DisposableEffect(url) {
@@ -1210,8 +1213,17 @@ fun ChatScreen(onBack: () -> Unit) {
                         ) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回上一页")
                         }
+                        IconButton(
+                            enabled = canGoForward,
+                            onClick = { webView?.goForward() },
+                        ) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "前进到下一页")
+                        }
+                        IconButton(onClick = { webView?.reload() }) {
+                            Icon(Icons.Default.Refresh, contentDescription = "刷新当前网页")
+                        }
                         Text(
-                            url,
+                            currentUrl,
                             style = MaterialTheme.typography.labelSmall,
                             maxLines = 1,
                             modifier = Modifier.weight(1f),
@@ -1231,8 +1243,22 @@ fun ChatScreen(onBack: () -> Unit) {
                                 settings.builtInZoomControls = true
                                 settings.displayZoomControls = false
                                 webViewClient = object : WebViewClient() {
-                                    override fun onPageFinished(view: WebView?, url: String?) {
+                                    private fun syncHistory(view: WebView?, target: String?) {
                                         canGoBack = view?.canGoBack() == true
+                                        canGoForward = view?.canGoForward() == true
+                                        if (!target.isNullOrBlank()) currentUrl = target
+                                    }
+
+                                    override fun onPageFinished(view: WebView?, url: String?) {
+                                        syncHistory(view, url)
+                                    }
+
+                                    override fun doUpdateVisitedHistory(
+                                        view: WebView?,
+                                        target: String?,
+                                        isReload: Boolean,
+                                    ) {
+                                        syncHistory(view, target)
                                     }
                                     override fun onReceivedError(
                                         view: WebView?,
@@ -1243,9 +1269,14 @@ fun ChatScreen(onBack: () -> Unit) {
                                     }
                                 }
                                 android.webkit.WebChromeClient()
+                                // Load exactly once. The update block used to
+                                // re-run loadUrl on every recomposition, so any
+                                // back/forward state change reset the page and
+                                // history navigation appeared to do nothing.
+                                loadUrl(url)
                             }
                         },
-                        update = { it.loadUrl(url) },
+                        update = { },
                         modifier = Modifier.fillMaxWidth().height(460.dp),
                     )
                     TextButton(

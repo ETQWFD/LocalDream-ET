@@ -38,6 +38,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import io.github.xororz.localdream.data.GenerationMode
+import io.github.xororz.localdream.data.HistoryManager
 import io.github.xororz.localdream.service.BackendService
 import io.github.xororz.localdream.service.BackgroundGenerationService
 import io.github.xororz.localdream.utils.saveImage
@@ -75,6 +77,7 @@ fun EditScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val historyManager = remember { HistoryManager(context) }
 
     var originalPicked by remember { mutableStateOf<Bitmap?>(null) }
     var sourceBitmap by remember { mutableStateOf<Bitmap?>(null) }
@@ -95,7 +98,14 @@ fun EditScreen(
         )
     }
     var denoise by remember { mutableFloatStateOf(0.55f) }
-    var canvasSize by remember { mutableIntStateOf(512) }
+    // et.184: start at the RAM-safe long edge (384 on low-memory 32-bit
+    // devices) instead of always 512; 512×400 OOM'd/killed the engine on the
+    // PowerVR GE8320-class device in the logs.
+    var canvasSize by remember {
+        mutableIntStateOf(
+            io.github.xororz.localdream.utils.DeviceCapabilities.sd15LongEdgeForRam(context),
+        )
+    }
     var steps by remember { mutableIntStateOf(12) }
 
     var working by remember { mutableStateOf(false) }
@@ -112,6 +122,13 @@ fun EditScreen(
     var localNote by remember { mutableStateOf<String?>(null) }
     // Whole-image redraw needs an explicit confirmation.
     var pendingWideRedraw by remember { mutableStateOf<(() -> Unit)?>(null) }
+    // What this run actually sent, so the result can be written to history.
+    var lastPromptSent by remember { mutableStateOf("") }
+    var lastNegativeSent by remember { mutableStateOf("") }
+    var lastDenoiseSent by remember { mutableFloatStateOf(0.45f) }
+    var lastStepsSent by remember { mutableIntStateOf(12) }
+    var lastMasked by remember { mutableStateOf(false) }
+    var startedAtMs by remember { mutableLongStateOf(0L) }
 
     fun loadIntoCanvas(bitmap: Bitmap) {
         val scaled = scaleToCanvas(bitmap, canvasSize)
@@ -292,7 +309,11 @@ fun EditScreen(
             // ---- canvas size ---------------------------------------------
             Text("生成尺寸（长边）", style = MaterialTheme.typography.titleSmall)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf(512, 640, 768).forEach { size ->
+                listOf(
+                    io.github.xororz.localdream.utils.DeviceCapabilities.sd15LongEdgeForRam(context),
+                    512,
+                    640,
+                ).distinct().forEach { size ->
                     FilterChip(
                         selected = canvasSize == size,
                         onClick = {
@@ -427,7 +448,7 @@ fun EditScreen(
                         runCatching {
                             context.startService(
                                 Intent(context, BackgroundGenerationService::class.java).apply {
-                                    action = "io.github.xororz.localdream.STOP_GENERATION"
+                                    action = BackgroundGenerationService.ACTION_STOP
                                 },
                             )
                         }
@@ -476,6 +497,12 @@ fun EditScreen(
                         usedPrompt = positiveForEngine
                         showUsedPrompt = true
                     }
+                    lastPromptSent = positiveForEngine
+                    lastNegativeSent = negativeForEngine
+                    lastDenoiseSent = strength
+                    lastStepsSent = stepCount
+                    lastMasked = hasMask
+                    startedAtMs = System.currentTimeMillis()
                     startEdit(
                         context = context,
                         source = src,
@@ -687,7 +714,7 @@ fun EditScreen(
                     runCatching {
                         context.startService(
                             Intent(context, BackgroundGenerationService::class.java).apply {
-                                action = "io.github.xororz.localdream.STOP_GENERATION"
+                                action = BackgroundGenerationService.ACTION_STOP
                             },
                         )
                     }
@@ -716,6 +743,9 @@ fun EditScreen(
                     if (!working) return@collect
                     working = false
                     progress = 1f
+                    // Tell the service we have our own reference, so it can
+                    // release its copy and stop waiting (5s timeout otherwise).
+                    BackgroundGenerationService.markBitmapConsumed()
                     val base = sourceBitmap
                     val mask = maskBitmap
                     scope.launch {
@@ -747,7 +777,48 @@ fun EditScreen(
                                 localNote = "本地检测：已保留蒙版外原图区域，只替换了涂抹区域"
                             }
                             errorMsg = null
-                            Toast.makeText(context, "修图完成", Toast.LENGTH_SHORT).show()
+                            // et.184: a 修图 result used to live only in memory —
+                            // closing the page lost it. Persist it exactly like
+                            // the generation page does so it shows in 历史.
+                            val mode = if (mask != null) {
+                                GenerationMode.INPAINT
+                            } else {
+                                GenerationMode.IMG2IMG
+                            }
+                            val elapsed = if (startedAtMs > 0L) {
+                                "${(System.currentTimeMillis() - startedAtMs) / 1000}s"
+                            } else {
+                                null
+                            }
+                            val params = io.github.xororz.localdream.ui.screens
+                                .GenerationParameters(
+                                    steps = lastStepsSent,
+                                    cfg = 7f,
+                                    seed = st.seed,
+                                    prompt = lastPromptSent,
+                                    negativePrompt = lastNegativeSent,
+                                    generationTime = elapsed,
+                                    width = out.width,
+                                    height = out.height,
+                                    runOnCpu = backendType.contains("cpu"),
+                                    denoiseStrength = lastDenoiseSent,
+                                    useOpenCL = false,
+                                    scheduler = "dpm",
+                                    mode = mode,
+                                )
+                            val saved = withContext(Dispatchers.IO) {
+                                historyManager.saveGeneratedImage(
+                                    modelId = modelId,
+                                    bitmap = out,
+                                    params = params,
+                                    mode = mode,
+                                )
+                            }
+                            if (saved == null) {
+                                errorMsg = "修图完成，但写入历史失败，请检查存储空间"
+                            } else {
+                                Toast.makeText(context, "修图完成，已保存到历史", Toast.LENGTH_SHORT).show()
+                            }
                         }
                     }
                 }
@@ -819,7 +890,7 @@ private fun decodeSampledFile(path: String, maxEdge: Int): Bitmap? = runCatching
     BitmapFactory.decodeFile(path, opts)
 }.getOrNull()
 
-private fun startEdit(
+private suspend fun startEdit(
     context: Context,
     source: Bitmap?,
     prompt: String,
@@ -852,7 +923,12 @@ private fun startEdit(
             FileOutputStream(maskFile).use { it.write(maskBase64.toByteArray()) }
         }
 
-        // launch/attach the native engine for this model (binds 8081)
+        // Launch/attach the native engine for this model, then WAIT until its
+        // HTTP socket accepts connections. et.184: this page used to fire
+        // /generate immediately against a hard-coded 8081 while the engine was
+        // still loading (and while the resolved port could already have been
+        // bumped to 8082+), which is exactly the flaky "修图没反应/引擎退出" in
+        // the logs.
         runCatching {
             val beIntent = Intent(context, BackendService::class.java).apply {
                 putExtra("modelId", modelId)
@@ -861,6 +937,31 @@ private fun startEdit(
                 putExtra("height", h)
             }
             context.startForegroundService(beIntent)
+        }
+
+        var port = io.github.xororz.localdream.utils.EnginePort.activeEnginePort(context)
+        workingRef(true)
+        var ready = false
+        val deadline = System.currentTimeMillis() + 60_000L
+        while (System.currentTimeMillis() < deadline) {
+            port = io.github.xororz.localdream.utils.EnginePort.activeEnginePort(context)
+            ready = runCatching {
+                java.net.Socket().use { s ->
+                    s.connect(java.net.InetSocketAddress("127.0.0.1", port), 800)
+                }
+                true
+            }.getOrDefault(false)
+            if (ready) break
+            kotlinx.coroutines.delay(700L)
+        }
+        if (!ready) {
+            workingRef(false)
+            Toast.makeText(
+                context,
+                "修图引擎启动超时（$port），请确认模型已下载完整后重试",
+                Toast.LENGTH_LONG,
+            ).show()
+            return
         }
 
         val intent = Intent(context, BackgroundGenerationService::class.java).apply {
@@ -885,7 +986,7 @@ private fun startEdit(
             if (!maskBase64.isNullOrBlank()) putExtra("has_mask", true)
             putExtra("modelId", modelId)
             putExtra("backendType", backendType)
-            putExtra("backend_host", "127.0.0.1:8081")
+            putExtra("backend_host", "127.0.0.1:$port")
             // Prompt was already converted to English tags by the caller.
             putExtra("prompt_pretranslated", englishOnly)
             putExtra("prompt_english_only", englishOnly)
