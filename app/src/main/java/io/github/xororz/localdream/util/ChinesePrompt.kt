@@ -320,10 +320,39 @@ object ChinesePrompt {
         if (input.isNullOrBlank()) return ""
         if (!hasChinese(input)) return input.trim()
         if (System.currentTimeMillis() >= onlineDisabledUntilMs) {
-            val online = translateOnline(input)
+            // et.183: try the primary endpoint, then a second one before
+            // degrading to the tiny offline dictionary. A single blocked
+            // endpoint used to leave complex Chinese prompts almost empty.
+            val online = translateOnline(input) ?: translateGoogle(input)
             if (!online.isNullOrBlank()) return toTags(online)
         }
         return translatePrompt(input)
+    }
+
+    private const val GOOGLE_MT_ENDPOINT = "https://translate.googleapis.com/translate_a/single"
+
+    /** Secondary full-sentence translator; returns null when unavailable. */
+    private fun translateGoogle(q: String): String? = try {
+        val url = "$GOOGLE_MT_ENDPOINT?client=gtx&sl=zh-CN&tl=en&dt=t&q=" +
+            URLEncoder.encode(q, "UTF-8")
+        val conn = (URL(url).openConnection() as HttpURLConnection).apply {
+            requestMethod = "GET"
+            connectTimeout = MT_TIMEOUT_MS
+            readTimeout = MT_TIMEOUT_MS
+            instanceFollowRedirects = true
+            setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android) LocalDreamET")
+        }
+        if (conn.responseCode != 200) return null
+        val text = conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
+        val segments = org.json.JSONArray(text).optJSONArray(0) ?: return null
+        val out = StringBuilder()
+        for (i in 0 until segments.length()) {
+            val pair = segments.optJSONArray(i) ?: continue
+            out.append(pair.optString(0, ""))
+        }
+        out.toString().trim().ifBlank { null }
+    } catch (_: Exception) {
+        null
     }
 
     private fun translateOnline(q: String): String? = try {

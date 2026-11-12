@@ -3530,6 +3530,57 @@ fun ModelRunScreen(
                                         maxOf(currentWidth, currentHeight, 512)
                                 } == true,
                             ultrafixEnabled = !isRunning && !isUpscaling && !isUltrafixPreparing,
+                            // et.183: "AI 修图" — reopen the local img2img
+                            // workbench with this finished picture already
+                            // loaded. DiT models have no img2img backend, so the
+                            // button stays hidden instead of failing later.
+                            showEditButton = !isRemote && model?.isDit == false &&
+                                model.backendType.isNotBlank(),
+                            editEnabled = !isRunning && !isUpscaling && !isUltrafixPreparing,
+                            onEditClick = {
+                                val bitmap = currentBitmap
+                                val currentModel = model
+                                if (bitmap == null || currentModel == null) {
+                                    Toast.makeText(
+                                        context,
+                                        "图片还没准备好，请稍后再试",
+                                        Toast.LENGTH_SHORT,
+                                    ).show()
+                                } else {
+                                    scope.launch(Dispatchers.IO) {
+                                        val target = File(context.cacheDir, "edit_source.png")
+                                        val ok = runCatching {
+                                            java.io.FileOutputStream(target).use { out ->
+                                                bitmap.compress(
+                                                    android.graphics.Bitmap.CompressFormat.PNG,
+                                                    100,
+                                                    out,
+                                                )
+                                            }
+                                            true
+                                        }.getOrDefault(false)
+                                        withContext(Dispatchers.Main) {
+                                            if (ok) {
+                                                navController.navigate(
+                                                    io.github.xororz.localdream.navigation.Screen.Edit
+                                                        .createRoute(
+                                                            currentModel.id,
+                                                            currentModel.name,
+                                                            currentModel.backendType,
+                                                            target.absolutePath,
+                                                        ),
+                                                )
+                                            } else {
+                                                Toast.makeText(
+                                                    context,
+                                                    "图片保存失败，无法进入修图",
+                                                    Toast.LENGTH_SHORT,
+                                                ).show()
+                                            }
+                                        }
+                                    }
+                                }
+                            },
                             // The upscale button also exists on models that
                             // can't run UltraFix (SD1.5 NPU); its long press
                             // only opens the import dialog when the model can.

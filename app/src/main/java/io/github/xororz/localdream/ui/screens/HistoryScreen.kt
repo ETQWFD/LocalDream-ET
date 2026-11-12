@@ -2,12 +2,14 @@ package io.github.xororz.localdream.ui.screens
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import java.io.FileOutputStream
 import android.widget.Toast
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Brush
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Favorite
@@ -25,6 +27,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -75,6 +78,9 @@ fun HistoryScreen(navController: NavController) {
     val resources = LocalResources.current
     val scope = rememberCoroutineScope()
     val historyManager = remember { HistoryManager(context) }
+    // et.183: needed to resolve a history row's backend before offering 修图.
+    val modelRepository = remember { io.github.xororz.localdream.data.ModelRepository.getInstance(context) }
+    LaunchedEffect(Unit) { modelRepository.ensureLoaded() }
     val generationPreferences = remember { GenerationPreferences(context) }
     val shareUseBase64 by remember { generationPreferences.observeShareUseBase64() }
         .collectAsState(initial = false)
@@ -276,6 +282,55 @@ fun HistoryScreen(navController: NavController) {
             bitmap = previewBitmap,
             onDismiss = { previewItem = null },
             topEndContent = {
+                // et.183: only shown when the history row points at a real
+                // img2img-capable model on this device — never an empty button
+                // that fails after tapping.
+                val editModel = modelRepository.models.find {
+                    it.id == item.modelId && it.isDownloaded && !it.isDit &&
+                        it.backendType.isNotBlank()
+                }
+                if (editModel != null) {
+                    OverlayIconButton(
+                        icon = Icons.Default.Brush,
+                        contentDescription = "AI 修图",
+                        onClick = {
+                            val bitmap = previewBitmap
+                            if (bitmap == null) {
+                                Toast.makeText(context, "图片还没加载完，请稍后再试", Toast.LENGTH_SHORT).show()
+                            } else {
+                                scope.launch(Dispatchers.IO) {
+                                    val target = File(context.cacheDir, "edit_source.png")
+                                    val ok = runCatching {
+                                        FileOutputStream(target).use { out ->
+                                            bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+                                        }
+                                        true
+                                    }.getOrDefault(false)
+                                    withContext(Dispatchers.Main) {
+                                        if (ok) {
+                                            previewItem = null
+                                            navController.navigate(
+                                                io.github.xororz.localdream.navigation.Screen.Edit
+                                                    .createRoute(
+                                                        editModel.id,
+                                                        editModel.name,
+                                                        editModel.backendType,
+                                                        target.absolutePath,
+                                                    ),
+                                            )
+                                        } else {
+                                            Toast.makeText(
+                                                context,
+                                                "图片保存失败，无法进入修图",
+                                                Toast.LENGTH_SHORT,
+                                            ).show()
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                    )
+                }
                 OverlayIconButton(
                     icon = Icons.Default.Info,
                     contentDescription = "View parameters",

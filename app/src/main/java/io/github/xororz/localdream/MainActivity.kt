@@ -681,6 +681,10 @@ private fun AppContent() {
                     type = androidx.navigation.NavType.StringType
                     defaultValue = "sd15cpu"
                 },
+                androidx.navigation.navArgument("imagePath") {
+                    type = androidx.navigation.NavType.StringType
+                    defaultValue = ""
+                },
             ),
         ) { entry ->
             io.github.xororz.localdream.ui.screens.EditScreen(
@@ -688,6 +692,7 @@ private fun AppContent() {
                 modelId = entry.arguments?.getString("modelId").orEmpty(),
                 modelName = entry.arguments?.getString("modelName") ?: "Model",
                 backendType = entry.arguments?.getString("backendType") ?: "sd15cpu",
+                initialImagePath = entry.arguments?.getString("imagePath").orEmpty(),
             )
         }
     }

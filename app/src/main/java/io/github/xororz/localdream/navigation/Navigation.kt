@@ -20,9 +20,29 @@ sealed class Screen(val route: String) {
 
     object Upscale : Screen("upscale")
 
-    object Edit : Screen("edit/{modelId}?modelName={modelName}&backendType={backendType}") {
-        fun createRoute(modelId: String, modelName: String, backendType: String) =
-            "edit/$modelId?modelName=$modelName&backendType=$backendType"
+    object Edit : Screen(
+        "edit/{modelId}?modelName={modelName}&backendType={backendType}&imagePath={imagePath}",
+    ) {
+        /**
+         * [imagePath] is an optional absolute path of an already generated image
+         * (written by the result page into cacheDir). When present the 修图 page
+         * opens with that picture loaded instead of asking the user to pick it
+         * again from the album.
+         */
+        fun createRoute(
+            modelId: String,
+            modelName: String,
+            backendType: String,
+            imagePath: String? = null,
+        ): String {
+            val base = "edit/$modelId?modelName=${android.net.Uri.encode(modelName)}" +
+                "&backendType=${android.net.Uri.encode(backendType)}"
+            return if (imagePath.isNullOrBlank()) {
+                base
+            } else {
+                "$base&imagePath=${android.net.Uri.encode(imagePath)}"
+            }
+        }
     }
 
     object History : Screen("history")

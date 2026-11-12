@@ -1,9 +1,9 @@
 {
-  "versionCode": 256,
-  "versionName": "4.0.0-et.182",
-  "title": "发现新版本 v4.0.0-et.182",
-  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.182/LocalDream-ET.apk",
-  "size": 164619300,
-  "sha256": "6eaf2d54f6a66ec3b515ceddd8383e6c0e81f116654608f1cad093e558c6bc12",
-  "releaseNotes": "et.182（versionCode 256）：\n1) 新增第二生成引擎切换：设置页和右上角菜单均可切换“内置引擎 / Nightmare 引擎”，切换后下次生成生效，随时可以切回。\n2) 接入 Nightmare 的 arm64-v8a 后端二进制（QNN/DiT 管线），支持 sd15cpu、sd15npu、sdxl、anima、zimage/klein/qwen21 等类型；Nightmare 后端未实现 sdxlmnn，该类型会自动继续使用内置引擎，不会报 Invalid --type。\n3) 32 位 / x86 设备不显示可用的 Nightmare 开关，继续使用内置引擎，避免加载不兼容二进制导致崩溃。\n4) 生成进度继续显示预计剩余时间；聊天输入框跟随输入法、引用回复卡片保留。\n5) 签名不变，可直接覆盖安装。"
+  "versionCode": 257,
+  "versionName": "4.0.0-et.183",
+  "title": "发现新版本 v4.0.0-et.183",
+  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.183/LocalDream-ET.apk",
+  "size": 164662876,
+  "sha256": "b42ae717644d076fcb888bce80c4c29d9c4aa3bed5f7ed682bddba1c97584833",
+  "releaseNotes": "et.183（versionCode 257）：\n1) 生成结果页新增“AI 修图”入口（画笔按钮），一键把刚生成的图片送进本地修图工作台，不用再从相册重新选图；历史记录里点开大图同样可以进入（只有本机确实有可用模型时才会显示）。\n2) 修图页中文提示词修复：中文会自动翻译成英文 tag 再交给 SD 引擎，界面显示“实际使用”可展开核对，不再把中文当乱码丢给模型。\n3) 修图防乱改：新增本地像素检测（清晰度/平均亮度/蒙版覆盖率）。整图重绘强度上限 0.60；没有蒙版且强度超过 0.55 会先弹确认；图片已经很清晰又没写要改什么时直接拦截，提示先涂蒙版或写清要改的内容；蒙版小于 1% 提示太小，超过 70% 提示接近整图。\n4) 修图结果校验：蒙版外像素强制还原成原图；结果和原图几乎没差别时提示“未检测到有效修改”，不再误报“修图完成”；只在本次修图真正运行时接收结果，不会把别的文生图结果串进来。\n5) 修复修图页负向提示词失效（键名写错被丢弃）、宽高比被强制成 1:1 导致竖图/横图变形；整图修图页（Restore）同步修复翻译、负向提示词和比例。\n6) 中文翻译链路增加第二个在线翻译通道，首选接口不可用时仍能翻译中文提示词，最后才退回内置词表。\n7) Nightmare 第二引擎说明：官方只提供 arm64-v8a 的 stripped 后端可执行文件，没有源码，无法可靠编译 32 位/x86 版本；32 位设备继续使用内置引擎（armv7 后端正常出图），Nightmare 开关在 32 位设备上保持禁用并提示原因，不造假入口。\n8) 签名不变（SHA-256 c9e9cb5a…b917bce），可直接覆盖安装。"
 }

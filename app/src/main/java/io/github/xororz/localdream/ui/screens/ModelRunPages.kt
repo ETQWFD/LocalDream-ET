@@ -38,6 +38,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.AutoFixHigh
+import androidx.compose.material.icons.filled.Brush
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CheckCircleOutline
@@ -108,6 +109,10 @@ internal fun ModelRunResultPage(
     upscaleEnabled: Boolean,
     showUltrafixButton: Boolean,
     ultrafixEnabled: Boolean,
+    // et.183: hand the just-generated picture to the local 修图 workbench.
+    showEditButton: Boolean,
+    editEnabled: Boolean,
+    onEditClick: () -> Unit,
     // Long-pressing either the upscale or the UltraFix button opens the
     // local-image import dialog for UltraFix.
     onUpscaleLongClick: () -> Unit,
@@ -254,6 +259,18 @@ internal fun ModelRunResultPage(
                                             icon = Icons.Default.AutoAwesome,
                                             contentDescription = "ultrafix image",
                                         )
+                                    }
+
+                                    if (showEditButton) {
+                                        FilledTonalIconButton(
+                                            onClick = onEditClick,
+                                            enabled = editEnabled,
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Brush,
+                                                contentDescription = "AI 修图",
+                                            )
+                                        }
                                     }
 
                                     FilledTonalIconButton(

@@ -71,6 +71,7 @@ fun EditScreen(
     modelId: String,
     modelName: String,
     backendType: String,
+    initialImagePath: String = "",
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -104,6 +105,13 @@ fun EditScreen(
     var posOpen by remember { mutableStateOf(true) }
     var negOpen by remember { mutableStateOf(false) }
     var advancedOpen by remember { mutableStateOf(false) }
+    // What the engine actually received (English tags after Chinese translation).
+    var usedPrompt by remember { mutableStateOf<String?>(null) }
+    var showUsedPrompt by remember { mutableStateOf(false) }
+    // Local (non-AI) diagnostics shown above the confirm button.
+    var localNote by remember { mutableStateOf<String?>(null) }
+    // Whole-image redraw needs an explicit confirmation.
+    var pendingWideRedraw by remember { mutableStateOf<(() -> Unit)?>(null) }
 
     fun loadIntoCanvas(bitmap: Bitmap) {
         val scaled = scaleToCanvas(bitmap, canvasSize)
@@ -113,6 +121,22 @@ fun EditScreen(
         maskPaths = emptyList()
         resultBitmap = null
         errorMsg = null
+        localNote = null
+        usedPrompt = null
+        showUsedPrompt = false
+    }
+
+    // et.183: the result page hands us a temp PNG path so "AI 修图" opens with
+    // the just-generated picture already loaded.
+    LaunchedEffect(initialImagePath) {
+        if (initialImagePath.isBlank() || sourceBitmap != null) return@LaunchedEffect
+        val bmp = withContext(Dispatchers.IO) { decodeSampledFile(initialImagePath, 1536) }
+        if (bmp == null) {
+            errorMsg = "这张图读取失败，请重新选择图片"
+        } else {
+            originalPicked = bmp
+            loadIntoCanvas(bmp)
+        }
     }
 
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
@@ -341,16 +365,23 @@ fun EditScreen(
                 )
             }
             Slider(
-                value = denoise,
+                value = denoise.coerceIn(0.30f, if (maskBitmap != null) 0.70f else 0.60f),
                 onValueChange = { denoise = it },
                 enabled = !working,
-                valueRange = 0.30f..0.70f,
+                // et.183: whole-image redraw is capped at 0.60; only a painted
+                // mask may go up to 0.70. Higher strength without a mask was
+                // exactly what "乱修" the whole picture (face/background drift).
+                valueRange = 0.30f..(if (maskBitmap != null) 0.70f else 0.60f),
                 steps = 39,
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(0.35f to "0.35 轻微", 0.55f to "0.55 推荐", 0.65f to "0.65 强力").forEach { (v, label) ->
                     AssistChip(
-                        onClick = { if (!working) denoise = v },
+                        onClick = {
+                            if (!working) {
+                                denoise = if (maskBitmap != null) v else minOf(v, 0.60f)
+                            }
+                        },
                         label = { Text(label) },
                     )
                 }
@@ -408,25 +439,155 @@ fun EditScreen(
                 Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
             }
 
-            Button(
-                onClick = {
+            /**
+             * Translate (if needed) then launch the engine. Runs on IO: the
+             * online sentence translator must never block the main thread.
+             */
+            fun runEdit(src: Bitmap) {
+                // Capture the current mask/prompt settings before switching dispatchers.
+                val hasMask = maskBitmap != null
+                val maskToSend = maskBase64
+                val rawPositive = positive.ifBlank { DEFAULT_POSITIVE }
+                val rawNegative = negative
+                val strength = denoise.coerceIn(0.30f, if (hasMask) 0.70f else 0.60f)
+                val stepCount = steps
+                scope.launch {
+                    errorMsg = null
+                    val englishOnly = !BackendService.isDitBackend(backendType)
+                    val positiveForEngine =
+                        if (englishOnly && io.github.xororz.localdream.util.ChinesePrompt.hasChinese(rawPositive)) {
+                            withContext(Dispatchers.IO) {
+                                io.github.xororz.localdream.util.ChinesePrompt
+                                    .translatePromptBest(rawPositive)
+                            }
+                        } else {
+                            rawPositive
+                        }
+                    val negativeForEngine =
+                        if (englishOnly && io.github.xororz.localdream.util.ChinesePrompt.hasChinese(rawNegative)) {
+                            withContext(Dispatchers.IO) {
+                                io.github.xororz.localdream.util.ChinesePrompt
+                                    .translatePromptBest(rawNegative)
+                            }
+                        } else {
+                            rawNegative
+                        }
+                    if (englishOnly && io.github.xororz.localdream.util.ChinesePrompt.hasChinese(rawPositive)) {
+                        usedPrompt = positiveForEngine
+                        showUsedPrompt = true
+                    }
                     startEdit(
                         context = context,
-                        source = sourceBitmap,
-                        prompt = positive.ifBlank { DEFAULT_POSITIVE },
-                        negative = negative,
-                        denoise = denoise,
-                        steps = steps,
+                        source = src,
+                        prompt = positiveForEngine,
+                        negative = negativeForEngine,
+                        denoise = strength,
+                        steps = stepCount,
                         modelId = modelId,
                         backendType = backendType,
-                        maskBase64 = maskBase64,
+                        maskBase64 = maskToSend,
+                        englishOnly = englishOnly,
                         workingRef = { working = it; if (it) progress = 0f },
                     )
-                },
+                }
+            }
+
+            /**
+             * et.183 anti-"乱修" gate. Everything is decided locally from the
+             * pixels the user is looking at — no cloud model, no guessing.
+             */
+            fun validateAndStart() {
+                val src = sourceBitmap ?: return
+                errorMsg = null
+                localNote = null
+                val mask = maskBitmap
+                if (mask != null &&
+                    (mask.width != src.width || mask.height != src.height)
+                ) {
+                    errorMsg = "蒙版尺寸和底图不一致，请重新涂蒙版"
+                    return
+                }
+                if (mask != null) {
+                    val coverage = io.github.xororz.localdream.util.ImageDiagnostics.maskCoverageOf(mask)
+                    val pct = io.github.xororz.localdream.util.ImageDiagnostics.percent(coverage)
+                    localNote = "本地检测：蒙版覆盖约 $pct%，只重绘这块区域"
+                    if (coverage < io.github.xororz.localdream.util.ImageDiagnostics.MASK_TOO_SMALL) {
+                        errorMsg = "蒙版太小（约 $pct%），请把要修改的地方涂出来再试"
+                        return
+                    }
+                    if (coverage > io.github.xororz.localdream.util.ImageDiagnostics.MASK_TOO_LARGE) {
+                        localNote = "本地检测：蒙版覆盖约 $pct%，已接近整图重绘，强度不要超过 0.55"
+                    }
+                    runEdit(src)
+                    return
+                }
+
+                val sharpness = io.github.xororz.localdream.util.ImageDiagnostics.sharpnessOf(src)
+                val exposure = io.github.xororz.localdream.util.ImageDiagnostics.exposureOf(src)
+                localNote = buildString {
+                    append("本地检测：清晰度 ${sharpness.toInt()}（")
+                    append(
+                        if (io.github.xororz.localdream.util.ImageDiagnostics.isAlreadySharp(sharpness)) {
+                            "已清晰"
+                        } else {
+                            "偏糊，适合整图增强"
+                        },
+                    )
+                    append("），平均亮度 ${exposure.meanLuma.toInt()}")
+                    if (exposure.isOverexposed) append("，画面偏过曝")
+                    if (exposure.isUnderexposed) append("，画面偏暗")
+                }
+                if (positive.isBlank() &&
+                    io.github.xororz.localdream.util.ImageDiagnostics.isAlreadySharp(sharpness)
+                ) {
+                    errorMsg = "本机检测：这张图已经很清晰，而且没有写要改什么。请先涂蒙版圈出要改的位置，" +
+                        "或在提示词里写清楚要改的内容，避免整张图被乱改。"
+                    return
+                }
+                if (denoise > 0.55f) {
+                    // Confirm before repainting the whole picture.
+                    pendingWideRedraw = { runEdit(src) }
+                    return
+                }
+                runEdit(src)
+            }
+
+            Button(
+                onClick = { validateAndStart() },
                 enabled = sourceBitmap != null && !working,
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(if (working) "修图中…" else if (maskBitmap != null) "只重绘蒙版区域" else "确认修图")
+            }
+
+            localNote?.let {
+                Text(
+                    it,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            usedPrompt?.let { used ->
+                Card(
+                    onClick = { showUsedPrompt = !showUsedPrompt },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Column(Modifier.padding(10.dp)) {
+                        Text(
+                            if (showUsedPrompt) "实际使用（点击收起）" else "实际使用（点击展开）",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                        if (showUsedPrompt) {
+                            Text(
+                                used,
+                                style = MaterialTheme.typography.labelSmall,
+                                maxLines = 3,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
+                }
             }
 
             resultBitmap?.let { result ->
@@ -489,6 +650,32 @@ fun EditScreen(
         }
     }
 
+    pendingWideRedraw?.let { proceed ->
+        AlertDialog(
+            onDismissRequest = { pendingWideRedraw = null },
+            title = { Text("整图重绘确认") },
+            text = {
+                Text(
+                    "当前没有涂蒙版，重绘强度 ${"%.2f".format(denoise)} 会把人物和背景一起重画，" +
+                        "容易和原图差别很大。建议先涂蒙版只改局部。",
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val action = proceed
+                    pendingWideRedraw = null
+                    action()
+                }) { Text("仍然整图重绘") }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    pendingWideRedraw = null
+                    showInpaint = true
+                }) { Text("去涂蒙版") }
+            },
+        )
+    }
+
     if (showExitConfirm) {
         AlertDialog(
             onDismissRequest = { showExitConfirm = false },
@@ -524,10 +711,45 @@ fun EditScreen(
                 }
 
                 is BackgroundGenerationService.GenerationState.Complete -> {
+                    // Ignore a completion that belongs to another screen's
+                    // generation: only an edit we started may land here.
+                    if (!working) return@collect
                     working = false
                     progress = 1f
-                    resultBitmap = st.bitmap
-                    Toast.makeText(context, "修图完成", Toast.LENGTH_SHORT).show()
+                    val base = sourceBitmap
+                    val mask = maskBitmap
+                    scope.launch {
+                        val processed = withContext(Dispatchers.IO) {
+                            var out = st.bitmap
+                            if (mask != null && base != null) {
+                                // Hard guarantee: pixels outside the brush are
+                                // restored from the original, so "只改局部"
+                                // really only changes the painted area.
+                                out = io.github.xororz.localdream.util.ImageDiagnostics
+                                    .preserveOutsideMask(base, out, mask)
+                            }
+                            val diff = if (base != null) {
+                                io.github.xororz.localdream.util.ImageDiagnostics.diffOf(base, out)
+                            } else {
+                                -1.0
+                            }
+                            out to diff
+                        }
+                        val (out, diff) = processed
+                        resultBitmap = out
+                        if (diff >= 0.0 &&
+                            !io.github.xororz.localdream.util.ImageDiagnostics.hasVisibleChange(diff)
+                        ) {
+                            errorMsg = "未检测到有效修改（画面几乎没有变化）。请提高重绘强度、" +
+                                "补充提示词，或用蒙版圈出要改的地方。"
+                        } else {
+                            if (mask != null) {
+                                localNote = "本地检测：已保留蒙版外原图区域，只替换了涂抹区域"
+                            }
+                            errorMsg = null
+                            Toast.makeText(context, "修图完成", Toast.LENGTH_SHORT).show()
+                        }
+                    }
                 }
 
                 is BackgroundGenerationService.GenerationState.Error -> {
@@ -582,6 +804,21 @@ private fun decodeSampled(context: Context, uri: Uri, maxEdge: Int): Bitmap? = r
     context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, opts) }
 }.getOrNull()
 
+/** Same sampling decode for an absolute file path (result-page handoff). */
+private fun decodeSampledFile(path: String, maxEdge: Int): Bitmap? = runCatching {
+    val file = File(path)
+    if (!file.exists() || file.length() <= 0L) return@runCatching null
+    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    BitmapFactory.decodeFile(path, bounds)
+    if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return@runCatching null
+    var sample = 1
+    while (bounds.outWidth / sample > maxEdge || bounds.outHeight / sample > maxEdge) {
+        sample *= 2
+    }
+    val opts = BitmapFactory.Options().apply { inSampleSize = sample }
+    BitmapFactory.decodeFile(path, opts)
+}.getOrNull()
+
 private fun startEdit(
     context: Context,
     source: Bitmap?,
@@ -592,6 +829,7 @@ private fun startEdit(
     modelId: String,
     backendType: String,
     maskBase64: String?,
+    englishOnly: Boolean,
     workingRef: (Boolean) -> Unit,
 ) {
     if (source == null) {
@@ -637,12 +875,20 @@ private fun startEdit(
             putExtra("denoise_strength", denoise)
             putExtra("use_opencl", false)
             putExtra("scheduler", "dpm")
-            putExtra("aspect_ratio", "1:1")
+            // Match the real canvas instead of always claiming 1:1, otherwise
+            // portrait photos get padded/cropped as a square.
+            putExtra(
+                "aspect_ratio",
+                io.github.xororz.localdream.util.ImageDiagnostics.aspectRatioFor(w, h),
+            )
             putExtra("has_image", true)
             if (!maskBase64.isNullOrBlank()) putExtra("has_mask", true)
             putExtra("modelId", modelId)
             putExtra("backendType", backendType)
             putExtra("backend_host", "127.0.0.1:8081")
+            // Prompt was already converted to English tags by the caller.
+            putExtra("prompt_pretranslated", englishOnly)
+            putExtra("prompt_english_only", englishOnly)
         }
         context.startForegroundService(intent)
         workingRef(true)

@@ -176,15 +176,28 @@ fun RestoreScreen(
                             withContext(Dispatchers.IO) {
                                 // Compute 64-aligned size from the chosen image's
                                 // aspect ratio, long edge capped by RAM tier.
-                                val ratio = if (bmp.width >= bmp.height)
-                                    "${bmp.width / bmp.height}%d".format(1) else "1:${bmp.height / bmp.width}"
+                                // et.183: keep the real ratio instead of forcing
+                                // 1:1, which distorted portrait/landscape photos.
+                                val ratio = io.github.xororz.localdream.util.ImageDiagnostics
+                                    .aspectRatioFor(bmp.width, bmp.height)
                                 val (w, h) = sd15SizeForRatio(
-                                    if (bmp.width >= bmp.height) "1:1" else "1:1",
+                                    ratio,
                                     io.github.xororz.localdream.utils.DeviceCapabilities
                                         .sd15LongEdgeForRam(context),
                                 )
-                                val targetW = if (bmp.width >= bmp.height) w else h
-                                val targetH = if (bmp.width >= bmp.height) h else w
+                                // et.183: Chinese prompts must be converted to
+                                // English tags here too; this page used to pass
+                                // raw Chinese straight into the SD1.5 text encoder.
+                                val enginePrompt =
+                                    io.github.xororz.localdream.util.ChinesePrompt
+                                        .translatePromptBest(prompt)
+                                val engineNegative =
+                                    io.github.xororz.localdream.util.ChinesePrompt
+                                        .translatePromptBest(negative)
+                                // sd15SizeForRatio already returns (width,height)
+                                // for the requested ratio in the right orientation.
+                                val targetW = w
+                                val targetH = h
                                 // et.30: encode as JPEG (not PNG) and base64; photo
                                 // bytes are far smaller, matching the main img2img path.
                                 val b64 = io.github.xororz.localdream.utils.ImageDecode
@@ -215,12 +228,20 @@ fun RestoreScreen(
                                 if (!ready) error("engine start timeout")
                                 // 2) then run img2img generation.
                                 val i = Intent(context, BackgroundGenerationService::class.java).apply {
-                                    putExtra("prompt", prompt)
-                                    putExtra("negative", negative)
+                                    putExtra("prompt", enginePrompt)
+                                    // Was "negative": the service only reads
+                                    // "negative_prompt", so the anti-anatomy list
+                                    // was silently dropped on this page.
+                                    putExtra("negative_prompt", engineNegative)
+                                    putExtra("prompt_pretranslated", true)
+                                    putExtra("prompt_english_only", true)
                                     putExtra("steps", 20)
                                     putExtra("cfg", 7f)
                                     putExtra("width", targetW)
                                     putExtra("height", targetH)
+                                    putExtra("effective_width", targetW)
+                                    putExtra("effective_height", targetH)
+                                    putExtra("aspect_ratio", ratio)
                                     putExtra("has_image", true)
                                     putExtra("denoise_strength", strength)
                                 }
