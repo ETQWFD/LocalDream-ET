@@ -407,6 +407,9 @@ fun ModelRunScreen(
     var returnedSeed by remember { mutableStateOf<Long?>(null) }
     var isRunning by remember { mutableStateOf(false) }
     var progress by remember { mutableFloatStateOf(0f) }
+    // Ticks once a second only while a render is running, so the ETA label
+    // counts down without recomposing the screen when idle.
+    var etaTick by remember { mutableStateOf(0L) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var isCheckingBackend by remember { mutableStateOf(true) }
 
@@ -1760,6 +1763,13 @@ fun ModelRunScreen(
         }
     }
 
+    LaunchedEffect(isRunning) {
+        while (isRunning) {
+            etaTick = System.currentTimeMillis()
+            delay(1000L)
+        }
+    }
+
     LaunchedEffect(serviceState) {
         when (val state = serviceState) {
             is GenerationState.Progress -> {
@@ -2662,6 +2672,7 @@ fun ModelRunScreen(
                                 // Progress/Complete/Error branches below own the reset.
                                 isRunning = true
                                 progress = 0f
+                                generationStartTime = System.currentTimeMillis()
                                 Log.d(
                                     "ModelRunScreen",
                                     "start generation",
@@ -3026,6 +3037,30 @@ fun ModelRunScreen(
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
+                        val started = generationStartTime
+                        val remainingMs = if (started != null && batchTotalProgress > 0.01f) {
+                            val elapsed = (etaTick.takeIf { it > 0 } ?: System.currentTimeMillis()) - started
+                            ((elapsed.toFloat() / batchTotalProgress) * (1f - batchTotalProgress))
+                                .toLong().coerceAtLeast(0L)
+                        } else {
+                            null
+                        }
+                        if (remainingMs != null) {
+                            val etaText = when {
+                                remainingMs < 5_000L -> "预计即将完成"
+                                remainingMs < 60_000L -> "预计剩余约 ${((remainingMs + 999L) / 1000L)} 秒"
+                                else -> {
+                                    val minutes = remainingMs / 60_000L
+                                    val seconds = (remainingMs % 60_000L) / 1000L
+                                    "预计剩余约 ${minutes} 分${if (seconds > 0) " ${seconds} 秒" else ""}"
+                                }
+                            }
+                            Text(
+                                etaText,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                         intermediateBitmap?.let { bitmap ->
                             Spacer(modifier = Modifier.height(8.dp))
                             Card(

@@ -1,9 +1,9 @@
 {
-  "versionCode": 254,
-  "versionName": "4.0.0-et.180",
-  "title": "发现新版本 v4.0.0-et.180",
-  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.180/LocalDream-ET.apk",
-  "size": 160340750,
-  "sha256": "faec2589722efc12c8999472da434b5cce597446ce78e0af53a4b8d4c5619457",
-  "releaseNotes": "et.180（versionCode 254）修聊天输入区与引用显示：\n1) 输入框跟随系统输入法：键盘弹起时消息列表和输入栏整体上移，键盘收起自动落回，输入内容不再被键盘挡住；打开聊天 / 切换键盘也会自动滚到最新消息。\n2) 引用改成真正的回复卡片：长按→引用后，输入框上方出现“回复 xxx”的预览条（可取消）；发出的消息在气泡内显示被引用人 + 原文摘要，不再把引用内容拼成一条新消息。\n3) 引用字段向后兼容：新客户端写入 qauthor/qtext；老版本客户端仍能正常显示正文，不会出现乱码。\n4) 修内存泄漏：聊天内置浏览器关闭时销毁 WebView；视频弹窗关闭时停止 VideoView 播放并释放，反复打开不再累积内存。\n5) 新增 2 项引用序列化单测，全部单测通过；签名不变可覆盖安装。"
+  "versionCode": 255,
+  "versionName": "4.0.0-et.181",
+  "title": "发现新版本 v4.0.0-et.181",
+  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.181/LocalDream-ET.apk",
+  "size": 160344038,
+  "sha256": "b2e928b8e194cbf18bdaf678a6cc75df28f98594067323a2c11449cc1b95f801",
+  "releaseNotes": "et.181（versionCode 255）：\n1) 生成进度新增“预计剩余时间”：第一页生成时，进度条和百分比下方会显示“预计剩余约 N 秒 / M 分 S 秒”，接近完成时显示“预计即将完成”，按当前批次实际进度动态换算。\n2) 聊天输入框继续跟随输入法：键盘弹起时列表和输入栏整体上移，键盘收起自动落回，不再挡住正在输入的内容。\n3) 引用消息保持回复卡片样式，不再把引用内容拼成新消息。\n4) 签名不变，可直接覆盖安装。"
 }
