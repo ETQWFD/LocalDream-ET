@@ -84,6 +84,28 @@ class LocalDreamApplication : Application() {
                 android.content.ComponentCallbacks2.TRIM_MEMORY_COMPLETE,
                 -> io.github.xororz.localdream.service.BackgroundGenerationService.clearCompleteState()
             }
+            // et.185 (Nightmare's "your RAM back" rule): under real pressure, give
+            // the native engine back even if the user is still on the run screen.
+            // The engine holds 2-6 GB of weights, which is what makes Android kill
+            // the app on 8-12 GB phones. Never do this mid-render.
+            if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW) {
+                val generating = when (val st = io.github.xororz.localdream.service
+                        .BackgroundGenerationService.generationState.value) {
+                    is io.github.xororz.localdream.service.BackgroundGenerationService.GenerationState.Progress -> true
+                    is io.github.xororz.localdream.service.BackgroundGenerationService.GenerationState.Complete -> false
+                    else -> false
+                }
+                if (!generating) {
+                    runCatching {
+                        startService(
+                            android.content.Intent(
+                                this,
+                                io.github.xororz.localdream.service.BackendService::class.java,
+                            ).setAction(io.github.xororz.localdream.service.BackendService.ACTION_STOP),
+                        )
+                    }
+                }
+            }
             io.github.xororz.localdream.cloud.LogHub.log(
                 io.github.xororz.localdream.cloud.LogHub.Category.APP,
                 "onTrimMemory level=$level",

@@ -45,6 +45,16 @@
   .btn.p{background:var(--ink);color:#fff}
   .btn.g{background:#fff;color:var(--ink)}
   .link{font-size:14.5px;color:var(--ink);font-weight:600;border-bottom:1px solid var(--ink);padding-bottom:2px}
+  .ghicon{width:17px;height:17px;fill:currentColor;flex:none}
+  .navgh{display:inline-flex;align-items:center;gap:7px}
+  .hero{display:flex;align-items:center;gap:56px}
+  .hero-copy{flex:1;min-width:0}
+  .hero-art{flex:none;width:300px;border:1px solid var(--line);border-radius:18px;padding:18px;background:#fff;box-shadow:0 18px 50px rgba(17,20,24,.06)}
+  .hero-art img{width:100%;border-radius:12px;display:block}
+  .statrow{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:22px}
+  .stat{border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+  .stat b{display:block;font-size:19px;line-height:1.2}
+  .stat small{color:var(--mut);font-size:12px}
   .meta{font-size:13px;color:var(--mut)}
 
   section{padding:80px 0;border-top:1px solid var(--line)}
@@ -117,6 +127,7 @@
   #eeInput{display:flex;gap:8px;padding:12px;border-top:1px solid var(--line)}
   #eeInput input{flex:1;background:#fff;border:1px solid var(--line);color:var(--ink);border-radius:999px;padding:9px 14px}
   #eeInput button{background:var(--ink);color:#fff;border:0;border-radius:999px;padding:0 18px;cursor:pointer}
+  @media(max-width:900px){.hero{display:block}.hero-art{display:none}}
   @media(max-width:760px){.hero h1{font-size:38px}h2{font-size:26px}.steps{grid-template-columns:1fr;gap:28px}.grid2{grid-template-columns:1fr}.shots{grid-template-columns:repeat(2,1fr)}.navlinks{display:none}}
 </style>
 </head>
@@ -135,7 +146,7 @@
       <a href="guide.html" data-i18n="nav.guide">使用手册</a>
       <a href="quota.html" data-i18n="nav.quota">额度</a>
       <a href="tupian.html" data-i18n="nav.tupian">图片社区</a>
-      <a href="https://github.com/ETQWFD/LocalDream-ET" target="_blank" rel="noopener">GitHub</a>
+      <a class="navgh" href="https://github.com/ETQWFD/LocalDream-ET" target="_blank" rel="noopener"><svg class="ghicon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.42 7.42 0 0 1 2-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>GitHub</a>
     </div>
     <div class="langsel">
       <button class="langbtn" id="langBtn" type="button">简体中文</button>
@@ -149,15 +160,25 @@
 </nav>
 
 <header class="hero wrap">
-  <div class="eyebrow" data-i18n="hero.eye">LOCAL OFFLINE SD · ANDROID / PC</div>
-  <h1 data-i18n="hero.h1">在手机本地<br>跑 Stable Diffusion<br>不上传一张图</h1>
-  <p class="lead" data-i18n="hero.lead">完全离线的 AI 出图 App。文生图、图生图、模型下载、云备份，另有 Windows / Linux 服务端。不联网也能出图。</p>
-  <div class="btns">
-    <a class="btn p" href="https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk" data-i18n="hero.dl">下载安卓版 ↓</a>
-    <a class="btn g" href="server.html" target="_blank" rel="noopener" data-i18n="hero.server">下载服务端</a>
-    <a class="link" href="https://github.com/ETQWFD/LocalDream-ET" target="_blank" rel="noopener" data-i18n="hero.gh">查看开源项目 →</a>
+  <div class="hero-copy">
+    <div class="eyebrow" data-i18n="hero.eye">LOCAL OFFLINE SD · ANDROID / PC</div>
+    <h1 data-i18n="hero.h1">在手机本地<br>跑 Stable Diffusion<br>不上传一张图</h1>
+    <p class="lead" data-i18n="hero.lead">完全离线的 AI 出图 App。文生图、图生图、修图、模型下载与云备份，另有 Windows / Linux 服务端。不联网也能出图。</p>
+    <div class="btns">
+      <a class="btn p" href="https://github.com/ETQWFD/LocalDream-ET/releases/latest/download/LocalDream-ET.apk" data-i18n="hero.dl">下载安卓版 ↓</a>
+      <a class="btn g" href="server.html" target="_blank" rel="noopener" data-i18n="hero.server">下载服务端</a>
+      <a class="btn g" href="https://github.com/ETQWFD/LocalDream-ET" target="_blank" rel="noopener"><svg class="ghicon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.42 7.42 0 0 1 2-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>进入 GitHub 仓库</a>
+    </div>
+    <div class="meta" id="heroMeta">当前版本加载中 · Android 8.0+ · arm64 / armv7 / x86_64</div>
+    <div class="statrow">
+      <div class="stat"><b>100%</b><small>本地推理，不上传</small></div>
+      <div class="stat"><b>0 元</b><small>无订阅、无额度</small></div>
+      <div class="stat"><b>3 平台</b><small>Android / Windows / Linux</small></div>
+    </div>
   </div>
-  <div class="meta" data-i18n="hero.meta">当前版本 v4.0.0-et.146 (versionCode 220) · Android 8.0+ · arm64 / armv7 / x86_64</div>
+  <div class="hero-art">
+    <img src="assets/shots/s1.webp" alt="Local Dream ET 主界面" loading="eager">
+  </div>
 </header>
 
 <section id="build">
@@ -269,7 +290,7 @@
     <div class="footbtns">
       <a class="btn g" href="mailto:2416444244@qq.com">2416444244@qq.com</a>
       <a class="btn p" href="http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=FEhaN_bPJIhurqBLoRhqkhmHnkRz17bu&authKey=hYuEEJTFOcfkPr85OD8vyrhHH56GhhUKRYuIfEpEDIkdclfxVTEKMV0IMYrz5HFB&noverify=0&group_code=1078799843" target="_blank" rel="noopener" data-i18n="foot.qq">加入 QQ 群</a>
-      <a class="link" href="https://github.com/ETQWFD/LocalDream-ET" target="_blank" rel="noopener">GitHub →</a>
+      <a class="btn g" href="https://github.com/ETQWFD/LocalDream-ET" target="_blank" rel="noopener"><svg class="ghicon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.42 7.42 0 0 1 2-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>进入 GitHub 仓库</a>
     </div>
   </div>
 </footer>
@@ -286,6 +307,14 @@
 </script>
 
 <script>
+/* et.185: 首页版本号从 update.json 读取，不再写死在 HTML 里 */
+(function(){
+  fetch("update.json",{cache:"no-store"}).then(function(r){return r.json();}).then(function(d){
+    var el=document.getElementById("heroMeta");
+    if(el&&d&&d.versionName){el.textContent="当前版本 v"+d.versionName+" (versionCode "+d.versionCode+") · Android 8.0+ · arm64 / armv7 / x86_64";}
+  }).catch(function(){});
+})();
+
 /* 历史版本：GitHub Releases API */
 (function(){
   function $(id){return document.getElementById(id);}

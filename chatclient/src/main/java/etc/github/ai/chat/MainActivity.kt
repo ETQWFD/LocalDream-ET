@@ -10,12 +10,12 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
-import androidx.lifecycle.viewmodel.compose.viewModel
-import etc.github.ai.chat.ui.ChatScreen
+import etc.github.ai.chat.community.CommunityChatScreen
 
 /**
- * ET 聊天画师 / LocalDream Chat — chat-style client for the ET server.
+ * ET 聊天社区（移植版）— 只包含聊天，免登录，私有仓库存储。
  * Standalone applicationId etc.github.ai.chat, installs next to the main app.
+ * This APK is private and is never published on the website or a public repo.
  */
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -23,10 +23,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             AppTheme {
-                val vm: etc.github.ai.chat.ui.ChatViewModel = viewModel(
-                    factory = etc.github.ai.chat.ui.ChatViewModelFactory(application),
-                )
-                ChatScreen(vm)
+                CommunityChatScreen()
             }
         }
     }
@@ -34,7 +31,6 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun AppTheme(content: @Composable () -> Unit) {
-    // Dark-first (per ET preference), light theme still available.
     val scheme = if (isSystemInDarkTheme()) darkColorScheme() else lightColorScheme()
     MaterialTheme(colorScheme = scheme, content = content)
 }

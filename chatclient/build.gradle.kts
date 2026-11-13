@@ -7,6 +7,15 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+// ET 聊天社区 (移植版): no login required — reads/writes go to the private
+// ET-Chat repo with the owner token baked in at build time (local.properties).
+val chatToken: String = let {
+    val p = Properties()
+    val f = rootProject.file("local.properties")
+    if (f.exists()) f.inputStream().use { p.load(it) }
+    p.getProperty("gallery.token", "")
+}
+
 // chatclient: independent "chat-style local image client" for the ET server.
 // Pure Kotlin + Compose, no native code, no flavors. It only consumes the
 // HTTP API described in server-dist/SERVER-API.md and installs side by side
@@ -60,6 +69,11 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
+    }
+
+    defaultConfig {
+        buildConfigField("String", "GALLERY_TOKEN", "\"$chatToken\"")
     }
     packaging {
         resources {

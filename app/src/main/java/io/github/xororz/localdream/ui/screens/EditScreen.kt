@@ -35,6 +35,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -109,6 +110,14 @@ fun EditScreen(
     var steps by remember { mutableIntStateOf(12) }
 
     var working by remember { mutableStateOf(false) }
+    // et.185: an edit can take minutes on a slow chip; without this Android
+    // dims and locks the screen mid-render, which also paused the UI thread
+    // work that collects the result. Keep the display awake while rendering.
+    val rootView = LocalView.current
+    DisposableEffect(working) {
+        rootView.keepScreenOn = working
+        onDispose { rootView.keepScreenOn = false }
+    }
     var progress by remember { mutableStateOf(0f) }
     var errorMsg by remember { mutableStateOf<String?>(null) }
     var showExitConfirm by remember { mutableStateOf(false) }

@@ -260,6 +260,18 @@ class MainActivity : ComponentActivity() {
         // (403) for anonymous mobile IPs and required a GitHub login, which made the
         // list empty for everyone not logged in. index.json lists file names; each
         // announce is fetched as plain JSON. Logs print URL/code/count for debugging.
+        //
+        // et.185: this used to run every file one after another with 8 s timeouts,
+        // so one slow request kept the popup back for ten seconds or more ("公告
+        // 加载很慢"). Now: show the last successful announcement from local cache
+        // at once, then refresh in parallel with a 3 s timeout per request.
+        val announceSp = getSharedPreferences("app_prefs", MODE_PRIVATE)
+        val cachedTs = announceSp.getLong("announce_cache_ts", 0L)
+        if (cachedTs > announceSp.getLong("last_announce_ts", 0L)) {
+            val ct = announceSp.getString("announce_cache_title", "公告").orEmpty()
+            val cx = announceSp.getString("announce_cache_text", "").orEmpty()
+            if (cx.isNotBlank()) announceDialog.value = Triple(ct, cx, cachedTs)
+        }
         Thread {
             runCatching {
                 val repo = "ETQWFD/LocalDream-ET-ratings"
@@ -271,7 +283,7 @@ class MainActivity : ComponentActivity() {
                         val a = (java.net.URL(
                             "https://api.github.com/repos/$repo/contents/announcements/$path"
                         ).openConnection() as java.net.HttpURLConnection).apply {
-                            connectTimeout = 8000; readTimeout = 8000
+                            connectTimeout = 3500; readTimeout = 3500
                             setRequestProperty("Authorization", "token $tok")
                             setRequestProperty("Accept", "application/vnd.github+json")
                         }
@@ -284,7 +296,7 @@ class MainActivity : ComponentActivity() {
                         a.disconnect()
                     }
                     val c = (java.net.URL("$rawBase/$path").openConnection() as java.net.HttpURLConnection).apply {
-                        connectTimeout = 8000; readTimeout = 8000
+                        connectTimeout = 3500; readTimeout = 3500
                     }
                     val code = c.responseCode
                     val t = (if (code == 200) c.inputStream else c.errorStream)
@@ -297,18 +309,25 @@ class MainActivity : ComponentActivity() {
                 if (ic != 200) return@runCatching
                 val files = org.json.JSONObject(idxText).optJSONArray("files") ?: return@runCatching
                 android.util.Log.i("Announce", "index lists ${files.length()} files")
-                var best: Pair<Long, String>? = null
-                for (i in 0 until files.length()) {
-                    val name = files.optString(i, "")
-                    if (!name.startsWith("announce_") || !name.endsWith(".json")) continue
-                    val (fc, raw) = get(name)
-                    if (fc != 200) continue
-                    val o = runCatching { org.json.JSONObject(raw) }.getOrNull() ?: continue
-                    val target = o.optString("target", "全部")
-                    if (!target.contains("手机") && !target.contains("全部")) continue
-                    val ts = io.github.xororz.localdream.ui.screens.parseAnnounceTs(o)
-                    if (best == null || ts > best!!.first) best = ts to raw
-                }
+                // Fetch every candidate in parallel: one stalled file no longer
+                // delays the popup by its full timeout.
+                val names = (0 until files.length()).map { files.optString(it, "") }
+                    .filter { it.startsWith("announce_") && it.endsWith(".json") }
+                val pool = java.util.concurrent.Executors.newFixedThreadPool(6)
+                val best = names.map { name ->
+                    pool.submit<Pair<Long, String>?> {
+                        runCatching {
+                            val (fc, raw) = get(name)
+                            if (fc != 200) return@runCatching null
+                            val o = org.json.JSONObject(raw)
+                            val target = o.optString("target", "全部")
+                            if (!target.contains("手机") && !target.contains("全部")) return@runCatching null
+                            io.github.xororz.localdream.ui.screens.parseAnnounceTs(o) to raw
+                        }.getOrNull()
+                    }
+                }.mapNotNull { runCatching { it.get(6, java.util.concurrent.TimeUnit.SECONDS) }.getOrNull() }
+                    .maxByOrNull { it.first }
+                pool.shutdownNow()
                 val b = best ?: run {
                     android.util.Log.w("Announce", "no matching announcement")
                     return@runCatching
@@ -325,6 +344,13 @@ class MainActivity : ComponentActivity() {
                 val text = io.github.xororz.localdream.ui.screens.parseAnnounceContent(o)
                 android.util.Log.i("Announce", "showing new announcement ts=$ts title=$title len=${text.length}")
                 io.github.xororz.localdream.ui.screens.setAnnounceUnread(applicationContext, true)
+                // Cache the body so the next launch shows it instantly, even
+                // before the network round-trip finishes (et.185).
+                sp.edit()
+                    .putLong("announce_cache_ts", ts)
+                    .putString("announce_cache_title", title)
+                    .putString("announce_cache_text", text)
+                    .apply()
                 runOnUiThread { announceDialog.value = Triple(title, text, ts) }
             }.onFailure { android.util.Log.w("Announce", "pull failed: ${it.message}") }
         }.start()

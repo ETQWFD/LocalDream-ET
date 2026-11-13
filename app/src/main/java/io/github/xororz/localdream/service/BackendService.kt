@@ -755,13 +755,35 @@ class BackendService : Service() {
                     File(filesDir, "safety_checker.mnn").absolutePath,
                 )
             }
-            // SDXL and Anima are the large NPU formats that benefit from
-            // per-stage load/release. They share the same backend --lowram flag
-            // but keep separate UI toggles so each can opt in independently.
-            if ((backendType == "sdxl" || backendType == "sdxlmnn") && preferences.getBoolean("sdxl_lowram", false)) {
+            // SDXL and Anima are the large formats that benefit from per-stage
+            // load/release. They share the same backend --lowram flag but keep
+            // separate UI toggles so each can opt in independently.
+            //
+            // et.185: default ON below 16 GB (Nightmare does the same: "SDXL's
+            // low-RAM switch is always on under 16 GB, where without it Android
+            // closes your apps"). The pref, when the user has touched the switch,
+            // still wins; only an untouched pref falls back to the memory size.
+            fun lowRamDefault(): Boolean {
+                val am = getSystemService(android.content.Context.ACTIVITY_SERVICE)
+                    as? android.app.ActivityManager ?: return true
+                val mi = android.app.ActivityManager.MemoryInfo()
+                am.getMemoryInfo(mi)
+                return mi.totalMem < 16L * 1024 * 1024 * 1024
+            }
+            val sdxlLowRam = if (preferences.contains("sdxl_lowram")) {
+                preferences.getBoolean("sdxl_lowram", true)
+            } else {
+                lowRamDefault()
+            }
+            val animaLowRam = if (preferences.contains("anima_lowram")) {
+                preferences.getBoolean("anima_lowram", true)
+            } else {
+                lowRamDefault()
+            }
+            if ((backendType == "sdxl" || backendType == "sdxlmnn") && sdxlLowRam) {
                 command += "--lowram"
             }
-            if (backendType == "anima" && preferences.getBoolean("anima_lowram", false)) {
+            if (backendType == "anima" && animaLowRam) {
                 command += "--lowram"
                 // Aggressive variant: never hold both DiT halves resident at
                 // once, so 12GB devices can run Anima low-RAM. Slower per step.
