@@ -22,6 +22,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -62,6 +63,8 @@ fun CommunityChatScreen() {
     var downloadNote by remember { mutableStateOf<String?>(null) }
     var downloadProgress by remember { mutableStateOf(0f) }
     var downloadingTs by remember { mutableStateOf<Long?>(null) }
+    var viewImage by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
+    var viewVideo by remember { mutableStateOf<File?>(null) }
     var nickname by remember { mutableStateOf(myName(context)) }
     var showNick by remember { mutableStateOf(false) }
     var nickDraft by remember { mutableStateOf(nickname) }
@@ -110,6 +113,13 @@ fun CommunityChatScreen() {
     ) { uri: Uri? ->
         if (uri == null) return@rememberLauncherForActivityResult
         val name = queryName(context, uri)
+        val mime = runCatching { context.contentResolver.getType(uri) }.getOrNull().orEmpty()
+        val kind = when {
+            mime.startsWith("image/") -> "image"
+            mime.startsWith("video/") -> "video"
+            mime.startsWith("audio/") -> "audio"
+            else -> "file"
+        }
         scope.launch {
             sending = true
             uploadNote = "准备上传…"
@@ -124,7 +134,7 @@ fun CommunityChatScreen() {
                     author = nickname,
                     text = "",
                     ts = System.currentTimeMillis(),
-                    kind = "file",
+                    kind = kind,
                     fileName = up.name,
                     fileSize = up.size,
                     sha256 = up.sha256,
@@ -159,12 +169,16 @@ fun CommunityChatScreen() {
         }
     }
 
-    fun download(msg: ChatMsg) {
+    fun download(msg: ChatMsg, preview: Boolean = false) {
         if (msg.parts.isEmpty()) return
         downloadingTs = msg.ts
         downloadProgress = 0f
         scope.launch {
-            val dir = File(context.getExternalFilesDir(null), "downloads").apply { mkdirs() }
+            val dir = if (preview) {
+                File(context.cacheDir, "preview").apply { mkdirs() }
+            } else {
+                File(context.getExternalFilesDir(null), "downloads").apply { mkdirs() }
+            }
             val target = File(dir, msg.fileName.ifBlank { "file-${msg.ts}" })
             downloadNote = "正在下载并合并…"
             val r = ChatApi.download(msg.parts, target, msg.fileSize) { done, total ->
@@ -180,8 +194,21 @@ fun CommunityChatScreen() {
                         return@onSuccess
                     }
                 }
-                Toast.makeText(context, "已合并为完整文件：${target.name}", Toast.LENGTH_LONG).show()
-                shareFile(context, target)
+                if (preview) {
+                    when {
+                        msg.kind == "image" || isImageName(msg.fileName) -> {
+                            viewImage = decodePreview(target)
+                            if (viewImage == null) {
+                                Toast.makeText(context, "图片解码失败", Toast.LENGTH_LONG).show()
+                            }
+                        }
+                        msg.kind == "video" -> viewVideo = target
+                        else -> shareFile(context, target)
+                    }
+                } else {
+                    Toast.makeText(context, "已合并为完整文件：${target.name}", Toast.LENGTH_LONG).show()
+                    shareFile(context, target)
+                }
             }.onFailure {
                 Toast.makeText(context, it.message ?: "下载失败", Toast.LENGTH_LONG).show()
             }
@@ -228,7 +255,7 @@ fun CommunityChatScreen() {
                         mine = m.author == nickname,
                         downloading = downloadingTs == m.ts,
                         progress = downloadProgress,
-                        onDownload = { download(m) },
+                        onDownload = { download(m, preview = m.kind != "file") },
                     )
                 }
             }
@@ -255,6 +282,44 @@ fun CommunityChatScreen() {
                     Spacer(Modifier.width(8.dp))
                     Text("$it ${(downloadProgress * 100).toInt()}%", fontSize = 11.sp)
                 }
+            }
+
+            viewImage?.let { bmp ->
+                androidx.compose.material3.AlertDialog(
+                    onDismissRequest = { viewImage = null },
+                    confirmButton = {
+                        TextButton(onClick = { viewImage = null }) { Text("关闭") }
+                    },
+                    text = {
+                        androidx.compose.foundation.Image(
+                            bitmap = bmp.asImageBitmap(),
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxWidth(),
+                            contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                        )
+                    },
+                )
+            }
+            viewVideo?.let { f ->
+                androidx.compose.material3.AlertDialog(
+                    onDismissRequest = { viewVideo = null },
+                    confirmButton = {
+                        TextButton(onClick = { viewVideo = null }) { Text("关闭") }
+                    },
+                    title = { Text("视频预览") },
+                    text = {
+                        androidx.compose.ui.viewinterop.AndroidView(
+                            factory = { ctx ->
+                                android.widget.VideoView(ctx).apply {
+                                    setMediaController(android.widget.MediaController(ctx).also { it.setAnchorView(this) })
+                                    setVideoPath(f.absolutePath)
+                                    setOnPreparedListener { it.isLooping = false; start() }
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth().height(260.dp),
+                        )
+                    },
+                )
             }
 
             Surface(tonalElevation = 2.dp) {
@@ -323,7 +388,13 @@ private fun MessageBox(
                         .clickable(enabled = !downloading) { onDownload() }
                         .padding(10.dp),
                 ) {
-                    Text("📎 ${msg.fileName}", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                    val icon = when {
+                        msg.kind == "image" || isImageName(msg.fileName) -> "🖼"
+                        msg.kind == "video" -> "🎬"
+                        msg.kind == "audio" -> "🎵"
+                        else -> "📎"
+                    }
+                    Text("$icon ${msg.fileName}", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
                     Text(
                         buildString {
                             append(humanSize(msg.fileSize))
@@ -336,7 +407,13 @@ private fun MessageBox(
                         Spacer(Modifier.height(6.dp))
                         LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth())
                     } else {
-                        Text("点此下载", fontSize = 11.sp, color = MaterialTheme.colorScheme.primary)
+                        val action = when {
+                            msg.kind == "image" || isImageName(msg.fileName) -> "点击查看图片"
+                            msg.kind == "video" -> "点击播放视频"
+                            msg.kind == "audio" -> "点击播放音频"
+                            else -> "点击下载（分片自动合并）"
+                        }
+                        Text(action, fontSize = 11.sp, color = MaterialTheme.colorScheme.primary)
                     }
                 }
             }
@@ -389,3 +466,24 @@ private fun shareFile(context: Context, file: File) {
         Toast.makeText(context, "无法打开文件：${it.message}", Toast.LENGTH_LONG).show()
     }
 }
+
+
+private fun isImageName(name: String): Boolean =
+    listOf(".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp", ".heic").any {
+        name.lowercase().endsWith(it)
+    }
+
+/** Decode with a bounded sample so a 8K photo never blows the heap in chat. */
+private fun decodePreview(file: File): android.graphics.Bitmap? = runCatching {
+    val opts = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    android.graphics.BitmapFactory.decodeFile(file.absolutePath, opts)
+    var sample = 1
+    while (opts.outWidth / sample > 1400 || opts.outHeight / sample > 1400) sample *= 2
+    android.graphics.BitmapFactory.decodeFile(
+        file.absolutePath,
+        android.graphics.BitmapFactory.Options().apply {
+            inSampleSize = sample
+            inPreferredConfig = android.graphics.Bitmap.Config.RGB_565
+        },
+    )
+}.getOrNull()

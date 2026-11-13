@@ -281,39 +281,34 @@ object ChatApi {
             }
             val releaseId = ensureRelease()
             val parts = mutableListOf<Long>()
-            // A unique run id in every part name: two people sending the same
-            // file must not overwrite (or delete) each other's chunks.
-            val suffix = sha.take(12) + "-" + java.util.UUID.randomUUID().toString().take(8)
-            var offset = 0L
+            // Split only above 100 MiB; a small APK/photo is one asset, exactly
+            // as the user asked ("超过 100 MB 才开始分割").
+            val total = if (size <= CHUNK) 1 else ((size + CHUNK - 1) / CHUNK).toInt()
+            val runId = sha.take(12) + "-" + java.util.UUID.randomUUID().toString().take(8)
+            val base = safeName(displayName)
             var index = 1
-            val total = ((size + CHUNK - 1) / CHUNK).toInt()
-            while (offset < size) {
-                val len = minOf(CHUNK, size - offset)
-                val partFile = File(dir, "part.bin")
-                src.inputStream().use { ins ->
-                    var skipped = 0L
-                    while (skipped < offset) {
-                        val s = ins.skip(offset - skipped)
-                        if (s <= 0) break
-                        skipped += s
-                    }
+            var written = 0L
+            src.inputStream().use { ins ->
+                val buf = ByteArray(1 shl 16)
+                while (written < size) {
+                    val len = minOf(CHUNK, size - written)
+                    val partFile = File(dir, "part.bin")
                     FileOutputStream(partFile).use { out ->
                         var left = len
-                        val buf = ByteArray(1 shl 16)
                         while (left > 0) {
                             val n = ins.read(buf, 0, minOf(buf.size.toLong(), left).toInt())
                             if (n <= 0) break
                             out.write(buf, 0, n)
                             left -= n
+                            written += n
                         }
                     }
+                    val partName = if (total == 1) "$base.$runId" else "$base.$runId.part${index}of$total"
+                    parts += uploadPart(releaseId, partName, partFile)
+                    partFile.delete()
+                    index++
+                    onProgress(written, size)
                 }
-                val partName = "${safeName(displayName)}.$suffix.part${index}of$total"
-                parts += uploadPart(releaseId, partName, partFile)
-                offset += len
-                index++
-                onProgress(offset, size)
-                partFile.delete()
             }
             src.delete()
             UploadResult(displayName, size, sha, parts)

@@ -113,9 +113,12 @@ fun EditScreen(
     // et.185: an edit can take minutes on a slow chip; without this Android
     // dims and locks the screen mid-render, which also paused the UI thread
     // work that collects the result. Keep the display awake while rendering.
+    // Keep the whole edit page awake, not just while rendering: users type
+    // Chinese prompts / pick masks for minutes, and the old "only while
+    // working" flag still let the screen sleep mid-edit on some ROMs.
     val rootView = LocalView.current
-    DisposableEffect(working) {
-        rootView.keepScreenOn = working
+    DisposableEffect(Unit) {
+        rootView.keepScreenOn = true
         onDispose { rootView.keepScreenOn = false }
     }
     var progress by remember { mutableStateOf(0f) }
@@ -505,6 +508,18 @@ fun EditScreen(
                     if (englishOnly && io.github.xororz.localdream.util.ChinesePrompt.hasChinese(rawPositive)) {
                         usedPrompt = positiveForEngine
                         showUsedPrompt = true
+                    }
+                    // Honest feedback instead of silently sending unreadable
+                    // Chinese tokens to SD1.5's CLIP when translation failed.
+                    if (englishOnly &&
+                        io.github.xororz.localdream.util.ChinesePrompt.hasChinese(positiveForEngine)
+                    ) {
+                        Toast.makeText(
+                            context,
+                            "中文提示词未完全翻译（翻译服务不可用），已走离线词典；" +
+                                "可先用简短英文关键词，避免出图偏离",
+                            Toast.LENGTH_LONG,
+                        ).show()
                     }
                     lastPromptSent = positiveForEngine
                     lastNegativeSent = negativeForEngine

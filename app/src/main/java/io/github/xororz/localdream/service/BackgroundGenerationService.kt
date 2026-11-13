@@ -191,6 +191,27 @@ class BackgroundGenerationService : Service() {
         val data: android.content.Intent = intent!!
 
         var negativePrompt = data.getStringExtra("negative_prompt") ?: ""
+        // Canonical anti-deformity floor. Whatever the UI sends (or omits),
+        // always keep the anatomy/quality terms that stop extra limbs, fused
+        // hands, deformed faces and unfinished/dirty renders. Applied here so
+        // txt2img, img2img, inpaint and the edit page all benefit.
+        run {
+            val floor = "lowres, worst quality, low quality, blurry, jpeg artifacts, " +
+                "bad anatomy, bad hands, bad proportions, missing fingers, extra fingers, " +
+                "extra limbs, fused limbs, extra legs, extra arms, extra feet, extra hands, " +
+                "missing limbs, malformed limbs, mutated hands, poorly drawn hands, " +
+                "poorly drawn face, deformed, disfigured, mutated, unfinished, cropped, " +
+                "watermark, text, signature"
+            val have = negativePrompt.lowercase()
+            val missing = floor.split(", ").filter { it.isNotBlank() && !have.contains(it) }
+            if (missing.isNotEmpty()) {
+                negativePrompt = if (negativePrompt.isBlank()) {
+                    floor
+                } else {
+                    negativePrompt.trimEnd().trimEnd(',') + ", " + missing.joinToString(", ")
+                }
+            }
+        }
 
         // SD1.5's CLIP text encoder only understands English. Chinese characters
         // map to garbage tokens (blank/ignored results), so the prompt must be

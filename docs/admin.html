@@ -47,6 +47,24 @@
   function ghTok(){var k="et-gh",b=atob(B64),o="";for(var i=0;i<b.length;i++){o+=String.fromCharCode(b.charCodeAt(i)^k.charCodeAt(i%k.length));}return o;}
   function $(id){return document.getElementById(id);}
   function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
+  function decodeMaybe(b64){try{if(!/^[A-Za-z0-9+/=\s]{40,}$/.test(b64))return b64;var u=atob(b64.replace(/\s/g,""));if(/[^\x20-\x7E\u4e00-\u9fff]/.test(u))return b64;return u;}catch(e){return b64;}}
+  function renderMedia(f){
+    var out="";
+    function add(u,kind){
+      if(!u||typeof u!=="string")return;
+      if(/^data:image\//.test(u))out+='<img src="'+esc(u)+'" style="max-width:100%;border-radius:10px;margin-top:8px">';
+      else if(/^data:video\//.test(u))out+='<video src="'+esc(u)+'" controls style="max-width:100%;border-radius:10px;margin-top:8px"></video>';
+      else if(/^data:audio\//.test(u))out+='<audio src="'+esc(u)+'" controls style="width:100%;margin-top:8px"></audio>';
+      else if(/\.(png|jpe?g|webp|gif)(\?|$)/i.test(u))out+='<img src="'+esc(u)+'" style="max-width:100%;border-radius:10px;margin-top:8px">';
+      else if(/\.(mp4|webm|mov)(\?|$)/i.test(u))out+='<video src="'+esc(u)+'" controls style="max-width:100%;border-radius:10px;margin-top:8px"></video>';
+      else if(/\.(mp3|m4a|wav|ogg)(\?|$)/i.test(u))out+='<audio src="'+esc(u)+'" controls style="width:100%;margin-top:8px"></audio>';
+    }
+    ["image","img","video","audio","media","attachment"].forEach(function(k){add(f[k]);});
+    ["images","imgs","mediaList","attachments","files"].forEach(function(k){
+      if(Array.isArray(f[k]))f[k].forEach(function(x){add(typeof x==="string"?x:(x&&(x.url||x.data||x.src)));});
+    });
+    return out;
+  }
   function fmtTs(ts){if(ts==null||ts==="")return"";try{var t=ts;if(typeof t==="number"&&t<1e12)t=t*1000;else if(typeof t==="string"&&/^\d+$/.test(t)&&Number(t)<1e12)t=Number(t)*1000;return new Date(t).toLocaleString("zh-CN",{year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false});}catch(e){return String(ts);}}
   function load(){
     $("status").textContent="加载中…";
@@ -69,7 +87,7 @@
         arr=(arr||[]).filter(Boolean).sort(function(a,b){return(b.ts||0)-(a.ts||0);});
         if(!arr.length){$("list").innerHTML='<div class="empty">暂无反馈。</div>';$("status").textContent="共 0 条。";return;}
         $("list").innerHTML=arr.map(function(f){
-          return '<div class="card"><div class="meta"><b>'+esc(f.model||"未知机型")+'</b> · Android '+esc(f.androidVer||"?")+' · '+esc(fmtTs(f.ts))+'</div><div class="body">'+esc(f.text||"")+'</div></div>';
+          return '<div class="card"><div class="meta"><b>'+esc(f.model||"未知机型")+'</b> · Android '+esc(f.androidVer||"?")+' · '+esc(fmtTs(f.ts))+'</div><div class="body">'+esc(decodeMaybe(String(f.text||"")))+'</div>'+renderMedia(f)+'</div>';
         }).join("");
         $("status").textContent="共 "+arr.length+" 条。";
       })
@@ -77,6 +95,9 @@
   }
   $("reload").addEventListener("click",load);
   load();
+  // et.186: keep the panel current — list used to stay stale until a manual
+  // refresh, so newly assigned admins / new media didn't show up.
+  setInterval(function(){if(!document.hidden)load();},20000);
 })();
 </script>
 

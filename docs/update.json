@@ -1,9 +1,9 @@
 {
-  "versionCode": 259,
-  "versionName": "4.0.0-et.185",
-  "title": "发现新版本 v4.0.0-et.185",
-  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.185/LocalDream-ET.apk",
-  "size": 164681784,
-  "sha256": "a98014161c169076f04ef9583e50ba27ed014848cfe0b4827f8230a5696b3a9a",
-  "releaseNotes": "et.185（versionCode 259）按 Nightmare Mobile 的内存策略做了收尾修复：\n1) 修图页常亮：修图/重绘过程中屏幕不再自动熄灭（之前渲染中途熄屏会打断渲染与结果收集）。修完自动恢复系统亮度策略。\n2) 内存归还：系统内存紧张（onTrimMemory ≥ RUNNING_LOW）且当前没有在渲染时，主动停止本地引擎、释放模型权重，避免 8-12GB 手机被系统直接杀掉。\n3) 低内存模式默认开启：SDXL / Anima 的低内存模式在 16GB 以下设备默认打开（之前要手动开），按需加载、用完即释放；你手动关掉仍然生效。\n4) 公告加载提速：启动时先用本地缓存的公告立即显示，再并行刷新（每条 3.5 秒超时），不再一条一条排队等十几秒。\n5) 官网做了简单重构：首屏更清爽、新增三个卖点数据块，版本号改为从 update.json 读取；“进入 GitHub 仓库”按钮带上了 GitHub 图标（导航栏和页脚同步）。\n6) 保留 et.184 的修图修复：结果自动进历史、等引擎真正就绪再发请求、停止按钮有效、浏览器前进/刷新。\n7) 签名不变（SHA-256 c9e9cb5a…b917bce），可直接覆盖安装。"
+  "versionCode": 260,
+  "versionName": "4.0.0-et.186",
+  "title": "发现新版本 v4.0.0-et.186",
+  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.186/LocalDream-ET.apk",
+  "size": 164682888,
+  "sha256": "18b8898f36f9dce0f1f9263ecb67b6fde2a589c501b0cfcfc2dbbe9621130346",
+  "releaseNotes": "et.186（versionCode 260）：\n1) 修图页整页常亮：不再只在渲染时保持亮屏，挑图、涂蒙版、写中文提示词的整个过程都不会熄屏。\n2) 畸形/未画完/画质差“地板”负向词写进代码：不管界面传什么负向词，后台都会补齐 bad anatomy、extra limbs、extra hands/feet、missing limbs、fused limbs、deformed、mutated、unfinished、low quality、blurry 等词；文生图、图生图、局部重绘、修图全部生效。\n3) 中文提示词：修图页本来就会先把中文整句翻成英文标签再送引擎；这次补了失败提示——翻译服务不可用时会明确告诉你“走了离线词典”，不会再让你以为中文生效了却出图跑偏。\n4) 后台/官网：\n   - 官网去掉“无额度”错误说法（额度是有的），改为“无订阅、额度透明”。\n   - 评分区修掉可无限重复打分：本设备投票后立刻锁定并写入本地，重复点击直接提示“每设备一票”；同时给票数读取加时间戳缓存击穿，不再把同一票反复计数。\n   - 官网换成 DeepSeek 风格深蓝紫渐变 + 点阵 + 缓慢光晕背景（低对比，保留可读性；减少动效偏好自动关闭）。\n   - 反馈后台支持直接显示图片/视频/音频附件，乱码文本会被识别并原样显示；列表每 20 秒自动刷新，不再一直停在旧数据。\n5) 聊天社区（单独私密 APK，不在官网发布）同步升级：上传的图片、视频、音频可在聊天里直接查看/播放；分片改为“只有超过 100MB 才切 100MB 分片”，小文件单片直传；上传改单遍流式读盘，不再每片重读整个文件。\n6) 签名不变（SHA-256 c9e9cb5a…b917bce），可直接覆盖安装。"
 }
