@@ -63,6 +63,32 @@ fun CommunityChatScreen() {
     var downloadProgress by remember { mutableStateOf(0f) }
     var downloadingTs by remember { mutableStateOf<Long?>(null) }
     var nickname by remember { mutableStateOf(myName(context)) }
+    var showNick by remember { mutableStateOf(false) }
+    var nickDraft by remember { mutableStateOf(nickname) }
+
+    if (showNick) {
+        AlertDialog(
+            onDismissRequest = { showNick = false },
+            title = { Text("聊天昵称（无需登录）") },
+            text = {
+                OutlinedTextField(
+                    value = nickDraft,
+                    onValueChange = { nickDraft = it.take(16) },
+                    singleLine = true,
+                    label = { Text("昵称") },
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val n = nickDraft.trim().ifBlank { nickname }
+                    nickname = n
+                    chatPrefs(context).edit().putString("nick", n).apply()
+                    showNick = false
+                }) { Text("保存") }
+            },
+            dismissButton = { TextButton(onClick = { showNick = false }) { Text("取消") } },
+        )
+    }
 
     fun reload() {
         loading = true
@@ -141,7 +167,7 @@ fun CommunityChatScreen() {
             val dir = File(context.getExternalFilesDir(null), "downloads").apply { mkdirs() }
             val target = File(dir, msg.fileName.ifBlank { "file-${msg.ts}" })
             downloadNote = "正在下载并合并…"
-            val r = ChatApi.download(msg.parts, target) { done, total ->
+            val r = ChatApi.download(msg.parts, target, msg.fileSize) { done, total ->
                 downloadProgress = if (total <= 0) 0f else (done.toFloat() / total).coerceIn(0f, 1f)
             }
             downloadNote = null
@@ -167,7 +193,11 @@ fun CommunityChatScreen() {
             TopAppBar(
                 title = {
                     Column {
-                        Text("ET 聊天社区", fontWeight = FontWeight.SemiBold)
+                        Text(
+                            "ET 聊天社区 · $nickname",
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.clickable { nickDraft = nickname; showNick = true },
+                        )
                         Text(
                             "免登录 · 私密仓库 · 单文件最大 1GB",
                             fontSize = 11.sp,

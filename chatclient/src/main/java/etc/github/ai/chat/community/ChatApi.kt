@@ -106,7 +106,7 @@ object ChatApi {
     private val client = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(180, TimeUnit.SECONDS)
-        .writeTimeout(600, TimeUnit.SECONDS)
+        .writeTimeout(900, TimeUnit.SECONDS)
         .retryOnConnectionFailure(true)
         .build()
 
@@ -281,7 +281,9 @@ object ChatApi {
             }
             val releaseId = ensureRelease()
             val parts = mutableListOf<Long>()
-            val suffix = sha.take(12)
+            // A unique run id in every part name: two people sending the same
+            // file must not overwrite (or delete) each other's chunks.
+            val suffix = sha.take(12) + "-" + java.util.UUID.randomUUID().toString().take(8)
             var offset = 0L
             var index = 1
             val total = ((size + CHUNK - 1) / CHUNK).toInt()
@@ -325,11 +327,12 @@ object ChatApi {
     suspend fun download(
         parts: List<Long>,
         target: File,
+        totalBytes: Long,
         onProgress: (done: Long, total: Long) -> Unit,
     ): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching {
             var done = 0L
-            val total = parts.size.toLong() * CHUNK
+            val total = if (totalBytes > 0) totalBytes else parts.size.toLong() * CHUNK
             FileOutputStream(target).use { out ->
                 for ((i, id) in parts.withIndex()) {
                     val r = Request.Builder()
