@@ -651,7 +651,7 @@
         var html='<table><thead><tr><th>时间</th><th>接收端</th><th>标题</th><th>内容</th></tr></thead><tbody>';
         arr.forEach(function(a){
           var d=fmtTs(a.ts);
-          var tg=a.target==="app"?"手机端":(a.target==="server"?"服务端":"全部");
+          var tg=/手机|app/.test(String(a.target||""))?"手机端":(/服务|server/.test(String(a.target||""))?"服务端":"全部");
           html+='<tr><td class="dim">'+esc(d)+'</td><td>'+esc(tg)+'</td><td>'+esc(a.title||"")+'</td><td>'+esc(a.content||"")+'</td></tr>';
         });
         html+='</tbody></table>';
@@ -666,10 +666,19 @@
     return fetch(api,{headers:{"Authorization":"Bearer "+tok,"Accept":"application/vnd.github+json"}}).then(function(r){
       if(r.status===404)return {list:[],sha:null};
       if(!r.ok)throw new Error("HTTP "+r.status);
-      return r.json().then(function(d){return {list:JSON.parse(atob(d.content)),sha:d.sha};});
+      return r.json().then(function(d){
+        // et.187c: index.json is {"files":[...]} (that is what the App reads).
+        // The old code parsed it as a bare array, so st.list was undefined and
+        // every send died with "st.list.indexOf is not a function".
+        var parsed;
+        try{ parsed=JSON.parse(atob(String(d.content||"").replace(/\s/g,""))); }catch(e){ parsed={files:[]}; }
+        var files=Array.isArray(parsed)?parsed:(parsed&&Array.isArray(parsed.files)?parsed.files:[]);
+        return {list:files,sha:d.sha};
+      });
     }).then(function(st){
       if(st.list.indexOf(newFile)<0)st.list.push(newFile);
-      var body={message:"index+"+newFile,content:btoa(unescape(encodeURIComponent(JSON.stringify(st.list)))),branch:"main"};
+      var payload={files:st.list};
+      var body={message:"index+"+newFile,content:btoa(unescape(encodeURIComponent(JSON.stringify(payload)))),branch:"main"};
       if(st.sha)body.sha=st.sha;
       return fetch(api,{method:"PUT",headers:{"Authorization":"Bearer "+tok,"Accept":"application/vnd.github+json","Content-Type":"application/json"},body:JSON.stringify(body)});
     });
@@ -677,10 +686,13 @@
   $("anSend").addEventListener("click",function(){
     var title=$("anTitle").value.trim(),content=$("anContent").value.trim(),target=$("anTarget").value,tok=$("anToken").value.trim();
     if(!title||!content){alert("标题和内容都要填");return;}
-    if(!tok){alert("请填写令牌");return;}
+    // et.187c: no manual token needed — fall back to the built-in admin token.
+    if(!tok)tok=ghTok();
+    // The App matches target by text (手机/全部), so map the select values.
+    var targetText = target==="app" ? "手机" : (target==="server" ? "服务端" : "全部");
     var b=$("anSend");b.disabled=true;b.textContent="发送中…";
     var ts=Date.now();
-    var obj={title:title,content:content,target:target,ts:ts,from:"admin"};
+    var obj={title:title,content:content,target:targetText,ts:ts,from:"admin"};
     var fname="announce_"+ts+"_"+Math.random().toString(36).slice(2,7)+".json";
     var path="announcements/"+fname;
     fetch("https://api.github.com/repos/ETQWFD/LocalDream-ET-ratings/contents/"+path,{
@@ -690,7 +702,11 @@
     }).then(function(r){if(!r.ok)return r.text().then(function(t){throw new Error("HTTP "+r.status);});return r.json();})
       .then(function(){return syncIndex(fname,tok);})
       .then(function(){$("anTitle").value="";$("anContent").value="";b.disabled=false;b.textContent="发送公告";$("anStatus").textContent="公告已发送。";loadAnn();})
-      .catch(function(e){b.disabled=false;b.textContent="发送公告";$("anStatus").textContent="发送失败："+(e.message||"");});
+      .catch(function(e){b.disabled=false;b.textContent="发送公告";
+      var msg=(e&&e.message)?e.message:String(e);
+      // 403/401 means the built-in token is not allowed to write this repo.
+      if(/HTTP 40(1|3)/.test(msg))msg="令牌无写入权限（HTTP 401/403），请填有 Contents: RW 的令牌";
+      $("anStatus").textContent="发送失败："+msg;});
   });
   loadAnn();
 
