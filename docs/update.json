@@ -1,10 +1,10 @@
 {
   "versionCode": 262,
   "versionName": "4.0.0-et.188",
-  "title": "发现新版本 v4.0.0-et.187",
-  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.187/LocalDream-ET.apk",
+  "title": "发现新版本 v4.0.0-et.188",
+  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.188/LocalDream-ET.apk",
   "size": 164689744,
   "sha256": "ae1868d6914fad54a62523eb6b83ecf7c25830c76ed8db0f23dfdb884adc52ca",
-  "releaseNotes": "et.187（versionCode 261）：\n1) 模型下载卡在 30% 修复：连接中断时会在同一镜像保留 .part 断点续传并自动重试 2 次；单次读取卡住 30 秒就判定重连（原来是 120 秒），不再一动不动。\n2) 逐条检查了内置模型直链：31 个模型文件全部 200；发现 FLUX.3 Klein 6B 依赖的 flux3_klein_adreno 仓库 llm.gguf / vae.safetensors 是两个 404，已改指向同系列 flux2_klein_adreno 的可用文件，避免下到一半失败。\n3) 右上角三个点 →「上传生成图片」新增“从相册添加图片”：用系统相册/文件选择器直接选手机里的图，复制进缓存后与生成图一样可多选上传。\n4) 官网反馈新增联系方式：左侧下拉选手机号 / QQ / 邮箱，右侧填号码（会校验格式），提交后和反馈一起显示在反馈后台。\n5) 官网动态背景：改成单一层缓慢流动的极光渐变（DeepSeek Harness 风格），配白色遮罩保证文字可读；系统“减少动效”时自动静止。\n6) 已在 App 公告中心发布 et.187 公告，说明本次修复与下载地址。\n7) 签名不变，可直接覆盖安装。",
+  "releaseNotes": "et.188（versionCode 262）：\n1) 修复 Illustrious v16 / Illustrious v16 DMD2 等 SDXL·QNN 模型“下载完成后提示文件不完整、缺少运行所需权重”的误报：下载完整性校验原来按 URL 里的 \"/sd-qnn/\" 判断 QNN 包，而 SDXL 用的是 \"sdxl-qnn\"，导致按 CPU 的六件套 .mnn.weight 去校验一个本来就没有这些文件的 NPU 扁平包，必然失败。\n2) 现在校验改为“任一已知 SD 布局通过即可”：CPU 六件套 / QNN 扁平布局 / SDXL 布局（unet.bin 必须 >100MB，vae_decoder.bin 非空，且至少存在一个 clip*.mnn 文本编码器）三者任一满足就判为完整；真正下坏的包仍然会失败，不会把半成品当成功。\n3) 顺带修正 SDXL 文本编码器命名兼容：clip_2.mnn.weight / clip.mnn / clip_v2.mnn 都能识别。\n4) 已下载失败卡在“不完整”的模型不用删：更新后重新点下载会复用已保留的安装包，校验通过后直接完成；仍失败再删除重下。\n5) 签名不变（c9e9cb5a…），可直接覆盖安装。",
   "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.188/LocalDream-ET.apk"
 }
