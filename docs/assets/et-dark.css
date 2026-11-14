@@ -15,27 +15,26 @@ body::before{
     radial-gradient(42% 48% at 80% 12%, rgba(90,190,255,.28), transparent 64%),
     radial-gradient(46% 50% at 70% 88%, rgba(140,92,255,.34), transparent 62%),
     radial-gradient(40% 44% at 18% 92%, rgba(30,150,190,.26), transparent 66%) !important;
-  filter:blur(2px) saturate(1.1);
+  will-change:transform;
   animation:etaurora 26s ease-in-out infinite alternate !important;
 }
 body::after{content:none !important;background:none !important}
 @keyframes etaurora{
-  0%{transform:translate3d(-3%,-2%,0) scale(1.02) rotate(0)}
-  50%{transform:translate3d(3%,2%,0) scale(1.09) rotate(3deg)}
-  100%{transform:translate3d(-1%,4%,0) scale(1.03) rotate(-2deg)}
+  0%{transform:translate3d(-2%,-1%,0)}
+  50%{transform:translate3d(2%,1%,0)}
+  100%{transform:translate3d(-1%,2%,0)}
 }
 @media (prefers-reduced-motion: reduce){body::before{animation:none !important}}
 nav{
   background:rgba(10,16,32,.62) !important;
   border-bottom:1px solid rgba(255,255,255,.12) !important;
-  backdrop-filter:blur(16px) saturate(1.2) !important;
+  backdrop-filter:blur(8px) !important;
 }
 .brand,.navlinks a,.navin a{color:#eef3ff !important}
 .card,.stat,.sechead,.box,.panel,.item,.kv,.row,.post,.cmt,.faq,.release,.ver,.asset,.notice,.hero-art,.warn,.tip,.empty{
   background:rgba(18,27,48,.66) !important;
   border-color:rgba(255,255,255,.12) !important;
   color:#eef3ff !important;
-  backdrop-filter:blur(10px);
 }
 .card h3,.card p,.stat b,.stat small,.cmt .n,.cmt .x,.body,.meta,.mut{color:#dbe6ff !important}
 .mut,.note,.meta,.stat small{color:#9fb0cf !important}
@@ -78,3 +77,20 @@ hr,.line,.sep{border-color:rgba(255,255,255,.12) !important}
 @media (prefers-reduced-motion: reduce){.hero h1{animation:none}}
 .eyebrow{color:#a9bddf !important}
 .hero .lead{color:#d7e3ff !important}
+
+/* Menus/dropdowns were hard-coded white in several pages, which looked like
+   a blank white box when opened on the dark theme. */
+.langmenu,.menu,.dropdown,.popover,.modal,.dialog,.sheet,.tooltip{
+  background:#111b33 !important;color:#eef3ff !important;
+  border-color:rgba(255,255,255,.16) !important;
+  box-shadow:0 16px 40px rgba(0,0,0,.55) !important;
+  backdrop-filter:none !important;
+}
+.langmenu button,.menu a,.menu button,.dropdown a,.dropdown button{color:#eef3ff !important;background:transparent !important}
+.langmenu button:hover,.menu a:hover,.menu button:hover,.dropdown a:hover,.dropdown button:hover{background:rgba(255,255,255,.08) !important}
+/* keep long pages cheap to composite on phones */
+@media (max-width:900px){
+  .card,.stat,.panel,.box,.post,.cmt,.release,.ver,.faq,.notice,.tip{
+    backdrop-filter:none !important;
+  }
+}
