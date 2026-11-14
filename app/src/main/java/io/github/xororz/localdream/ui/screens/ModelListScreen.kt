@@ -319,6 +319,18 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
             Toast.LENGTH_SHORT,
         ).show()
     }
+    var unlockModelLimit by remember {
+        mutableStateOf(
+            context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+                .getBoolean("unlock_model_limit", false),
+        )
+    }
+    var recycleEngine by remember {
+        mutableStateOf(
+            context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+                .getBoolean("recycle_engine_after_gen", true),
+        )
+    }
     var pendingUnhide by remember { mutableStateOf<String?>(null) }
     fun setHidden(key: String, hidden: Boolean) {
         privacyPrefs.edit().putBoolean(key, hidden).apply()
@@ -1972,6 +1984,58 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                 ) {
                     item {
                         Column {
+                            Text("模型与引擎", style = MaterialTheme.typography.titleMedium)
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                            ) {
+                                Column(Modifier.weight(1f)) {
+                                    Text("解锁全部机型限制（风险自负）")
+                                    Text(
+                                        "开启后不再按芯片代际/厂商拦截 NPU、DiT、SDXL 模型（如骁龙 8 Gen 1 也可下载 8gen3 包）。架构不匹配时模型会加载失败或闪退，后果由使用者自行承担。",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                                Switch(
+                                    checked = unlockModelLimit,
+                                    onCheckedChange = { checked ->
+                                        context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+                                            .edit().putBoolean("unlock_model_limit", checked).apply()
+                                        unlockModelLimit = checked
+                                        if (checked) android.widget.Toast.makeText(
+                                            context,
+                                            "已解锁机型限制：模型能否运行取决于芯片架构，风险自负",
+                                            android.widget.Toast.LENGTH_LONG,
+                                        ).show()
+                                    },
+                                )
+                            }
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                            ) {
+                                Column(Modifier.weight(1f)) {
+                                    Text("每 3 张自动重启引擎")
+                                    Text(
+                                        "CPU 连续出图到第 4~5 张容易中途失败，开启后每成功 3 张回收一次引擎进程，下一张用干净内存重新加载（首次会多花几秒加载模型）。",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                                Switch(
+                                    checked = recycleEngine,
+                                    onCheckedChange = { checked ->
+                                        context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+                                            .edit().putBoolean("recycle_engine_after_gen", checked).apply()
+                                        recycleEngine = checked
+                                    },
+                                )
+                            }
+                        }
+                    }
+                    item {
+                        Column {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -3192,6 +3256,10 @@ private fun gateReasonText(
 /** Machine gate reason for a non-CPU model on this device, or null if usable. */
 private fun gateOf(context: Context, model: Model): String? {
     if (model.runOnCpu) return null
+    // 2026-11：设置里的“解锁全部机型限制”开关。开启后不再按 芯片代际/厂商/DiT/SDXL
+    // 能力拦截模型，用户可以自行下载使用，风险由用户承担（开关旁有明确提示）。
+    if (context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+            .getBoolean("unlock_model_limit", false)) return null
     return io.github.xororz.localdream.utils.DeviceCapabilities.gateReason(
         context = context,
         isDit = model.isDit,
