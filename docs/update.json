@@ -1,10 +1,10 @@
 {
-  "versionCode": 271,
-  "versionName": "4.0.0-et.197",
-  "title": "发现新版本 v4.0.0-et.197",
-  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.197/LocalDream-ET.apk",
-  "size": 164713220,
-  "sha256": "f7c75f173fea08f75e61c8a6124ddb6c47dadf4c0248995dcd27ba944d4955f1",
-  "releaseNotes": "et.197（versionCode 271）：公告改为“先秒显缓存、后台刷新”，不再每次转圈；更新检查超时从 20s/60s 降到 6s/12s，通道不通时立刻切下一个；保留此前全部修复。",
-  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.197/LocalDream-ET.apk"
+  "versionCode": 272,
+  "versionName": "4.0.0-et.198",
+  "title": "发现新版本 v4.0.0-et.198",
+  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.198/LocalDream-ET.apk",
+  "size": 164714900,
+  "sha256": "c10d5e009f4212dda24655e4bcf106ae70def13de0cad4dcd4620831fd1479b0",
+  "releaseNotes": "et.198（versionCode 272）：社区卡片按下缩放回弹（弹簧动画），点击有灵动反馈；保留 et.196 分段下载、et.197 公告缓存与更新超时收紧等修复。",
+  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.198/LocalDream-ET.apk"
 }

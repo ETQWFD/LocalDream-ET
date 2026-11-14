@@ -30,6 +30,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.ui.graphics.graphicsLayer
 import io.github.xororz.localdream.cloud.CloudConfig
 import io.github.xororz.localdream.cloud.SecureTokenStore
 import io.github.xororz.localdream.navigation.popBackStackIfResumed
@@ -216,7 +222,26 @@ fun GalleryScreen(navController: NavController) {
                     modifier = Modifier.fillMaxSize(),
                 ) {
                     items(filtered, key = { it.name }) { g ->
-                        Column(Modifier.clickable { previewItem = g }) {
+                        // 2026-11：卡片按下时轻微缩到 0.95 再弹回，配合图片渐显，
+                        // 让社区网格点起来有“灵动”反馈；不改变点击区域与命中逻辑。
+                        val pressSrc = remember { MutableInteractionSource() }
+                        val pressed by pressSrc.collectIsPressedAsState()
+                        val pressScale by animateFloatAsState(
+                            targetValue = if (pressed) 0.95f else 1f,
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                stiffness = Spring.StiffnessMediumLow,
+                            ),
+                            label = "galleryPressScale",
+                        )
+                        Column(
+                            Modifier
+                                .graphicsLayer { scaleX = pressScale; scaleY = pressScale }
+                                .clickable(
+                                    interactionSource = pressSrc,
+                                    indication = null,
+                                ) { previewItem = g },
+                        ) {
                             // Mirror chain instead of a single URL: a stale
                             // jsDelivr entry no longer shows as a black tile.
                             FallbackImage(
