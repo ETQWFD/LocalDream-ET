@@ -94,3 +94,6 @@ hr,.line,.sep{border-color:rgba(255,255,255,.12) !important}
     backdrop-filter:none !important;
   }
 }
+/* keep anchored sections clear of the sticky nav */
+html{scroll-padding-top:84px}
+section{scroll-margin-top:84px}
