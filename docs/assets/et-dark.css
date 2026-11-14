@@ -97,3 +97,34 @@ hr,.line,.sep{border-color:rgba(255,255,255,.12) !important}
 /* keep anchored sections clear of the sticky nav */
 html{scroll-padding-top:84px}
 section{scroll-margin-top:84px}
+/* ---- et.187c: hard-coded white panels (AI 客服 etc.) ---- */
+#eeBox{
+  background:linear-gradient(180deg,#141f3a,#0d1428) !important;
+  border:1px solid rgba(255,255,255,.16) !important;
+  color:#eef3ff !important;
+  box-shadow:0 24px 60px rgba(0,0,0,.6) !important;
+}
+#eeHead{border-bottom-color:rgba(255,255,255,.12) !important;color:#eef3ff !important}
+#eeMsgs{background:transparent !important}
+#eeInput{border-top-color:rgba(255,255,255,.12) !important}
+#eeInput input{
+  background:rgba(255,255,255,.08) !important;color:#fff !important;
+  border-color:rgba(255,255,255,.2) !important;
+}
+#eeInput input::placeholder{color:#8fa1c2 !important}
+#eeInput button{background:#fff !important;color:#0a1020 !important;font-weight:600}
+.eem.bot{background:rgba(255,255,255,.10) !important;color:#eef3ff !important}
+.eem.me{background:#2b4a8f !important;color:#fff !important}
+button.g{
+  background:rgba(255,255,255,.10) !important;color:#eef3ff !important;
+  border-color:rgba(255,255,255,.22) !important;
+}
+button.d{
+  background:rgba(255,90,90,.14) !important;color:#ffb4b4 !important;
+  border-color:rgba(255,90,90,.45) !important;
+}
+.hero-art{background:rgba(18,27,48,.62) !important;border-color:rgba(255,255,255,.14) !important}
+/* last-resort: any inline white background left in the pages */
+[style*="background:#fff"],[style*="background: #fff"],[style*="background:#ffffff"],[style*="background: #ffffff"]{
+  background:#111b33 !important; color:#eef3ff !important;
+}
