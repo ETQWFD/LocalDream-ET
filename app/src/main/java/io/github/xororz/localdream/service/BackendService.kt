@@ -617,8 +617,9 @@ class BackendService : Service() {
             backendType == "sdxl"
         ) {
             updateState(BackendState.Error(
-                "当前设备不支持 NPU 模型（需要骁龙 8 系及以上且 QNN 库可用）。" +
-                    "请改用 CPU 版本（MNN）的模型，或换用支持 NPU 的设备。"
+                "当前设备不支持 NPU 模型：NPU 后端目前只有骁龙 8 系（QNN）可用，" +
+                    "天玑（MediaTek）、Exynos 等平台还没适配（正在推进兼容，适配好会在这里放开）。" +
+                    "现在请改用 CPU（MNN）模型；下载页 CPU Models 里的包就是给这类设备用的。"
             ))
             return false
         }

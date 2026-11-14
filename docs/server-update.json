@@ -1,21 +1,22 @@
 {
   "name": "Local Dream ET Server",
-  "version": "1.6.12",
-  "versionCode": 172,
-  "tag": "server-1.6.12",
+  "version": "1.6.13",
+  "versionCode": 173,
+  "tag": "server-1.6.13",
   "prerelease": false,
   "channel": "github",
   "platforms": {
     "windows": {
-      "file": "LocalDreamET-Server-1.6.12-windows-x86_64.zip",
+      "file": "LocalDreamET-Server-1.6.13-windows-x86_64.zip",
       "size": 145119,
-      "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/server-1.6.12/LocalDreamET-Server-1.6.12-windows-x86_64.zip"
+      "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/server-1.6.13/LocalDreamET-Server-1.6.13-windows-x86_64.zip"
     },
     "linux-x86_64": {
-      "file": "LocalDreamET-Server-1.6.12-linux-x86_64.tar.gz",
-      "size": 41115,
-      "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/server-1.6.12/LocalDreamET-Server-1.6.12-linux-x86_64.tar.gz"
+      "file": "LocalDreamET-Server-1.6.13-linux-x86_64.tar.gz",
+      "size": 41427,
+      "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/server-1.6.13/LocalDreamET-Server-1.6.13-linux-x86_64.tar.gz"
     }
   },
-  "notes": "v1.6.12：引擎缺失误报修复（多目录查找+DLL 检查）；/admin、/gen 出图窗口必定可打开（缺 web 文件时用内置页）；新增剩余时间估算。"
+  "notes": "v1.6.13：默认端口 4080，出图网站 /admin 与 /gen 均可打开。",
+  "port": 4080
 }

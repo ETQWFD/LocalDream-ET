@@ -90,10 +90,10 @@
 
 /* ============================ 全局配置 ============================ */
 #define APP_NAME      "Local Dream ET Server"
-#define APP_VERSION   "1.6.12"
+#define APP_VERSION   "1.6.13"
 #define COPYRIGHT_STR "Copyright (C) 2026 etc"
 
-#define DEFAULT_PORT       8080      /* 对外监听端口 */
+#define DEFAULT_PORT 4080      /* 对外监听端口 */
 #define DEFAULT_BIND       "0.0.0.0"
 #define UPSTREAM_BASE_PORT 17860     /* sd-server 内部端口起点 */
 #define KEY_LEN            46        /* API Key 固定长度 */
