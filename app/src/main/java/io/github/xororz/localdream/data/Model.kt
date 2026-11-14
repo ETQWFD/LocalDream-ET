@@ -532,9 +532,28 @@ data class Model(
 
         fun hasCompleteSdxlPackage(modelDir: File): Boolean {
             if (!modelDir.isDirectory) return false
-            return SDXL_REQUIRED.all { name ->
-                File(modelDir, name).let { it.isFile && it.length() > 100L * 1024 * 1024 }
-            }
+            // et.188: different SDXL QNN packages name their text encoder differently
+            // (clip_2.mnn.weight / clip.mnn / clip_v2.mnn). Only unet.bin is the real
+            // multi-hundred-MB core; the rest just need to exist and be non-empty.
+            val unet = File(modelDir, "unet.bin")
+            if (!unet.isFile || unet.length() < 100L * 1024 * 1024) return false
+            val vae = File(modelDir, "vae_decoder.bin")
+            if (!vae.isFile || vae.length() == 0L) return false
+            val hasTextEncoder = modelDir.listFiles()?.any { f ->
+                f.isFile && f.length() > 0L && f.name.startsWith("clip") &&
+                    (f.name.endsWith(".mnn") || f.name.endsWith(".mnn.weight"))
+            } ?: false
+            return hasTextEncoder
+        }
+
+        // et.188: download gate accepts any known SD layout. Reason: the QNN flag used
+        // to be derived from "/sd-qnn/" in the URL, but the SDXL QNN repo is
+        // "sdxl-qnn", so Illustrious v16 / v16 DMD2 were checked against the MNN
+        // six-piece manifest they never ship and always reported "incomplete".
+        fun hasCompleteAnySdLayout(modelDir: File): Boolean {
+            return hasCompleteSdPackage(modelDir, qnn = false) ||
+                hasCompleteSdPackage(modelDir, qnn = true) ||
+                hasCompleteSdxlPackage(modelDir)
         }
 
         fun hasConvertedSd15Outputs(modelDir: File): Boolean {

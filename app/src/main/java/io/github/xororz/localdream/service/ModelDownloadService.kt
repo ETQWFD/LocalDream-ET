@@ -324,8 +324,8 @@ class ModelDownloadService : Service() {
                             // by package family: sd-qnn NPU packages ship a flattened
                             // QNN layout (no *.mnn.weight sidecars), CPU packages ship
                             // the MNN six-piece set.
-                            val isQnnPackage = fileUrl.contains("/sd-qnn/")
-                            val complete = Model.hasCompleteSdPackage(modelDir, isQnnPackage)
+                            val isQnnPackage = fileUrl.contains("/sd-qnn/") || fileUrl.contains("-qnn/")
+                            val complete = Model.hasCompleteAnySdLayout(modelDir)
                             if (!complete) {
                                 val actual = modelDir.listFiles()
                                     ?.joinToString { "${it.name}=${it.length()}" } ?: "(empty)"
