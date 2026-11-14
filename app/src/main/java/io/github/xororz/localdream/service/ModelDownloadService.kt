@@ -18,6 +18,9 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicLong
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import java.util.zip.ZipInputStream
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -498,6 +501,82 @@ class ModelDownloadService : Service() {
         return -1L
     }
 
+    /**
+     * et.196：多连接分段下载。原来单连接顺序拉，国内镜像单线程常见 300–800KB/s，
+     * 4GB 的模型要一个多小时。这里对支持 Range 的大文件开 4 个连接各拉一段，
+     * 落成 .segN 后再顺序合并；任一段失败就整体放弃并清掉分段，退回单连接逻辑，
+     * 合并完仍按总字节严格校验，所以慢一点但绝不会产生“看起来下完其实不完整”的文件。
+     */
+    private suspend fun segmentedDownload(
+        url: String,
+        destFile: File,
+        total: Long,
+        modelId: String,
+        modelName: String,
+        packageOffset: Long,
+        packageTotal: Long,
+    ): Boolean = withContext(Dispatchers.IO) {
+        val parts = 4
+        val chunk = (total + parts - 1) / parts
+        val segFiles = (0 until parts).map { File(destFile.absolutePath + ".seg$it") }
+        val done = AtomicLong(0L)
+        var lastReport = 0L
+        fun report() {
+            val now = System.currentTimeMillis()
+            if (now - lastReport < 500) return
+            lastReport = now
+            val d = done.get()
+            val reportedTotal = if (packageTotal > 0) packageTotal else total
+            val reportedDone = packageOffset + d
+            val progress = if (reportedTotal > 0) reportedDone.toFloat() / reportedTotal else 0f
+            _downloadState.value = DownloadState.Downloading(modelId, progress, reportedDone, reportedTotal)
+            runCatching { updateNotification(modelName, progress) }
+        }
+        val okAll = try {
+            (0 until parts).map { i ->
+                async(Dispatchers.IO) {
+                    val start = i.toLong() * chunk
+                    val end = minOf(total - 1, start + chunk - 1)
+                    if (start > end) return@async true
+                    val req = Request.Builder().url(url).header("Range", "bytes=$start-$end").build()
+                    client.newCall(req).execute().use { r ->
+                        if (r.code != 206) return@use false
+                        val body = r.body ?: return@use false
+                        var got = 0L
+                        java.io.BufferedInputStream(body.byteStream()).use { input ->
+                            java.io.BufferedOutputStream(FileOutputStream(segFiles[i])).use { out ->
+                                val buf = ByteArray(256 * 1024)
+                                while (true) {
+                                    val n = input.read(buf)
+                                    if (n <= 0) break
+                                    out.write(buf, 0, n)
+                                    got += n
+                                    done.addAndGet(n.toLong())
+                                    report()
+                                }
+                            }
+                        }
+                        got == (end - start + 1)
+                    }
+                }
+            }.awaitAll().all { it }
+        } catch (e: Exception) {
+            Log.w(TAG, "segmented download failed: ${e.message}")
+            false
+        }
+        if (!okAll) {
+            segFiles.forEach { runCatching { it.delete() } }
+            return@withContext false
+        }
+        val merged = runCatching {
+            FileOutputStream(destFile, false).use { out ->
+                segFiles.forEach { f -> f.inputStream().use { it.copyTo(out) } }
+            }
+        }.isSuccess
+        segFiles.forEach { runCatching { it.delete() } }
+        merged && destFile.length() == total
+    }
+
     private suspend fun downloadFile(
         url: String,
         destFile: File,
@@ -519,6 +598,18 @@ class ModelDownloadService : Service() {
 
             // (b) a stale/over-long scratch restarts from 0 instead of appending.
             var have = if (destFile.exists()) destFile.length().coerceAtLeast(0L) else 0L
+
+            // et.196：全新下载 + 大文件 -> 先试 4 连接分段；失败就继续走原来的单连接续传。
+            if (have == 0L && total >= 24L * 1024 * 1024) {
+                if (segmentedDownload(candidate, destFile, total, modelId, modelName, packageOffset, packageTotal)) {
+                    _downloadState.value = DownloadState.Downloading(
+                        modelId, 1f, packageOffset + total,
+                        if (packageTotal > 0) packageTotal else total,
+                    )
+                    return@withContext
+                }
+                Log.i(TAG, "segmented unsupported/slow for $candidate, fallback to single connection")
+            }
             if (total > 0L && have > total) {
                 Log.w(TAG, "$candidate stale scratch have=$have total=$total, restart")
                 destFile.delete()
