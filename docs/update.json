@@ -1,10 +1,10 @@
 {
-  "versionCode": 274,
-  "versionName": "4.0.0-et.200",
-  "title": "发现新版本 v4.0.0-et.200",
-  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.200/LocalDream-ET.apk",
-  "size": 164716424,
-  "sha256": "38f016ae407b977b558b414b843c9fd8b353dff263f799a7f17be78c2687e53f",
-  "releaseNotes": "et.200（versionCode 274）：社区列表项加入淡入/淡出与弹性归位动画（滑动找图不再是硬跳变），模型列表本身已有同样的 animateItem 弹簧动画，页面级 sharedAxisX 转场全局生效。",
-  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.200/LocalDream-ET.apk"
+  "versionCode": 275,
+  "versionName": "4.0.0-et.201",
+  "title": "发现新版本 v4.0.0-et.201",
+  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.201/LocalDream-ET.apk",
+  "size": 164719560,
+  "sha256": "664a411e0fc2c49be066f2962fda2a80cd908adf9dd1653c8c78dc880f7e1516",
+  "releaseNotes": "et.201（versionCode 275）：\n1) 生成页主按钮“生成图像”加入按压缩放（0.96+弹簧回弹）。\n2) 社区列表错峰入场：前 11 项按索引 30ms 依次淡入并上移 28dp，形成从上往下铺开的效果，延迟封顶 300ms。\n3) 保留社区卡片按压缩放、图片淡入、列表弹性归位与全局页面转场。",
+  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.201/LocalDream-ET.apk"
 }

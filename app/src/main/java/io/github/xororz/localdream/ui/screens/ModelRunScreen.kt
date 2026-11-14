@@ -38,6 +38,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -2650,7 +2655,19 @@ fun ModelRunScreen(
                             },
                         )
 
+                        // 2026-11：主按钮按压缩放（0.96 + 轻微回弹），按下即有反馈。
+                        val genPressSrc = remember { MutableInteractionSource() }
+                        val genPressed by genPressSrc.collectIsPressedAsState()
+                        val genScale by animateFloatAsState(
+                            targetValue = if (genPressed) 0.96f else 1f,
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                stiffness = Spring.StiffnessMediumLow,
+                            ),
+                            label = "generatePressScale",
+                        )
                         Button(
+                            interactionSource = genPressSrc,
                             onClick = {
                                 focusManager.clearFocus()
                                 pendingUltrafix = false
@@ -2910,7 +2927,10 @@ fun ModelRunScreen(
                             enabled = serviceState !is GenerationState.Progress &&
                                 !isRunning && !isUpscaling && !isUltrafixPreparing &&
                                 (selectedImageUri == null || base64EncodeDone),
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth().graphicsLayer {
+                                scaleX = genScale
+                                scaleY = genScale
+                            },
                             shape = MaterialTheme.shapes.medium,
                         ) {
                             AnimatedContent(

@@ -12,6 +12,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -222,11 +223,18 @@ fun GalleryScreen(navController: NavController) {
                     verticalArrangement = Arrangement.spacedBy(6.dp),
                     modifier = Modifier.fillMaxSize(),
                 ) {
-                    items(filtered, key = { it.name }) { g ->
+                    itemsIndexed(filtered, key = { _, g -> g.name }) { idx, g ->
                         // 2026-11：卡片按下时轻微缩到 0.95 再弹回，配合图片渐显，
                         // 让社区网格点起来有“灵动”反馈；不改变点击区域与命中逻辑。
                         val pressSrc = remember { MutableInteractionSource() }
                         val pressed by pressSrc.collectIsPressedAsState()
+                        // 2026-11：首次出现时按索引错峰淡入 + 轻微上移，形成“从上往下铺开”的入场；
+                        // 延迟封顶 300ms，长列表不会越往下越慢。
+                        val enter = remember(g.name) { androidx.compose.animation.core.Animatable(0f) }
+                        androidx.compose.runtime.LaunchedEffect(g.name) {
+                            kotlinx.coroutines.delay((idx.coerceAtMost(10) * 30).toLong())
+                            enter.animateTo(1f, androidx.compose.animation.core.tween(260))
+                        }
                         val pressScale by animateFloatAsState(
                             targetValue = if (pressed) 0.95f else 1f,
                             animationSpec = spring(
@@ -246,7 +254,11 @@ fun GalleryScreen(navController: NavController) {
                                         stiffness = Spring.StiffnessMediumLow,
                                     ),
                                 )
-                                .graphicsLayer { scaleX = pressScale; scaleY = pressScale }
+                                .graphicsLayer {
+                                    scaleX = pressScale; scaleY = pressScale
+                                    alpha = enter.value
+                                    translationY = (1f - enter.value) * 28f
+                                }
                                 .clickable(
                                     interactionSource = pressSrc,
                                     indication = null,
