@@ -1,10 +1,10 @@
 {
-  "versionCode": 276,
-  "versionName": "4.0.0-et.202",
-  "title": "发现新版本 v4.0.0-et.202",
-  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.202/LocalDream-ET.apk",
-  "size": 164720192,
-  "sha256": "16e025d5ecf80760c3064691f6a05601c40a2ed3371508d69bee735de05a4b06",
-  "releaseNotes": "et.202（versionCode 276）玻璃质感：\n1) 模型卡片：底色改为 0.76 透明度 + 1dp 白色 10% 描边，暗色下呈现磨砂玻璃观感，正文对比度不受影响。\n2) 社区卡片：12dp 圆角裁切 + 5% 白色底 + 1dp 描边，配合原有按压缩放与错峰入场。\n3) 保留生成按钮按压缩放、页面级 sharedAxisX 转场、列表弹性归位。",
-  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.202/LocalDream-ET.apk"
+  "versionCode": 277,
+  "versionName": "4.0.0-et.203",
+  "title": "发现新版本 v4.0.0-et.203",
+  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.203/LocalDream-ET.apk",
+  "size": 164720920,
+  "sha256": "1f52ea7fb4c00768d5a27851d5d545558f40bdac7cfdc0b893bbed88918616b2",
+  "releaseNotes": "et.203（versionCode 277）明亮模式修复：\n1) 模型卡片亮色下底色不透明度改为 0.94（接近实色），不再透出页面底色显得发灰。\n2) 描边亮色改用主题 outline 30%，暗色仍是白色 10%；社区卡片同样按明暗切换底色与描边。\n3) 保留按压缩放、错峰入场、列表弹性归位与页面转场。",
+  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.203/LocalDream-ET.apk"
 }

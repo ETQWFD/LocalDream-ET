@@ -3323,9 +3323,16 @@ fun ModelCard(
         // 在中端机上开销大且会拖慢列表滚动），用透明度+描边模拟磨砂玻璃观感。
         modifier = modifier
             .fillMaxWidth()
-            .androidxBorderGlass(),
+            .androidxBorderGlass(
+                androidx.compose.foundation.isSystemInDarkTheme(),
+                MaterialTheme.colorScheme.outline,
+            ),
         colors = CardDefaults.elevatedCardColors(
-            containerColor = backgroundColor.copy(alpha = 0.76f),
+            // 亮色下 0.76 会透出页面底色，看起来发灰发脏；亮色用 0.94 接近实色，
+            // 只留一点透感，暗色保持 0.76 的磨砂观感。
+            containerColor = backgroundColor.copy(
+                alpha = if (androidx.compose.foundation.isSystemInDarkTheme()) 0.76f else 0.94f,
+            ),
             contentColor = primaryContent,
         ),
         elevation = CardDefaults.elevatedCardElevation(
@@ -6082,8 +6089,12 @@ private fun EtStorageDialog(onDismiss: () -> Unit) {
 }
 
 /** 玻璃卡片描边：1dp 半透明轮廓，配合 0.76 透明底色形成磨砂玻璃观感。 */
-private fun Modifier.androidxBorderGlass(): Modifier = this.border(
+private fun Modifier.androidxBorderGlass(
+    dark: Boolean,
+    outline: androidx.compose.ui.graphics.Color,
+): Modifier = this.border(
     width = 1.dp,
-    color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.10f),
+    // 暗色用白色 10% 提亮轮廓；亮色改用主题 outline 30%，白描边在浅底上几乎看不见且显脏。
+    color = if (dark) androidx.compose.ui.graphics.Color.White.copy(alpha = 0.10f) else outline.copy(alpha = 0.30f),
     shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
 )

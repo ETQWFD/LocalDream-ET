@@ -250,10 +250,18 @@ fun GalleryScreen(navController: NavController) {
                             Modifier
                                 // 玻璃卡片：圆角 + 半透明白底 + 1dp 描边(见下方 background/border)
                                 .clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
-                                .background(androidx.compose.ui.graphics.Color.White.copy(alpha = 0.05f))
+                                .background(
+                                    if (androidx.compose.foundation.isSystemInDarkTheme())
+                                        androidx.compose.ui.graphics.Color.White.copy(alpha = 0.05f)
+                                    else
+                                        androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                                )
                                 .border(
                                     width = 1.dp,
-                                    color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.10f),
+                                    color = if (androidx.compose.foundation.isSystemInDarkTheme())
+                                        androidx.compose.ui.graphics.Color.White.copy(alpha = 0.10f)
+                                    else
+                                        androidx.compose.material3.MaterialTheme.colorScheme.outline.copy(alpha = 0.25f),
                                     shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
                                 )
                                 // 列表项出现/移动时淡入淡出并弹性归位，滑动找图不再“啪”地跳变
