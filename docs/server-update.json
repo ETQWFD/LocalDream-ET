@@ -1,13 +1,21 @@
 {
   "name": "Local Dream ET Server",
-  "version": "1.6.10",
-  "versionCode": 170,
-  "tag": "server-1.6.10",
+  "version": "1.6.11",
+  "versionCode": 171,
+  "tag": "server-1.6.11",
   "prerelease": false,
   "channel": "github",
   "platforms": {
-    "windows": {"file": "LocalDreamET-Server-1.6.10-windows-x86_64.zip", "size": 18593520, "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/server-1.6.10/LocalDreamET-Server-1.6.10-windows-x86_64.zip"},
-    "linux-x86_64": {"file": "LocalDreamET-Server-1.6.10-linux-x86_64.tar.gz", "size": 16569659, "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/server-1.6.10/LocalDreamET-Server-1.6.10-linux-x86_64.tar.gz"}
+    "windows": {
+      "file": "LocalDreamET-Server-1.6.11-windows-x86_64.zip",
+      "size": 141729,
+      "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/server-1.6.11/LocalDreamET-Server-1.6.11-windows-x86_64.zip"
+    },
+    "linux-x86_64": {
+      "file": "LocalDreamET-Server-1.6.11-linux-x86_64.tar.gz",
+      "size": 39261,
+      "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/server-1.6.11/LocalDreamET-Server-1.6.11-linux-x86_64.tar.gz"
+    }
   },
-  "notes": "v1.6.10 新增 /gen 简易在线出图网页（端口可通过配置改为 8548）；修复 Web 管理页按钮。"
+  "notes": "v1.6.11：修复模型下载地址（andite/anything-v4.0、Tweqie/chilloutmix 仓库已被删，换成仍可用的官方/镜像直链）；包内附 启动-Windows.bat、停止-Windows.bat。"
 }

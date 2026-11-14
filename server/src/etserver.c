@@ -63,14 +63,18 @@
   #define close_socket closesocket
   #define poll_sleep_ms(ms) Sleep(ms)
   #define access _access
-  #ifndef X_OK
-    #define X_OK 00
+  /* existence only: NTFS has no POSIX exec bit */
+  #ifndef ACCESS_EXISTS
+    #define ACCESS_EXISTS F_OK
   #endif
   typedef SOCKET sock_t;
   #define MSG_NOSIGNAL 0          /* Windows 无 MSG_NOSIGNAL，SIGPIPE 本就不存在 */
   #define SHUT_WR      SD_SEND    /* Windows shutdown 第二参数 */
 #else
   #include <unistd.h>
+  #ifndef ACCESS_EXISTS
+    #define ACCESS_EXISTS X_OK
+  #endif
   #include <ifaddrs.h>
   #include <sys/socket.h>
   #include <netinet/in.h>
@@ -86,7 +90,7 @@
 
 /* ============================ 全局配置 ============================ */
 #define APP_NAME      "Local Dream ET Server"
-#define APP_VERSION   "1.6.6"
+#define APP_VERSION   "1.6.11"
 #define COPYRIGHT_STR "Copyright (C) 2026 etc"
 
 #define DEFAULT_PORT       8080      /* 对外监听端口 */
@@ -112,6 +116,7 @@ typedef struct {
     int   batch_size;       /* 默认批量(GUI batch)；txt2img=batch_size，OpenAI=n，默认 1 */
     int   unload_after_gen;  /* v1.4.0：出完图后释放模型 buffer（杀引擎），默认 1 */
     int   enable_api_key;     /* v1.6.5：1=校验 api_key；默认 0=不校验 */
+    char  engine_args[512];   /* v1.6.9：追加给 sd-server 的额外参数，如 --type f16 */
 } Config;
 
 static Config g_cfg;
@@ -136,6 +141,7 @@ static void mkdir_p(const char* base, const char* sub);
 #ifdef _WIN32
 static PROCESS_INFORMATION g_child = {0};
 static int g_child_started = 0;
+static HANDLE g_job = NULL;          /* 2026-11: 与引擎绑定同一 Job，服务端退出时引擎必被回收 */
 #else
 static pid_t g_child_pid = 0;
 #endif
@@ -196,6 +202,18 @@ static void detect_progdir(void) {
     if (n > 0) { g_progdir[n]=0; char*s=strrchr(g_progdir,'/'); if(s)*s=0; }
     else strcpy(g_progdir, ".");
 #endif
+    /* v1.6.7: if the shell lives in bin/ (or dist/), the package root is one level up.
+       Without this, models/ and bin/sd-server.exe were looked for inside bin/bin. */
+    {
+        char* sep = strrchr(g_progdir, DIRSEP[0]);
+        if (sep && sep[1]) {
+            char leaf[64];
+            snprintf(leaf, sizeof(leaf), "%s", sep + 1);
+            if (!strcmp(leaf, "bin") || !strcmp(leaf, "dist")) {
+                *sep = 0;
+            }
+        }
+    }
 }
 
 /* 选择可写数据目录。
@@ -484,6 +502,7 @@ static int load_config(void) {
         else if (!strcmp(k,"batch_size")) g_cfg.batch_size=atoi(v);
         else if (!strcmp(k,"unload_after_gen")) g_cfg.unload_after_gen=atoi(v);
         else if (!strcmp(k,"enable_api_key")) g_cfg.enable_api_key=atoi(v);
+        else if (!strcmp(k,"engine_args")) strncpy(g_cfg.engine_args,v,sizeof(g_cfg.engine_args)-1);
         else if (!strcmp(k,"config_version")) cfgver=atoi(v);
     }
     fclose(f);
@@ -707,13 +726,13 @@ typedef struct {
 } ModelEntry;
 
 static ModelEntry MODELS[] = {
-    { "sd15-anythingv5",  "Anything V5 (SD1.5 动漫 safetensors)",
+    { "sd15-anythingv5",  "Anything V5（原作者仓库已下架，自动改用 SD1.5 官方权重直链）",
       { {"魔搭ModelScope", "", 0},
         {"hf-mirror",
-         "https://hf-mirror.com/andite/anything-v4.0/resolve/main/anything-v4.5-pruned.safetensors",
+         "https://hf-mirror.com/stable-diffusion-v1-5/stable-diffusion-v1-5/resolve/main/v1-5-pruned-emaonly.safetensors",
          4265146304LL},
         {"HuggingFace",
-         "https://huggingface.co/andite/anything-v4.0/resolve/main/anything-v4.5-pruned.safetensors",
+         "https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5/resolve/main/v1-5-pruned-emaonly.safetensors",
          4265146304LL} } },
     { "sd15-realisticv6",  "Realistic Vision V6.0 (写实 safetensors)",
       { {"魔搭ModelScope", "", 0},
@@ -741,15 +760,15 @@ static ModelEntry MODELS[] = {
         {"HuggingFace",
          "https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5/resolve/main/v1-5-pruned-emaonly.safetensors",
          4265146304LL} } },
-    { "sd15-chillout",     "ChilloutMix (写实 safetensors 直读)",
+    { "sd15-chillout",     "ChilloutMix（已切到在线 digiplay 镜像）",
       { {"魔搭ModelScope",
          "https://modelscope.cn/models/TheKernelZ/chilloutmix_NiPrunedFp32Fix/resolve/master/chilloutmix_NiPrunedFp32Fix.safetensors",
          4265097179LL},
         {"hf-mirror",
-         "https://hf-mirror.com/Tweqie/chilloutmix/resolve/main/chilloutmix_NiPrunedFp32Fix.safetensors",
+         "https://hf-mirror.com/digiplay/chilloutmix_NiPrunedFp32Fix/resolve/main/chilloutmix_NiPrunedFp32Fix.safetensors",
          4265097179LL},
         {"HuggingFace",
-         "https://huggingface.co/Tweqie/chilloutmix/resolve/main/chilloutmix_NiPrunedFp32Fix.safetensors",
+         "https://huggingface.co/digiplay/chilloutmix_NiPrunedFp32Fix/resolve/main/chilloutmix_NiPrunedFp32Fix.safetensors",
          4265097179LL} } },
     { "sd15-dreamshaper",  "DreamShaper 8 (全能 SD1.5 写实/动漫，对齐手机 digiplay 源)",
       { {"魔搭ModelScope", "", 0},
@@ -1024,7 +1043,7 @@ static int spawn_engine(void) {
         snprintf(cand[nc++],1280,"%s%sbin%s%s",g_progdir,DIRSEP,DIRSEP,ename);
         snprintf(cand[nc++],1280,"%s%s..%s%s",g_datadir,DIRSEP,DIRSEP,ename);
         int found=-1;
-        for(int i=0;i<nc;i++){ if(access(cand[i],X_OK)==0){ found=i; break; } }
+        for(int i=0;i<nc;i++){ if(access(cand[i],ACCESS_EXISTS)==0){ found=i; break; } }
         if(found<0){
             if(!g_engine_missing){
                 g_engine_missing=1;
@@ -1045,8 +1064,9 @@ static int spawn_engine(void) {
         snprintf(engine,sizeof(engine),"%s",cand[found]);
     }
     snprintf(args,sizeof(args),
-        "--model \"%s\" --listen-ip 127.0.0.1 --listen-port %d --threads %d",
-        g_cfg.model_path, g_cfg.inner_port, g_cfg.threads);
+        "--model \"%s\" --listen-ip 127.0.0.1 --listen-port %d --threads %d%s%s",
+        g_cfg.model_path, g_cfg.inner_port, g_cfg.threads,
+        g_cfg.engine_args[0] ? " " : "", g_cfg.engine_args);
     log_line("拉起引擎: %s %s", engine, args);
 
 #ifdef _WIN32
@@ -1058,6 +1078,17 @@ static int spawn_engine(void) {
         log_line("CreateProcess 失败: %lu", GetLastError()); return -1;
     }
     g_child_started=1;
+    if (!g_job) {
+        g_job = CreateJobObjectA(NULL, NULL);
+        if (g_job) {
+            JOBOBJECT_EXTENDED_LIMIT_INFORMATION li; ZeroMemory(&li,sizeof(li));
+            li.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+            SetInformationJobObject(g_job, JobObjectExtendedLimitInformation, &li, sizeof(li));
+            AssignProcessToJobObject(g_job, g_child.hProcess);
+        }
+    } else {
+        AssignProcessToJobObject(g_job, g_child.hProcess);
+    }
 #else
     fflush(NULL);
     pid_t pid = fork();
@@ -1239,6 +1270,54 @@ static void send_html(sock_t c, const char* html) {
     shutdown(c,SHUT_WR);
 }
 
+/* v1.6.7: 临时出图窗口。读取 web/admin.html，注入 API Key 后返回。
+   出图直接打到本服务的 /sdapi/v1/txt2img，因此和客户端共用同一个引擎与队列，
+   服务端分发 IP/Key 的线程不受影响。 */
+static void serve_admin(sock_t c) {
+    char path[1400];
+    snprintf(path, sizeof(path), "%s%sweb%sadmin.html", g_progdir, DIRSEP, DIRSEP);
+    FILE* f = fopen(path, "rb");
+    if (!f) {
+        send_html(c, "<!doctype html><meta charset=utf-8><body style='font-family:Segoe UI;background:#0a1020;color:#eef3ff;padding:40px'>"
+                     "<h2>缺少 web/admin.html</h2><p>请把压缩包里的 web 目录和本程序放在同一级。</p></body>");
+        return;
+    }
+    static char buf[300 * 1024];
+    int n = (int)fread(buf, 1, sizeof(buf) - 1, f);
+    fclose(f);
+    if (n < 0) n = 0;
+    buf[n] = 0;
+    /* 注入 Key：把占位符 __APIKEY__ 替换成真实 Key（同长度缓冲区安全） */
+    const char* ph = "__APIKEY__";
+    size_t phlen = strlen(ph);
+    char* pos = buf;
+    while ((pos = strstr(pos, ph)) != NULL) {
+        size_t klen = strlen(g_cfg.api_key);
+        if (klen != phlen) {
+            /* Key 长度不同：就地覆盖会错位，改用重建 */
+            static char out[300 * 1024];
+            size_t o = 0;
+            char* q = buf;
+            while (*q && o < sizeof(out) - 8) {
+                if (strncmp(q, ph, phlen) == 0) {
+                    size_t copy = klen < sizeof(out) - o - 1 ? klen : sizeof(out) - o - 1;
+                    memcpy(out + o, g_cfg.api_key, copy);
+                    o += copy;
+                    q += phlen;
+                } else {
+                    out[o++] = *q++;
+                }
+            }
+            out[o] = 0;
+            send_html(c, out);
+            return;
+        }
+        memcpy(pos, g_cfg.api_key, klen);
+        pos += klen;
+    }
+    send_html(c, buf);
+}
+
 /* 浅色圆角首页（Win11 纸片风），展示 API 地址/Key/模型，一键复制 */
 static void serve_home(sock_t c) {
     char url[128], key[80], model[128];
@@ -1401,9 +1480,32 @@ static void forward_to_upstream(sock_t c, const char* method, const char* target
     send(u,req,w,0);
     if(body_len>0) send(u,body,body_len,0);
     /* 流式回传上游响应（含状态行/头/体）直到上游关闭 */
-    char buf[16384]; int r;
-    while((r=recv(u,buf,sizeof(buf),0))>0){ send(c,buf,r,MSG_NOSIGNAL); }
+    char buf[16384]; int r; long got=0;
+    while((r=recv(u,buf,sizeof(buf),0))>0){ got+=r; send(c,buf,r,MSG_NOSIGNAL); }
     close_socket(u);
+    /* 2026-11：上游一个字节都没回就断开，分两种情况告诉调用方真正原因，
+       不再给一个空响应体让客户端（和出图窗口）无话可说。 */
+    if(got==0){
+        if(!child_alive()){
+            char ej[640]; unsigned long ec=0;
+#ifdef _WIN32
+            if(g_child_started) GetExitCodeProcess(g_child.hProcess,(DWORD*)&ec);
+#endif
+            log_line("引擎在处理请求时退出（采样阶段崩溃），exit_code=%lu，已返回结构化错误", ec);
+            snprintf(ej,sizeof(ej),
+                "{\"error\":{\"kind\":\"engine_crashed\",\"exit_code\":%lu,"
+                "\"message\":\"引擎进程在处理该请求时退出了（多发生在采样阶段）\","
+                "\"hint\":\"exit_code=3221225501(0xC000001D) 表示 CPU 指令不兼容；3221225477(0xC0000005) 多为内存/后端 DLL 问题。可先在 config\\etserver.conf 的 engine_args 里试 --type f16，或换匹配的 sd-server/ggml-cpu DLL、带 GPU 的机器\"}}",
+                ec);
+            send_json(c,502,"Bad Gateway",ej);
+        } else {
+            log_line("引擎 300 秒无响应，已返回超时错误");
+            send_json(c,504,"Gateway Timeout",
+                "{\"error\":{\"kind\":\"engine_timeout\","
+                "\"message\":\"引擎 300 秒内没有返回任何数据\","
+                "\"hint\":\"降低分辨率与步数（如 384×384/8 步），或确认模型可正常推理\"}}");
+        }
+    }
 }
 
 /* ---- v1.6.5：/api/txt2img、/api/img2img 真正出图并返回 base64 ---- */
@@ -1761,6 +1863,9 @@ static void* handle_conn(void* arg) {
     }
 
     /* ---- 首页（无需 Key，浏览器直接打开） ---- */
+    if(!strcmp(method,"GET") && !strcmp(path,"/admin")){
+        serve_admin(c); CONN_RETURN();
+    }
     if(!strcmp(method,"GET") && (!strcmp(path,"/") || !strcmp(path,"/index.html"))){
         serve_home(c); CONN_RETURN();
     }
@@ -1960,6 +2065,27 @@ static void win_utf8(void) {
     CONSOLE_FONT_INFOEX fi; ZeroMemory(&fi,sizeof(fi)); fi.cbSize=sizeof(fi);
     fi.dwFontSize.Y=16; wcscpy(fi.FaceName,L"Microsoft YaHei Mono");
     SetCurrentConsoleFontEx(h, FALSE, &fi);
+}
+#endif
+
+#ifdef _WIN32
+/* 2026-11: 关窗口 / Ctrl+C / 注销关机时，先杀引擎再退出，避免残留 sd-server 占端口，
+   也避免“进程结束不掉”。 */
+static BOOL WINAPI win_ctrl_handler(DWORD type) {
+    switch (type) {
+    case CTRL_C_EVENT:
+    case CTRL_BREAK_EVENT:
+    case CTRL_CLOSE_EVENT:
+    case CTRL_LOGOFF_EVENT:
+    case CTRL_SHUTDOWN_EVENT:
+        log_line("收到控制台退出信号(%lu)，正在停止引擎并退出…", (unsigned long)type);
+        kill_engine();
+        if (g_job) { CloseHandle(g_job); g_job = NULL; }
+        g_running = 0;
+        return TRUE;
+    default:
+        return FALSE;
+    }
 }
 #endif
 
@@ -2226,7 +2352,7 @@ static void run_diag(void) {
     char cand[3][1280]; int nc=0;
     snprintf(cand[nc++],1280,"%s%s%s",g_progdir,DIRSEP,ename);
     snprintf(cand[nc++],1280,"%s%sbin%s%s",g_progdir,DIRSEP,DIRSEP,ename);
-    int found=-1; for(int i=0;i<nc;i++) if(access(cand[i],X_OK)==0){found=i;break;}
+    int found=-1; for(int i=0;i<nc;i++) if(access(cand[i],ACCESS_EXISTS)==0){found=i;break;}
     printf("引擎 %s: %s\n", ename, found>=0? cand[found] : "未找到!");
     printf("配置模型路径: %s\n", g_cfg.model_path[0]?g_cfg.model_path:"(未配置)");
     if(g_cfg.model_path[0]){
@@ -2252,6 +2378,7 @@ int main(int argc, char** argv) {
     LOG_INIT();
 #ifdef _WIN32
     win_utf8();
+    SetConsoleCtrlHandler(win_ctrl_handler, TRUE);
     WSADATA w; WSAStartup(MAKEWORD(2,2),&w);
 #else
     signal(SIGPIPE, SIG_IGN);
@@ -2303,7 +2430,13 @@ int main(int argc, char** argv) {
     if (g_cfg.model_path[0]) {
         g_intentional_unload = g_cfg.unload_after_gen ? 1 : 0;  /* 看门狗不自动预载 */
         struct stat mst;
+        /* v1.6.7: 32-bit stat() overflows on >2GB safetensors and reported a
+           perfectly good 4GB SD1.5 file as "missing". Use the Windows API there. */
+#ifdef _WIN32
+        if(GetFileAttributesA(g_cfg.model_path)==INVALID_FILE_ATTRIBUTES){
+#else
         if(stat(g_cfg.model_path,&mst)!=0){
+#endif
             log_line("⚠ 模型文件不存在或路径错误: %s", g_cfg.model_path);
             log_line("  请重新下载模型或修正 config/etserver.conf 的 model_path。");
         } else {
@@ -2323,7 +2456,10 @@ int main(int argc, char** argv) {
         char p1[1280],p2[1280];
         snprintf(p1,1280,"%s%s%s",g_progdir,DIRSEP,ename);
         snprintf(p2,1280,"%s%sbin%s%s",g_progdir,DIRSEP,DIRSEP,ename);
-        if(access(p1,X_OK)!=0 && access(p2,X_OK)!=0){
+        /* v1.6.7: on Windows access(ACCESS_EXISTS) tests the NTFS execute bit and fails for
+           plain .exe files extracted from a zip, reporting a present engine as
+           "missing". Only existence matters here. */
+        if(access(p1,ACCESS_EXISTS)!=0 && access(p2,ACCESS_EXISTS)!=0){
             log_line("⚠ 引擎二进制缺失: %s（请重新安装或下载引擎）", ename);
         } else {
             log_line("引擎二进制: %s 已就绪", ename);
