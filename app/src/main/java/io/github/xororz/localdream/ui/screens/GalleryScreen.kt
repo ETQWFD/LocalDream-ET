@@ -31,6 +31,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Spring
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -236,6 +237,15 @@ fun GalleryScreen(navController: NavController) {
                         )
                         Column(
                             Modifier
+                                // 列表项出现/移动时淡入淡出并弹性归位，滑动找图不再“啪”地跳变
+                                .animateItem(
+                                    fadeInSpec = tween(300),
+                                    fadeOutSpec = tween(200),
+                                    placementSpec = spring(
+                                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                                        stiffness = Spring.StiffnessMediumLow,
+                                    ),
+                                )
                                 .graphicsLayer { scaleX = pressScale; scaleY = pressScale }
                                 .clickable(
                                     interactionSource = pressSrc,

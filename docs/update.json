@@ -1,10 +1,10 @@
 {
-  "versionCode": 273,
-  "versionName": "4.0.0-et.199",
-  "title": "发现新版本 v4.0.0-et.199",
-  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.199/LocalDream-ET.apk",
-  "size": 164716320,
-  "sha256": "8cf87b37039cca990f5b0991d480b106d24dfd9108f5dc1da886a610b6c741c3",
-  "releaseNotes": "et.199（versionCode 273）：社区图片 240ms 淡入，页面级转场沿用全局 sharedAxisX（进入/返回/手势返回均有）；卡片保留弹簧按压反馈。",
-  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.199/LocalDream-ET.apk"
+  "versionCode": 274,
+  "versionName": "4.0.0-et.200",
+  "title": "发现新版本 v4.0.0-et.200",
+  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.200/LocalDream-ET.apk",
+  "size": 164716424,
+  "sha256": "38f016ae407b977b558b414b843c9fd8b353dff263f799a7f17be78c2687e53f",
+  "releaseNotes": "et.200（versionCode 274）：社区列表项加入淡入/淡出与弹性归位动画（滑动找图不再是硬跳变），模型列表本身已有同样的 animateItem 弹簧动画，页面级 sharedAxisX 转场全局生效。",
+  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.200/LocalDream-ET.apk"
 }
