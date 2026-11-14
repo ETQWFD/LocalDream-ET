@@ -1,5 +1,6 @@
 package io.github.xororz.localdream.ui.screens
 
+import androidx.compose.foundation.border
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
@@ -3318,9 +3319,13 @@ fun ModelCard(
     }
 
     ElevatedCard(
-        modifier = modifier.fillMaxWidth(),
+        // 2026-11：玻璃质感——半透明底色 + 1dp 描边。不做真正的模糊（Modifier.blur
+        // 在中端机上开销大且会拖慢列表滚动），用透明度+描边模拟磨砂玻璃观感。
+        modifier = modifier
+            .fillMaxWidth()
+            .androidxBorderGlass(),
         colors = CardDefaults.elevatedCardColors(
-            containerColor = backgroundColor,
+            containerColor = backgroundColor.copy(alpha = 0.76f),
             contentColor = primaryContent,
         ),
         elevation = CardDefaults.elevatedCardElevation(
@@ -6076,3 +6081,9 @@ private fun EtStorageDialog(onDismiss: () -> Unit) {
     )
 }
 
+/** 玻璃卡片描边：1dp 半透明轮廓，配合 0.76 透明底色形成磨砂玻璃观感。 */
+private fun Modifier.androidxBorderGlass(): Modifier = this.border(
+    width = 1.dp,
+    color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.10f),
+    shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+)

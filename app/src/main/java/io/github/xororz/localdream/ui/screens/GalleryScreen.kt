@@ -13,6 +13,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.border
+import androidx.compose.foundation.background
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -245,6 +248,14 @@ fun GalleryScreen(navController: NavController) {
                         )
                         Column(
                             Modifier
+                                // 玻璃卡片：圆角 + 半透明白底 + 1dp 描边(见下方 background/border)
+                                .clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+                                .background(androidx.compose.ui.graphics.Color.White.copy(alpha = 0.05f))
+                                .border(
+                                    width = 1.dp,
+                                    color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.10f),
+                                    shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+                                )
                                 // 列表项出现/移动时淡入淡出并弹性归位，滑动找图不再“啪”地跳变
                                 .animateItem(
                                     fadeInSpec = tween(300),

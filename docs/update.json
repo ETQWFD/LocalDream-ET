@@ -1,10 +1,10 @@
 {
-  "versionCode": 275,
-  "versionName": "4.0.0-et.201",
-  "title": "发现新版本 v4.0.0-et.201",
-  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.201/LocalDream-ET.apk",
-  "size": 164719560,
-  "sha256": "664a411e0fc2c49be066f2962fda2a80cd908adf9dd1653c8c78dc880f7e1516",
-  "releaseNotes": "et.201（versionCode 275）：\n1) 生成页主按钮“生成图像”加入按压缩放（0.96+弹簧回弹）。\n2) 社区列表错峰入场：前 11 项按索引 30ms 依次淡入并上移 28dp，形成从上往下铺开的效果，延迟封顶 300ms。\n3) 保留社区卡片按压缩放、图片淡入、列表弹性归位与全局页面转场。",
-  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.201/LocalDream-ET.apk"
+  "versionCode": 276,
+  "versionName": "4.0.0-et.202",
+  "title": "发现新版本 v4.0.0-et.202",
+  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.202/LocalDream-ET.apk",
+  "size": 164720192,
+  "sha256": "16e025d5ecf80760c3064691f6a05601c40a2ed3371508d69bee735de05a4b06",
+  "releaseNotes": "et.202（versionCode 276）玻璃质感：\n1) 模型卡片：底色改为 0.76 透明度 + 1dp 白色 10% 描边，暗色下呈现磨砂玻璃观感，正文对比度不受影响。\n2) 社区卡片：12dp 圆角裁切 + 5% 白色底 + 1dp 描边，配合原有按压缩放与错峰入场。\n3) 保留生成按钮按压缩放、页面级 sharedAxisX 转场、列表弹性归位。",
+  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.202/LocalDream-ET.apk"
 }
