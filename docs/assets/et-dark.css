@@ -128,3 +128,8 @@ button.d{
 [style*="background:#fff"],[style*="background: #fff"],[style*="background:#ffffff"],[style*="background: #ffffff"]{
   background:#111b33 !important; color:#eef3ff !important;
 }
+.tabs button{background:rgba(255,255,255,.08) !important;color:#cfdcff !important;border-color:rgba(255,255,255,.16) !important}
+.tabs button.on,.tabs button.active{background:#fff !important;color:#0a1020 !important}
+.card button.del{background:rgba(255,90,90,.12) !important;color:#ffb4b4 !important;border-color:rgba(255,90,90,.45) !important}
+.shots img{background:#0d1428 !important;border-color:rgba(255,255,255,.14) !important}
+.chip,.tag,.badge{background:rgba(255,255,255,.10) !important;color:#eef3ff !important;border-color:rgba(255,255,255,.18) !important}
