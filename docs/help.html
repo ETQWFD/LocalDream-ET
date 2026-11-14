@@ -29,8 +29,14 @@
   code{background:#0a131c;border:1px solid var(--line);border-radius:6px;padding:1px 7px;font-size:13px;color:var(--acc)}
   .warn{background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.4);border-radius:12px;padding:14px 16px;margin:14px 0;color:#fde68a}
   .ok{color:var(--acc);font-weight:700}
-  table{width:100%;border-collapse:collapse;margin:10px 0;font-size:14px}
-  th,td{border:1px solid var(--line);padding:9px 11px;text-align:left;vertical-align:top}
+  /* et.187c: long paths/commands used to push the tables out of the 880px
+     column ("列表出格"). Fixed layout + anywhere wrapping keeps them inside. */
+  table{width:100%;max-width:100%;border-collapse:collapse;margin:10px 0;font-size:14px;table-layout:fixed}
+  th,td{border:1px solid var(--line);padding:9px 11px;text-align:left;vertical-align:top;
+    word-break:break-word;overflow-wrap:anywhere}
+  code{word-break:break-all;overflow-wrap:anywhere}
+  pre{overflow-x:auto;max-width:100%}
+  img{max-width:100%;height:auto}
   th{background:#0f1a24}
   .top{color:var(--mut);font-size:13px;text-decoration:none}
   a{color:var(--acc2)}

@@ -537,5 +537,17 @@
 })();
 </script>
 
+<style>
+/* et.187c: AI 客服面板的深色样式直接写进页面，避免外部 CSS 缓存未更新时
+   仍然出现白底白字的“白屏”。 */
+#eeBox{background:linear-gradient(180deg,#141f3a,#0d1428) !important;color:#eef3ff !important;border-color:rgba(255,255,255,.16) !important}
+#eeHead{border-bottom-color:rgba(255,255,255,.12) !important;color:#eef3ff !important}
+#eeMsgs{background:transparent !important;color:#eef3ff !important}
+#eeInput{border-top-color:rgba(255,255,255,.12) !important}
+#eeInput input{background:rgba(255,255,255,.08) !important;color:#fff !important;border-color:rgba(255,255,255,.2) !important}
+#eeInput button{background:#fff !important;color:#0a1020 !important;font-weight:600}
+.eem.bot{background:rgba(255,255,255,.10) !important;color:#eef3ff !important}
+.eem.me{background:#2b4a8f !important;color:#fff !important}
+</style>
 </body>
 </html>
