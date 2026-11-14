@@ -754,4 +754,5 @@
     <string name="content_restriction_desc">开启时拦截包含违禁词的提示词；关闭则直通，不追加任何词。</string>
     <string name="content_restriction_confirm_off">关闭后将不再做本地违禁词过滤，生成内容由你自行负责，请遵守当地法律。</string>
     <string name="content_blocked_warning">你的描述包含敏感内容，开启内容限制时无法生成，请修改描述或关闭限制。</string>
+    <string name="conversion_not_cpu_package">这不是 CPU（MNN）支持包，而是原版/NPU 权重包。转换器在读取 CLIP 张量（cond_stage_model…）时就失败了，说明该文件不是可直接转成 CPU 模型的 SD1.5 结构。\n请改用 CPU Models 列表里已转换好的安装包（含 .mnn 文件），或到 NPU Models 使用对应的 NPU 包。\n详情：%1$s（exitCode=%2$d）</string>
 </resources>

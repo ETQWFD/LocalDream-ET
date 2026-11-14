@@ -5153,6 +5153,13 @@ suspend fun convertCustomModel(
                 onError(
                     when {
                         detail.isBlank() -> context.getString(R.string.conversion_need_sd15)
+                        // 2026-11: 这份权重根本不是 CPU(MNN) 支持包（转换器在 CLIP 张量上就失败，
+                        // 常见于 NPU/原版打包），直接说清楚是“格式不支持”，而不是甩一句 exitCode。
+                        detail.contains("Tensor not found", true) ||
+                        detail.contains("CONVERT_FAILED", true) ||
+                        detail.contains("unsupported", true) ||
+                        detail.contains("not a valid", true) ->
+                            context.getString(R.string.conversion_not_cpu_package, detail.take(240), exitCode)
                         else -> context.getString(R.string.conversion_failed_detail, detail, exitCode)
                     },
                 )

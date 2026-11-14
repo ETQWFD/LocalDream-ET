@@ -767,4 +767,5 @@
     <string name="content_restriction_desc">ON: block generation when prompt contains blocked words. OFF: pass-through, no extra words injected.</string>
     <string name="content_restriction_confirm_off">Disabling removes local blocked-word filtering. You are responsible for the content you generate; please comply with local law.</string>
     <string name="content_blocked_warning">Your description contains blocked content. While content restriction is ON this cannot be generated. Please modify your prompt or turn off restriction.</string>
+    <string name="conversion_not_cpu_package">This is not a CPU (MNN) package but a raw/NPU weight file. The converter already failed on CLIP tensors (cond_stage_model…), so it cannot be turned into a CPU model.\nUse a pre-converted package from CPU Models (with .mnn files), or use the matching NPU package.\nDetail: %1$s (exitCode=%2$d)</string>
 </resources>

@@ -1,10 +1,10 @@
 {
-  "versionCode": 265,
-  "versionName": "4.0.0-et.191",
-  "title": "发现新版本 v4.0.0-et.191",
-  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.191/LocalDream-ET.apk",
-  "size": 164693196,
-  "sha256": "982e08e910d972b6149452ce92a926596fdf784b4f1c92803b2fba90940e4a13",
-  "releaseNotes": "et.191（versionCode 265）图片社区与公告修复：\n1) 社区缩略图改为按显示尺寸（360×360）解码，不再把 1024/2048 原图整张读进内存，加载明显变快、也不再撑爆内存缓存。\n2) 社区自动刷新从 15 秒“强制重建列表”改为 60 秒且仅在内容真的变化时替换，上下滑动时已加载过的图不再重新下载（原来每次刷新都换一批对象导致重载）。\n3) 公告打不开：原来把 GitHub 令牌发给 jsDelivr/gitmirror/gh-proxy 等第三方镜像，会被对方拒绝（403），公告一直空白。现在只对 GitHub 官方域名带令牌，并把 jsDelivr 放在镜像链首位，超时降到 6 秒，公告可正常加载查看。\n4) 签名不变，可直接覆盖安装。",
-  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.191/LocalDream-ET.apk"
+  "versionCode": 266,
+  "versionName": "4.0.0-et.192",
+  "title": "发现新版本 v4.0.0-et.192",
+  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.192/LocalDream-ET.apk",
+  "size": 164694792,
+  "sha256": "1eb6cf3b6d4c066343eca3f691223e54a996fe3f04f6e5df7a983390adc0eb4c",
+  "releaseNotes": "et.192（versionCode 266）：\n1) 修复“CPU 模型导入失败只报 exitCode”的问题：转换器在 CLIP 张量（cond_stage_model.transformer…）就失败时，明确提示“这不是 CPU（MNN）支持包，而是原版/NPU 权重包”，并告诉你改用 CPU Models 里已转换好的 .mnn 包或对应 NPU 包。\n2) 修复 bad_alloc 日志误标：CPU(MNN) 包内存失败时不再写成“on NPU，retry”，按实际后端标 CPU/NPU，避免把排查方向带偏。\n3) 保留 et.191 的社区与公告修复。\n4) 签名不变，可直接覆盖安装。",
+  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.192/LocalDream-ET.apk"
 }

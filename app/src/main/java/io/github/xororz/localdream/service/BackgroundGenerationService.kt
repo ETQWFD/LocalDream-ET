@@ -964,7 +964,10 @@ class BackgroundGenerationService : Service() {
                     attemptHeight = (Math.round(attemptHeight * scale).toInt() / 8) * 8
                     io.github.xororz.localdream.cloud.LogHub.log(
                         io.github.xororz.localdream.cloud.LogHub.Category.GENERATE,
-                        "engine bad_alloc; tier down to ${attemptWidth}x${attemptHeight} on NPU, retry",
+                        // 2026-11: 原来无条件写 on NPU，CPU(MNN) 包报同样内存错误时日志
+                        // 会误导排查方向，这里按模型 id 标注真实后端。
+                        "engine bad_alloc; tier down to ${attemptWidth}x${attemptHeight} on " +
+                            (if (engineModelId?.contains("cpu", true) == true) "CPU" else "NPU") + ", retry",
                     )
                     runCatching { Thread.sleep(2000) }
                     if (engineModelId != null) {
