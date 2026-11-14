@@ -123,8 +123,18 @@ fun GalleryScreen(navController: NavController) {
     // Other people's uploads should appear without a manual refresh.
     LaunchedEffect(Unit) {
         while (true) {
-            kotlinx.coroutines.delay(15_000)
-            if (!loading && !showUpload) items = GalleryClient.list(true)
+            // 2026-11：原来 15 秒强制 list(true)，每次都换一批 GalleryItem，
+            // 网格跟着重组、图片重新请求，滑动时观感就是“一直很慢、上下翻又重载”。
+            // 改成 60 秒且只在内容真的变了才替换，保持列表对象稳定，靠 key 复用。
+            kotlinx.coroutines.delay(60_000)
+            if (!loading && !showUpload) {
+                val fresh = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    GalleryClient.list(true)
+                }
+                if (fresh.size != items.size || fresh.map { it.name } != items.map { it.name }) {
+                    items = fresh
+                }
+            }
         }
     }
 

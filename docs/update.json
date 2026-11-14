@@ -1,10 +1,10 @@
 {
-  "versionCode": 264,
-  "versionName": "4.0.0-et.190",
-  "title": "发现新版本 v4.0.0-et.190",
-  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.190/LocalDream-ET.apk",
-  "size": 164690992,
-  "sha256": "64d304926867de8e1443a8f3baf99f0c65279ab26080b60cc70dc7f200b16cec",
-  "releaseNotes": "et.190（versionCode 264）：\n1) 健康检查在连不上保存的端口时，会主动扫描 8081~8097 找到引擎真正监听的端口再继续轮询，彻底排除“引擎在 8082、界面死等 8081”导致的“后端启动失败”。\n2) 沿用 et.189 的修复：全链路（健康检查/出图/tokenize/修图/放大/局域网 API）统一走引擎实际端口。\n3) 沿用 et.189 的 NPU 闪退修复：不支持的机型直接给出中文提示，不再拉起会原生崩溃的 SDXL·QNN 引擎。\n4) 签名不变，可直接覆盖安装（versionCode 264 > 263）。",
-  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.190/LocalDream-ET.apk"
+  "versionCode": 265,
+  "versionName": "4.0.0-et.191",
+  "title": "发现新版本 v4.0.0-et.191",
+  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.191/LocalDream-ET.apk",
+  "size": 164693196,
+  "sha256": "982e08e910d972b6149452ce92a926596fdf784b4f1c92803b2fba90940e4a13",
+  "releaseNotes": "et.191（versionCode 265）图片社区与公告修复：\n1) 社区缩略图改为按显示尺寸（360×360）解码，不再把 1024/2048 原图整张读进内存，加载明显变快、也不再撑爆内存缓存。\n2) 社区自动刷新从 15 秒“强制重建列表”改为 60 秒且仅在内容真的变化时替换，上下滑动时已加载过的图不再重新下载（原来每次刷新都换一批对象导致重载）。\n3) 公告打不开：原来把 GitHub 令牌发给 jsDelivr/gitmirror/gh-proxy 等第三方镜像，会被对方拒绝（403），公告一直空白。现在只对 GitHub 官方域名带令牌，并把 jsDelivr 放在镜像链首位，超时降到 6 秒，公告可正常加载查看。\n4) 签名不变，可直接覆盖安装。",
+  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.191/LocalDream-ET.apk"
 }

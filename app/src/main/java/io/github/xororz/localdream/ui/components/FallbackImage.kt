@@ -16,6 +16,9 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import coil.size.Size
+import androidx.compose.ui.platform.LocalContext
 
 /**
  * Image with a mirror fallback chain.
@@ -38,8 +41,19 @@ fun FallbackImage(
     var scale by remember { androidx.compose.runtime.mutableFloatStateOf(1f) }
     var offset by remember { androidx.compose.runtime.mutableStateOf(Offset.Zero) }
     Box(modifier = modifier.background(MaterialTheme.colorScheme.surfaceContainerHighest)) {
+        // 2026-11：按显示尺寸解码（360px 见方），而不是把 1024/2048 原图整张
+        // 解进内存。原图一解码就是几十 MB，三列网格滑两屏就把 Coil 的内存缓存
+        // 挤爆，于是“滑回去又重新加载”。尺寸固定后内存缓存命中率稳定，滑动不再重载。
+        val ctx = LocalContext.current
+        val req = remember(index, urls.firstOrNull()) {
+            ImageRequest.Builder(ctx)
+                .data(urls.getOrNull(index))
+                .size(Size(360, 360))
+                .crossfade(false)
+                .build()
+        }
         AsyncImage(
-            model = urls.getOrNull(index),
+            model = req,
             contentDescription = contentDescription,
             contentScale = contentScale,
             modifier = Modifier.fillMaxSize().then(

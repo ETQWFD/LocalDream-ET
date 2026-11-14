@@ -82,6 +82,9 @@ private fun loadAll(context: Context): List<AnnouncementItem> {
     val repo = "ETQWFD/LocalDream-ET-ratings"
     // et.147: 国内 API 被墙时用镜像拉 index.json 与公告正文。
     fun mirrorUrls(file: String) = listOf(
+        // 2026-11：jsDelivr 在国内通常可用且不需要鉴权；把它放第一位，
+        // 后面才是 gitmirror / statically / gh-proxy / raw。
+        "https://cdn.jsdelivr.net/gh/$repo@main/announcements/$file",
         "https://raw.gitmirror.com/$repo/main/announcements/$file",
         "https://cdn.statically.io/gh/$repo@main/announcements/$file",
         "https://raw.githubusercontent.com/$repo/main/announcements/$file",
@@ -90,9 +93,16 @@ private fun loadAll(context: Context): List<AnnouncementItem> {
     fun httpGet(url: String): Pair<Int, String> {
         return try {
             val c = (java.net.URL(url).openConnection() as java.net.HttpURLConnection).apply {
-                connectTimeout = 8000; readTimeout = 8000
+                connectTimeout = 6000; readTimeout = 6000
                 setRequestProperty("Accept", "application/vnd.github+json")
-                setRequestProperty("Authorization", "token " + tok!!)
+                // 2026-11：只对 GitHub 官方域名带令牌。把 token 发给 jsDelivr /
+                // gitmirror / gh-proxy 这类第三方镜像既不安全，也会被对方拒（403），
+                // 公告因此一直“打不开/空白”。
+                val host = java.net.URL(url).host.orEmpty()
+                if (host == "api.github.com" || host == "raw.githubusercontent.com") {
+                    setRequestProperty("Authorization", "token " + tok.orEmpty())
+                }
+                setRequestProperty("User-Agent", "LocalDream-ET")
             }
             val code = c.responseCode
             val body = (if (code == 200) c.inputStream else c.errorStream)
