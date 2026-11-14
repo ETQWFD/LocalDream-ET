@@ -1,10 +1,10 @@
 {
-  "versionCode": 266,
-  "versionName": "4.0.0-et.192",
-  "title": "发现新版本 v4.0.0-et.192",
-  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.192/LocalDream-ET.apk",
-  "size": 164694792,
-  "sha256": "1eb6cf3b6d4c066343eca3f691223e54a996fe3f04f6e5df7a983390adc0eb4c",
-  "releaseNotes": "et.192（versionCode 266）：\n1) 修复“CPU 模型导入失败只报 exitCode”的问题：转换器在 CLIP 张量（cond_stage_model.transformer…）就失败时，明确提示“这不是 CPU（MNN）支持包，而是原版/NPU 权重包”，并告诉你改用 CPU Models 里已转换好的 .mnn 包或对应 NPU 包。\n2) 修复 bad_alloc 日志误标：CPU(MNN) 包内存失败时不再写成“on NPU，retry”，按实际后端标 CPU/NPU，避免把排查方向带偏。\n3) 保留 et.191 的社区与公告修复。\n4) 签名不变，可直接覆盖安装。",
-  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.192/LocalDream-ET.apk"
+  "versionCode": 267,
+  "versionName": "4.0.0-et.193",
+  "title": "发现新版本 v4.0.0-et.193",
+  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.193/LocalDream-ET.apk",
+  "size": 164694816,
+  "sha256": "34ba80d9a1a5eb48319603257b5cab17e89769bd3d955c4fdb55a69bdf6b215b",
+  "releaseNotes": "et.193（versionCode 267）延迟修复：\n1) 社区缩略图改为 RGB_565 解码（每像素 2 字节），解码时间与内存再降一半，首屏与滑动更跟手。\n2) 仍按 360×360 显示尺寸解码，不读原图，缓存命中稳定，滑回上面不重载。\n3) 保留 et.191/et.192 的公告镜像与鉴权修复、“不是 CPU 支持包”提示。\n4) 签名不变，可直接覆盖安装。",
+  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.193/LocalDream-ET.apk"
 }

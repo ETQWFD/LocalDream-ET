@@ -18,6 +18,7 @@ import androidx.compose.ui.layout.ContentScale
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import coil.size.Size
+import android.graphics.Bitmap
 import androidx.compose.ui.platform.LocalContext
 
 /**
@@ -49,6 +50,9 @@ fun FallbackImage(
             ImageRequest.Builder(ctx)
                 .data(urls.getOrNull(index))
                 .size(Size(360, 360))
+                // 2026-11：缩略图用 RGB_565（每像素 2 字节）解码，解码时间与内存都再降一半，
+                // 社区滑动/首屏延迟明显下降，肉眼看不出差别。
+                .bitmapConfig(Bitmap.Config.RGB_565)
                 .crossfade(false)
                 .build()
         }
