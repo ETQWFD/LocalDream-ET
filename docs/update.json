@@ -1,10 +1,10 @@
 {
-  "versionCode": 272,
-  "versionName": "4.0.0-et.198",
-  "title": "发现新版本 v4.0.0-et.198",
-  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.198/LocalDream-ET.apk",
-  "size": 164714900,
-  "sha256": "c10d5e009f4212dda24655e4bcf106ae70def13de0cad4dcd4620831fd1479b0",
-  "releaseNotes": "et.198（versionCode 272）：社区卡片按下缩放回弹（弹簧动画），点击有灵动反馈；保留 et.196 分段下载、et.197 公告缓存与更新超时收紧等修复。",
-  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.198/LocalDream-ET.apk"
+  "versionCode": 273,
+  "versionName": "4.0.0-et.199",
+  "title": "发现新版本 v4.0.0-et.199",
+  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.199/LocalDream-ET.apk",
+  "size": 164716320,
+  "sha256": "8cf87b37039cca990f5b0991d480b106d24dfd9108f5dc1da886a610b6c741c3",
+  "releaseNotes": "et.199（versionCode 273）：社区图片 240ms 淡入，页面级转场沿用全局 sharedAxisX（进入/返回/手势返回均有）；卡片保留弹簧按压反馈。",
+  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.199/LocalDream-ET.apk"
 }

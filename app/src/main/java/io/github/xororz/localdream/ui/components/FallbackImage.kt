@@ -18,6 +18,10 @@ import androidx.compose.ui.layout.ContentScale
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import coil.size.Size
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.draw.alpha
+import androidx.compose.runtime.mutableStateOf
 import android.graphics.Bitmap
 import androidx.compose.ui.platform.LocalContext
 
@@ -56,11 +60,19 @@ fun FallbackImage(
                 .crossfade(true)  // 载入时 200ms 淡入，替代硬切，滑动观感更顺
                 .build()
         }
+        // 2026-11：图片解码完成前透明，成功后 240ms 淡入，滑动时不再“啪”地跳出整块图。
+        var imgReady by remember(urls.firstOrNull(), index) { mutableStateOf(false) }
+        val imgAlpha by animateFloatAsState(
+            targetValue = if (imgReady) 1f else 0f,
+            animationSpec = tween(240),
+            label = "fallbackImageAlpha",
+        )
         AsyncImage(
             model = req,
             contentDescription = contentDescription,
             contentScale = contentScale,
-            modifier = Modifier.fillMaxSize().then(
+            onSuccess = { imgReady = true },
+            modifier = Modifier.fillMaxSize().alpha(imgAlpha).then(
                 if (!zoomable) Modifier else Modifier
                     .pointerInput(Unit) {
                         detectTransformGestures { _, pan, zoom, _ ->
