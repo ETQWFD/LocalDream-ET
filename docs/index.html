@@ -18,16 +18,24 @@
   }
   *{box-sizing:border-box}
   /* faint dot grid + slow drifting glow, disabled for reduced-motion users */
-  body::before{content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;
-    background-image:radial-gradient(rgba(20,30,60,.055) 1px,transparent 1px);
-    background-size:26px 26px;
-    mask-image:linear-gradient(180deg,rgba(0,0,0,.55),rgba(0,0,0,.12) 60%,transparent 100%)}
-  body::after{content:"";position:fixed;left:-12%;top:-18%;width:64vw;height:64vw;z-index:-1;
-    pointer-events:none;border-radius:50%;
-    background:radial-gradient(circle,rgba(92,124,255,.14),transparent 65%);
-    animation:etdrift 26s ease-in-out infinite alternate}
-  @keyframes etdrift{from{transform:translate3d(0,0,0) scale(1)}to{transform:translate3d(9vw,6vh,0) scale(1.12)}}
-  @media (prefers-reduced-motion: reduce){body::after{animation:none}}
+  /* ONE animated background layer (et.187): a slow drifting aurora mesh,
+     DeepSeek-harness-like but single-layer and cheap to paint on mobile. */
+  body::before{content:"";position:fixed;inset:-12%;z-index:-1;pointer-events:none;
+    background:
+      radial-gradient(42% 46% at 18% 22%, rgba(99,102,241,.28), transparent 62%),
+      radial-gradient(40% 44% at 82% 18%, rgba(56,189,248,.24), transparent 64%),
+      radial-gradient(46% 50% at 68% 86%, rgba(168,85,247,.22), transparent 62%),
+      radial-gradient(38% 42% at 22% 88%, rgba(45,212,191,.20), transparent 64%);
+    filter:saturate(1.05);
+    animation:etaurora 28s ease-in-out infinite alternate}
+  body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+    background:linear-gradient(180deg,rgba(255,255,255,.52),rgba(255,255,255,.78) 55%,rgba(255,255,255,.9))}
+  @keyframes etaurora{
+    0%{transform:translate3d(-3%,-2%,0) scale(1.02) rotate(0deg)}
+    50%{transform:translate3d(3%,2%,0) scale(1.08) rotate(3deg)}
+    100%{transform:translate3d(-1%,4%,0) scale(1.03) rotate(-2deg)}
+  }
+  @media (prefers-reduced-motion: reduce){body::before{animation:none}}
   html{scroll-behavior:smooth}
   /* et.186: DeepSeek-ish deep blue→violet ambient background instead of flat
      white. Very low-contrast so all text keeps AA contrast; content sits on
@@ -118,6 +126,9 @@
   .cmt .n{font-weight:600;font-size:13.5px}
   .cmt .t{color:var(--mut);font-size:11.5px;float:right}
   .cmt .x{font-size:14px;margin-top:4px;color:var(--ink)}
+  .contactrow{display:flex;gap:8px;margin:8px 0}
+  .contactrow select{flex:none;width:110px;border:1px solid var(--line);border-radius:10px;padding:10px 8px;background:#fff;font:inherit;color:var(--ink)}
+  .contactrow input{flex:1;min-width:0;margin:0}
   .cmtform input,.cmtform textarea{width:100%;background:#fff;border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:10px 12px;font:inherit;margin:6px 0}
   .note{color:var(--mut);font-size:13px;margin:10px 0}
 
@@ -282,6 +293,14 @@
     <div id="cmtList"></div>
     <div class="cmtform" style="margin-top:16px">
       <input id="cmtNick" maxlength="20" data-i18n-ph="cmt.nick" placeholder="昵称（不填则匿名）" />
+      <div class="contactrow">
+        <select id="cmtContactType" aria-label="联系方式类型">
+          <option value="phone">手机号</option>
+          <option value="qq">QQ</option>
+          <option value="email">邮箱</option>
+        </select>
+        <input id="cmtContact" maxlength="60" placeholder="填写联系方式（可选，方便我们回复你）" />
+      </div>
       <textarea id="cmtText" maxlength="300" rows="3" data-i18n-ph="cmt.text" placeholder="留下使用反馈（禁止链接 / 图片 / 辱骂）"></textarea>
       <button class="btn p" id="cmtSubmit" type="button" data-i18n="cmt.btn">发表评论</button>
     </div>
@@ -379,7 +398,13 @@
   function paint(sum,v){if(v==null)v=localVoted();paintStars(sum.avg||0,v);paintDist(sum.dist||{});$("rateAvg").textContent=(sum.count>0)?(Number(sum.avg).toFixed(1)+" / 5.0 · "+sum.count+" 人"):"还没人评分，来做第一个";$("rateNote").textContent=v!=null?("你已投过 "+v+" ★（每设备一票，重复覆盖）。"):"点击星星评分，每设备一票。";}
   function loadComments(){return getJSON(GHAPI+"/comments").then(function(arr){if(!Array.isArray(arr)){return [];}return Promise.all(arr.filter(function(f){return /\.json$/.test(f.name);}).slice(0,50).map(function(f){return getJSON(RAW+"/comments/"+f.name).catch(function(){return null;});}));}).then(function(list){list=(list||[]).filter(Boolean).sort(function(a,b){return(b.ts||0)-(a.ts||0);});if(!list.length){$("cmtList").innerHTML='<div class="note">还没有评论，来第一条。</div>';return;}$("cmtList").innerHTML=list.map(function(c){return '<div class="cmt"><span class="t">'+esc(new Date(c.ts).toLocaleDateString())+'</span><span class="n">'+esc(c.nick)+'</span><div class="x">'+esc(c.text)+'</div></div>';}).join("");}).catch(function(){$("cmtList").innerHTML='<div class="note">暂无评论。</div>';});}
   $("stars").addEventListener("click",function(e){var v=e.target.getAttribute&&e.target.getAttribute("data-v");if(!v)return;if(localVoted()!=null){$("rateNote").textContent="本设备已经评过分了（每设备一票，不能重复打分）。";return;}$("rateNote").textContent="提交中…";var oldV=null;getJSON(RAW+"/ratings/"+MYFP+".json").then(function(o){oldV=o?Number(o.score):null;}).catch(function(){}).then(function(){return ghPut("ratings/"+MYFP+".json",{score:Number(v),ts:Date.now(),fp:MYFP},"rate");}).then(function(){return ghMeta("summary.json");}).then(function(m){return m?fetch(m.download_url).then(function(r){return r.json();}):{dist:{}};}).then(function(s){s.dist=s.dist||{};for(var k=1;k<=5;k++)s.dist[k]=s.dist[k]||0;if(oldV!=null&&s.dist[oldV]>0)s.dist[oldV]-=1;s.dist[v]=(s.dist[v]||0)+1;var t=0,c=0;for(var k=1;k<=5;k++){t+=(s.dist[k]||0)*k;c+=(s.dist[k]||0);}s.avg=c?Math.round(t/c*10)/10:0;s.count=c;s.updatedAt=Date.now();return ghPut("summary.json",s,"sum");}).then(function(){try{localStorage.setItem(VOTED_KEY,String(v));}catch(e){}sessionStorage.removeItem("etld_sum");return boot();}).then(function(){$("rateNote").textContent="感谢评分！每设备一票，之后不能重复提交。";}).catch(function(err){$("rateNote").textContent="提交失败："+(err.message||"")+"，稍后重试。";});});
-  $("cmtSubmit").addEventListener("click",function(){var nick=$("cmtNick").value.trim(),text=$("cmtText").value.trim();if(!text){alert("评论不能为空");return;}if(/https?:\/\/|<img|<video|\.jpg|\.png/i.test(text)){alert("禁止链接/图片");return;}var b=$("cmtSubmit");b.disabled=true;b.textContent="…";ghPut("comments/c"+Date.now()+"_"+Math.random().toString(36).slice(2,7)+".json",{nick:nick||"匿名",text:text,ts:Date.now(),fp:MYFP},"comment").then(function(){$("cmtText").value="";b.disabled=false;b.textContent="发表评论";return loadComments();}).catch(function(err){b.disabled=false;b.textContent="发表评论";alert("失败："+(err.message||""));});});
+  $("cmtSubmit").addEventListener("click",function(){var nick=$("cmtNick").value.trim(),text=$("cmtText").value.trim();
+  var ctype=$("cmtContactType").value,contact=$("cmtContact").value.trim();
+  if(contact){
+    if(ctype==="phone"&&!/^[0-9+\- ]{6,20}$/.test(contact)){alert("手机号格式不正确");return;}
+    if(ctype==="qq"&&!/^[0-9]{5,12}$/.test(contact)){alert("QQ 号应为 5-12 位数字");return;}
+    if(ctype==="email"&&!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(contact)){alert("邮箱格式不正确");return;}
+  }if(!text){alert("评论不能为空");return;}if(/https?:\/\/|<img|<video|\.jpg|\.png/i.test(text)){alert("禁止链接/图片");return;}var b=$("cmtSubmit");b.disabled=true;b.textContent="…";ghPut("comments/c"+Date.now()+"_"+Math.random().toString(36).slice(2,7)+".json",{nick:nick||"匿名",text:text,ts:Date.now(),fp:MYFP,contactType:ctype,contact:contact},"comment").then(function(){$("cmtText").value="";b.disabled=false;b.textContent="发表评论";return loadComments();}).catch(function(err){b.disabled=false;b.textContent="发表评论";alert("失败："+(err.message||""));});});
   function boot(){return Promise.all([loadSum(),voted()]).then(function(r){paint(r[0],r[1]);});}
   getFp().then(function(fp){MYFP=fp||"";return boot().then(loadComments);});
 })();

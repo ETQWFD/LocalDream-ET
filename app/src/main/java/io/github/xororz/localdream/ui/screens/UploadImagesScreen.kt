@@ -1,6 +1,9 @@
 package io.github.xororz.localdream.ui.screens
 
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -62,6 +65,46 @@ fun UploadImagesScreen(onBack: () -> Unit, onGoGenerate: () -> Unit) {
     val selected = remember { mutableStateMapOf<String, Boolean>() }
     var busy by remember { mutableStateOf(false) }
 
+    // et.187: the page used to scan only the app's own history/output folders,
+    // so "上传图片" could never see photos the user saved from the system
+    // gallery. Pick straight from the gallery (DocumentsUI/相册), copy into
+    // cache, and treat them exactly like generated images.
+    val albumPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.GetMultipleContents(),
+    ) { uris ->
+        if (uris.isNullOrEmpty()) return@rememberLauncherForActivityResult
+        scope.launch {
+            val added = withContext(Dispatchers.IO) {
+                uris.mapIndexedNotNull { idx, uri ->
+                    runCatching {
+                        val mime = context.contentResolver.getType(uri).orEmpty()
+                        val ext = when {
+                            mime.contains("png") -> "png"
+                            mime.contains("webp") -> "webp"
+                            mime.contains("gif") -> "gif"
+                            else -> "jpg"
+                        }
+                        val f = File(
+                            context.cacheDir,
+                            "album_${System.currentTimeMillis()}_${idx}.$ext",
+                        )
+                        context.contentResolver.openInputStream(uri)?.use { input ->
+                            f.outputStream().use { out -> input.copyTo(out, 1 shl 16) }
+                        } ?: return@runCatching null
+                        f
+                    }.getOrNull()
+                }
+            }
+            if (added.isEmpty()) {
+                Toast.makeText(context, "无法读取所选图片", Toast.LENGTH_LONG).show()
+                return@launch
+            }
+            images = (added + images).distinctBy { it.absolutePath }
+            added.forEach { selected[it.absolutePath] = true }
+            Toast.makeText(context, "已加入 ${added.size} 张相册图片", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     LaunchedEffect(Unit) {
         images = withContext(Dispatchers.IO) {
             // et.34: the real history PNGs live in the app-private history tree
@@ -110,6 +153,12 @@ fun UploadImagesScreen(onBack: () -> Unit, onGoGenerate: () -> Unit) {
         },
     ) { pad ->
         Column(Modifier.padding(pad).fillMaxSize().padding(8.dp)) {
+            OutlinedButton(
+                onClick = { albumPicker.launch("image/*") },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("从相册添加图片")
+            }
             if (images.isEmpty()) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {

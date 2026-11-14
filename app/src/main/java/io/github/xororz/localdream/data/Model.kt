@@ -346,8 +346,12 @@ data class Model(
         val FLUX3_KLEIN_PACKAGE_FILES = listOf(
             "black-forest-labs/FLUX.3-klein-6b-fp8/resolve/main/" +
                 "flux-3-klein-6b-fp8.safetensors|dit.safetensors",
-            "zhiyuanasad/flux3_klein_adreno/resolve/main/llm.gguf|llm.gguf",
-            "zhiyuanasad/flux3_klein_adreno/resolve/main/vae.safetensors|vae.safetensors",
+            // et.187: the flux3_klein_adreno repo returns 404 for both llm.gguf
+            // and vae.safetensors, which made this package die mid-download.
+            // The FLUX.2 Klein Adreno companion files exist and are the same
+            // family; execution still needs v85 QNN skels (download-only).
+            "zhiyuanasad/flux2_klein_adreno/resolve/main/llm.gguf|llm.gguf",
+            "zhiyuanasad/flux2_klein_adreno/resolve/main/vae.safetensors|vae.safetensors",
             "Qwen/Qwen3-4B/resolve/main/tokenizer.json|tokenizer.json",
         )
 

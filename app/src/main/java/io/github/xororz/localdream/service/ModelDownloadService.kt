@@ -48,7 +48,7 @@ class ModelDownloadService : Service() {
         // switch to the mirror; a long read timeout tolerates slow big-file
         // transfers without aborting mid-download.
         .connectTimeout(12, TimeUnit.SECONDS)
-        .readTimeout(120, TimeUnit.SECONDS)
+        .readTimeout(30, TimeUnit.SECONDS)
         .retryOnConnectionFailure(true)
         .build()
 
@@ -527,6 +527,10 @@ class ModelDownloadService : Service() {
 
             // (c) per-mirror full-restart budget on 404/416 / size mismatch.
             var restartBudget = 2
+            // et.187: a dropped/stalled connection (the "卡在 30%" report) used
+            // to rotate away and eventually fail. Retry the same mirror twice,
+            // keeping the .part scratch so the Range request resumes.
+            var transientRetries = 2
             var ok = false
             while (!ok && restartBudget >= 0) {
                 val requestBuilder = Request.Builder().url(candidate)
@@ -628,6 +632,10 @@ class ModelDownloadService : Service() {
                         destFile.delete()
                         have = 0L
                         restartBudget--
+                    } else if (transientRetries > 0) {
+                        transientRetries--
+                        Log.i(TAG, "retry same mirror ($transientRetries left), have=$have")
+                        continue // keep scratch; Range resumes from `have`
                     } else {
                         break // rotate to next mirror, keep scratch for resume
                     }

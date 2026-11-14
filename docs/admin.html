@@ -87,7 +87,9 @@
         arr=(arr||[]).filter(Boolean).sort(function(a,b){return(b.ts||0)-(a.ts||0);});
         if(!arr.length){$("list").innerHTML='<div class="empty">暂无反馈。</div>';$("status").textContent="共 0 条。";return;}
         $("list").innerHTML=arr.map(function(f){
-          return '<div class="card"><div class="meta"><b>'+esc(f.model||"未知机型")+'</b> · Android '+esc(f.androidVer||"?")+' · '+esc(fmtTs(f.ts))+'</div><div class="body">'+esc(decodeMaybe(String(f.text||"")))+'</div>'+renderMedia(f)+'</div>';
+          return '<div class="card"><div class="meta"><b>'+esc(f.model||"未知机型")+'</b> · Android '+esc(f.androidVer||"?")+' · '+esc(fmtTs(f.ts))+'</div><div class="body">'+esc(decodeMaybe(String(f.text||"")))+'</div>'+
+            (f.contact?'<div class="meta" style="margin-top:6px">联系方式：<b>'+esc(({phone:"手机号",qq:"QQ",email:"邮箱"}[f.contactType]||"其他"))+'</b> '+esc(String(f.contact))+'</div>':'')+
+            renderMedia(f)+'</div>';
         }).join("");
         $("status").textContent="共 "+arr.length+" 条。";
       })
