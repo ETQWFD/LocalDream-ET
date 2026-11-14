@@ -1,10 +1,10 @@
 {
-  "versionCode": 267,
-  "versionName": "4.0.0-et.193",
-  "title": "发现新版本 v4.0.0-et.193",
-  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.193/LocalDream-ET.apk",
-  "size": 164694816,
-  "sha256": "34ba80d9a1a5eb48319603257b5cab17e89769bd3d955c4fdb55a69bdf6b215b",
-  "releaseNotes": "et.193（versionCode 267）延迟修复：\n1) 社区缩略图改为 RGB_565 解码（每像素 2 字节），解码时间与内存再降一半，首屏与滑动更跟手。\n2) 仍按 360×360 显示尺寸解码，不读原图，缓存命中稳定，滑回上面不重载。\n3) 保留 et.191/et.192 的公告镜像与鉴权修复、“不是 CPU 支持包”提示。\n4) 签名不变，可直接覆盖安装。",
-  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.193/LocalDream-ET.apk"
+  "versionCode": 268,
+  "versionName": "4.0.0-et.194",
+  "title": "发现新版本 v4.0.0-et.194",
+  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.194/LocalDream-ET.apk",
+  "size": 164695596,
+  "sha256": "2d5220a9d9ae28453e44b2dec8496721df033a67484c73057a940a105d538b15",
+  "releaseNotes": "et.194（versionCode 268）天玑/非骁龙适配：\n1) 检测到本机无 Hexagon NPU（天玑等）时，模型页 NPU 标签直接标注“（本机不支持）”，顶部提示改用 CPU Models，避免反复下 NPU 包再闪退。\n2) 出图建议 512×512 以内、步数 12–20，降低 CPU 出图中途失败概率。\n3) 保留 et.191–193 的社区缓存、公告、CPU 包提示与 RGB_565 降延迟修复。\n4) 签名不变，可直接覆盖安装。",
+  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.194/LocalDream-ET.apk"
 }

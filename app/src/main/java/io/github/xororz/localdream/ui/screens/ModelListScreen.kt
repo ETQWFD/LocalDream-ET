@@ -566,9 +566,12 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
         preferences.edit { putInt("last_viewed_page", pagerState.currentPage) }
     }
 
+    // 2026-11：天玑/非骁龙设备没有 Hexagon NPU，NPU 包必然报“后端启动失败”。
+    // 直接把标签标成不可用，并在顶部给出该用哪个模型，避免用户反复下 NPU 包再闪退。
+    val npuUnavailable = !io.github.xororz.localdream.utils.DeviceCapabilities.hasQnnNpu()
     val tabTitles = listOf(
         stringResource(R.string.cpu_models),
-        stringResource(R.string.npu_models),
+        if (npuUnavailable) stringResource(R.string.npu_models) + "（本机不支持）" else stringResource(R.string.npu_models),
         stringResource(R.string.dit_models),
     )
 
@@ -1689,6 +1692,14 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                 }
             }
 
+            if (npuUnavailable) {
+                Text(
+                    text = "本机不是骁龙（无 Hexagon NPU），NPU/DiT 模型无法运行，会直接报“后端启动失败”。请使用 CPU Models；CPU 出图建议 512×512 以内、步数 12–20。",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 6.dp),
+                )
+            }
             OutlinedTextField(
                 value = modelSearchQuery,
                 onValueChange = { modelSearchQuery = it },
