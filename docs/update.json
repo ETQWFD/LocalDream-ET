@@ -1,10 +1,10 @@
 {
-  "versionCode": 270,
-  "versionName": "4.0.0-et.196",
-  "title": "发现新版本 v4.0.0-et.196",
-  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.196/LocalDream-ET.apk",
-  "size": 164711272,
-  "sha256": "d236338f7aa6c0730a5a74265fc20fc96251d4321b59118151ab7b5a3294ec56",
-  "releaseNotes": "et.196（versionCode 270）下载提速：\n1) 大于 24MB 的模型包改为 4 连接分段下载（各拉一段后顺序合并），国内镜像下单线程常见的 300–800KB/s 可明显提升。\n2) 任一段失败会整体放弃并清掉分段，自动退回原来的单连接续传，绝不会留下不完整文件。\n3) 合并后仍按 HEAD 得到的总字节严格校验，进度通知按四段合计计算。\n4) 签名不变，可直接覆盖安装。",
-  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.196/LocalDream-ET.apk"
+  "versionCode": 271,
+  "versionName": "4.0.0-et.197",
+  "title": "发现新版本 v4.0.0-et.197",
+  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.197/LocalDream-ET.apk",
+  "size": 164713220,
+  "sha256": "f7c75f173fea08f75e61c8a6124ddb6c47dadf4c0248995dcd27ba944d4955f1",
+  "releaseNotes": "et.197（versionCode 271）：公告改为“先秒显缓存、后台刷新”，不再每次转圈；更新检查超时从 20s/60s 降到 6s/12s，通道不通时立刻切下一个；保留此前全部修复。",
+  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.197/LocalDream-ET.apk"
 }

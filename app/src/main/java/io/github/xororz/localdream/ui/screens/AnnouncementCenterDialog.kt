@@ -152,8 +152,31 @@ private fun loadAll(context: Context): List<AnnouncementItem> {
         out.add(AnnouncementItem(title, content, ts))
     }
     out.sortByDescending { it.ts }
+    // 2026-11：公告正文每次打开都要走 4 条镜像（每条 6 秒超时），网络差时就是“转圈很久”。
+    // 把成功拉到的结果落一份缓存，下次打开先秒显缓存，再后台刷新。
+    runCatching {
+        val arr = org.json.JSONArray()
+        out.forEach { item ->
+            arr.put(org.json.JSONObject().apply {
+                put("title", item.title); put("text", item.text); put("ts", item.ts)
+            })
+        }
+        context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+            .edit().putString("announce_cache_v1", arr.toString()).apply()
+    }
     return out
 }
+
+/** 读取上次成功拉取的公告缓存（可能为空）。 */
+private fun loadCached(context: Context): List<AnnouncementItem> = runCatching {
+    val raw = context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+        .getString("announce_cache_v1", null) ?: return emptyList()
+    val arr = org.json.JSONArray(raw)
+    (0 until arr.length()).mapNotNull { i ->
+        val o = arr.optJSONObject(i) ?: return@mapNotNull null
+        AnnouncementItem(o.optString("title"), o.optString("text"), o.optLong("ts"))
+    }
+}.getOrElse { emptyList() }
 
 /**
  * et.118/build195b: in-app announcement center. Opens a scrollable list (newest
@@ -169,9 +192,15 @@ fun AnnouncementCenterDialog(onDismiss: () -> Unit) {
     LaunchedEffect(Unit) {
         // Opening the list = viewed; clear the home bell badge immediately.
         setAnnounceUnread(context, false)
-        items = kotlin.runCatching {
+        // 先秒显缓存，避免每次都“空白转圈”；随后后台刷新，拿到新公告再替换。
+        val cached = kotlin.runCatching {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { loadCached(context) }
+        }.getOrElse { emptyList() }
+        if (cached.isNotEmpty()) items = cached
+        val fresh = kotlin.runCatching {
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { loadAll(context) }
         }.getOrElse { emptyList() }
+        if (fresh.isNotEmpty()) items = fresh
     }
 
     fun markRead(ts: Long) {

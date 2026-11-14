@@ -63,8 +63,10 @@ object AppUpdater {
 
     private val client: OkHttpClient by lazy {
         OkHttpClient.Builder()
-            .connectTimeout(20, TimeUnit.SECONDS)
-            .readTimeout(60, TimeUnit.SECONDS)
+            // 2026-11：更新检查原来 20s/60s，镜像不通时用户要干等一分多钟；
+            // 取版本号只需要几十 KB，6s/12s 足够，失败立刻换下一通道。
+            .connectTimeout(6, TimeUnit.SECONDS)
+            .readTimeout(12, TimeUnit.SECONDS)
             .followRedirects(true)
             .followSslRedirects(true)
             .build()
