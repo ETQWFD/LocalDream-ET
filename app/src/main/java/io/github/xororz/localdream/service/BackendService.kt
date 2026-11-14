@@ -610,6 +610,19 @@ class BackendService : Service() {
             backendType = "sd15cpu"
         }
 
+        // et.189: SDXL / QNN-only packages crash the native engine on non-Qualcomm
+        // devices (MediaTek/Exynos) or devices below SM8450 - the app then just
+        // "闪退". Refuse to exec them instead of letting the engine die.
+        if (!io.github.xororz.localdream.utils.DeviceCapabilities.hasQnnNpu() &&
+            backendType == "sdxl"
+        ) {
+            updateState(BackendState.Error(
+                "当前设备不支持 NPU 模型（需要骁龙 8 系及以上且 QNN 库可用）。" +
+                    "请改用 CPU 版本（MNN）的模型，或换用支持 NPU 的设备。"
+            ))
+            return false
+        }
+
         try {
             val nativeDir = applicationInfo.nativeLibraryDir
             val modelsDir = File(Model.getModelsDir(this), modelId)

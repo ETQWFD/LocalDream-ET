@@ -141,7 +141,7 @@ internal suspend fun checkBackendHealth(
 
                 try {
                     val request = Request.Builder()
-                        .url("http://localhost:8081/health")
+                        .url("http://${io.github.xororz.localdream.utils.EnginePort.host}/health")
                         .get()
                         .build()
 

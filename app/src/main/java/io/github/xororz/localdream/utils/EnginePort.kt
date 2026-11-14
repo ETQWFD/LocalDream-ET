@@ -12,6 +12,14 @@ import java.net.ServerSocket
  */
 object EnginePort {
     private const val PREFS = "app_prefs"
+
+    /** et.189: the port the engine ACTUALLY listens on (may be bumped past 8081).
+        Every health check / generate / tokenize URL must read this instead of a
+        hard-coded 8081, otherwise a stale listener on 8081 makes the UI report
+        "后端启动失败" although the engine is happily serving on 8082. */
+    @Volatile var activePort: Int = 8081
+        private set
+    val host: String get() = "localhost:$activePort"
     const val DEFAULT_ENGINE_PORT = 8081
     const val DEFAULT_HTTP_PORT = 8080
     const val MAX_BUMP = 16
@@ -45,12 +53,16 @@ object EnginePort {
     /** Free port for the engine, persisted so the request URL can reuse it. */
     fun enginePort(context: Context): Int {
         val resolved = resolveFreePort(configuredEnginePort(context))
+        activePort = resolved
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .edit().putInt("active_engine_port", resolved).apply()
         return resolved
     }
 
-    fun activeEnginePort(context: Context): Int =
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+    fun activeEnginePort(context: Context): Int {
+        val p = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .getInt("active_engine_port", configuredEnginePort(context))
+        activePort = p
+        return p
+    }
 }

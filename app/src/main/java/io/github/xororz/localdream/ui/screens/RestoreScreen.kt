@@ -219,7 +219,7 @@ fun RestoreScreen(
                                 var ready = false
                                 while (System.currentTimeMillis() < deadline) {
                                     runCatching {
-                                        java.net.Socket("127.0.0.1", 8081).use { }
+                                        java.net.Socket("127.0.0.1", io.github.xororz.localdream.utils.EnginePort.activePort).use { }
                                         ready = true
                                     }
                                     if (ready) break

@@ -264,7 +264,7 @@ class LanImageService : Service() {
         }
         var conn: HttpURLConnection? = null
         try {
-            conn = (URL("http://$ENGINE_HOST:$ENGINE_PORT/generate").openConnection() as HttpURLConnection).apply {
+            conn = (URL("http://$ENGINE_HOST:${io.github.xororz.localdream.utils.EnginePort.activePort}/generate").openConnection() as HttpURLConnection).apply {
                 requestMethod = "POST"
                 doOutput = true
                 connectTimeout = 15_000

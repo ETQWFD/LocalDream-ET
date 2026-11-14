@@ -88,7 +88,7 @@ class BackgroundGenerationService : Service() {
         private const val CHANNEL_ID = "image_generation_channel"
         private const val NOTIFICATION_ID = 1
         const val ACTION_STOP = "stop_generation"
-        const val LOCAL_BACKEND_HOST = "localhost:8081"
+        val LOCAL_BACKEND_HOST: String get() = io.github.xororz.localdream.utils.EnginePort.host
 
         // Shared across generations; the long timeouts cover a single SDXL
         // request that can stream for many minutes.
@@ -982,7 +982,7 @@ class BackgroundGenerationService : Service() {
                             startService(ri)
                             var waited = 0L
                             while (waited < 45_000L) {
-                                try { java.net.Socket("127.0.0.1", 8081).use { break } }
+                                try { java.net.Socket("127.0.0.1", io.github.xororz.localdream.utils.EnginePort.activePort).use { break } }
                                 catch (_: Exception) { Thread.sleep(400); waited += 400 }
                             }
                         }
@@ -1018,7 +1018,7 @@ class BackgroundGenerationService : Service() {
                                 })
                             var waited = 0L
                             while (waited < 60_000L) {
-                                try { java.net.Socket("127.0.0.1", 8081).use { break } }
+                                try { java.net.Socket("127.0.0.1", io.github.xororz.localdream.utils.EnginePort.activePort).use { break } }
                                 catch (_: Exception) { Thread.sleep(500); waited += 500 }
                             }
                         }
@@ -1149,7 +1149,7 @@ class BackgroundGenerationService : Service() {
                             var ready = false
                             while (waited < 45_000L) {
                                 try {
-                                    java.net.Socket("127.0.0.1", 8081).use { ready = true; break }
+                                    java.net.Socket("127.0.0.1", io.github.xororz.localdream.utils.EnginePort.activePort).use { ready = true; break }
                                 } catch (_: Exception) {
                                     Thread.sleep(400)
                                     waited += 400

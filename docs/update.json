@@ -1,10 +1,10 @@
 {
-  "versionCode": 262,
-  "versionName": "4.0.0-et.188",
-  "title": "发现新版本 v4.0.0-et.188",
-  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.188/LocalDream-ET.apk",
-  "size": 164689744,
-  "sha256": "ae1868d6914fad54a62523eb6b83ecf7c25830c76ed8db0f23dfdb884adc52ca",
-  "releaseNotes": "et.188（versionCode 262）：\n1) 修复 Illustrious v16 / Illustrious v16 DMD2 等 SDXL·QNN 模型“下载完成后提示文件不完整、缺少运行所需权重”的误报：下载完整性校验原来按 URL 里的 \"/sd-qnn/\" 判断 QNN 包，而 SDXL 用的是 \"sdxl-qnn\"，导致按 CPU 的六件套 .mnn.weight 去校验一个本来就没有这些文件的 NPU 扁平包，必然失败。\n2) 现在校验改为“任一已知 SD 布局通过即可”：CPU 六件套 / QNN 扁平布局 / SDXL 布局（unet.bin 必须 >100MB，vae_decoder.bin 非空，且至少存在一个 clip*.mnn 文本编码器）三者任一满足就判为完整；真正下坏的包仍然会失败，不会把半成品当成功。\n3) 顺带修正 SDXL 文本编码器命名兼容：clip_2.mnn.weight / clip.mnn / clip_v2.mnn 都能识别。\n4) 已下载失败卡在“不完整”的模型不用删：更新后重新点下载会复用已保留的安装包，校验通过后直接完成；仍失败再删除重下。\n5) 签名不变（c9e9cb5a…），可直接覆盖安装。",
-  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.188/LocalDream-ET.apk"
+  "versionCode": 263,
+  "versionName": "4.0.0-et.189",
+  "title": "发现新版本 v4.0.0-et.189",
+  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.189/LocalDream-ET.apk",
+  "size": 164690548,
+  "sha256": "77d0ccbadb49965532b15f48e53a937fe1d4ee3ef6f73d6df8be8a26358ce1d8",
+  "releaseNotes": "et.189（versionCode 263）：\n1) 修复部分手机（尤其天玑/非骁龙机型）点生成后报“后端启动失败，您的设备可能不受支持”，但引擎其实已经在 8082 端口正常监听的问题。根因是 8081 被上一次残留的引擎进程占用后，引擎按设计顺延到 8082，而健康检查、出图请求、tokenize、修图与放大仍写死 8081，于是明明能出图却判定失败。\n2) 现在全链路统一使用引擎实际解析到的端口（EnginePort.activePort）：健康检查、出图、提示词 token 统计、修图、放大、局域网 API、恢复校验都跟随实际端口，残留进程占用 8081 也不再误报。\n3) 修复使用 NPU 模型时闪退：SDXL·QNN 模型在非骁龙 8 系 / QNN 库不可用的设备上不再直接拉起引擎（会原生崩溃导致应用退出），改为明确提示“当前设备不支持 NPU 模型，请改用 CPU 版本模型”，应用不再闪退。SD1.5 NPU 仍按原逻辑自动回退 CPU。\n4) 签名不变（c9e9cb5a…），可直接覆盖安装；更新后若仍有异常，请用日志页导出完整日志。",
+  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.189/LocalDream-ET.apk"
 }

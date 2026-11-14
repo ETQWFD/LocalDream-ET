@@ -196,7 +196,7 @@ fun UpscaleScreen(navController: NavController, modifier: Modifier = Modifier) {
                     "--lib_dir",
                     runtimeDir.absolutePath,
                     "--port",
-                    "8081",
+                    io.github.xororz.localdream.utils.EnginePort.activePort.toString(),
                 )
                 if (listenOnAll) {
                     command = command + "--listen_all"
