@@ -90,7 +90,7 @@
 
 /* ============================ 全局配置 ============================ */
 #define APP_NAME      "Local Dream ET Server"
-#define APP_VERSION   "1.6.11"
+#define APP_VERSION   "1.6.12"
 #define COPYRIGHT_STR "Copyright (C) 2026 etc"
 
 #define DEFAULT_PORT       8080      /* 对外监听端口 */
@@ -1270,16 +1270,88 @@ static void send_html(sock_t c, const char* html) {
     shutdown(c,SHUT_WR);
 }
 
+
+/* v1.6.12：引擎查找统一入口。原来只在 程序目录 与 bin\ 两处找 sd-server，
+   用户把引擎解压到 engine\、runtime\ 或放错一层时就报“引擎缺失”，其实文件在。
+   这里一次覆盖 5 个常见位置，并检查 Windows 下必需的 stable-diffusion.dll。 */
+#ifdef _WIN32
+#define ENGINE_FILE_NAME "sd-server.exe"
+#else
+#define ENGINE_FILE_NAME "sd-server"
+#endif
+
+static int find_engine(char* out, int cap) {
+    static const char* subs[] = { "", "bin", "engine", "bin" DIRSEP "engine", "runtime" };
+    for (size_t i = 0; i < sizeof(subs)/sizeof(subs[0]); i++) {
+        if (subs[i][0] == 0)
+            snprintf(out, cap, "%s%s%s", g_progdir, DIRSEP, ENGINE_FILE_NAME);
+        else
+            snprintf(out, cap, "%s%s%s%s%s", g_progdir, DIRSEP, subs[i], DIRSEP, ENGINE_FILE_NAME);
+        if (access(out, ACCESS_EXISTS) == 0) return 1;
+    }
+    return 0;
+}
+
+/* 返回缺少的 DLL 名（逗号分隔，空串=齐全）。只检查真正会导致引擎起不来的两个。 */
+static void engine_missing_dlls(const char* engine_path, char* out, int cap) {
+    out[0] = 0;
+#ifndef _WIN32
+    (void)engine_path; (void)cap;
+#else
+    char dir[1300]; snprintf(dir, sizeof(dir), "%s", engine_path);
+    char* slash = strrchr(dir, DIRSEP[0]);
+    if (slash) slash[1] = 0; else dir[0] = 0;
+    const char* need[] = { "stable-diffusion.dll", "ggml.dll" };
+    for (int i = 0; i < 2; i++) {
+        char f[1500];
+        snprintf(f, sizeof(f), "%s%s", dir, need[i]);
+        if (access(f, ACCESS_EXISTS) != 0) {
+            if (out[0]) strncat(out, ", ", cap - strlen(out) - 1);
+            strncat(out, need[i], cap - strlen(out) - 1);
+        }
+    }
+    (void)engine_path;
+#endif
+}
+
 /* v1.6.7: 临时出图窗口。读取 web/admin.html，注入 API Key 后返回。
    出图直接打到本服务的 /sdapi/v1/txt2img，因此和客户端共用同一个引擎与队列，
    服务端分发 IP/Key 的线程不受影响。 */
 static void serve_admin(sock_t c) {
+    /* v1.6.12：按 5 个位置找界面文件（程序目录/web、程序目录、数据目录/web、
+       程序目录/docs、上一级/web），找不到就用内置页，保证出图窗口永远能打开。 */
+    static const char* subs[] = { "web", "", "docs", ".." DIRSEP "web", "web" DIRSEP "public" };
     char path[1400];
-    snprintf(path, sizeof(path), "%s%sweb%sadmin.html", g_progdir, DIRSEP, DIRSEP);
-    FILE* f = fopen(path, "rb");
+    FILE* f = NULL;
+    for (size_t i = 0; i < sizeof(subs)/sizeof(subs[0]); i++) {
+        if (subs[i][0]) snprintf(path, sizeof(path), "%s%s%s%sadmin.html", g_progdir, DIRSEP, subs[i], DIRSEP);
+        else snprintf(path, sizeof(path), "%s%sadmin.html", g_progdir, DIRSEP);
+        f = fopen(path, "rb");
+        if (f) break;
+    }
     if (!f) {
-        send_html(c, "<!doctype html><meta charset=utf-8><body style='font-family:Segoe UI;background:#0a1020;color:#eef3ff;padding:40px'>"
-                     "<h2>缺少 web/admin.html</h2><p>请把压缩包里的 web 目录和本程序放在同一级。</p></body>");
+        char page[5200];
+        snprintf(page, sizeof(page),
+            "<!doctype html><meta charset=utf-8><title>出图窗口</title>"
+            "<body style='font:15px/1.6 Segoe UI;background:#0a1020;color:#eef3ff;padding:24px'>"
+            "<h2>服务端出图窗口（内置页）</h2>"
+            "<p style='color:#9fb0cf'>未找到 web/admin.html，已使用内置页面；功能与压缩包里的页面一致。</p>"
+            "<textarea id=p rows=5 style='width:100%%;background:#152036;color:#fff;border:1px solid #33415c;border-radius:10px;padding:10px'>masterpiece, best quality, highly detailed</textarea>"
+            "<p>steps <input id=s type=number value=12 style='width:80px'>"
+            " 宽 <input id=w type=number value=384 style='width:80px'>"
+            " 高 <input id=h type=number value=384 style='width:80px'></p>"
+            "<button onclick='go()' style='padding:12px 20px;border:0;border-radius:10px;background:#fff;color:#0a1020;font-weight:700'>生成图片</button>"
+            "<p id=st style='color:#9fb0cf'></p><div id=o></div>"
+            "<script>var K=\"%s\";function go(){var t0=Date.now();document.getElementById('st').textContent='生成中…';"
+            "fetch('/sdapi/v1/txt2img',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+K},"
+            "body:JSON.stringify({prompt:document.getElementById('p').value,steps:+document.getElementById('s').value,width:+document.getElementById('w').value,height:+document.getElementById('h').value})})"
+            ".then(function(r){return r.json()}).then(function(j){var o=document.getElementById('o');"
+            "if(j.images&&j.images.length){o.innerHTML='<img style=\"max-width:100%%\" src=\"data:image/png;base64,'+j.images[0]+'\">';"
+            "document.getElementById('st').textContent='完成，用时 '+((Date.now()-t0)/1000).toFixed(1)+'s';}"
+            "else{document.getElementById('st').textContent='失败：'+JSON.stringify(j);}})"
+            ".catch(function(e){document.getElementById('st').textContent='失败：'+e;});}</script></body>",
+            g_cfg.api_key);
+        send_html(c, page);
         return;
     }
     static char buf[300 * 1024];
@@ -1345,6 +1417,7 @@ static void serve_home(sock_t c) {
 "<div class=\"row\"><div><div class=\"label\">当前模型</div><div class=\"val\">%s</div></div></div>"
 "<div class=\"row\"><div><div class=\"label\">出图接口</div><div class=\"val\">POST /api/txt2img<br>POST /api/img2img<br>POST /sdapi/v1/txt2img</div></div></div>"
 "<div class=\"sub\" style=\"margin-top:16px\">手机/其他设备请与本机连同一 WiFi，填上面 API 地址。</div>"
+"<div style=\"margin-top:14px\"><a href=\"/admin\" style=\"display:inline-block;background:#111827;color:#fff;text-decoration:none;padding:10px 16px;border-radius:10px;font-weight:600\">打开出图窗口 →</a></div>"
 "</div><script>"
 "var u=document.querySelector('.row .val');if(u)u.textContent=window.location.origin;"
 "function cp(t,b){"
@@ -1863,7 +1936,7 @@ static void* handle_conn(void* arg) {
     }
 
     /* ---- 首页（无需 Key，浏览器直接打开） ---- */
-    if(!strcmp(method,"GET") && !strcmp(path,"/admin")){
+    if(!strcmp(method,"GET") && (!strcmp(path,"/admin") || !strcmp(path,"/gen") || !strcmp(path,"/admin.html"))){
         serve_admin(c); CONN_RETURN();
     }
     if(!strcmp(method,"GET") && (!strcmp(path,"/") || !strcmp(path,"/index.html"))){
@@ -2349,11 +2422,13 @@ static void run_diag(void) {
 #else
       "sd-server";
 #endif
-    char cand[3][1280]; int nc=0;
-    snprintf(cand[nc++],1280,"%s%s%s",g_progdir,DIRSEP,ename);
-    snprintf(cand[nc++],1280,"%s%sbin%s%s",g_progdir,DIRSEP,DIRSEP,ename);
-    int found=-1; for(int i=0;i<nc;i++) if(access(cand[i],ACCESS_EXISTS)==0){found=i;break;}
-    printf("引擎 %s: %s\n", ename, found>=0? cand[found] : "未找到!");
+    char ep[1300];
+    if(find_engine(ep, sizeof(ep))) {
+        char miss[256]; engine_missing_dlls(ep, miss, sizeof(miss));
+        printf("引擎 %s: %s%s%s\n", ename, ep, miss[0]?"  缺少DLL: ":"", miss);
+    } else {
+        printf("引擎 %s: 未找到! 可放在 程序目录 / bin / engine / runtime 任一位置\n", ename);
+    }
     printf("配置模型路径: %s\n", g_cfg.model_path[0]?g_cfg.model_path:"(未配置)");
     if(g_cfg.model_path[0]){
         struct stat st;
@@ -2453,16 +2528,14 @@ int main(int argc, char** argv) {
 #else
           "sd-server";
 #endif
-        char p1[1280],p2[1280];
-        snprintf(p1,1280,"%s%s%s",g_progdir,DIRSEP,ename);
-        snprintf(p2,1280,"%s%sbin%s%s",g_progdir,DIRSEP,DIRSEP,ename);
-        /* v1.6.7: on Windows access(ACCESS_EXISTS) tests the NTFS execute bit and fails for
-           plain .exe files extracted from a zip, reporting a present engine as
-           "missing". Only existence matters here. */
-        if(access(p1,ACCESS_EXISTS)!=0 && access(p2,ACCESS_EXISTS)!=0){
-            log_line("⚠ 引擎二进制缺失: %s（请重新安装或下载引擎）", ename);
+        char ep[1300];
+        if(!find_engine(ep, sizeof(ep))){
+            log_line("⚠ 未找到引擎 %s：请把 sd-server 放进 程序目录、bin\\、engine\\ 或 runtime\\ 任一位置即可（四个位置都会被自动识别）。", ename);
         } else {
-            log_line("引擎二进制: %s 已就绪", ename);
+            char miss[256];
+            engine_missing_dlls(ep, miss, sizeof(miss));
+            if(miss[0]) log_line("⚠ 引擎已找到(%s)，但同目录缺少 DLL: %s（引擎会启动失败，请把压缩包里的 DLL 一并放到该目录）", ep, miss);
+            else log_line("引擎二进制: %s 已就绪", ep);
         }
     }
 

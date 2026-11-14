@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Local Dream ET · 服务端出图窗口</title>
+<style>
+:root{--bg:#0a1020;--line:rgba(255,255,255,.14);--txt:#eef3ff;--mut:#9fb0cf}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(900px 420px at 80% -10%,#1b2b52,transparent 60%),var(--bg);color:var(--txt);font:15px/1.6 "Segoe UI","Microsoft YaHei",sans-serif}
+.wrap{max-width:1160px;margin:0 auto;padding:24px 18px 44px}
+h1{font-size:22px;margin:0 0 4px}.sub{color:var(--mut);font-size:13px;margin-bottom:18px}
+.grid{display:grid;grid-template-columns:1fr 330px;gap:16px}@media(max-width:900px){.grid{grid-template-columns:1fr}}
+.card{background:linear-gradient(180deg,#151f38,#0e1730);border:1px solid var(--line);border-radius:14px;padding:16px}
+label{display:block;font-size:13px;color:var(--mut);margin:10px 0 6px}
+textarea,input,select{width:100%;background:rgba(255,255,255,.07);color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:10px;padding:10px 12px;font:inherit;outline:none}
+textarea{resize:vertical}.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn{width:100%;margin-top:14px;padding:12px;border:0;border-radius:11px;background:#fff;color:#0a1020;font-weight:700;font-size:15px;cursor:pointer}
+.btn:disabled{opacity:.55;cursor:not-allowed}
+.out{margin-top:14px;min-height:240px;border:1px dashed rgba(255,255,255,.18);border-radius:12px;display:flex;align-items:center;justify-content:center;color:var(--mut);overflow:hidden;position:relative}
+.out img{max-width:100%;max-height:520px;display:block}
+.err{margin-top:12px;display:none;background:rgba(255,90,90,.1);border:1px solid rgba(255,90,90,.4);border-radius:12px;padding:12px;color:#ffc9c9;white-space:pre-wrap;word-break:break-word;font-size:13px}
+.err .bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.copy{background:#fff;color:#0a1020;border:0;border-radius:8px;padding:6px 12px;font-weight:600;cursor:pointer}
+.spin{width:18px;height:18px;border-radius:50%;border:3px solid rgba(255,255,255,.2);border-top-color:#fff;animation:r 1s linear infinite;display:inline-block;vertical-align:middle;margin-right:8px}
+@keyframes r{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>服务端 · 临时出图窗口</h1>
+  <div class="sub">调用本机已下载的模型真实出图；出图在后台排队，服务端仍会继续分发 IP / Key 给客户端。</div>
+  <div class="grid">
+    <div class="card">
+      <label>提示语（正向）</label>
+      <textarea id="prompt" rows="5">masterpiece, best quality, highly detailed, sharp focus, cinematic lighting</textarea>
+      <label>反向提示语</label>
+      <textarea id="neg" rows="4">lowres, worst quality, low quality, blurry, jpeg artifacts, bad anatomy, bad hands, bad proportions, extra fingers, extra limbs, fused limbs, missing limbs, mutated hands, poorly drawn hands, poorly drawn face, deformed, disfigured, mutated, unfinished, cropped, watermark, text, signature</textarea>
+      <div class="out" id="out"><span>生成结果会显示在这里</span></div>
+      <div class="err" id="err"><div class="bar"><strong>生成失败</strong><button class="copy" onclick="copyErr()">复制错误</button></div><div id="errText"></div></div>
+    </div>
+    <div class="card">
+      <label>步数 steps</label><input id="steps" type="number" min="1" max="150" value="12" />
+      <label>CFG</label><input id="cfg" type="number" min="1" max="30" step="0.5" value="7" />
+      <div class="row"><div><label>宽 width</label><input id="w" type="number" min="64" max="2048" step="64" value="384" /></div>
+        <div><label>高 height</label><input id="h" type="number" min="64" max="2048" step="64" value="384" /></div></div>
+      <label>种子 seed（0 = 随机）</label><input id="seed" type="number" value="0" />
+      <label>采样器 sampler</label>
+      <select id="sampler"><option value="dpm++2m" selected>DPM++ 2M（质量优先）</option><option value="euler_a">Euler a（速度快）</option><option value="euler">Euler</option><option value="heun">Heun</option></select>
+      <button class="btn" id="go" onclick="gen()">生成图片</button>
+      <div class="sub" style="margin-top:10px">Key 已自动填入，无需手输。</div>
+    </div>
+  </div>
+</div>
+<script>
+var API_KEY = "__APIKEY__";
+var lastErr = "";
+function copyErr(){ navigator.clipboard.writeText(lastErr).catch(function(){}); }
+function showErr(text){ lastErr = text; document.getElementById("errText").textContent = text; document.getElementById("err").style.display = "block"; }
+async function gen(){
+  var btn = document.getElementById("go"), out = document.getElementById("out");
+  document.getElementById("err").style.display = "none";
+  btn.disabled = true;
+  var t0 = Date.now(); out.innerHTML = '<span><span class="spin"></span><span id="el">正在生成…</span><br><span id="eta" style="font-size:12px;color:#9fb0cf"></span></span>';
+  // 2026-11：估算时间。用“每步每百万像素秒数”的历史标定值（localStorage 记住本机速度），
+  // 首次按默认经验值，成功出图后用真实用时重新标定，所以同一台机器第二次起会越估越准。
+  var mp = (+document.getElementById("w").value) * (+document.getElementById("h").value) / 1e6;
+  var steps = +document.getElementById("steps").value;
+  var rate = parseFloat(localStorage.getItem("ld.secPerStepMP") || "0") || 0.9;
+  var estTotal = Math.max(3, rate * steps * Math.max(mp, 0.05));
+  var timer = setInterval(function(){
+    var el = document.getElementById("el"), eta = document.getElementById("eta");
+    var spent = (Date.now() - t0) / 1000;
+    if (el) el.textContent = "正在生成… " + Math.floor(spent) + "s";
+    if (eta) {
+      var left = estTotal - spent;
+      eta.textContent = left > 1
+        ? "预计还需 " + Math.ceil(left) + "s（参考值，按本机历史速度估算）"
+        : "已超过估算，仍在生成…";
+    }
+  }, 1000);
+  try{
+    var body = {
+      prompt: document.getElementById("prompt").value,
+      negative_prompt: document.getElementById("neg").value,
+      steps: +document.getElementById("steps").value,
+      cfg_scale: +document.getElementById("cfg").value,
+      width: +document.getElementById("w").value,
+      height: +document.getElementById("h").value,
+      seed: +document.getElementById("seed").value,
+      sampler_name: document.getElementById("sampler").value
+    };
+    var r = await fetch("/sdapi/v1/txt2img", {method:"POST", headers:{"Content-Type":"application/json","Authorization":"Bearer " + API_KEY}, body: JSON.stringify(body)});
+    var j = await r.json().catch(function(){ return {}; });
+    if(j.images && j.images.length){
+      out.innerHTML = "";
+      var img = new Image(); img.src = "data:image/png;base64," + j.images[0]; out.appendChild(img);
+      var meta = document.createElement("div");
+      meta.style.cssText = "position:absolute;right:10px;bottom:8px;font-size:12px;color:#9fb0cf";
+      var spent = (Date.now()-t0)/1000;
+      meta.textContent = "用时 " + spent.toFixed(1) + "s";
+      out.appendChild(meta);
+      // 用本次真实用时重新标定（每步每百万像素秒），下次估算更准
+      if (steps > 0 && mp > 0) {
+        var measured = spent / (steps * Math.max(mp, 0.05));
+        if (measured > 0.05 && measured < 60) localStorage.setItem("ld.secPerStepMP", measured.toFixed(4));
+      }
+    } else {
+      out.innerHTML = '<span>生成失败，错误已显示在下方，可一键复制</span>';
+      showErr("HTTP " + r.status + "\n" + JSON.stringify(j, null, 2));
+    }
+  }catch(e){
+    out.innerHTML = '<span>请求失败</span>';
+    showErr("network: " + e);
+  }finally{
+    clearInterval(timer); btn.disabled = false;
+  }
+}
+</script>
+</body>
+</html>
