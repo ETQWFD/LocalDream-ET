@@ -43,6 +43,7 @@
   footer{padding:48px 0;border-top:1px solid var(--line);color:var(--mut);font-size:13px;text-align:center}
   @media(max-width:760px){.hero h1{font-size:30px}.navlinks{display:none}}
 </style>
+  <link rel="stylesheet" href="assets/et-dark.css">
 </head>
 <body>
 
@@ -137,8 +138,13 @@
   };
   function $(id){return document.getElementById(id);}
   function apply(lang){
+    // et.187b: remember the original Chinese HTML once, otherwise switching
+    // back to 简体中文 left the page in the previous language (the old code
+    // only wrote when lang!=="zh-CN").
+    document.querySelectorAll("[data-i18n]").forEach(function(el){if(el.dataset.zhText==null)el.dataset.zhText=el.innerHTML;});
+    document.querySelectorAll("[data-i18n-ph]").forEach(function(el){if(el.dataset.zhPh==null)el.dataset.zhPh=el.getAttribute("placeholder")||"";});
     document.documentElement.lang=lang==="en"?"en":"zh-CN";
-    document.querySelectorAll("[data-i18n]").forEach(function(el){var k=el.getAttribute("data-i18n");if(lang!=="zh-CN"&&DICT[lang][k]!=null)el.innerHTML=DICT[lang][k];});
+    document.querySelectorAll("[data-i18n]").forEach(function(el){var k=el.getAttribute("data-i18n");var v=(lang!=="zh-CN"&&DICT[lang]&&DICT[lang][k]!=null)?DICT[lang][k]:el.dataset.zhText;if(v!=null)el.innerHTML=v;});
     $("langBtn").textContent=lang==="zh-TW"?"繁體中文":(lang==="en"?"English":"简体中文");
     try{localStorage.setItem("etld_lang",lang);}catch(e){}
   }

@@ -1,0 +1,80 @@
+/* et.187b — one shared dark "DeepSeek Harness" theme for every page.
+   Single animated aurora layer, glass nav, readable contrast. */
+:root{
+  --bg:#0a1020; --ink:#eef3ff; --mut:#9fb0cf; --line:rgba(255,255,255,.12);
+  --accent:#ffffff; --accent-soft:rgba(255,255,255,.08);
+}
+html{background:#0a1020}
+body{
+  background:#0a1020 !important; color:#eef3ff !important;
+}
+body::before{
+  content:"" !important; position:fixed !important; inset:-15% !important; z-index:-2 !important;
+  pointer-events:none; background:
+    radial-gradient(40% 45% at 20% 18%, rgba(64,120,255,.42), transparent 62%),
+    radial-gradient(42% 48% at 80% 12%, rgba(90,190,255,.28), transparent 64%),
+    radial-gradient(46% 50% at 70% 88%, rgba(140,92,255,.34), transparent 62%),
+    radial-gradient(40% 44% at 18% 92%, rgba(30,150,190,.26), transparent 66%) !important;
+  filter:blur(2px) saturate(1.1);
+  animation:etaurora 26s ease-in-out infinite alternate !important;
+}
+body::after{content:none !important;background:none !important}
+@keyframes etaurora{
+  0%{transform:translate3d(-3%,-2%,0) scale(1.02) rotate(0)}
+  50%{transform:translate3d(3%,2%,0) scale(1.09) rotate(3deg)}
+  100%{transform:translate3d(-1%,4%,0) scale(1.03) rotate(-2deg)}
+}
+@media (prefers-reduced-motion: reduce){body::before{animation:none !important}}
+nav{
+  background:rgba(10,16,32,.62) !important;
+  border-bottom:1px solid rgba(255,255,255,.12) !important;
+  backdrop-filter:blur(16px) saturate(1.2) !important;
+}
+.brand,.navlinks a,.navin a{color:#eef3ff !important}
+.card,.stat,.sechead,.box,.panel,.item,.kv,.row,.post,.cmt,.faq,.release,.ver,.asset,.notice,.hero-art,.warn,.tip,.empty{
+  background:rgba(18,27,48,.66) !important;
+  border-color:rgba(255,255,255,.12) !important;
+  color:#eef3ff !important;
+  backdrop-filter:blur(10px);
+}
+.card h3,.card p,.stat b,.stat small,.cmt .n,.cmt .x,.body,.meta,.mut{color:#dbe6ff !important}
+.mut,.note,.meta,.stat small{color:#9fb0cf !important}
+h1,h2,h3,h4,p,li,td,th,label,.lead{color:#eef3ff !important}
+a{color:#cfe0ff !important}
+.btn.p{background:#ffffff !important;color:#0a1020 !important;border-color:#ffffff !important;font-weight:700}
+.btn.g{background:rgba(255,255,255,.10) !important;color:#eef3ff !important;border-color:rgba(255,255,255,.22) !important}
+.langbtn,.tab,.chip,.pill{background:rgba(255,255,255,.08) !important;color:#eef3ff !important;border-color:rgba(255,255,255,.18) !important}
+input,textarea,select{
+  background:rgba(255,255,255,.07) !important;color:#ffffff !important;
+  border-color:rgba(255,255,255,.18) !important;
+}
+input::placeholder,textarea::placeholder{color:#8fa1c2 !important}
+option{background:#0f1830;color:#fff}
+table{background:transparent !important}
+th,td{border-color:rgba(255,255,255,.1) !important}
+hr,.line,.sep{border-color:rgba(255,255,255,.12) !important}
+/* the "title box": glass panel that shimmers, like the Harness hero */
+.hero-copy{
+  background:linear-gradient(180deg,rgba(16,26,48,.72),rgba(10,17,33,.55));
+  border:1px solid rgba(255,255,255,.14);
+  border-radius:26px; padding:30px 28px 26px;
+  box-shadow:0 30px 80px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.12);
+  position:relative; overflow:hidden;
+}
+.hero-copy::after{
+  content:""; position:absolute; inset:-40% -60%;
+  background:linear-gradient(115deg,transparent 38%,rgba(255,255,255,.10) 48%,rgba(140,180,255,.16) 52%,transparent 62%);
+  animation:etsheen 9s ease-in-out infinite; pointer-events:none;
+}
+@keyframes etsheen{0%{transform:translateX(-45%)}55%{transform:translateX(45%)}100%{transform:translateX(-45%)}}
+@media (prefers-reduced-motion: reduce){.hero-copy::after{animation:none}}
+.hero h1{
+  background:linear-gradient(92deg,#ffffff 18%,#9ec5ff 48%,#c9b6ff 66%,#ffffff 92%);
+  background-size:220% 100%;
+  -webkit-background-clip:text; background-clip:text; color:transparent !important;
+  animation:ettitle 10s ease-in-out infinite;
+}
+@keyframes ettitle{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+@media (prefers-reduced-motion: reduce){.hero h1{animation:none}}
+.eyebrow{color:#a9bddf !important}
+.hero .lead{color:#d7e3ff !important}
