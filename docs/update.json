@@ -1,10 +1,10 @@
 {
-  "versionCode": 263,
-  "versionName": "4.0.0-et.189",
-  "title": "发现新版本 v4.0.0-et.189",
-  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.189/LocalDream-ET.apk",
-  "size": 164690548,
-  "sha256": "77d0ccbadb49965532b15f48e53a937fe1d4ee3ef6f73d6df8be8a26358ce1d8",
-  "releaseNotes": "et.189（versionCode 263）：\n1) 修复部分手机（尤其天玑/非骁龙机型）点生成后报“后端启动失败，您的设备可能不受支持”，但引擎其实已经在 8082 端口正常监听的问题。根因是 8081 被上一次残留的引擎进程占用后，引擎按设计顺延到 8082，而健康检查、出图请求、tokenize、修图与放大仍写死 8081，于是明明能出图却判定失败。\n2) 现在全链路统一使用引擎实际解析到的端口（EnginePort.activePort）：健康检查、出图、提示词 token 统计、修图、放大、局域网 API、恢复校验都跟随实际端口，残留进程占用 8081 也不再误报。\n3) 修复使用 NPU 模型时闪退：SDXL·QNN 模型在非骁龙 8 系 / QNN 库不可用的设备上不再直接拉起引擎（会原生崩溃导致应用退出），改为明确提示“当前设备不支持 NPU 模型，请改用 CPU 版本模型”，应用不再闪退。SD1.5 NPU 仍按原逻辑自动回退 CPU。\n4) 签名不变（c9e9cb5a…），可直接覆盖安装；更新后若仍有异常，请用日志页导出完整日志。",
-  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.189/LocalDream-ET.apk"
+  "versionCode": 264,
+  "versionName": "4.0.0-et.190",
+  "title": "发现新版本 v4.0.0-et.190",
+  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.190/LocalDream-ET.apk",
+  "size": 164690992,
+  "sha256": "64d304926867de8e1443a8f3baf99f0c65279ab26080b60cc70dc7f200b16cec",
+  "releaseNotes": "et.190（versionCode 264）：\n1) 健康检查在连不上保存的端口时，会主动扫描 8081~8097 找到引擎真正监听的端口再继续轮询，彻底排除“引擎在 8082、界面死等 8081”导致的“后端启动失败”。\n2) 沿用 et.189 的修复：全链路（健康检查/出图/tokenize/修图/放大/局域网 API）统一走引擎实际端口。\n3) 沿用 et.189 的 NPU 闪退修复：不支持的机型直接给出中文提示，不再拉起会原生崩溃的 SDXL·QNN 引擎。\n4) 签名不变，可直接覆盖安装（versionCode 264 > 263）。",
+  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.190/LocalDream-ET.apk"
 }

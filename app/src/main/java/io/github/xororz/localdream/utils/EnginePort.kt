@@ -65,4 +65,22 @@ object EnginePort {
         activePort = p
         return p
     }
+
+    /** et.190: actively probe 8081..8081+MAX_BUMP and bind to the port a live
+        engine is really listening on. Covers the case where a stored/preferred
+        port is stale (a listener died after the pref was written) so the UI
+        keeps polling a dead port and reports 后端启动失败 forever. */
+    fun probeLivePort(start: Int = DEFAULT_ENGINE_PORT, span: Int = MAX_BUMP): Int {
+        for (p in start until start + span) {
+            try {
+                java.net.Socket().use { s ->
+                    s.connect(java.net.InetSocketAddress("127.0.0.1", p), 200)
+                }
+                activePort = p
+                return p
+            } catch (_: Exception) {
+            }
+        }
+        return activePort
+    }
 }

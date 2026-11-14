@@ -157,7 +157,10 @@ internal suspend fun checkBackendHealth(
                         break
                     }
                 } catch (e: Exception) {
-                    // Backend not up yet; retry after the current delay.
+                    // et.190: the health URL may point at a port the engine has
+                    // already left (or never bound). Re-detect the live port so
+                    // a stale 8081 can't mask an engine that is serving on 8082+.
+                    try { io.github.xororz.localdream.utils.EnginePort.probeLivePort() } catch (_: Exception) {}
                 }
             }
 
