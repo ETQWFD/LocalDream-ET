@@ -404,6 +404,10 @@ object GalleryClient {
                     MirrorPurge.jsdelivr("LocalDreamET-Gallery", "thumb/$dir/pic_$id.jpg")
                 }
             }
+            // 2026-11：公开库成功后，尽力镜像一份到私密备份仓库（失败不影响发布）。
+            runCatching {
+                mirrorPrivate(dir, id, pngBytes, meta.toString(), BuildConfig.GALLERY_TOKEN)
+            }
             MirrorPurge.jsdelivr("LocalDreamET-Gallery", "png/$dir/pic_$id.png")
             MirrorPurge.jsdelivr("LocalDreamET-Gallery", "png/$dir/pic_$id.meta.json")
             // Read the file back so "发布成功" can never be a lie: if the commit
@@ -432,6 +436,34 @@ object GalleryClient {
                 "gallery upload exception ${e.message}",
             )
             UploadResult(false, e.message ?: e.javaClass.simpleName)
+        }
+    }
+
+    /** 私密备份仓库写入（best-effort）。 */
+    private fun mirrorPrivate(dir: String, id: String, png: ByteArray, meta: String, token: String) {
+        if (token.isBlank()) return
+        val api = "https://api.github.com/repos/ETQWFD/LocalDreamET-Gallery-Private/contents"
+        fun put(path: String, bytes: ByteArray, msg: String) {
+            runCatching {
+                val b64 = Base64.getEncoder().encodeToString(bytes)
+                val body = JSONObject().put("message", msg).put("content", b64).toString().toByteArray()
+                val c = (URL("$api/$path").openConnection() as java.net.HttpURLConnection).apply {
+                    requestMethod = "PUT"; doOutput = true
+                    connectTimeout = 8000; readTimeout = 20000
+                    setRequestProperty("Authorization", "token $token")
+                    setRequestProperty("Accept", "application/vnd.github+json")
+                    setRequestProperty("Content-Type", "application/json")
+                    setRequestProperty("User-Agent", "LocalDream-ET")
+                }
+                c.outputStream.use { it.write(body) }
+                c.responseCode
+            }
+        }
+        put("png/$dir/pic_$id.png", png, "mirror png $dir/$id")
+        put("png/$dir/pic_$id.meta.json", meta.toByteArray(), "mirror meta $dir/$id")
+        runCatching {
+            val jpeg = makeThumb(png)
+            if (jpeg != null) put("thumb/$dir/pic_$id.jpg", jpeg, "mirror thumb $dir/$id")
         }
     }
 

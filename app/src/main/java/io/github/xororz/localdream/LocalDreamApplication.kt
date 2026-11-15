@@ -29,6 +29,7 @@ class LocalDreamApplication : Application() {
     private var migrationJob: Job? = null
 
     override fun onCreate() {
+        runCatching { io.github.xororz.localdream.service.FollowNotifyWorker.schedule(this) }
         super.onCreate()
         io.github.xororz.localdream.cloud.RollingLogger.init(this)
         // et.30: log OpenCL/GPU probe once at startup for diagnostics.

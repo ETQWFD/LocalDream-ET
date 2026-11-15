@@ -1,10 +1,10 @@
 {
-  "versionCode": 285,
-  "versionName": "4.0.0-et.211",
-  "title": "发现新版本 v4.0.0-et.211",
-  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.211/LocalDream-ET.apk",
-  "size": 164797956,
-  "sha256": "ef6ea45b91454713aafa0342d22808dd212d74d4485f233eea064a2a4e7bcb38",
-  "releaseNotes": "et.211（versionCode 285）作者主页 + 按用户分文件夹：\n1) 新上传图片按 用户名/pic_*.png 分文件夹存放，meta 与 thumb 同目录；旧平铺图片自动兼容读取，不会消失。\n2) 点作者头像打开作者主页：头像、昵称、简介；本人可编辑并保存，资料与共享聊天社区共用 profiles/<login>.json，两边同步。\n3) 主页里可直接关注/取消关注。\n4) 作者下架、私密备份仓库、128万兑换卡 ET128W 延续。",
-  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.211/LocalDream-ET.apk"
+  "versionCode": 286,
+  "versionName": "4.0.0-et.212",
+  "title": "发现新版本 v4.0.0-et.212",
+  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.212/LocalDream-ET.apk",
+  "size": 164806004,
+  "sha256": "52fd96616d26665ac5ee14658c996d49390e8ac872e29bb0a3b542a9018502f8",
+  "releaseNotes": "et.212（versionCode 286）关注作者新图提醒 + 自动私密镜像：\n1) 关注作者有新作品时发通知栏提醒：应用存活期间每 15 分钟检查一次，内容含作者和作品名；首次使用会申请通知权限。\n2) 新上传在公开库成功后，自动把 png/meta/thumb 镜像一份到私密仓库（失败不影响发布）。\n3) 作者主页、按用户名分文件夹、下架、128万兑换卡 ET128W 延续。",
+  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.212/LocalDream-ET.apk"
 }
