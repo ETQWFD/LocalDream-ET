@@ -976,7 +976,13 @@ private suspend fun purchaseItem(ctx: Context, item: GalleryClient.GalleryItem):
                 }.onFailure { lastReason = it.message ?: "下载失败" }
             }
             val data = bytes ?: return@withContext lastReason
-            val bmp = android.graphics.BitmapFactory.decodeByteArray(data, 0, data.size)
+            // 2026-11：超大图直接整张解码会 OOM/返回 null，先算采样再解码，避免“下载失败”。
+            val bounds = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            android.graphics.BitmapFactory.decodeByteArray(data, 0, data.size, bounds)
+            var sample = 1
+            while (bounds.outWidth / sample > 4096 || bounds.outHeight / sample > 4096) sample *= 2
+            val opts = android.graphics.BitmapFactory.Options().apply { inSampleSize = sample }
+            val bmp = android.graphics.BitmapFactory.decodeByteArray(data, 0, data.size, opts)
                 ?: return@withContext "图片解码失败"
             // 右下角防伪水印：etc 官方 + 作者名
             val wm = android.graphics.Bitmap.createBitmap(bmp.width, bmp.height, bmp.config ?: android.graphics.Bitmap.Config.ARGB_8888)

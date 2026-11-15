@@ -240,7 +240,12 @@ fun ChatScreen(onBack: () -> Unit) {
     }
 
     fun copyMessage(m: ChatMessage) {
-        val text = m.text.ifBlank { "[${m.kind.name}]" }
+        // 2026-11：图片/视频复制的是可访问的媒体链接，不再是 "[IMAGE]" 占位符。
+        val text = when (m.kind) {
+            ChatKind.IMAGE, ChatKind.VIDEO ->
+                m.mediaUrl.orEmpty().ifBlank { m.cdnUrl.orEmpty() }.ifBlank { m.text }
+            else -> m.text.ifBlank { "[${m.kind.name}]" }
+        }
         val clipboard = ctx.getSystemService(android.content.ClipboardManager::class.java)
         clipboard?.setPrimaryClip(android.content.ClipData.newPlainText("message", text))
         Toast.makeText(ctx, "已复制", Toast.LENGTH_SHORT).show()

@@ -1,10 +1,10 @@
 {
-  "versionCode": 289,
-  "versionName": "4.0.0-et.215",
-  "title": "发现新版本 v4.0.0-et.215",
-  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.215/LocalDream-ET.apk",
-  "size": 164834616,
-  "sha256": "71672b093a719b76302a0cd8f00ba5aa14b796475fcaae9d7ee5b2c74d2da82b",
-  "releaseNotes": "et.215（versionCode 289）授权登录用户码修复：\n1) Device Flow 一拿到用户码就自动复制到剪贴板，并弹提示显示码。\n2) 打开授权页时带上 ?user_code= 预填参数，能预填就不用粘贴；不能预填时剪贴板里已有码，直接粘贴。\n3) 网页授权自动回跳、作者分类/预览主页、关注提醒、排行榜、ET128W 延续。",
-  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.215/LocalDream-ET.apk"
+  "versionCode": 290,
+  "versionName": "4.0.0-et.216",
+  "title": "发现新版本 v4.0.0-et.216",
+  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.216/LocalDream-ET.apk",
+  "size": 164835244,
+  "sha256": "888f1340f75d261bd7770318681995f9d28b36103459a4d82bb54c687e18e85c",
+  "releaseNotes": "et.216（versionCode 290）下载与聊天媒体修复：\n1) 图片社区下载改为按采样解码（≤4096），超大图不再“图片解码失败”，下载成功后可保存。\n2) 共享聊天社区图片/视频的“复制”改为复制可访问的媒体链接，不再是 [IMAGE] 占位符。\n3) 图片/视频长按菜单的“下载”保留原图/原视频保存。\n4) 排行榜、作者分类、授权用户码复制与预填延续。",
+  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.216/LocalDream-ET.apk"
 }
