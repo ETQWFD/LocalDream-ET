@@ -1,10 +1,10 @@
 {
-  "versionCode": 277,
-  "versionName": "4.0.0-et.203",
-  "title": "发现新版本 v4.0.0-et.203",
-  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.203/LocalDream-ET.apk",
-  "size": 164720920,
-  "sha256": "1f52ea7fb4c00768d5a27851d5d545558f40bdac7cfdc0b893bbed88918616b2",
-  "releaseNotes": "et.203（versionCode 277）明亮模式修复：\n1) 模型卡片亮色下底色不透明度改为 0.94（接近实色），不再透出页面底色显得发灰。\n2) 描边亮色改用主题 outline 30%，暗色仍是白色 10%；社区卡片同样按明暗切换底色与描边。\n3) 保留按压缩放、错峰入场、列表弹性归位与页面转场。",
-  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.203/LocalDream-ET.apk"
+  "versionCode": 278,
+  "versionName": "4.0.0-et.204",
+  "title": "发现新版本 v4.0.0-et.204",
+  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.204/LocalDream-ET.apk",
+  "size": 164744308,
+  "sha256": "a63b9d4c3a3e7a2dbd3fc96fedccca37a1f4a790bd58120dce65bd01f9c32d27",
+  "releaseNotes": "et.204（versionCode 278）GitHub 网页授权登录：\n1) 新增 Device Flow：点“使用 GitHub 网页授权登录”→ 自动打开浏览器 → 输入页面显示的用户码 → 授权后应用自动拿到 token 并保存到本机，无需手输 PAT。\n2) 默认填入已注册的 OAuth App Client ID（可在登录框修改）；注意 OAuth App 设置里需勾选 Enable Device Flow。\n3) 修复明亮模式下玻璃卡片发灰：亮色底色 0.94、描边用主题 outline；暗色保持磨砂。\n4) 保留按压缩放、错峰入场、列表弹性归位与页面转场。",
+  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.204/LocalDream-ET.apk"
 }

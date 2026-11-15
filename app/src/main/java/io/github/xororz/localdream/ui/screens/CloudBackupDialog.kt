@@ -27,6 +27,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -45,6 +47,7 @@ import io.github.xororz.localdream.cloud.CloudConfig
 import io.github.xororz.localdream.cloud.LogHub
 import io.github.xororz.localdream.cloud.SecureTokenStore
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -64,6 +67,11 @@ fun CloudBackupDialog(onDismiss: () -> Unit) {
     var pat by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf<String?>(null) }
+    // 2026-11：GitHub OAuth Device Flow（不需要 client_secret，也不会把密码上传到任何仓库）
+    val oauthPrefs = remember { context.getSharedPreferences("app_prefs", android.content.Context.MODE_PRIVATE) }
+    var oauthClientId by remember { mutableStateOf(oauthPrefs.getString("github_oauth_client_id", "Ov23ligVcx2ZUAG3lNAA") ?: "Ov23ligVcx2ZUAG3lNAA") }
+    var oauthHint by remember { mutableStateOf<String?>(null) }
+    var oauthBusy by remember { mutableStateOf(false) }
     var showExisting by remember { mutableStateOf(false) }
     // Per-provider login state (re-read when the tab changes or after save/logout).
     var auth by remember { mutableStateOf(store.state(provider)) }
@@ -219,6 +227,104 @@ fun CloudBackupDialog(onDismiss: () -> Unit) {
                     ) { Text(if (batchBusy) "上传中…" else "批量上传图片") }
                     if (batchProgress.isNotBlank()) Text(batchProgress)
                 } else {
+                    if (provider == CloudConfig.Provider.GITHUB) {
+                        OutlinedTextField(
+                            value = oauthClientId,
+                            onValueChange = {
+                                oauthClientId = it.trim()
+                                oauthPrefs.edit().putString("github_oauth_client_id", oauthClientId).apply()
+                            },
+                            label = { Text("GitHub OAuth App Client ID") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        Text(
+                            "在 GitHub → Settings → Developer settings → OAuth Apps 新建一个应用，" +
+                                "把它的 Client ID 填在上面，并在应用设置里勾选 Enable Device Flow（Device Flow 不需要 Client Secret，客户端密钥不要写进应用）。",
+                            style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                            color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        OutlinedButton(
+                            enabled = !busy && !oauthBusy && oauthClientId.isNotBlank(),
+                            onClick = {
+                                oauthBusy = true; status = null; oauthHint = null
+                                scope.launch {
+                                    val dc = withContext(Dispatchers.IO) {
+                                        runCatching { io.github.xororz.localdream.cloud.GithubDeviceAuth.requestDeviceCode(oauthClientId) }
+                                    }
+                                    dc.onFailure {
+                                        status = "申请设备码失败：${it.message}"
+                                        oauthBusy = false
+                                    }.onSuccess { code ->
+                                        oauthHint = "已打开浏览器：请输入 ${code.userCode} 完成授权（${code.expiresInSec / 60} 分钟内有效）"
+                                        runCatching {
+                                            context.startActivity(
+                                                Intent(Intent.ACTION_VIEW, Uri.parse(code.verificationUri))
+                                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                                            )
+                                        }
+                                        var interval = code.intervalSec.coerceAtLeast(5)
+                                        val deadline = System.currentTimeMillis() + code.expiresInSec * 1000L
+                                        var token: String? = null
+                                        while (System.currentTimeMillis() < deadline && token == null) {
+                                            delay(interval * 1000L)
+                                            when (val r = withContext(Dispatchers.IO) {
+                                                io.github.xororz.localdream.cloud.GithubDeviceAuth.pollToken(oauthClientId, code.deviceCode)
+                                            }) {
+                                                io.github.xororz.localdream.cloud.GithubDeviceAuth.Poll.Pending -> Unit
+                                                io.github.xororz.localdream.cloud.GithubDeviceAuth.Poll.SlowDown -> interval += 5
+                                                io.github.xororz.localdream.cloud.GithubDeviceAuth.Poll.Expired -> {
+                                                    status = "授权码已过期，请重新点击授权"
+                                                    break
+                                                }
+                                                is io.github.xororz.localdream.cloud.GithubDeviceAuth.Poll.Failure -> {
+                                                    status = r.error
+                                                    break
+                                                }
+                                                is io.github.xororz.localdream.cloud.GithubDeviceAuth.Poll.Success -> token = r.token
+                                            }
+                                        }
+                                        if (token != null) {
+                                            val res = runCatching {
+                                                withContext(Dispatchers.IO) {
+                                                    val user = CloudClient.validatePAT(provider, token)
+                                                    runCatching {
+                                                        CloudClient.ensurePrivateRepo(provider, token, user.login)
+                                                    }.getOrElse {
+                                                        throw CloudRepoCreateException(
+                                                            context.getString(R.string.cloud_backup_fine_grained_hint),
+                                                        )
+                                                    }
+                                                    store.saveToken(
+                                                        provider, token, user.login, user.displayName,
+                                                        avatarUrl = user.avatarUrl,
+                                                        owner = user.login,
+                                                        repo = CloudConfig.BACKUP_REPO,
+                                                        repoState = SecureTokenStore.RepoState.READY,
+                                                    )
+                                                    runCatching { CloudClient.githubStarAndFollow(token) }
+                                                    user
+                                                }
+                                            }
+                                            res.onSuccess {
+                                                auth = store.state(provider)
+                                                Toast.makeText(
+                                                    context,
+                                                    context.getString(R.string.oauth_login_ok, it.displayName),
+                                                    Toast.LENGTH_LONG,
+                                                ).show()
+                                            }.onFailure { e -> status = e.message ?: "授权后校验失败" }
+                                        }
+                                        oauthHint = null
+                                        oauthBusy = false
+                                    }
+                                }
+                            },
+                        ) { Text(if (oauthBusy) "等待浏览器授权…" else "使用 GitHub 网页授权登录") }
+                        oauthHint?.let {
+                            Text(it, style = androidx.compose.material3.MaterialTheme.typography.bodySmall)
+                        }
+                    }
                     OutlinedTextField(
                         value = pat,
                         onValueChange = { pat = it },
