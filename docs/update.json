@@ -1,10 +1,10 @@
 {
-  "versionCode": 293,
-  "versionName": "4.0.0-et.219",
-  "title": "发现新版本 v4.0.0-et.219",
-  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.219/LocalDream-ET.apk",
-  "size": 164937604,
-  "sha256": "994ec9c06a472a8523779cb04a8a608f4056a6ffb91e6ab61ebcc0ef9dab3ca2",
-  "releaseNotes": "et.219（versionCode 293）悬赏功能：\n1) 图片社区新增“悬赏”按钮：填写目的和额度，发布时先托管扣除。\n2) 任何登录用户可提交图片/压缩包（≤20MB），提交物用发布者 RSA 公钥 + AES-GCM 混合加密，仓库里只有密文。\n3) 只有发布者设备持有私钥，可解密预览并保存到下载目录；其他人打开只会失败。\n4) 发布者验收后点“支付悬赏”，额度转入提交者账户，完成交易。",
-  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.219/LocalDream-ET.apk"
+  "versionCode": 294,
+  "versionName": "4.0.0-et.220",
+  "title": "最新版本 v4.0.0-et.220",
+  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.220/LocalDream-ET.apk",
+  "size": 164737024,
+  "sha256": "26a0d7a87daf2c417cfaf19c4c12609e920bf1ecf2ab62215703058135ad037a",
+  "releaseNotes": "最新版本\n\n作者下个星期无法更新，因为要开家长会，作者要死掉了，等下个星期看广告复活，请勿来打扰作者，谢谢。\n\n正文：\net.220（versionCode 294）\n1) 修复兑换码兑换时报“写入失败：Upload failed HTTP 404”：used 流水优先写到一定存在的 redeem/codes 目录，失败不再把整次兑换判失败，额度照常到账。\n2) 修复作者下架不了自己作品：删除改为跟随 png/{作者}/ 目录计算 meta 与缩略图路径，不再只认旧平铺路径。\n3) 聊天长按菜单、图片/视频复制与保存保持 et.217 的修复。\n4) 发布说明占位，其余问题（聊天内置红包式额度/悬赏、ANR、缩略图清晰度）见下一条消息。",
+  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.220/LocalDream-ET.apk"
 }

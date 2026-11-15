@@ -240,15 +240,26 @@ object RedemptionManager {
                     } else {
                         // read-only mirror gave no sha; just append the used record.
                         val rec = """{"code":"$code","androidId":"$aid","ts":$ts,"auto":true}"""
-                        CloudClient.uploadContent(
-                            provider, tok, "ETQWFD", REPO,
-                            "redeem/used/used_${code}_$aid.json", rec.toByteArray(), "used",
-                        )
+                        // 2026-11：redeem/used 目录在仓库里可能不存在，直接写会 404。
+                        // 先写同目录（一定存在），失败再尝试 used 子目录，都失败不阻断兑换。
+                        runCatching {
+                            CloudClient.uploadContent(
+                                provider, tok, "ETQWFD", REPO,
+                                "redeem/codes/used_${code}_$aid.json", rec.toByteArray(), "used",
+                            )
+                        }.onFailure {
+                            runCatching {
+                                CloudClient.uploadContent(
+                                    provider, tok, "ETQWFD", REPO,
+                                    "redeem/used/used_${code}_$aid.json", rec.toByteArray(), "used",
+                                )
+                            }
+                        }
                     }
                 }.exceptionOrNull()
                 if (writeErr != null) {
+                    // 额度已经入账；used 记录只是流水，写失败不能把兑换判死。
                     Log.w(TAG, "mark-used failed: ${writeErr.message}")
-                    return Result.WriteFailed(writeErr.message ?: "未知错误")
                 }
                 Result.Ok(credit)
             }

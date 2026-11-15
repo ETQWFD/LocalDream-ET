@@ -635,8 +635,18 @@ object GalleryClient {
     /** 作者下架自己的作品：删除 png、meta、thumb 三个文件。 */
     suspend fun delete(name: String, token: String): Pair<Boolean, String> = withContext(Dispatchers.IO) {
         val api = "https://api.github.com/repos/ETQWFD/LocalDreamET-Gallery/contents"
-        val stem = name.substringBeforeLast(".png")
-        val paths = listOf("png/$name", "png/$stem.meta.json", "thumb/$stem.jpg")
+        // et.220：新图在 png/{作者}/ 下，name 可能是相对路径；删除时必须跟着目录走，
+        // 否则永远删不到旧平铺路径，表现就是“作者下架不了自己的作品”。
+        val rel = name.removePrefix("png/")
+        val stem = rel.substringBeforeLast(".png")
+        val dir = stem.substringBeforeLast("/", "")
+        val base = stem.substringAfterLast("/")
+        val prefix = if (dir.isBlank()) "" else "$dir/"
+        val paths = listOf(
+            "png/$rel",
+            "png/$prefix$base.meta.json",
+            "thumb/$prefix$base.jpg",
+        ).distinct()
         var okAny = false
         var err = ""
         for (path in paths) {
