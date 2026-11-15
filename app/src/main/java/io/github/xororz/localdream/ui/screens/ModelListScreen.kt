@@ -1340,7 +1340,7 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                         // et.212: top-left entry into the image community.
                         if (!hideGallery) {
                             IconButton(onClick = { navController.navigate(io.github.xororz.localdream.navigation.Screen.Gallery.route) }) {
-                                Icon(androidx.compose.material.icons.Icons.Default.Share, "图片社区")
+                                Icon(androidx.compose.ui.res.painterResource(io.github.xororz.localdream.R.drawable.ic_gallery_logo), "图片社区")
                             }
                         }
                     }

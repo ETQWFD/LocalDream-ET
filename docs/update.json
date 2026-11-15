@@ -1,10 +1,10 @@
 {
-  "versionCode": 282,
-  "versionName": "4.0.0-et.208",
-  "title": "发现新版本 v4.0.0-et.208",
-  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.208/LocalDream-ET.apk",
-  "size": 164752708,
-  "sha256": "630313c113001c9c8af99febdb15d3549632ca55c964da6380ad62286b4e94fc",
-  "releaseNotes": "et.208（versionCode 282）额度与社区修复：\n1) 额度不再能突破上限：分享赚取的额度封顶为 limit-used，remaining 永不超过总额。\n2) 图片社区支持一次从相册多选多张，逐张独立上传、独立成条，部分失败会提示成功/失败张数。\n3) 未登录用户也能在共享聊天社区发言，显示为“匿名游客”，写入走 App 内置发布令牌。\n4) 新增 128 万额度兑换卡：兑换码 ET128W（一次性）。\n5) 图片预览 1080、上传 2560、下载 8K 上采样延续。",
-  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.208/LocalDream-ET.apk"
+  "versionCode": 283,
+  "versionName": "4.0.0-et.209",
+  "title": "发现新版本 v4.0.0-et.209",
+  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.209/LocalDream-ET.apk",
+  "size": 164756252,
+  "sha256": "577bb809778f609b81982558884361f8235e9d53e411c62009fd0141449aca7c",
+  "releaseNotes": "et.209（versionCode 283）图片社区改版（第一版）：\n1) 社区入口图标换成新的作品图标。\n2) 网格按作者排序分组，同一作者的作品排在一起，配合搜索按作者/作品名过滤。\n3) 保留按压回弹、错峰入场、暗色/亮色玻璃底色。\n4) 额度封顶、批量上传、匿名发言、128万兑换卡（ET128W）延续。",
+  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.209/LocalDream-ET.apk"
 }

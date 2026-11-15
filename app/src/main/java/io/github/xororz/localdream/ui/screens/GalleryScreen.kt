@@ -184,6 +184,10 @@ fun GalleryScreen(navController: NavController) {
             it.author.contains(q, true) || it.name.contains(q, true) || it.title.contains(q, true)
         }
     }
+    // 2026-11：按作者分组展示，同一作者的图排在一起，作者名作为分组标识。
+    val groupedFiltered = remember(filtered) {
+        filtered.sortedWith(compareBy({ it.author.lowercase() }, { -it.ts }))
+    }
 
     Scaffold(
         topBar = {
@@ -226,7 +230,7 @@ fun GalleryScreen(navController: NavController) {
                     verticalArrangement = Arrangement.spacedBy(6.dp),
                     modifier = Modifier.fillMaxSize(),
                 ) {
-                    itemsIndexed(filtered, key = { _, g -> g.name }) { idx, g ->
+                    itemsIndexed(groupedFiltered, key = { _, g -> g.name }) { idx, g ->
                         // 2026-11：卡片按下时轻微缩到 0.95 再弹回，配合图片渐显，
                         // 让社区网格点起来有“灵动”反馈；不改变点击区域与命中逻辑。
                         val pressSrc = remember { MutableInteractionSource() }
