@@ -731,7 +731,9 @@ private fun AppContent() {
  */
 private fun handleGithubOAuth(activity: android.app.Activity, intent: Intent?) {
     val data = intent?.data ?: return
-    if (data.scheme != "localdreamet" || data.host != "oauth") return
+    val isCustom = data.scheme == "localdreamet" && data.host == "oauth"
+    val isAppLink = data.scheme == "https" && data.host == "etc.tw.kg" && data.path == "/oauth.html"
+    if (!isCustom && !isAppLink) return
     val code = data.getQueryParameter("code") ?: return
     val redirect = "https://etc.tw.kg/oauth.html"
     Thread {

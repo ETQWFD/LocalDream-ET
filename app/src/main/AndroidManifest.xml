@@ -77,6 +77,14 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="localdreamet" android:host="oauth" />
             </intent-filter>
+            <!-- 2026-11：App Links，让 GitHub 回跳 https://etc.tw.kg/oauth.html 直接打开应用，
+                 不需要再依赖浏览器对自定义 scheme 的二次确认。 -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="etc.tw.kg" android:pathPrefix="/oauth.html" />
+            </intent-filter>
         </activity>
 
         <service

@@ -1,35 +1,31 @@
 <!doctype html><html lang="zh"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Local Dream ET · 返回应用</title>
+<title>Local Dream ET · GitHub 授权</title>
 <style>
-:root{color-scheme:dark}
 body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
-background:radial-gradient(120% 80% at 50% 0%,#1b2a4a 0%,#070b14 60%);font-family:-apple-system,"Segoe UI",sans-serif;color:#e8eefc}
-.card{width:min(92vw,420px);padding:28px 22px;border-radius:22px;background:rgba(255,255,255,.07);
-border:1px solid rgba(255,255,255,.16);backdrop-filter:blur(18px);text-align:center;box-shadow:0 18px 50px rgba(0,0,0,.45)}
-h2{margin:6px 0 6px;font-size:20px}
-p{color:#a9b6cf;font-size:14px;line-height:1.7;margin:8px 0}
-a.btn{display:block;margin:20px 0 8px;padding:15px;border-radius:14px;text-decoration:none;
-background:linear-gradient(180deg,#4f7dff,#3b63e0);color:#fff;font-weight:600;font-size:16px;
-box-shadow:0 8px 20px rgba(63,99,224,.35)}
-.tip{font-size:12px;color:#7f8ca3;margin-top:14px}
+font-family:-apple-system,"Segoe UI",sans-serif;background:#0b1220;color:#e8eefc}
+.card{max-width:420px;padding:28px;border-radius:20px;background:rgba(255,255,255,.06);
+border:1px solid rgba(255,255,255,.14);text-align:center}
+h3{margin:0 0 10px;font-weight:600}
+p{color:#9fb0cc;font-size:14px;line-height:1.7}
+a.btn{display:block;margin-top:18px;padding:14px;border-radius:14px;background:#2f6bff;color:#fff;
+text-decoration:none;font-weight:600}
+.err{color:#ff9d9d}
 </style></head><body>
 <div class="card">
-  <h2>授权已完成</h2>
-  <p id="msg">正在返回 Local Dream ET…</p>
-  <a class="btn" id="l" href="localdreamet://oauth">点此返回应用并完成登录</a>
-  <p class="tip">如果按钮没反应，请确认已安装 Local Dream ET，或在浏览器菜单里选择“在应用中打开”。</p>
+<h3>正在返回 Local Dream ET</h3>
+<p id="msg">如果应用没有自动打开，请点下面的按钮完成登录。</p>
+<a class="btn" id="l" href="#">打开 Local Dream ET</a>
 </div>
 <script>
-var q=location.search||"";
-var m=q.match(/code=([^&]+)/);
-var e=q.match(/error=([^&]+)/);
-var link="localdreamet://oauth"+(m?("?code="+m[1]):"");
+var q=location.search||"", code=(q.match(/[?&]code=([^&]+)/)||[])[1];
+var err=(q.match(/[?&]error_description=([^&]+)/)||[])[1];
+var link="localdreamet://oauth"+(code?("?code="+code):"");
 document.getElementById("l").href=link;
-var msg=document.getElementById("msg");
-if(!m){
-  msg.textContent = e ? ("授权未完成：" + decodeURIComponent(e[1])) : "没有拿到授权码，请从软件里重新发起授权。";
+if(err){document.getElementById("msg").innerHTML='<span class="err">授权失败：'+decodeURIComponent(err)+'</span>';}
+if(code){
+  // 先尝试自动跳转；浏览器若拦截自定义 scheme，用户点按钮即可（按钮就是用户手势）。
+  try{location.href=link;}catch(e){}
 }
-try{ if(m){ setTimeout(function(){ location.href=link; }, 300); } }catch(_){}
 </script>
 </body></html>
