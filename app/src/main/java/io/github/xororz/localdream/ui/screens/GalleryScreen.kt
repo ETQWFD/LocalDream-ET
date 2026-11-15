@@ -400,17 +400,19 @@ private fun UploadDialog(ctx: Context, onPublished: () -> Unit = {}, onDismiss: 
     var uploading by remember { mutableStateOf(false) }
     var showPicker by remember { mutableStateOf(false) }
     var progress by remember { mutableFloatStateOf(-1f) }
-    var pickedUri by remember { mutableStateOf<Uri?>(null) }
+    var pickedUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
+    val pickedUri: Uri? = pickedUris.firstOrNull()
     var pickedBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var pickedFile by remember { mutableStateOf<File?>(null) }
     val token = remember { SecureTokenStore(ctx).token(CloudConfig.Provider.GITHUB) }
     val login = remember { SecureTokenStore(ctx).state(CloudConfig.Provider.GITHUB)?.login }
 
-    val albumLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        if (uri != null) {
+    // 2026-11：相册支持一次选多张，逐张独立发布（后台也会分别生成条目）。
+    val albumLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
+        if (uris.isNotEmpty()) {
             pickedFile = null
-            pickedUri = uri
-            pickedBitmap = io.github.xororz.localdream.utils.ImageDecode.decodeSampledUri(ctx, uri, 1024)
+            pickedUris = uris
+            pickedBitmap = io.github.xororz.localdream.utils.ImageDecode.decodeSampledUri(ctx, uris.first(), 1024)
         }
     }
 
@@ -456,7 +458,11 @@ private fun UploadDialog(ctx: Context, onPublished: () -> Unit = {}, onDismiss: 
                         modifier = Modifier.fillMaxWidth().height(140.dp),
                         contentScale = ContentScale.Fit,
                     )
-                    Text("已选：${b.width}×${b.height}", style = MaterialTheme.typography.labelSmall)
+                    Text(
+                        if (pickedUris.size > 1) "已选 ${pickedUris.size} 张（预览首张 ${b.width}×${b.height}）"
+                        else "已选：${b.width}×${b.height}",
+                        style = MaterialTheme.typography.labelSmall,
+                    )
                 }
                 pickedFile?.let { f ->
                     Spacer(Modifier.height(8.dp))
@@ -480,7 +486,7 @@ private fun UploadDialog(ctx: Context, onPublished: () -> Unit = {}, onDismiss: 
                                 val f = localImages[i].file
                                 val selected = pickedFile?.absolutePath == f.absolutePath
                                 Column(Modifier.clickable {
-                                    pickedUri = null
+                                    pickedUris = emptyList()
                                     pickedBitmap = null
                                     pickedFile = f
                                 }) {
@@ -547,38 +553,45 @@ private fun UploadDialog(ctx: Context, onPublished: () -> Unit = {}, onDismiss: 
                                 msg = "正在压缩并上传…"
                                 progress = -1f
                                 scope.launch {
-                                    val bytes = withContext(Dispatchers.IO) {
-                                        encodeForGallery(ctx, pickedUri, pickedFile)
-                                    }
-                                    if (bytes == null || bytes.isEmpty()) {
-                                        uploading = false
-                                        msg = "图片读取失败，请换一张"
-                                        return@launch
-                                    }
+                                    val targets: List<Pair<Uri?, File?>> =
+                                        if (pickedUris.isNotEmpty()) pickedUris.map { it to null }
+                                        else listOf(pickedUri to pickedFile)
                                     val author = login ?: "ETQWFD"
-                                    var lastPct = -1
-                                    val res = GalleryClient.upload(
-                                        bytes,
-                                        author = author,
-                                        price = p,
-                                        name = name.ifBlank { "作品" },
-                                        userToken = token,
-                                        onProgress = { v ->
-                                            val pct = (v * 100).toInt().coerceIn(0, 100)
-                                            if (pct != lastPct) {
-                                                lastPct = pct
-                                                progress = v
-                                            }
-                                        },
-                                    )
+                                    var ok = 0
+                                    var fail = 0
+                                    var lastErr = ""
+                                    targets.forEachIndexed { i, (u, f) ->
+                                        val bytes = withContext(Dispatchers.IO) { encodeForGallery(ctx, u, f) }
+                                        if (bytes == null || bytes.isEmpty()) {
+                                            fail++; lastErr = "图片读取失败"
+                                            return@forEachIndexed
+                                        }
+                                        var lastPct = -1
+                                        val base = name.ifBlank { "作品" }
+                                        val res = GalleryClient.upload(
+                                            bytes,
+                                            author = author,
+                                            price = p,
+                                            name = if (targets.size > 1) "$base ${i + 1}" else base,
+                                            userToken = token,
+                                            onProgress = { v ->
+                                                val pct = (v * 100).toInt().coerceIn(0, 100)
+                                                if (pct != lastPct) {
+                                                    lastPct = pct
+                                                    progress = (i.toFloat() + v) / targets.size.toFloat()
+                                                }
+                                            },
+                                        )
+                                        if (res.ok) ok++ else { fail++; lastErr = res.reason }
+                                    }
                                     progress = -1f
                                     uploading = false
-                                    msg = if (res.ok) {
-                                        if (res.reason.isBlank()) "发布成功" else res.reason
-                                    } else {
-                                        "发布失败：${res.reason}"
+                                    msg = when {
+                                        ok > 0 && fail == 0 -> if (targets.size > 1) "已发布 $ok 张" else "发布成功"
+                                        ok > 0 -> "已发布 $ok 张，失败 $fail 张：$lastErr"
+                                        else -> "发布失败：$lastErr"
                                     }
-                                    if (res.ok) {
+                                    if (ok > 0) {
                                         onPublished()
                                         onDismiss()
                                     }

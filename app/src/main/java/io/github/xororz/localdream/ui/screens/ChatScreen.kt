@@ -291,8 +291,9 @@ fun ChatScreen(onBack: () -> Unit) {
     fun sendText() {
         val text = input.trim()
         if (text.isEmpty()) return
-        val author = meLogin ?: ""
-        if (author.isBlank()) {
+        // 2026-11：未登录也允许发言，以匿名身份发布（写入走 App 内置发布令牌）。
+        val author = (meLogin ?: "").ifBlank { "匿名游客" }
+        if ((meLogin ?: "").isBlank() && io.github.xororz.localdream.BuildConfig.GALLERY_TOKEN.isBlank()) {
             status = "请先在设置里登录 GitHub，才能公开发言"
             return
         }

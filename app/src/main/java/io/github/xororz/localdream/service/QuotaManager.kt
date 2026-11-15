@@ -61,7 +61,7 @@ object QuotaManager {
     fun bonusPool(c: Context): Long = sp(c).getLong("bonus_pool", 0L)
 
     fun remaining(c: Context): Long =
-        (limit(c) - used(c) + bonusPool(c)).coerceAtLeast(0L)
+        (limit(c) - used(c) + bonusPool(c)).coerceAtLeast(0L).coerceAtMost(limit(c))
 
     fun available(c: Context): Boolean = used(c) < limit(c)
 
@@ -89,7 +89,10 @@ object QuotaManager {
     /** et.156: 卡密赠送额度进独立 bonus_pool，避免 used=0 时赠额被吞掉。 */
     fun bonus(c: Context, value: Long) {
         if (value <= 0L) return
-        sp(c).edit().putLong("bonus_pool", sp(c).getLong("bonus_pool",0L) + value).apply()
+        // 2026-11：奖励额度不得把总量顶到上限以上：used + bonus 最多等于 limit。
+        val room = (limit(c) - used(c)).coerceAtLeast(0L)
+        val next = (sp(c).getLong("bonus_pool", 0L) + value).coerceAtMost(room)
+        sp(c).edit().putLong("bonus_pool", next).apply()
     }
 
     /** Next reset instant (epoch_ms + 7 days from current epoch); 0 if unset. */
