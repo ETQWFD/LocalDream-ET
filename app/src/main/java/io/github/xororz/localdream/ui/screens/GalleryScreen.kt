@@ -8,6 +8,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -223,6 +224,34 @@ fun GalleryScreen(navController: NavController) {
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
                     placeholder = { Text("搜索作品 / 作者") }, singleLine = true,
                 )
+                // 2026-11：草图里的“作者分组”条：一行作者头像 + 关注开关。
+                val authors = groupedFiltered.map { it.author }.distinct()
+                if (authors.isNotEmpty()) {
+                    androidx.compose.foundation.layout.Row(
+                        modifier = Modifier.fillMaxWidth()
+                            .horizontalScroll(rememberScrollState())
+                            .padding(horizontal = 8.dp, vertical = 2.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        authors.forEach { a ->
+                            val following = io.github.xororz.localdream.service.FollowStore.isFollowing(ctx, a)
+                            androidx.compose.material3.AssistChip(
+                                onClick = {
+                                    io.github.xororz.localdream.service.FollowStore.toggle(ctx, a)
+                                },
+                                leadingIcon = {
+                                    Box(
+                                        Modifier.size(22.dp)
+                                            .clip(androidx.compose.foundation.shape.CircleShape)
+                                            .background(MaterialTheme.colorScheme.primaryContainer),
+                                        contentAlignment = Alignment.Center,
+                                    ) { Text(a.take(1).uppercase(), style = MaterialTheme.typography.labelSmall) }
+                                },
+                                label = { Text("@$a${if (following) " ✓" else ""}", maxLines = 1) },
+                            )
+                        }
+                    }
+                }
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(3),
                     contentPadding = PaddingValues(8.dp),
@@ -708,6 +737,24 @@ private fun PreviewDialog(ctx: Context, item: GalleryClient.GalleryItem, onDismi
                     )
                     Spacer(Modifier.width(4.dp))
                     Text(if (fav) "已收藏" else "收藏")
+                }
+                run {
+                    val myLogin = io.github.xororz.localdream.cloud.SecureTokenStore(ctx)
+                        .state(io.github.xororz.localdream.cloud.CloudConfig.Provider.GITHUB)?.login
+                    val myToken = io.github.xororz.localdream.cloud.SecureTokenStore(ctx)
+                        .token(io.github.xororz.localdream.cloud.CloudConfig.Provider.GITHUB)
+                    if (myLogin != null && item.author == myLogin && !myToken.isNullOrBlank()) {
+                        TextButton(enabled = !busy, onClick = {
+                            busy = true; msg = ""
+                            scope.launch {
+                                val (ok, err) = withContext(Dispatchers.IO) {
+                                    GalleryClient.delete(item.name, myToken)
+                                }
+                                busy = false
+                                if (ok) { onDismiss() } else { msg = "下架失败：$err" }
+                            }
+                        }) { Text("下架我的作品", color = MaterialTheme.colorScheme.error) }
+                    }
                 }
                 if (msg.isNotEmpty()) Text(msg, color = MaterialTheme.colorScheme.error)
                 Spacer(Modifier.height(12.dp))

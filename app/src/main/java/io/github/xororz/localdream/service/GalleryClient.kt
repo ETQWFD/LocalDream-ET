@@ -433,6 +433,43 @@ object GalleryClient {
         }
     }
 
+    /** 作者下架自己的作品：删除 png、meta、thumb 三个文件。 */
+    suspend fun delete(name: String, token: String): Pair<Boolean, String> = withContext(Dispatchers.IO) {
+        val api = "https://api.github.com/repos/ETQWFD/LocalDreamET-Gallery/contents"
+        val stem = name.substringBeforeLast(".png")
+        val paths = listOf("png/$name", "png/$stem.meta.json", "thumb/$stem.jpg")
+        var okAny = false
+        var err = ""
+        for (path in paths) {
+            runCatching {
+                val get = (URL("$api/$path").openConnection() as java.net.HttpURLConnection).apply {
+                    requestMethod = "GET"; connectTimeout = 6000; readTimeout = 10000
+                    setRequestProperty("Authorization", "token $token")
+                    setRequestProperty("Accept", "application/vnd.github+json")
+                    setRequestProperty("User-Agent", "LocalDream-ET")
+                }
+                if (get.responseCode != 200) return@runCatching
+                val sha = JSONObject(get.inputStream.use { it.readBytes().toString(Charsets.UTF_8) })
+                    .optString("sha", "")
+                if (sha.isBlank()) return@runCatching
+                val body = JSONObject().put("message", "delete $path").put("sha", sha)
+                    .toString().toByteArray()
+                val del = (URL("$api/$path").openConnection() as java.net.HttpURLConnection).apply {
+                    requestMethod = "DELETE"; doOutput = true
+                    connectTimeout = 8000; readTimeout = 15000
+                    setRequestProperty("Authorization", "token $token")
+                    setRequestProperty("Accept", "application/vnd.github+json")
+                    setRequestProperty("Content-Type", "application/json")
+                    setRequestProperty("User-Agent", "LocalDream-ET")
+                }
+                del.outputStream.use { it.write(body) }
+                if (del.responseCode in 200..299) okAny = true else err = "HTTP ${del.responseCode}"
+            }.onFailure { err = it.message ?: "删除失败" }
+        }
+        invalidate()
+        okAny to err
+    }
+
     /** Idempotent: androidId+imageName is the path key; existing => not charged again. */
     suspend fun recordPurchase(androidId: String, imageName: String): Boolean =
         withContext(Dispatchers.IO) {

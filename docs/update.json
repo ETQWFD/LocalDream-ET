@@ -1,10 +1,10 @@
 {
-  "versionCode": 283,
-  "versionName": "4.0.0-et.209",
-  "title": "发现新版本 v4.0.0-et.209",
-  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.209/LocalDream-ET.apk",
-  "size": 164756252,
-  "sha256": "577bb809778f609b81982558884361f8235e9d53e411c62009fd0141449aca7c",
-  "releaseNotes": "et.209（versionCode 283）图片社区改版（第一版）：\n1) 社区入口图标换成新的作品图标。\n2) 网格按作者排序分组，同一作者的作品排在一起，配合搜索按作者/作品名过滤。\n3) 保留按压回弹、错峰入场、暗色/亮色玻璃底色。\n4) 额度封顶、批量上传、匿名发言、128万兑换卡（ET128W）延续。",
-  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.209/LocalDream-ET.apk"
+  "versionCode": 284,
+  "versionName": "4.0.0-et.210",
+  "title": "发现新版本 v4.0.0-et.210",
+  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.210/LocalDream-ET.apk",
+  "size": 164769788,
+  "sha256": "782cd6260a844209e37986fdc298323af1e8f862628b26f24f7188c9c13d710d",
+  "releaseNotes": "et.210（versionCode 284）社区关注与下架：\n1) 图片社区顶部新增作者分组条：头像 + @作者 + 关注/取消关注（本地保存）。\n2) 作者本人点开自己的作品，弹窗多出“下架我的作品”：删除 png/meta/thumb 三个文件，删完立即刷新。\n3) 新建私密备份仓库 ETQWFD/LocalDreamET-Gallery-Private（private），已把现有 119 个 png 全量迁入。\n4) 社区图标、按作者排序分组、批量上传、额度封顶、匿名发言延续。",
+  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.210/LocalDream-ET.apk"
 }
