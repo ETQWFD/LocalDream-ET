@@ -585,6 +585,16 @@ private fun UploadDialog(ctx: Context, onPublished: () -> Unit = {}, onDismiss: 
     val login = remember { SecureTokenStore(ctx).state(CloudConfig.Provider.GITHUB)?.login }
 
     // 2026-11：相册支持一次选多张，逐张独立发布（后台也会分别生成条目）。
+    // 2026-11：系统照片选择器，一次最多 100 张。
+    val photoPicker = rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.PickMultipleVisualMedia(100),
+    ) { uris ->
+        if (uris.isNotEmpty()) {
+            pickedFile = null
+            pickedUris = uris.take(100)
+            pickedBitmap = io.github.xororz.localdream.utils.ImageDecode.decodeSampledUri(ctx, pickedUris.first(), 1024)
+        }
+    }
     val albumLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
         if (uris.isNotEmpty()) {
             pickedFile = null
@@ -620,7 +630,15 @@ private fun UploadDialog(ctx: Context, onPublished: () -> Unit = {}, onDismiss: 
                 )
                 Spacer(Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = { albumLauncher.launch("image/*") }, Modifier.weight(1f)) {
+                    OutlinedButton(onClick = {
+                        runCatching {
+                            photoPicker.launch(
+                                androidx.activity.result.PickVisualMediaRequest(
+                                    androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly,
+                                ),
+                            )
+                        }.onFailure { albumLauncher.launch("image/*") }
+                    }, Modifier.weight(1f)) {
                         Text("从相册选图")
                     }
                     OutlinedButton(onClick = { showPicker = !showPicker }, Modifier.weight(1f)) {

@@ -1,10 +1,10 @@
 {
-  "versionCode": 290,
-  "versionName": "4.0.0-et.216",
-  "title": "发现新版本 v4.0.0-et.216",
-  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.216/LocalDream-ET.apk",
-  "size": 164835244,
-  "sha256": "888f1340f75d261bd7770318681995f9d28b36103459a4d82bb54c687e18e85c",
-  "releaseNotes": "et.216（versionCode 290）下载与聊天媒体修复：\n1) 图片社区下载改为按采样解码（≤4096），超大图不再“图片解码失败”，下载成功后可保存。\n2) 共享聊天社区图片/视频的“复制”改为复制可访问的媒体链接，不再是 [IMAGE] 占位符。\n3) 图片/视频长按菜单的“下载”保留原图/原视频保存。\n4) 排行榜、作者分类、授权用户码复制与预填延续。",
-  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.216/LocalDream-ET.apk"
+  "versionCode": 291,
+  "versionName": "4.0.0-et.217",
+  "title": "发现新版本 v4.0.0-et.217",
+  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.217/LocalDream-ET.apk",
+  "size": 164840792,
+  "sha256": "24e770490f5f1331ef4216d2405dcb7249e2c9d66f1a2bc23c8222d1df068622",
+  "releaseNotes": "et.217（versionCode 291）聊天长按菜单与多选上传：\n1) 修复聊天消息长按不出菜单：文字气泡不再包 SelectionContainer，长按可选“复制/引用/转发/下载/分享”。\n2) 图片/视频保存：仓库取不到时直接按公开 URL 下载，再失败才提示，不再一律“文件下载失败”。\n3) 图片社区从相册选图改用系统照片选择器，一次最多 100 张，逐张独立上传。\n4) 排行榜、作者分类、授权用户码、下载采样解码延续。",
+  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.217/LocalDream-ET.apk"
 }

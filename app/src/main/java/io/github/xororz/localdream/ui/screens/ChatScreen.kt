@@ -264,7 +264,23 @@ fun ChatScreen(onBack: () -> Unit) {
         val kind = m.kind
         if (kind != ChatKind.IMAGE && kind != ChatKind.VIDEO) return
         scope.launch {
-            val bytes = withContext(Dispatchers.IO) { ChatRepository.fetchRepoFile(m.mediaUrl) }
+            var bytes = withContext(Dispatchers.IO) { ChatRepository.fetchRepoFile(m.mediaUrl.orEmpty()) }
+            // 2026-11：仓库取不到时直接按公开 URL 下载（CDN/raw 都可以）。
+            if (bytes == null) {
+                val direct = m.cdnUrl.orEmpty().ifBlank { m.mediaUrl.orEmpty() }
+                if (direct.isNotBlank()) {
+                    bytes = withContext(Dispatchers.IO) {
+                        runCatching {
+                            val c = (java.net.URL(direct).openConnection() as java.net.HttpURLConnection)
+                            c.connectTimeout = 10000; c.readTimeout = 20000
+                            if (c.responseCode in 200..299) c.inputStream.use { it.readBytes() } else null
+                        }.getOrNull()
+                    }
+                }
+            }
+            if ((bytes == null || bytes.isEmpty()) && !m.cdnUrl.isNullOrBlank()) {
+                bytes = withContext(Dispatchers.IO) { ChatRepository.fetchRepoFile(m.cdnUrl) }
+            }
             if (bytes == null || bytes.isEmpty()) {
                 Toast.makeText(ctx, "文件下载失败", Toast.LENGTH_SHORT).show()
                 return@launch
@@ -1644,6 +1660,7 @@ private fun MessageRow(
                         }
                     }
                     when (message.kind) {
+                        // 2026-11：去掉 SelectionContainer——它吞掉长按，导致复制/引用菜单弹不出来。
                         ChatKind.TEXT -> LinkText(
                             text = message.text,
                             color = if (mine) Color(0xFF111111) else MaterialTheme.colorScheme.onSurface,
@@ -1659,7 +1676,10 @@ private fun MessageRow(
                                     .widthIn(max = 220.dp)
                                     .heightIn(max = 260.dp)
                                     .clip(RoundedCornerShape(6.dp))
-                                    .clickable { onOpenMedia(urls) },
+                                    .combinedClickable(
+                                        onClick = { onOpenMedia(urls) },
+                                        onLongClick = { showMenu = true },
+                                    ),
                             )
                         }
 
@@ -1670,9 +1690,10 @@ private fun MessageRow(
                                 modifier = Modifier
                                     .width(180.dp)
                                     .height(110.dp)
-                                    .clickable {
-                                        onOpenVideo(listOfNotNull(message.mediaUrl, message.cdnUrl))
-                                    },
+                                    .combinedClickable(
+                                        onClick = { onOpenVideo(listOfNotNull(message.mediaUrl, message.cdnUrl)) },
+                                        onLongClick = { showMenu = true },
+                                    ),
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
                                     Icon(
@@ -1695,7 +1716,10 @@ private fun MessageRow(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
                                 .width(140.dp)
-                                .clickable { onPlayAudio() },
+                                .combinedClickable(
+                                    onClick = { onPlayAudio() },
+                                    onLongClick = { showMenu = true },
+                                ),
                         ) {
                             Icon(
                                 imageVector = if (playing) Icons.Default.PauseCircle else Icons.Default.PlayCircle,
