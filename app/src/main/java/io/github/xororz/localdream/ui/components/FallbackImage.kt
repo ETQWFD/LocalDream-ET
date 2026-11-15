@@ -53,10 +53,10 @@ fun FallbackImage(
         val req = remember(index, urls.firstOrNull()) {
             ImageRequest.Builder(ctx)
                 .data(urls.getOrNull(index))
-                .size(Size(360, 360))
+                .size(Size(1080, 1080))
                 // 2026-11：缩略图用 RGB_565（每像素 2 字节）解码，解码时间与内存都再降一半，
                 // 社区滑动/首屏延迟明显下降，肉眼看不出差别。
-                .bitmapConfig(Bitmap.Config.RGB_565)
+                .bitmapConfig(Bitmap.Config.ARGB_8888)
                 .crossfade(true)  // 载入时 200ms 淡入，替代硬切，滑动观感更顺
                 .build()
         }

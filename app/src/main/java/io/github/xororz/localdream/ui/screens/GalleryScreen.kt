@@ -630,7 +630,7 @@ private fun encodeForGallery(ctx: Context, uri: Uri?, file: File?): ByteArray? {
             null
         }) ?: return null
 
-        val maxEdge = 1280
+        val maxEdge = 2560
         val scale = minOf(1f, maxEdge.toFloat() / maxOf(bitmap.width, bitmap.height))
         val target = if (scale < 1f) {
             Bitmap.createScaledBitmap(
@@ -765,8 +765,22 @@ private suspend fun purchaseItem(ctx: Context, item: GalleryClient.GalleryItem):
             }
             val sw = paint.measureText(text)
             canvas.drawText(text, bmp.width - sw - bmp.width / 40.0f, bmp.height - bmp.height / 40.0f, paint)
+            // 2026-11：下载保留原始分辨率；长边不足 7680 时做一次高质量放大到 8K
+            // （RGB_565 控制内存，失败自动退回原图，绝不让下载崩掉）。
+            val hi = runCatching {
+                val longEdge = maxOf(wm.width, wm.height)
+                if (longEdge >= 7680) wm else {
+                    val k = 7680f / longEdge
+                    android.graphics.Bitmap.createScaledBitmap(
+                        wm,
+                        (wm.width * k).toInt().coerceAtLeast(1),
+                        (wm.height * k).toInt().coerceAtLeast(1),
+                        true,
+                    )
+                }
+            }.getOrNull() ?: wm
             val out = ByteArrayOutputStream()
-            wm.compress(Bitmap.CompressFormat.PNG, 95, out)
+            hi.compress(Bitmap.CompressFormat.PNG, 100, out)
             saveToGallery(ctx, "LocalDreamET_${item.name}", out.toByteArray())
             qm.consume(ctx, item.price.toLong())
             // 85% to the author, 15% to the platform; failures never block the

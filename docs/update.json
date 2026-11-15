@@ -1,10 +1,10 @@
 {
-  "versionCode": 280,
-  "versionName": "4.0.0-et.206",
-  "title": "发现新版本 v4.0.0-et.206",
-  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.206/LocalDream-ET.apk",
-  "size": 164749180,
-  "sha256": "a80d8d9a7321d2dac0fbc4f1fa2c8ff21af05929f464543b391f372bd67e691b",
-  "releaseNotes": "et.206（versionCode 280）修复 GitHub 授权无法跳回应用：\n1) 接入 Android App Links：GitHub 回跳 https://etc.tw.kg/oauth.html 时由系统直接打开应用，不再依赖浏览器对自定义 scheme 的二次确认。\n2) oauth.html 重做：自动尝试跳转 + 保留“打开 Local Dream ET”按钮（浏览器拦截时点一下即可），并显示授权失败原因。\n3) 应用同时接受 https App Link 与 localdreamet://oauth 两种回跳，取 code 换 token、建私有仓库、保存登录态。\n4) 明亮模式玻璃卡片发灰修复延续。",
-  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.206/LocalDream-ET.apk"
+  "versionCode": 281,
+  "versionName": "4.0.0-et.207",
+  "title": "发现新版本 v4.0.0-et.207",
+  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.207/LocalDream-ET.apk",
+  "size": 164749476,
+  "sha256": "1ca2d8f1478eabdb87d4be068c610b977c20b6172794fa1945c8e2820042c174",
+  "releaseNotes": "et.207（versionCode 281）图片画质修复：\n1) 图片社区预览不再发糊：解码从 360×360 RGB_565 提升到 1080×1080 ARGB_8888。\n2) 上传原图上限 1280 → 2560，社区图片本身不再被压成马赛克。\n3) 下载保存原始分辨率 + 水印，并高质量放大到长边 7680（8K）；内存不足自动退回原图，不会崩。\n4) 保留 et.206 的 GitHub 授权回跳（App Links + 手动按钮）。",
+  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.207/LocalDream-ET.apk"
 }
