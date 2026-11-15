@@ -1,10 +1,10 @@
 {
-  "versionCode": 286,
-  "versionName": "4.0.0-et.212",
-  "title": "发现新版本 v4.0.0-et.212",
-  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.212/LocalDream-ET.apk",
-  "size": 164806004,
-  "sha256": "52fd96616d26665ac5ee14658c996d49390e8ac872e29bb0a3b542a9018502f8",
-  "releaseNotes": "et.212（versionCode 286）关注作者新图提醒 + 自动私密镜像：\n1) 关注作者有新作品时发通知栏提醒：应用存活期间每 15 分钟检查一次，内容含作者和作品名；首次使用会申请通知权限。\n2) 新上传在公开库成功后，自动把 png/meta/thumb 镜像一份到私密仓库（失败不影响发布）。\n3) 作者主页、按用户名分文件夹、下架、128万兑换卡 ET128W 延续。",
-  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.212/LocalDream-ET.apk"
+  "versionCode": 287,
+  "versionName": "4.0.0-et.213",
+  "title": "发现新版本 v4.0.0-et.213",
+  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.213/LocalDream-ET.apk",
+  "size": 164811616,
+  "sha256": "e796bd161ff3f1e157b1f4da0dc4b313b0aaa47e551f4d1514fa459738c8aaa4",
+  "releaseNotes": "et.213（versionCode 287）作者分类与预览跳主页：\n1) 社区作者条可分类：点某位作者只显示他的作品，再点一次取消；“全部”恢复全部。\n2) 预览弹窗图片下方新增作者头像行，点头像/作者名直接打开作者主页，可关注。\n3) 作者主页、关注新图提醒、按用户分文件夹、私密镜像、ET128W 延续。",
+  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.213/LocalDream-ET.apk"
 }

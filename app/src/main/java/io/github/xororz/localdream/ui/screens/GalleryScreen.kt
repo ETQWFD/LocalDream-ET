@@ -181,14 +181,16 @@ fun GalleryScreen(navController: NavController) {
     }
     // et.213: search by author / image name.
     var profileAuthor by remember { mutableStateOf<String?>(null) }
+    var authorFilter by remember { mutableStateOf<String?>(null) }
     val filtered = remember(items, q) {
         if (q.isBlank()) items else items.filter {
             it.author.contains(q, true) || it.name.contains(q, true) || it.title.contains(q, true)
         }
     }
     // 2026-11：按作者分组展示，同一作者的图排在一起，作者名作为分组标识。
-    val groupedFiltered = remember(filtered) {
-        filtered.sortedWith(compareBy({ it.author.lowercase() }, { -it.ts }))
+    val groupedFiltered = remember(filtered, authorFilter) {
+        val base = authorFilter?.let { a -> filtered.filter { it.author == a } } ?: filtered
+        base.sortedWith(compareBy({ it.author.lowercase() }, { -it.ts }))
     }
 
     Scaffold(
@@ -234,10 +236,14 @@ fun GalleryScreen(navController: NavController) {
                             .padding(horizontal = 8.dp, vertical = 2.dp),
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
+                        androidx.compose.material3.AssistChip(
+                            onClick = { authorFilter = null },
+                            label = { Text(if (authorFilter == null) "全部 ✓" else "全部") },
+                        )
                         authors.forEach { a ->
                             val following = io.github.xororz.localdream.service.FollowStore.isFollowing(ctx, a)
                             androidx.compose.material3.AssistChip(
-                                onClick = { profileAuthor = a },
+                                onClick = { authorFilter = if (authorFilter == a) null else a },
                                 leadingIcon = {
                                     Box(
                                         Modifier.size(22.dp)
@@ -246,7 +252,12 @@ fun GalleryScreen(navController: NavController) {
                                         contentAlignment = Alignment.Center,
                                     ) { Text(a.take(1).uppercase(), style = MaterialTheme.typography.labelSmall) }
                                 },
-                                label = { Text("@$a${if (following) " ✓" else ""}", maxLines = 1) },
+                                label = {
+                                    Text(
+                                        "@$a" + (if (authorFilter == a) " ✓" else "") + (if (following) " ★" else ""),
+                                        maxLines = 1,
+                                    )
+                                },
                             )
                         }
                     }
@@ -493,7 +504,12 @@ fun GalleryScreen(navController: NavController) {
         )
     }
 
-    previewItem?.let { item -> PreviewDialog(ctx, item) { previewItem = null } }
+    previewItem?.let { item ->
+        PreviewDialog(
+            ctx, item,
+            onAuthorClick = { a -> previewItem = null; profileAuthor = a },
+        ) { previewItem = null }
+    }
 }
 
 /** A generated picture that can be published without leaving the app. */
@@ -782,7 +798,12 @@ private fun encodeForGallery(ctx: Context, uri: Uri?, file: File?): ByteArray? {
 }
 
 @Composable
-private fun PreviewDialog(ctx: Context, item: GalleryClient.GalleryItem, onDismiss: () -> Unit) {
+private fun PreviewDialog(
+    ctx: Context,
+    item: GalleryClient.GalleryItem,
+    onAuthorClick: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
     val scope = rememberCoroutineScope()
     var busy by remember { mutableStateOf(false) }
     var msg by remember { mutableStateOf("") }
@@ -804,7 +825,18 @@ private fun PreviewDialog(ctx: Context, item: GalleryClient.GalleryItem, onDismi
                     zoomable = true,
                 )
                 Spacer(Modifier.height(8.dp))
-                Text("作者：${item.author}", style = MaterialTheme.typography.bodyMedium)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.clickable { onAuthorClick(item.author) },
+                ) {
+                    Box(
+                        Modifier.size(28.dp).clip(androidx.compose.foundation.shape.CircleShape)
+                            .background(MaterialTheme.colorScheme.primaryContainer),
+                        contentAlignment = Alignment.Center,
+                    ) { Text(item.author.take(1).uppercase(), style = MaterialTheme.typography.labelSmall) }
+                    Spacer(Modifier.width(6.dp))
+                    Text("作者：${item.author}（查看主页）", style = MaterialTheme.typography.bodyMedium)
+                }
                 Text("售价：${item.price} 额度（剩余 $remaining）", style = MaterialTheme.typography.bodySmall)
                 Text(
                     "购买后 ${100 - 15}% 额度归作者 @${item.author}，平台抽取 15%",
