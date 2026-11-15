@@ -31,6 +31,28 @@ object GithubDeviceAuth {
         data class Failure(val error: String) : Poll()
     }
 
+    /**
+     * Web OAuth 回跳换 token。注意：client_secret 会随 APK 分发，属于公开信息，
+     * 任何拿到 APK 的人都能反编译取出；仅适用于自有客户端的场景。
+     */
+    fun exchangeCode(clientId: String, clientSecret: String, code: String, redirectUri: String): String {
+        val json = org.json.JSONObject(
+            post(
+                "https://github.com/login/oauth/access_token",
+                mapOf(
+                    "client_id" to clientId,
+                    "client_secret" to clientSecret,
+                    "code" to code,
+                    "redirect_uri" to redirectUri,
+                ),
+            ),
+        )
+        return json.optString("access_token").takeIf { it.isNotBlank() }
+            ?: throw IllegalException(json.optString("error_description", "no access_token"))
+    }
+
+    private class IllegalException(msg: String) : Exception(msg)
+
     private fun post(url: String, form: Map<String, String>): String {
         val body = form.entries.joinToString("&") { (k, v) ->
             URLEncoder.encode(k, "UTF-8") + "=" + URLEncoder.encode(v, "UTF-8")

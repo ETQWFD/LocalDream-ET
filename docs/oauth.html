@@ -1,0 +1,16 @@
+<!doctype html><html lang="zh"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Local Dream ET · GitHub 授权</title>
+<style>body{font-family:-apple-system,Segoe UI,sans-serif;background:#0b1220;color:#e8eefc;padding:32px;line-height:1.6}
+a{color:#8ab4ff;word-break:break-all}</style></head><body>
+<h3>正在返回 Local Dream ET…</h3>
+<p>如果没有自动跳回，请点下面的链接：</p>
+<p><a id="l" href="#">打开应用</a></p>
+<script>
+var q = location.search || "";
+var m = q.match(/code=([^&]+)/);
+var link = "localdreamet://oauth" + (m ? ("?code=" + m[1]) : "");
+document.getElementById("l").href = link;
+if (m) location.href = link;
+</script>
+</body></html>

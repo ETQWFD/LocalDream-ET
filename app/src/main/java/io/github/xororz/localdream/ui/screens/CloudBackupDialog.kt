@@ -321,6 +321,24 @@ fun CloudBackupDialog(onDismiss: () -> Unit) {
                                 }
                             },
                         ) { Text(if (oauthBusy) "等待浏览器授权…" else "使用 GitHub 网页授权登录") }
+                        OutlinedButton(
+                            enabled = !oauthBusy,
+                            onClick = {
+                                val url = "https://github.com/login/oauth/authorize" +
+                                    "?client_id=Ov23ligVcx2ZUAG3lNAA" +
+                                    "&redirect_uri=" + java.net.URLEncoder.encode(
+                                        "https://etqwfd.github.io/LocalDream-ET/oauth.html", "UTF-8",
+                                    ) +
+                                    "&scope=" + java.net.URLEncoder.encode("repo read:user", "UTF-8")
+                                runCatching {
+                                    context.startActivity(
+                                        Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                                    )
+                                }
+                                oauthHint = "授权完成后会自动跳回本应用（若没跳回，请检查 OAuth App 的回调地址是否填了 https://etqwfd.github.io/LocalDream-ET/oauth.html）"
+                            },
+                        ) { Text("网页授权并自动回跳") }
                         oauthHint?.let {
                             Text(it, style = androidx.compose.material3.MaterialTheme.typography.bodySmall)
                         }

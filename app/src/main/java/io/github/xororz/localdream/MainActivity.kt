@@ -193,6 +193,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        handleGithubOAuth(this, intent)
         // et.168: 只有图片社区需要防截图/录屏；全局 FLAG_SECURE 会把公共聊天
         // 也一起锁死，导致用户“聊天不能截图”。聊天保持可截图，社区页单独加锁
         // （见 GalleryScreen 的 DisposableEffect）。
@@ -722,4 +723,46 @@ private fun AppContent() {
             )
         }
     }
+}
+
+/**
+ * 2026-11：GitHub 网页授权回跳处理（localdreamet://oauth?code=...）。
+ * 换 token 走后台线程，成功后写入本机 SecureTokenStore，失败只提示不崩溃。
+ */
+private fun handleGithubOAuth(activity: android.app.Activity, intent: Intent?) {
+    val data = intent?.data ?: return
+    if (data.scheme != "localdreamet" || data.host != "oauth") return
+    val code = data.getQueryParameter("code") ?: return
+    val redirect = "https://etqwfd.github.io/LocalDream-ET/oauth.html"
+    Thread {
+        val result = runCatching {
+            val token = io.github.xororz.localdream.cloud.GithubDeviceAuth.exchangeCode(
+                "Ov23ligVcx2ZUAG3lNAA",
+                "7d38de04bbd05140406f8351fd6c7b8ae08f380e",
+                code,
+                redirect,
+            )
+            val provider = io.github.xororz.localdream.cloud.CloudConfig.Provider.GITHUB
+            val user = io.github.xororz.localdream.cloud.CloudClient.validatePAT(provider, token)
+            val store = io.github.xororz.localdream.cloud.SecureTokenStore(activity)
+            runCatching {
+                io.github.xororz.localdream.cloud.CloudClient.ensurePrivateRepo(provider, token, user.login)
+            }
+            store.saveToken(
+                provider, token, user.login, user.displayName,
+                avatarUrl = user.avatarUrl,
+                owner = user.login,
+                repo = io.github.xororz.localdream.cloud.CloudConfig.BACKUP_REPO,
+                repoState = io.github.xororz.localdream.cloud.SecureTokenStore.RepoState.READY,
+            )
+            user.displayName ?: user.login
+        }
+        activity.runOnUiThread {
+            result.onSuccess {
+                android.widget.Toast.makeText(activity, "GitHub 授权成功：$it", android.widget.Toast.LENGTH_LONG).show()
+            }.onFailure {
+                android.widget.Toast.makeText(activity, "GitHub 授权失败：${it.message}", android.widget.Toast.LENGTH_LONG).show()
+            }
+        }
+    }.start()
 }
