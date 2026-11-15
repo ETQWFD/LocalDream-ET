@@ -1,10 +1,10 @@
 {
-  "versionCode": 292,
-  "versionName": "4.0.0-et.218",
-  "title": "发现新版本 v4.0.0-et.218",
-  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.218/LocalDream-ET.apk",
-  "size": 164870772,
-  "sha256": "b65d9b15b7fac6c1a1b76450323bfb6e8dc45c9dd662ca05531f62de09614b56",
-  "releaseNotes": "et.218（versionCode 292）指定用户发送额度：\n1) 图片社区右上角新增“发额度”按钮（排行榜左边）。\n2) 弹窗选择/搜索收款用户、输入额度；确认后必须验证锁屏密码，通过才发送。\n3) 额度写入 transfers/{收方}/ 专属目录，只有该用户登录后能认领到账并标记 claimed，其他人看不到、点了也拿不到。\n4) 发送方先扣额度，写入失败自动退回；收到转账时弹出“收到转账额度 +N”。",
-  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.218/LocalDream-ET.apk"
+  "versionCode": 293,
+  "versionName": "4.0.0-et.219",
+  "title": "发现新版本 v4.0.0-et.219",
+  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.219/LocalDream-ET.apk",
+  "size": 164937604,
+  "sha256": "994ec9c06a472a8523779cb04a8a608f4056a6ffb91e6ab61ebcc0ef9dab3ca2",
+  "releaseNotes": "et.219（versionCode 293）悬赏功能：\n1) 图片社区新增“悬赏”按钮：填写目的和额度，发布时先托管扣除。\n2) 任何登录用户可提交图片/压缩包（≤20MB），提交物用发布者 RSA 公钥 + AES-GCM 混合加密，仓库里只有密文。\n3) 只有发布者设备持有私钥，可解密预览并保存到下载目录；其他人打开只会失败。\n4) 发布者验收后点“支付悬赏”，额度转入提交者账户，完成交易。",
+  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.219/LocalDream-ET.apk"
 }

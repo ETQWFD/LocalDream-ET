@@ -20,6 +20,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CardGiftcard
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.ArrowBack
@@ -185,6 +186,63 @@ fun GalleryScreen(navController: NavController) {
     var profileAuthor by remember { mutableStateOf<String?>(null) }
     var showRank by remember { mutableStateOf(false) }
     var showSend by remember { mutableStateOf(false) }
+    var showBounty by remember { mutableStateOf(false) }
+    var bountyTitle by remember { mutableStateOf("") }
+    var bountyAmount by remember { mutableStateOf("") }
+    var bountyItems by remember { mutableStateOf<List<org.json.JSONObject>>(emptyList()) }
+    var bountyBusy by remember { mutableStateOf(false) }
+    var pendingBounty by remember { mutableStateOf<org.json.JSONObject?>(null) }
+    var bountySubs by remember { mutableStateOf<List<org.json.JSONObject>>(emptyList()) }
+    var subsFor by remember { mutableStateOf<org.json.JSONObject?>(null) }
+    val bountyFilePicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.GetContent(),
+    ) { uri ->
+        val b = pendingBounty
+        if (uri != null && b != null) {
+            val login = io.github.xororz.localdream.cloud.SecureTokenStore(ctx)
+                .state(io.github.xororz.localdream.cloud.CloudConfig.Provider.GITHUB)?.login
+            if (login.isNullOrBlank()) {
+                android.widget.Toast.makeText(ctx, "请先登录 GitHub", android.widget.Toast.LENGTH_LONG).show()
+            } else {
+                scope.launch {
+                    bountyBusy = true
+                    val bytes = withContext(Dispatchers.IO) {
+                        runCatching { ctx.contentResolver.openInputStream(uri)?.use { it.readBytes() } }.getOrNull()
+                    }
+                    val name = withContext(Dispatchers.IO) {
+                        runCatching {
+                            ctx.contentResolver.query(uri, null, null, null, null)?.use { c ->
+                                if (c.moveToFirst()) c.getString(c.getColumnIndexOrThrow(android.provider.OpenableColumns.DISPLAY_NAME)) else null
+                            }
+                        }.getOrNull() ?: "submission.bin"
+                    }
+                    if (bytes == null || bytes.size > 20 * 1024 * 1024) {
+                        bountyBusy = false
+                        android.widget.Toast.makeText(ctx, "文件读取失败或超过 20MB", android.widget.Toast.LENGTH_LONG).show()
+                    } else {
+                        val (ok, err) = withContext(Dispatchers.IO) {
+                            io.github.xororz.localdream.service.BountyClient.submit(b, login, name, bytes)
+                        }
+                        bountyBusy = false
+                        android.widget.Toast.makeText(
+                            ctx, if (ok) "已加密提交，只有发布者能打开" else "提交失败：$err",
+                            android.widget.Toast.LENGTH_LONG,
+                        ).show()
+                    }
+                    pendingBounty = null
+                }
+            }
+        } else pendingBounty = null
+    }
+    fun refreshBounty() {
+        scope.launch {
+            bountyBusy = true
+            bountyItems = withContext(Dispatchers.IO) {
+                runCatching { io.github.xororz.localdream.service.BountyClient.list() }.getOrDefault(emptyList())
+            }
+            bountyBusy = false
+        }
+    }
     var sendTo by remember { mutableStateOf("") }
     var sendAmount by remember { mutableStateOf("") }
     var pendingSend by remember { mutableStateOf<Pair<String, Long>?>(null) }
@@ -249,6 +307,9 @@ fun GalleryScreen(navController: NavController) {
                     }
                 },
                 actions = {
+                    IconButton(onClick = { showBounty = true; refreshBounty() }) {
+                        Icon(Icons.Default.CardGiftcard, contentDescription = "悬赏")
+                    }
                     IconButton(onClick = { showSend = true }) {
                         Icon(Icons.Default.Send, contentDescription = "发额度")
                     }
@@ -479,6 +540,139 @@ fun GalleryScreen(navController: NavController) {
                 }
             },
             dismissButton = { TextButton(onClick = { profileAuthor = null }) { Text("关闭") } },
+        )
+    }
+    if (showBounty) {
+        val login = io.github.xororz.localdream.cloud.SecureTokenStore(ctx)
+            .state(io.github.xororz.localdream.cloud.CloudConfig.Provider.GITHUB)?.login.orEmpty()
+        AlertDialog(
+            onDismissRequest = { showBounty = false },
+            title = { Text("悬赏") },
+            text = {
+                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                    OutlinedTextField(
+                        value = bountyTitle, onValueChange = { bountyTitle = it },
+                        label = { Text("悬赏目的") }, modifier = Modifier.fillMaxWidth(),
+                    )
+                    OutlinedTextField(
+                        value = bountyAmount, onValueChange = { bountyAmount = it.filter { c -> c.isDigit() } },
+                        label = { Text("悬赏额度（发布时先托管扣除）") }, singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Button(
+                        onClick = {
+                            if (login.isBlank()) {
+                                android.widget.Toast.makeText(ctx, "请先登录 GitHub", android.widget.Toast.LENGTH_SHORT).show()
+                            } else {
+                                scope.launch {
+                                    bountyBusy = true
+                                    val (ok, err) = withContext(Dispatchers.IO) {
+                                        io.github.xororz.localdream.service.BountyClient.create(
+                                            ctx, login, bountyTitle.trim(), bountyAmount.toLongOrNull() ?: 0L,
+                                        )
+                                    }
+                                    bountyBusy = false
+                                    android.widget.Toast.makeText(
+                                        ctx, if (ok) "悬赏已发布，额度已托管" else "发布失败：$err", android.widget.Toast.LENGTH_LONG,
+                                    ).show()
+                                    if (ok) { bountyTitle = ""; bountyAmount = ""; refreshBounty() }
+                                }
+                            }
+                        },
+                        enabled = !bountyBusy,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { Text("发布悬赏") }
+                    HorizontalDivider(Modifier.padding(vertical = 8.dp))
+                    Text("进行中的悬赏", style = MaterialTheme.typography.titleSmall)
+                    bountyItems.forEach { b ->
+                        val creator = b.optString("creator")
+                        Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+                            Text("@$creator · ${b.optString("amount")} 额度", style = MaterialTheme.typography.labelSmall)
+                            Text(b.optString("title"), style = MaterialTheme.typography.bodyMedium)
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                TextButton(onClick = {
+                                    if (login.isBlank()) {
+                                        android.widget.Toast.makeText(ctx, "请先登录 GitHub", android.widget.Toast.LENGTH_SHORT).show()
+                                    } else { pendingBounty = b; bountyFilePicker.launch("*/*") }
+                                }) { Text("提交成果") }
+                                if (creator == login) {
+                                    TextButton(onClick = {
+                                        scope.launch {
+                                            bountyBusy = true
+                                            bountySubs = withContext(Dispatchers.IO) {
+                                                runCatching { io.github.xororz.localdream.service.BountyClient.listSubs(b) }.getOrDefault(emptyList())
+                                            }
+                                            bountyBusy = false
+                                            subsFor = b
+                                        }
+                                    }) { Text("查看提交") }
+                                }
+                            }
+                        }
+                        HorizontalDivider()
+                    }
+                    if (bountyBusy) LinearProgressIndicator(Modifier.fillMaxWidth())
+                }
+            },
+            confirmButton = { TextButton(onClick = { showBounty = false }) { Text("关闭") } },
+        )
+    }
+    if (subsFor != null) {
+        val b = subsFor!!
+        val login = io.github.xororz.localdream.cloud.SecureTokenStore(ctx)
+            .state(io.github.xororz.localdream.cloud.CloudConfig.Provider.GITHUB)?.login.orEmpty()
+        AlertDialog(
+            onDismissRequest = { subsFor = null },
+            title = { Text("提交成果") },
+            text = {
+                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                    if (bountySubs.isEmpty()) Text("还没有人提交")
+                    bountySubs.forEach { sub ->
+                        Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+                            Text("@${sub.optString("submitter")} · ${sub.optString("name")}", style = MaterialTheme.typography.bodySmall)
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                TextButton(onClick = {
+                                    scope.launch {
+                                        val bytes = withContext(Dispatchers.IO) {
+                                            runCatching { io.github.xororz.localdream.service.BountyClient.decrypt(ctx, sub) }.getOrNull()
+                                        }
+                                        if (bytes == null) {
+                                            android.widget.Toast.makeText(ctx, "解密失败：只有发布者设备能打开", android.widget.Toast.LENGTH_LONG).show()
+                                        } else {
+                                            withContext(Dispatchers.IO) {
+                                                val name = sub.optString("name").ifBlank { "bounty_${System.currentTimeMillis()}" }
+                                                val values = android.content.ContentValues().apply {
+                                                    put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, name)
+                                                    put(android.provider.MediaStore.MediaColumns.MIME_TYPE, "application/octet-stream")
+                                                    put(android.provider.MediaStore.MediaColumns.RELATIVE_PATH, android.os.Environment.DIRECTORY_DOWNLOADS)
+                                                }
+                                                val uri = ctx.contentResolver.insert(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+                                                uri?.let { ctx.contentResolver.openOutputStream(it)?.use { o -> o.write(bytes) } }
+                                            }
+                                            android.widget.Toast.makeText(ctx, "已解密并保存到下载目录", android.widget.Toast.LENGTH_LONG).show()
+                                        }
+                                    }
+                                }) { Text("打开/保存") }
+                                TextButton(onClick = {
+                                    scope.launch {
+                                        val amount = b.optLong("amount")
+                                        val to = sub.optString("submitter")
+                                        val ok = withContext(Dispatchers.IO) {
+                                            io.github.xororz.localdream.service.BountyClient.pay(login, to, amount)
+                                        }
+                                        android.widget.Toast.makeText(
+                                            ctx, if (ok) "已把 $amount 额度付给 @$to，悬赏完成" else "支付失败",
+                                            android.widget.Toast.LENGTH_LONG,
+                                        ).show()
+                                    }
+                                }) { Text("支付悬赏") }
+                            }
+                            HorizontalDivider()
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { subsFor = null }) { Text("关闭") } },
         )
     }
     if (showSend) {
