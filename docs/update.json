@@ -1,10 +1,10 @@
 {
-  "versionCode": 284,
-  "versionName": "4.0.0-et.210",
-  "title": "发现新版本 v4.0.0-et.210",
-  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.210/LocalDream-ET.apk",
-  "size": 164769788,
-  "sha256": "782cd6260a844209e37986fdc298323af1e8f862628b26f24f7188c9c13d710d",
-  "releaseNotes": "et.210（versionCode 284）社区关注与下架：\n1) 图片社区顶部新增作者分组条：头像 + @作者 + 关注/取消关注（本地保存）。\n2) 作者本人点开自己的作品，弹窗多出“下架我的作品”：删除 png/meta/thumb 三个文件，删完立即刷新。\n3) 新建私密备份仓库 ETQWFD/LocalDreamET-Gallery-Private（private），已把现有 119 个 png 全量迁入。\n4) 社区图标、按作者排序分组、批量上传、额度封顶、匿名发言延续。",
-  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.210/LocalDream-ET.apk"
+  "versionCode": 285,
+  "versionName": "4.0.0-et.211",
+  "title": "发现新版本 v4.0.0-et.211",
+  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.211/LocalDream-ET.apk",
+  "size": 164797956,
+  "sha256": "ef6ea45b91454713aafa0342d22808dd212d74d4485f233eea064a2a4e7bcb38",
+  "releaseNotes": "et.211（versionCode 285）作者主页 + 按用户分文件夹：\n1) 新上传图片按 用户名/pic_*.png 分文件夹存放，meta 与 thumb 同目录；旧平铺图片自动兼容读取，不会消失。\n2) 点作者头像打开作者主页：头像、昵称、简介；本人可编辑并保存，资料与共享聊天社区共用 profiles/<login>.json，两边同步。\n3) 主页里可直接关注/取消关注。\n4) 作者下架、私密备份仓库、128万兑换卡 ET128W 延续。",
+  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.211/LocalDream-ET.apk"
 }

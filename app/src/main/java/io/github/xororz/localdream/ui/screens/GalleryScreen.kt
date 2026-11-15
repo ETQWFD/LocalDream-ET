@@ -180,6 +180,7 @@ fun GalleryScreen(navController: NavController) {
         )
     }
     // et.213: search by author / image name.
+    var profileAuthor by remember { mutableStateOf<String?>(null) }
     val filtered = remember(items, q) {
         if (q.isBlank()) items else items.filter {
             it.author.contains(q, true) || it.name.contains(q, true) || it.title.contains(q, true)
@@ -236,9 +237,7 @@ fun GalleryScreen(navController: NavController) {
                         authors.forEach { a ->
                             val following = io.github.xororz.localdream.service.FollowStore.isFollowing(ctx, a)
                             androidx.compose.material3.AssistChip(
-                                onClick = {
-                                    io.github.xororz.localdream.service.FollowStore.toggle(ctx, a)
-                                },
+                                onClick = { profileAuthor = a },
                                 leadingIcon = {
                                     Box(
                                         Modifier.size(22.dp)
@@ -333,6 +332,92 @@ fun GalleryScreen(navController: NavController) {
         }
     }
 
+    // 2026-11：作者主页（与共享聊天社区完全同步：同一份 profiles/<login>.json）。
+    profileAuthor?.let { author ->
+        val profile = remember(author) { mutableStateOf<io.github.xororz.localdream.chat.ChatProfile?>(null) }
+        var nick by remember(author) { mutableStateOf("") }
+        var bio by remember(author) { mutableStateOf("") }
+        var avatar by remember(author) { mutableStateOf("") }
+        var saving by remember { mutableStateOf(false) }
+        var pmsg by remember { mutableStateOf("") }
+        androidx.compose.runtime.LaunchedEffect(author) {
+            val p = withContext(Dispatchers.IO) {
+                runCatching { io.github.xororz.localdream.chat.ChatProfileRepo.load(author) }.getOrNull()
+            }
+            p?.let {
+                profile.value = it
+                nick = it.nickname
+                bio = it.bio
+                avatar = it.avatar
+            }
+        }
+        val myLogin = io.github.xororz.localdream.cloud.SecureTokenStore(ctx)
+            .state(io.github.xororz.localdream.cloud.CloudConfig.Provider.GITHUB)?.login
+        val following = io.github.xororz.localdream.service.FollowStore.isFollowing(ctx, author)
+        AlertDialog(
+            onDismissRequest = { profileAuthor = null },
+            title = { Text("作者主页") },
+            text = {
+                Column(Modifier.fillMaxWidth()) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        val av = avatar.ifBlank { profile.value?.avatar ?: "" }
+                        if (av.isNotBlank()) {
+                            AsyncImage(
+                                model = av, contentDescription = null,
+                                modifier = Modifier.size(52.dp).clip(androidx.compose.foundation.shape.CircleShape),
+                                contentScale = ContentScale.Crop,
+                            )
+                        } else {
+                            Box(
+                                Modifier.size(52.dp).clip(androidx.compose.foundation.shape.CircleShape)
+                                    .background(MaterialTheme.colorScheme.primaryContainer),
+                                contentAlignment = Alignment.Center,
+                            ) { Text(author.take(1).uppercase()) }
+                        }
+                        Column(Modifier.padding(start = 10.dp)) {
+                            Text(profile.value?.displayName ?: author, style = MaterialTheme.typography.titleSmall)
+                            Text("@$author", style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
+                    if (myLogin == author) {
+                        OutlinedTextField(value = nick, onValueChange = { nick = it }, label = { Text("昵称") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                        OutlinedTextField(value = bio, onValueChange = { bio = it }, label = { Text("简介") }, modifier = Modifier.fillMaxWidth())
+                        OutlinedTextField(value = avatar, onValueChange = { avatar = it }, label = { Text("头像图片 URL") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                        Text("此主页同时用于共享聊天社区，保存后两边同步。", style = MaterialTheme.typography.labelSmall)
+                        if (pmsg.isNotBlank()) Text(pmsg, color = MaterialTheme.colorScheme.error)
+                    } else {
+                        Text(profile.value?.bio?.ifBlank { "这个人很懒，还没有写简介" } ?: "加载中…", style = MaterialTheme.typography.bodySmall)
+                        Text("本机已关注" .takeIf { following } ?: "", style = MaterialTheme.typography.labelSmall)
+                    }
+                }
+            },
+            confirmButton = {
+                Row {
+                    TextButton(onClick = {
+                        io.github.xororz.localdream.service.FollowStore.toggle(ctx, author); profileAuthor = null
+                    }) { Text(if (following) "取消关注" else "关注") }
+                    if (myLogin == author) {
+                        TextButton(enabled = !saving, onClick = {
+                            saving = true; pmsg = ""
+                            scope.launch {
+                                val res = withContext(Dispatchers.IO) {
+                                    io.github.xororz.localdream.chat.ChatProfileRepo.save(
+                                        ctx,
+                                        io.github.xororz.localdream.chat.ChatProfile(
+                                            login = author, nickname = nick, bio = bio, avatar = avatar,
+                                        ),
+                                    )
+                                }
+                                saving = false
+                                res.onSuccess { pmsg = "已保存，聊天社区同步生效" }.onFailure { pmsg = "保存失败：${it.message}" }
+                            }
+                        }) { Text(if (saving) "保存中…" else "保存") }
+                    }
+                }
+            },
+            dismissButton = { TextButton(onClick = { profileAuthor = null }) { Text("关闭") } },
+        )
+    }
     if (showWarn) {
         AlertDialog(
             onDismissRequest = { },
@@ -845,7 +930,7 @@ private suspend fun purchaseItem(ctx: Context, item: GalleryClient.GalleryItem):
             }.getOrNull() ?: wm
             val out = ByteArrayOutputStream()
             hi.compress(Bitmap.CompressFormat.PNG, 100, out)
-            saveToGallery(ctx, "LocalDreamET_${item.name}", out.toByteArray())
+            saveToGallery(ctx, "LocalDreamET_${item.name.replace('/', '_')}", out.toByteArray())
             qm.consume(ctx, item.price.toLong())
             // 85% to the author, 15% to the platform; failures never block the
             // buyer from getting the picture they paid for.

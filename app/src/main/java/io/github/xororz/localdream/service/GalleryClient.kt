@@ -206,7 +206,7 @@ object GalleryClient {
             val arr = JSONObject(text).optJSONArray("files") ?: return emptyList()
             (0 until arr.length()).mapNotNull {
                 val name = arr.getJSONObject(it).optString("name", "")
-                if (name.startsWith("/png/") && name.endsWith(".png")) name.substringAfterLast("/") else null
+                if (name.startsWith("/png/") && name.endsWith(".png")) name.removePrefix("/png/") else null
             }
         } catch (_: Exception) { emptyList() }
     }
@@ -226,7 +226,7 @@ object GalleryClient {
             val tree = JSONObject(text).optJSONArray("tree") ?: return emptyList()
             (0 until tree.length()).mapNotNull { i ->
                 val path = tree.getJSONObject(i).optString("path", "")
-                if (path.startsWith("png/") && path.endsWith(".png")) path.substringAfterLast('/') else null
+                if (path.startsWith("png/") && path.endsWith(".png")) path.removePrefix("png/") else null
             }
         } catch (_: Exception) { emptyList() }
     }
@@ -366,11 +366,13 @@ object GalleryClient {
     ): UploadResult = withContext(Dispatchers.IO) {
         try {
             val id = "${System.currentTimeMillis()}_${(1000..9999).random()}"
+            // 2026-11：每个作者一个文件夹，图片/ meta / thumb 同路径分层存放。
+            val dir = author.filter { it.isLetterOrDigit() || it in "._-" }.ifBlank { "anonymous" }
             val imgBody = JSONObject()
                 .put("message", "upload $id")
                 .put("content", Base64.getEncoder().encodeToString(pngBytes))
                 .toString().toByteArray()
-            val (c1, t1) = putWithProgress("$API/png/pic_$id.png", imgBody, token, onProgress)
+            val (c1, t1) = putWithProgress("$API/png/$dir/pic_$id.png", imgBody, token, onProgress)
             if (c1 == -1 && t1 == "已取消上传") return@withContext UploadResult(false, "已取消上传")
             if (c1 !in 200..201) {
                 io.github.xororz.localdream.cloud.LogHub.log(
@@ -390,7 +392,7 @@ object GalleryClient {
             val metaBody = JSONObject().put("message", "meta $id")
                 .put("content", Base64.getEncoder().encodeToString(meta.toString().toByteArray()))
                 .toString().toByteArray()
-            val (c2, t2) = putWithProgress("$API/png/pic_$id.meta.json", metaBody, token, null)
+            val (c2, t2) = putWithProgress("$API/png/$dir/pic_$id.meta.json", metaBody, token, null)
             // Small preview so the community grid does not download 1-2 MB PNGs.
             runCatching {
                 val jpeg = makeThumb(pngBytes)
@@ -398,18 +400,18 @@ object GalleryClient {
                     val thumbBody = JSONObject().put("message", "thumb $id")
                         .put("content", Base64.getEncoder().encodeToString(jpeg))
                         .toString().toByteArray()
-                    putWithProgress("$API/thumb/pic_$id.jpg", thumbBody, token, null)
-                    MirrorPurge.jsdelivr("LocalDreamET-Gallery", "thumb/pic_$id.jpg")
+                    putWithProgress("$API/thumb/$dir/pic_$id.jpg", thumbBody, token, null)
+                    MirrorPurge.jsdelivr("LocalDreamET-Gallery", "thumb/$dir/pic_$id.jpg")
                 }
             }
-            MirrorPurge.jsdelivr("LocalDreamET-Gallery", "png/pic_$id.png")
-            MirrorPurge.jsdelivr("LocalDreamET-Gallery", "png/pic_$id.meta.json")
+            MirrorPurge.jsdelivr("LocalDreamET-Gallery", "png/$dir/pic_$id.png")
+            MirrorPurge.jsdelivr("LocalDreamET-Gallery", "png/$dir/pic_$id.meta.json")
             // Read the file back so "发布成功" can never be a lie: if the commit
             // did not land (409 race, revoked token) we report it immediately.
             val verified = runCatching {
                 var ok = false
                 repeat(3) { attempt ->
-                    val (vc, vt) = http("$API/png/pic_$id.png", "GET")
+                    val (vc, vt) = http("$API/png/$dir/pic_$id.png", "GET")
                     if (vc == 200 && vt.contains("\"size\"")) { ok = true; return@repeat }
                     if (attempt < 2) Thread.sleep(1200)
                 }
@@ -421,7 +423,7 @@ object GalleryClient {
             }
             io.github.xororz.localdream.cloud.LogHub.log(
                 io.github.xororz.localdream.cloud.LogHub.Category.UPLOAD,
-                "gallery upload ok pic_$id.png (${pngBytes.size} bytes, verified=$verified)",
+                "gallery upload ok $dir/pic_$id.png (${pngBytes.size} bytes, verified=$verified)",
             )
             UploadResult(true, if (verified) "" else "已上传，仓库索引稍有延迟，请下拉刷新")
         } catch (e: Exception) {
