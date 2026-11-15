@@ -20,6 +20,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Favorite
@@ -181,6 +182,7 @@ fun GalleryScreen(navController: NavController) {
     }
     // et.213: search by author / image name.
     var profileAuthor by remember { mutableStateOf<String?>(null) }
+    var showRank by remember { mutableStateOf(false) }
     var authorFilter by remember { mutableStateOf<String?>(null) }
     val filtered = remember(items, q) {
         if (q.isBlank()) items else items.filter {
@@ -203,6 +205,9 @@ fun GalleryScreen(navController: NavController) {
                     }
                 },
                 actions = {
+                    IconButton(onClick = { showRank = true }) {
+                        Icon(Icons.Default.Star, contentDescription = "本月下载榜")
+                    }
                     IconButton(onClick = { showFav = true }) {
                         Icon(Icons.Default.Favorite, contentDescription = "收藏")
                     }
@@ -427,6 +432,44 @@ fun GalleryScreen(navController: NavController) {
                 }
             },
             dismissButton = { TextButton(onClick = { profileAuthor = null }) { Text("关闭") } },
+        )
+    }
+    if (showRank) {
+        var rows by remember { mutableStateOf<List<Pair<String, Int>>?>(null) }
+        androidx.compose.runtime.LaunchedEffect(Unit) {
+            rows = withContext(Dispatchers.IO) { runCatching { GalleryClient.monthlyRanking() }.getOrDefault(emptyList()) }
+        }
+        AlertDialog(
+            onDismissRequest = { showRank = false },
+            title = { Text("本月下载榜 · 前 18 名") },
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState())) {
+                    val list = rows
+                    if (list == null) {
+                        Text("加载中…", style = MaterialTheme.typography.bodySmall)
+                    } else if (list.isEmpty()) {
+                        Text("本月还没有下载记录", style = MaterialTheme.typography.bodySmall)
+                    } else {
+                        list.take(18).forEachIndexed { i, (author, count) ->
+                            val medal = when (i) {
+                                0 -> "🥇"; 1 -> "🥈"; 2 -> "🥉"; else -> "${i + 1}."
+                            }
+                            androidx.compose.foundation.layout.Row(
+                                modifier = Modifier.fillMaxWidth()
+                                    .clickable { showRank = false; profileAuthor = author }
+                                    .padding(vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(medal, modifier = Modifier.width(38.dp))
+                                Text("@$author", modifier = Modifier.weight(1f), maxLines = 1)
+                                Text("$count 次", style = MaterialTheme.typography.labelSmall)
+                            }
+                            androidx.compose.material3.HorizontalDivider()
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { showRank = false }) { Text("关闭") } },
         )
     }
     if (showWarn) {
@@ -964,6 +1007,7 @@ private suspend fun purchaseItem(ctx: Context, item: GalleryClient.GalleryItem):
             hi.compress(Bitmap.CompressFormat.PNG, 100, out)
             saveToGallery(ctx, "LocalDreamET_${item.name.replace('/', '_')}", out.toByteArray())
             qm.consume(ctx, item.price.toLong())
+            runCatching { GalleryClient.bumpDownload(item.author) }
             // 85% to the author, 15% to the platform; failures never block the
             // buyer from getting the picture they paid for.
             runCatching {

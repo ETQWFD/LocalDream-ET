@@ -439,6 +439,91 @@ object GalleryClient {
         }
     }
 
+    /** 2026-11：本月下载榜——每次下载给作者计数 +1（stats/{作者}.json）。 */
+    suspend fun bumpDownload(author: String): Unit = withContext(Dispatchers.IO) {
+        runCatching {
+            val safe = author.filter { it.isLetterOrDigit() || it in "._-" }.ifBlank { "anonymous" }
+            val api = "$API/stats/$safe.json"
+            val token = BuildConfig.GALLERY_TOKEN
+            if (token.isBlank()) return@runCatching
+            val month = java.text.SimpleDateFormat("yyyy-MM", java.util.Locale.US).format(java.util.Date())
+            val c = (URL(api).openConnection() as java.net.HttpURLConnection).apply {
+                requestMethod = "GET"; connectTimeout = 6000; readTimeout = 10000
+                setRequestProperty("Authorization", "token $token")
+                setRequestProperty("Accept", "application/vnd.github+json")
+                setRequestProperty("User-Agent", "LocalDream-ET")
+            }
+            var sha = ""
+            var count = 1
+            var total = 1
+            if (c.responseCode == 200) {
+                runCatching {
+                    val root = JSONObject(c.inputStream.use { it.readBytes().toString(Charsets.UTF_8) })
+                    sha = root.optString("sha", "")
+                    val b64 = root.optString("content", "").replace("\n", "")
+                    val old = JSONObject(String(Base64.getDecoder().decode(b64), Charsets.UTF_8))
+                    count = if (old.optString("month", "") == month) old.optInt("count", 0) + 1 else 1
+                    total = old.optInt("total", 0) + 1
+                }
+            }
+            val body = JSONObject().put("month", month).put("count", count).put("total", total)
+            val payload = JSONObject().put("message", "stats $safe $month")
+                .put("content", Base64.getEncoder().encodeToString(body.toString().toByteArray()))
+            if (sha.isNotBlank()) payload.put("sha", sha)
+            val put = (URL(api).openConnection() as java.net.HttpURLConnection).apply {
+                requestMethod = "PUT"; doOutput = true
+                connectTimeout = 8000; readTimeout = 15000
+                setRequestProperty("Authorization", "token $token")
+                setRequestProperty("Accept", "application/vnd.github+json")
+                setRequestProperty("Content-Type", "application/json")
+                setRequestProperty("User-Agent", "LocalDream-ET")
+            }
+            put.outputStream.use { it.write(payload.toString().toByteArray()) }
+        }
+        Unit
+    }
+
+    /** 本月下载榜：作者 -> 次数，按次数倒序。 */
+    suspend fun monthlyRanking(): List<Pair<String, Int>> = withContext(Dispatchers.IO) {
+        coroutineScope {
+            val token = BuildConfig.GALLERY_TOKEN
+            val list = runCatching {
+                val c = (URL("$API/stats").openConnection() as java.net.HttpURLConnection).apply {
+                    requestMethod = "GET"; connectTimeout = 8000; readTimeout = 15000
+                    setRequestProperty("Authorization", "token $token")
+                    setRequestProperty("Accept", "application/vnd.github+json")
+                    setRequestProperty("User-Agent", "LocalDream-ET")
+                }
+                if (c.responseCode !in 200..299) emptyList() else {
+                    val arr = JSONArray(c.inputStream.use { it.readBytes().toString(Charsets.UTF_8) })
+                    (0 until arr.length()).mapNotNull { i ->
+                        val o = arr.getJSONObject(i)
+                        val name = o.optString("name", "")
+                        if (name.endsWith(".json")) name.removeSuffix(".json") to o.optString("url", "") else null
+                    }
+                }
+            }.getOrDefault(emptyList())
+            val month = java.text.SimpleDateFormat("yyyy-MM", java.util.Locale.US)
+                .format(java.util.Date())
+            list.take(60).map { (author, url) ->
+                async {
+                    runCatching {
+                        val c = (URL(url).openConnection() as java.net.HttpURLConnection).apply {
+                            requestMethod = "GET"; connectTimeout = 6000; readTimeout = 12000
+                            setRequestProperty("Authorization", "token $token")
+                            setRequestProperty("Accept", "application/vnd.github+json")
+                            setRequestProperty("User-Agent", "LocalDream-ET")
+                        }
+                        val root = JSONObject(c.inputStream.use { it.readBytes().toString(Charsets.UTF_8) })
+                        val b64 = root.optString("content", "").replace("\n", "")
+                        val o = JSONObject(String(Base64.getDecoder().decode(b64), Charsets.UTF_8))
+                        if (o.optString("month", "") == month) author to o.optInt("count", 0) else null
+                    }.getOrNull()
+                }
+            }.awaitAll().mapNotNull { it }.filter { it.second > 0 }.sortedByDescending { it.second }
+        }
+    }
+
     /** 私密备份仓库写入（best-effort）。 */
     private fun mirrorPrivate(dir: String, id: String, png: ByteArray, meta: String, token: String) {
         if (token.isBlank()) return

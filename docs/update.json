@@ -1,10 +1,10 @@
 {
-  "versionCode": 287,
-  "versionName": "4.0.0-et.213",
-  "title": "发现新版本 v4.0.0-et.213",
-  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.213/LocalDream-ET.apk",
-  "size": 164811616,
-  "sha256": "e796bd161ff3f1e157b1f4da0dc4b313b0aaa47e551f4d1514fa459738c8aaa4",
-  "releaseNotes": "et.213（versionCode 287）作者分类与预览跳主页：\n1) 社区作者条可分类：点某位作者只显示他的作品，再点一次取消；“全部”恢复全部。\n2) 预览弹窗图片下方新增作者头像行，点头像/作者名直接打开作者主页，可关注。\n3) 作者主页、关注新图提醒、按用户分文件夹、私密镜像、ET128W 延续。",
-  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.213/LocalDream-ET.apk"
+  "versionCode": 288,
+  "versionName": "4.0.0-et.214",
+  "title": "发现新版本 v4.0.0-et.214",
+  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.214/LocalDream-ET.apk",
+  "size": 164834044,
+  "sha256": "6f26cee8cef16d332c54f52009d58f69c9820ffe984903ae133d166f3b5802a5",
+  "releaseNotes": "et.214（versionCode 288）本月下载排行榜：\n1) 图片社区右上角、收藏左边新增排行榜按钮。\n2) 弹窗显示本月作者下载次数前 18 名，前三名带奖牌，可点作者打开主页关注。\n3) 每次用户购买/下载图片，自动给作者本月计数 +1（stats/作者.json），跨月自动归零重计。\n4) 作者分类、预览跳主页、关注新图提醒、私密镜像、ET128W 延续。",
+  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.214/LocalDream-ET.apk"
 }
