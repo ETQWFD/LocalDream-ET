@@ -733,7 +733,7 @@ private fun handleGithubOAuth(activity: android.app.Activity, intent: Intent?) {
     val data = intent?.data ?: return
     if (data.scheme != "localdreamet" || data.host != "oauth") return
     val code = data.getQueryParameter("code") ?: return
-    val redirect = "https://etqwfd.github.io/LocalDream-ET/oauth.html"
+    val redirect = "https://etc.tw.kg/oauth.html"
     Thread {
         val result = runCatching {
             val token = io.github.xororz.localdream.cloud.GithubDeviceAuth.exchangeCode(

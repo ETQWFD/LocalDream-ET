@@ -3,8 +3,8 @@
   "versionName": "4.0.0-et.205",
   "title": "发现新版本 v4.0.0-et.205",
   "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.205/LocalDream-ET.apk",
-  "size": 164748976,
-  "sha256": "361b1834dac39f78ba5ba0f0a816e5979c9c1bd499dd7d88a9fb5fd78d455528",
+  "size": 164748908,
+  "sha256": "3a93fe56d64adee829e70f5ed621086b8811829a174518d3df806e32b7ba3c13",
   "releaseNotes": "et.205（versionCode 279）网页授权自动回跳：\n1) 登录框新增“网页授权并自动回跳”：直接打开 GitHub 授权页，授权完成后经 oauth.html 自动跳回应用（localdreamet://oauth）。\n2) 回跳后自动换取 token、校验账号、创建私有备份仓库并保存，无需再粘贴 PAT；失败只提示不闪退。\n3) 保留 Device Flow（输入用户码）作为备用方式。\n4) 明亮模式玻璃卡片发灰已修（亮色 0.94 底、outline 描边）。",
   "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.205/LocalDream-ET.apk"
 }

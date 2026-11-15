@@ -327,7 +327,7 @@ fun CloudBackupDialog(onDismiss: () -> Unit) {
                                 val url = "https://github.com/login/oauth/authorize" +
                                     "?client_id=Ov23ligVcx2ZUAG3lNAA" +
                                     "&redirect_uri=" + java.net.URLEncoder.encode(
-                                        "https://etqwfd.github.io/LocalDream-ET/oauth.html", "UTF-8",
+                                        "https://etc.tw.kg/oauth.html", "UTF-8",
                                     ) +
                                     "&scope=" + java.net.URLEncoder.encode("repo read:user", "UTF-8")
                                 runCatching {
@@ -336,7 +336,7 @@ fun CloudBackupDialog(onDismiss: () -> Unit) {
                                             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
                                     )
                                 }
-                                oauthHint = "授权完成后会自动跳回本应用（若没跳回，请检查 OAuth App 的回调地址是否填了 https://etqwfd.github.io/LocalDream-ET/oauth.html）"
+                                oauthHint = "授权完成后会自动跳回本应用（若没跳回，请检查 OAuth App 的回调地址是否填了 https://etc.tw.kg/oauth.html）"
                             },
                         ) { Text("网页授权并自动回跳") }
                         oauthHint?.let {
