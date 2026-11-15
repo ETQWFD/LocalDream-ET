@@ -61,6 +61,7 @@ import kotlinx.coroutines.withContext
 fun CloudBackupDialog(onDismiss: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
     val store = remember { SecureTokenStore(context) }
 
     var provider by remember { mutableStateOf(store.loggedInProviders().firstOrNull()?.provider ?: CloudConfig.Provider.GITHUB) }
@@ -256,10 +257,19 @@ fun CloudBackupDialog(onDismiss: () -> Unit) {
                                         status = "申请设备码失败：${it.message}"
                                         oauthBusy = false
                                     }.onSuccess { code ->
-                                        oauthHint = "已打开浏览器：请输入 ${code.userCode} 完成授权（${code.expiresInSec / 60} 分钟内有效）"
+                                        // 2026-11：用户码自动复制到剪贴板，并在授权页带上 user_code 预填；
+                                        // 这两条都失败时用户仍可手动输入提示里的码。
+                                        runCatching {
+                                            clipboard.setText(androidx.compose.ui.text.AnnotatedString(code.userCode))
+                                        }
+                                        val fullUrl = runCatching {
+                                            code.verificationUri + "?user_code=" +
+                                                java.net.URLEncoder.encode(code.userCode, "UTF-8")
+                                        }.getOrDefault(code.verificationUri)
+                                        oauthHint = "用户码 ${code.userCode} 已复制到剪贴板；已打开浏览器，直接粘贴即可（${code.expiresInSec / 60} 分钟内有效）"
                                         runCatching {
                                             context.startActivity(
-                                                Intent(Intent.ACTION_VIEW, Uri.parse(code.verificationUri))
+                                                Intent(Intent.ACTION_VIEW, Uri.parse(fullUrl))
                                                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
                                             )
                                         }
