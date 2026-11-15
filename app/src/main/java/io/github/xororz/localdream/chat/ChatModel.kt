@@ -9,6 +9,8 @@ enum class ChatKind {
     IMAGE,
     VIDEO,
     AUDIO,
+    QUOTA,
+    BOUNTY,
     ;
 
     companion object {
@@ -39,6 +41,13 @@ data class ChatMessage(
     /** Quoted message header, rendered as a small reply card instead of a new post. */
     val quoteAuthor: String = "",
     val quoteText: String = "",
+    /** 红包式额度：指定领取人 + 数量 + pending/claimed。 */
+    val quotaTo: String = "",
+    val quotaAmount: Long = 0L,
+    /** 悬赏消息：对应 bounties/{creator}/{bountyId}.json。 */
+    val bountyId: String = "",
+    val bountyAmount: Long = 0L,
+    val status: String = "",
 ) {
     /** Stable identity for de-duplication when two clients merge the same file. */
     val key: String get() = "$ts|$author|${kind.name}|${mediaUrl.orEmpty()}|$text"
@@ -55,6 +64,11 @@ data class ChatMessage(
             if (durationSec > 0) put("dur", durationSec)
             quoteAuthor.takeIf { it.isNotBlank() }?.let { put("qauthor", it) }
             quoteText.takeIf { it.isNotBlank() }?.let { put("qtext", it) }
+            quotaTo.takeIf { it.isNotBlank() }?.let { put("qto", it) }
+            if (quotaAmount > 0) put("qamount", quotaAmount)
+            bountyId.takeIf { it.isNotBlank() }?.let { put("bid", it) }
+            if (bountyAmount > 0) put("bamount", bountyAmount)
+            status.takeIf { it.isNotBlank() }?.let { put("status", it) }
         }
 
     companion object {
@@ -89,6 +103,11 @@ data class ChatMessage(
                     avatar = o.optString("avatar", "").takeIf { it.isNotBlank() },
                     quoteAuthor = o.optString("qauthor", ""),
                     quoteText = o.optString("qtext", ""),
+                    quotaTo = o.optString("qto", ""),
+                    quotaAmount = o.optLong("qamount", 0L),
+                    bountyId = o.optString("bid", ""),
+                    bountyAmount = o.optLong("bamount", 0L),
+                    status = o.optString("status", ""),
                 )
             }
         }

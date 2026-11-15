@@ -94,6 +94,12 @@ fun ChatScreen(onBack: () -> Unit) {
     var loading by remember { mutableStateOf(true) }
     var input by remember { mutableStateOf("") }
     var quoting by remember { mutableStateOf<ChatMessage?>(null) }
+    var showQuota by remember { mutableStateOf(false) }
+    var quotaTo by remember { mutableStateOf("") }
+    var quotaAmount by remember { mutableStateOf("") }
+    var showBounty by remember { mutableStateOf(false) }
+    var bountyTitle by remember { mutableStateOf("") }
+    var bountyAmount by remember { mutableStateOf("") }
     var sending by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf("") }
     var atPicker by remember { mutableStateOf(false) }
@@ -339,6 +345,8 @@ fun ChatScreen(onBack: () -> Unit) {
                             ChatKind.IMAGE -> "[图片]"
                             ChatKind.VIDEO -> "[视频]"
                             ChatKind.AUDIO -> "[语音]"
+                            ChatKind.QUOTA -> "[额度红包]"
+                            ChatKind.BOUNTY -> "[悬赏]"
                             ChatKind.TEXT -> ""
                         }
                     }.orEmpty()
@@ -631,6 +639,121 @@ fun ChatScreen(onBack: () -> Unit) {
 
     Scaffold(
         topBar = {
+            if (showQuota) {
+                AlertDialog(
+                    onDismissRequest = { showQuota = false },
+                    title = { Text("发额度（指定领取人）") },
+                    text = {
+                        Column {
+                            OutlinedTextField(
+                                value = quotaTo, onValueChange = { quotaTo = it },
+                                label = { Text("领取人用户名") }, singleLine = true,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                            OutlinedTextField(
+                                value = quotaAmount,
+                                onValueChange = { quotaAmount = it.filter { c -> c.isDigit() } },
+                                label = { Text("额度数量") }, singleLine = true,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                            Text("发出后先扣你的额度；只有 @${quotaTo.ifBlank { "指定用户" }} 能领取，别人点只会提示不是给你的。",
+                                style = MaterialTheme.typography.labelSmall)
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            val author = meLogin ?: ""
+                            val amount = quotaAmount.toLongOrNull() ?: 0L
+                            if (author.isBlank()) {
+                                android.widget.Toast.makeText(ctx, "请先登录 GitHub", android.widget.Toast.LENGTH_SHORT).show()
+                            } else if (quotaTo.isBlank() || amount <= 0L) {
+                                android.widget.Toast.makeText(ctx, "请填写领取人和额度", android.widget.Toast.LENGTH_SHORT).show()
+                            } else if (io.github.xororz.localdream.service.QuotaManager.remaining(ctx) < amount) {
+                                android.widget.Toast.makeText(ctx, "额度不足", android.widget.Toast.LENGTH_SHORT).show()
+                            } else {
+                                scope.launch {
+                                    io.github.xororz.localdream.service.QuotaManager.consume(ctx, amount)
+                                    val (ok, err) = withContext(Dispatchers.IO) {
+                                        io.github.xororz.localdream.service.GalleryClient.sendQuota(author, quotaTo.trim(), amount)
+                                    }
+                                    if (!ok) {
+                                        io.github.xororz.localdream.service.QuotaManager.refund(ctx, amount)
+                                        android.widget.Toast.makeText(ctx, "发送失败：$err", android.widget.Toast.LENGTH_LONG).show()
+                                    } else {
+                                        post(
+                                            ChatMessage(
+                                                author = author,
+                                                text = "额度红包",
+                                                ts = nowSeconds(),
+                                                kind = ChatKind.QUOTA,
+                                                avatar = meAvatar,
+                                                quotaTo = quotaTo.trim(),
+                                                quotaAmount = amount,
+                                                status = "pending",
+                                            ),
+                                        )
+                                        showQuota = false
+                                        quotaTo = ""; quotaAmount = ""
+                                        android.widget.Toast.makeText(ctx, "已发出，仅 @${quotaTo} 可领", android.widget.Toast.LENGTH_LONG).show()
+                                    }
+                                }
+                            }
+                        }) { Text("发送") }
+                    },
+                    dismissButton = { TextButton(onClick = { showQuota = false }) { Text("取消") } },
+                )
+            }
+            if (showBounty) {
+                AlertDialog(
+                    onDismissRequest = { showBounty = false },
+                    title = { Text("发悬赏（@全体人员）") },
+                    text = {
+                        Column {
+                            OutlinedTextField(
+                                value = bountyTitle, onValueChange = { bountyTitle = it },
+                                label = { Text("悬赏目的") }, modifier = Modifier.fillMaxWidth(),
+                            )
+                            OutlinedTextField(
+                                value = bountyAmount,
+                                onValueChange = { bountyAmount = it.filter { c -> c.isDigit() } },
+                                label = { Text("悬赏额度（先托管扣除）") }, singleLine = true,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            val author = meLogin ?: ""
+                            if (author.isBlank()) {
+                                android.widget.Toast.makeText(ctx, "请先登录 GitHub", android.widget.Toast.LENGTH_SHORT).show()
+                            } else {
+                                scope.launch {
+                                    val (ok, err) = withContext(Dispatchers.IO) {
+                                        io.github.xororz.localdream.service.BountyClient.create(
+                                            ctx, author, bountyTitle.trim(), bountyAmount.toLongOrNull() ?: 0L,
+                                        )
+                                    }
+                                    if (!ok) {
+                                        android.widget.Toast.makeText(ctx, "发布失败：$err", android.widget.Toast.LENGTH_LONG).show()
+                                    } else {
+                                        post(
+                                            ChatMessage(
+                                                author = author, text = bountyTitle.trim(), ts = nowSeconds(),
+                                                kind = ChatKind.BOUNTY, avatar = meAvatar,
+                                                bountyAmount = bountyAmount.toLongOrNull() ?: 0L,
+                                                status = "open",
+                                            ),
+                                        )
+                                        showBounty = false; bountyTitle = ""; bountyAmount = ""
+                                        android.widget.Toast.makeText(ctx, "悬赏已发布，额度已托管", android.widget.Toast.LENGTH_LONG).show()
+                                    }
+                                }
+                            }
+                        }) { Text("发布") }
+                    },
+                    dismissButton = { TextButton(onClick = { showBounty = false }) { Text("取消") } },
+                )
+            }
             TopAppBar(
                 title = {
                     Column {
@@ -648,6 +771,12 @@ fun ChatScreen(onBack: () -> Unit) {
                     }
                 },
                 actions = {
+                    IconButton(onClick = { showBounty = true }) {
+                        Icon(Icons.Default.Campaign, contentDescription = "发悬赏")
+                    }
+                    IconButton(onClick = { showQuota = true }) {
+                        Icon(Icons.Default.CardGiftcard, contentDescription = "发额度")
+                    }
                     IconButton(onClick = { profileFor = meLogin }) {
                         Icon(Icons.Default.Person, contentDescription = "我的主页")
                     }
@@ -717,6 +846,32 @@ fun ChatScreen(onBack: () -> Unit) {
                         onOpenVideo = { urls -> videoUrls = urls },
                         onLink = { url -> webUrl = url },
                         onLongPress = { actionFor = m },
+                        meLogin = meLogin.orEmpty(),
+                        onClaimQuota = { m ->
+                            scope.launch {
+                                val login = meLogin
+                                if (login.isNullOrBlank()) {
+                                    android.widget.Toast.makeText(ctx, "请先登录 GitHub", android.widget.Toast.LENGTH_SHORT).show()
+                                } else if (!m.quotaTo.equals(login, true)) {
+                                    android.widget.Toast.makeText(ctx, "不是给你的，只有 @${m.quotaTo} 能领取", android.widget.Toast.LENGTH_LONG).show()
+                                } else {
+                                    val got = withContext(Dispatchers.IO) {
+                                        runCatching { io.github.xororz.localdream.service.GalleryClient.claimTransfers(ctx, login) }.getOrDefault(0L)
+                                    }
+                                    android.widget.Toast.makeText(
+                                        ctx,
+                                        if (got > 0) "已领取 $got 额度" else "没有可领取的额度（可能已领过）",
+                                        android.widget.Toast.LENGTH_LONG,
+                                    ).show()
+                                }
+                            }
+                        },
+                        onBountyAction = { m ->
+                            android.widget.Toast.makeText(
+                                ctx, "@全体人员 悬赏「${m.text}」${m.bountyAmount} 额度，提交入口在图片社区悬赏页",
+                                android.widget.Toast.LENGTH_LONG,
+                            ).show()
+                        },
                     )
                 }
             }
@@ -1549,6 +1704,9 @@ private fun MessageRow(
     onOpenVideo: (List<String>) -> Unit,
     onLink: (String) -> Unit,
     onLongPress: () -> Unit,
+    meLogin: String = "",
+    onClaimQuota: (ChatMessage) -> Unit = {},
+    onBountyAction: (ChatMessage) -> Unit = {},
 ) {
     var showMenu by remember { mutableStateOf(false) }
     Row(
@@ -1667,6 +1825,43 @@ private fun MessageRow(
                             linkColor = if (mine) Color(0xFF1A5AA0) else MaterialTheme.colorScheme.primary,
                             onLink = onLink,
                         )
+
+                        ChatKind.QUOTA -> {
+                            Column {
+                                Text("额度红包", style = MaterialTheme.typography.titleSmall, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                                Text(
+                                    "给 @${message.quotaTo} · ${message.quotaAmount} 额度",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                )
+                                val claimed = message.status == "claimed"
+                                if (claimed) {
+                                    Text("已领取", style = MaterialTheme.typography.labelSmall)
+                                } else if (meLogin.isNotBlank() && meLogin.equals(message.quotaTo, true)) {
+                                    Button(onClick = { onClaimQuota(message) }, modifier = Modifier.padding(top = 4.dp)) {
+                                        Text("领取")
+                                    }
+                                } else if (meLogin.isNotBlank() && meLogin != message.author) {
+                                    Text(
+                                        "不是给你的，仅 @${message.quotaTo} 可领",
+                                        style = MaterialTheme.typography.labelSmall,
+                                    )
+                                } else {
+                                    Text("待 @${message.quotaTo} 领取", style = MaterialTheme.typography.labelSmall)
+                                }
+                            }
+                        }
+
+                        ChatKind.BOUNTY -> {
+                            Column {
+                                Text("@全体人员 悬赏", style = MaterialTheme.typography.titleSmall, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                                Text(message.text, style = MaterialTheme.typography.bodyMedium)
+                                Text(
+                                    "悬赏 ${message.bountyAmount} 额度 · 发布者验收后支付",
+                                    style = MaterialTheme.typography.labelSmall,
+                                )
+                                TextButton(onClick = { onBountyAction(message) }) { Text("查看悬赏") }
+                            }
+                        }
 
                         ChatKind.IMAGE -> {
                             val urls = listOfNotNull(message.mediaUrl, message.cdnUrl)

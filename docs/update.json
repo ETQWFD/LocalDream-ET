@@ -1,10 +1,10 @@
 {
-  "versionCode": 294,
-  "versionName": "4.0.0-et.220",
-  "title": "最新版本 v4.0.0-et.220",
-  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.220/LocalDream-ET.apk",
-  "size": 164737024,
-  "sha256": "26a0d7a87daf2c417cfaf19c4c12609e920bf1ecf2ab62215703058135ad037a",
-  "releaseNotes": "最新版本\n\n作者下个星期无法更新，因为要开家长会，作者要死掉了，等下个星期看广告复活，请勿来打扰作者，谢谢。\n\n正文：\net.220（versionCode 294）\n1) 修复兑换码兑换时报“写入失败：Upload failed HTTP 404”：used 流水优先写到一定存在的 redeem/codes 目录，失败不再把整次兑换判失败，额度照常到账。\n2) 修复作者下架不了自己作品：删除改为跟随 png/{作者}/ 目录计算 meta 与缩略图路径，不再只认旧平铺路径。\n3) 聊天长按菜单、图片/视频复制与保存保持 et.217 的修复。\n4) 发布说明占位，其余问题（聊天内置红包式额度/悬赏、ANR、缩略图清晰度）见下一条消息。",
-  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.220/LocalDream-ET.apk"
+  "versionCode": 295,
+  "versionName": "4.0.0-et.221",
+  "title": "最新版本 v4.0.0-et.221",
+  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.221/LocalDream-ET.apk",
+  "size": 164989064,
+  "sha256": "08a40c91ed6ea1131823d21858a993b59c432d65eecf973b757c6b15c7f6141c",
+  "releaseNotes": "最新版本\n\n作者下个星期无法更新，因为要开家长会，作者要死掉了，等下个星期看广告复活，请勿来打扰作者，谢谢。\n\n正文：\net.221（versionCode 295）聊天社区内置额度红包与悬赏公告：\n1) 聊天顶栏新增“发额度”：指定领取人 + 额度，发出即扣款并写入对方转账目录；只有该用户看到“领取”按钮，其他人点开提示“不是给你的”。\n2) 新增“发悬赏”：填写目的与额度，发布即托管扣款，聊天中渲染为“@全体人员 悬赏”，并提示额度与验收后支付。\n3) 聊天消息模型新增 QUOTA / BOUNTY 类型，旧 messages.json 缺字段按默认值解析，不影响历史消息。\n4) 悬赏提交与验收仍在图片社区悬赏页完成。",
+  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.221/LocalDream-ET.apk"
 }
