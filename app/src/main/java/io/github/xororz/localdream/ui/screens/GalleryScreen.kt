@@ -20,6 +20,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
@@ -183,6 +184,49 @@ fun GalleryScreen(navController: NavController) {
     // et.213: search by author / image name.
     var profileAuthor by remember { mutableStateOf<String?>(null) }
     var showRank by remember { mutableStateOf(false) }
+    var showSend by remember { mutableStateOf(false) }
+    var sendTo by remember { mutableStateOf("") }
+    var sendAmount by remember { mutableStateOf("") }
+    var pendingSend by remember { mutableStateOf<Pair<String, Long>?>(null) }
+    val keyguardLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult(),
+    ) { res ->
+        val p = pendingSend
+        if (res.resultCode == android.app.Activity.RESULT_OK && p != null) {
+            val (to, amount) = p
+            val login = io.github.xororz.localdream.cloud.SecureTokenStore(ctx)
+                .state(io.github.xororz.localdream.cloud.CloudConfig.Provider.GITHUB)?.login
+            if (login.isNullOrBlank()) {
+                android.widget.Toast.makeText(ctx, "请先登录 GitHub", android.widget.Toast.LENGTH_LONG).show()
+            } else if (io.github.xororz.localdream.service.QuotaManager.remaining(ctx) < amount) {
+                android.widget.Toast.makeText(ctx, "额度不足", android.widget.Toast.LENGTH_LONG).show()
+            } else {
+                scope.launch {
+                    io.github.xororz.localdream.service.QuotaManager.consume(ctx, amount)
+                    val (ok, err) = withContext(Dispatchers.IO) {
+                        GalleryClient.sendQuota(login, to, amount)
+                    }
+                    if (!ok) io.github.xororz.localdream.service.QuotaManager.refund(ctx, amount)
+                    android.widget.Toast.makeText(
+                        ctx,
+                        if (ok) "已向 @$to 发送 $amount 额度" else "发送失败：$err",
+                        android.widget.Toast.LENGTH_LONG,
+                    ).show()
+                }
+            }
+        }
+        pendingSend = null
+    }
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        val login = io.github.xororz.localdream.cloud.SecureTokenStore(ctx)
+            .state(io.github.xororz.localdream.cloud.CloudConfig.Provider.GITHUB)?.login
+        if (!login.isNullOrBlank()) {
+            val got = withContext(Dispatchers.IO) {
+                runCatching { GalleryClient.claimTransfers(ctx, login) }.getOrDefault(0L)
+            }
+            if (got > 0) android.widget.Toast.makeText(ctx, "收到转账额度 +$got", android.widget.Toast.LENGTH_LONG).show()
+        }
+    }
     var authorFilter by remember { mutableStateOf<String?>(null) }
     val filtered = remember(items, q) {
         if (q.isBlank()) items else items.filter {
@@ -205,6 +249,9 @@ fun GalleryScreen(navController: NavController) {
                     }
                 },
                 actions = {
+                    IconButton(onClick = { showSend = true }) {
+                        Icon(Icons.Default.Send, contentDescription = "发额度")
+                    }
                     IconButton(onClick = { showRank = true }) {
                         Icon(Icons.Default.Star, contentDescription = "本月下载榜")
                     }
@@ -432,6 +479,72 @@ fun GalleryScreen(navController: NavController) {
                 }
             },
             dismissButton = { TextButton(onClick = { profileAuthor = null }) { Text("关闭") } },
+        )
+    }
+    if (showSend) {
+        AlertDialog(
+            onDismissRequest = { showSend = false },
+            title = { Text("发送额度") },
+            text = {
+                Column {
+                    val users = items.map { it.author }.distinct()
+                    OutlinedTextField(
+                        value = sendTo, onValueChange = { sendTo = it },
+                        label = { Text("发给谁（输入用户名）") }, singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    if (users.isNotEmpty()) {
+                        Text("可点选作者：", style = MaterialTheme.typography.labelSmall)
+                        androidx.compose.foundation.layout.Row(
+                            modifier = Modifier
+                                .horizontalScroll(rememberScrollState())
+                                .padding(vertical = 4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            users.take(30).forEach { u ->
+                                androidx.compose.material3.AssistChip(
+                                    onClick = { sendTo = u },
+                                    label = { Text("@$u") },
+                                )
+                            }
+                        }
+                    }
+                    OutlinedTextField(
+                        value = sendAmount,
+                        onValueChange = { sendAmount = it.filter { c -> c.isDigit() } },
+                        label = { Text("额度数量") }, singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                            keyboardType = androidx.compose.ui.text.input.KeyboardType.Number,
+                        ),
+                    )
+                    Text("确认后需要验证锁屏密码，通过才会真正发送。", style = MaterialTheme.typography.labelSmall)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val amount = sendAmount.toLongOrNull() ?: 0L
+                    if (sendTo.isBlank() || amount <= 0L) {
+                        android.widget.Toast.makeText(ctx, "请填写用户和额度", android.widget.Toast.LENGTH_SHORT).show()
+                    } else {
+                        pendingSend = sendTo to amount
+                        val locked = androidx.core.content.ContextCompat.getSystemService(
+                            ctx, android.app.KeyguardManager::class.java,
+                        )
+                        val intent = locked?.createConfirmDeviceCredentialIntent("验证身份", "发送额度需要验证")
+                        if (intent != null) keyguardLauncher.launch(intent)
+                        else {
+                            pendingSend = null
+                            android.widget.Toast.makeText(
+                                ctx, "设备未设置锁屏，请先在系统设置里设置锁屏密码再发送",
+                                android.widget.Toast.LENGTH_LONG,
+                            ).show()
+                        }
+                        showSend = false
+                    }
+                }) { Text("发送") }
+            },
+            dismissButton = { TextButton(onClick = { showSend = false }) { Text("取消") } },
         )
     }
     if (showRank) {

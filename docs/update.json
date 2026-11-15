@@ -1,10 +1,10 @@
 {
-  "versionCode": 291,
-  "versionName": "4.0.0-et.217",
-  "title": "发现新版本 v4.0.0-et.217",
-  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.217/LocalDream-ET.apk",
-  "size": 164840792,
-  "sha256": "24e770490f5f1331ef4216d2405dcb7249e2c9d66f1a2bc23c8222d1df068622",
-  "releaseNotes": "et.217（versionCode 291）聊天长按菜单与多选上传：\n1) 修复聊天消息长按不出菜单：文字气泡不再包 SelectionContainer，长按可选“复制/引用/转发/下载/分享”。\n2) 图片/视频保存：仓库取不到时直接按公开 URL 下载，再失败才提示，不再一律“文件下载失败”。\n3) 图片社区从相册选图改用系统照片选择器，一次最多 100 张，逐张独立上传。\n4) 排行榜、作者分类、授权用户码、下载采样解码延续。",
-  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.217/LocalDream-ET.apk"
+  "versionCode": 292,
+  "versionName": "4.0.0-et.218",
+  "title": "发现新版本 v4.0.0-et.218",
+  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.218/LocalDream-ET.apk",
+  "size": 164870772,
+  "sha256": "b65d9b15b7fac6c1a1b76450323bfb6e8dc45c9dd662ca05531f62de09614b56",
+  "releaseNotes": "et.218（versionCode 292）指定用户发送额度：\n1) 图片社区右上角新增“发额度”按钮（排行榜左边）。\n2) 弹窗选择/搜索收款用户、输入额度；确认后必须验证锁屏密码，通过才发送。\n3) 额度写入 transfers/{收方}/ 专属目录，只有该用户登录后能认领到账并标记 claimed，其他人看不到、点了也拿不到。\n4) 发送方先扣额度，写入失败自动退回；收到转账时弹出“收到转账额度 +N”。",
+  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.218/LocalDream-ET.apk"
 }

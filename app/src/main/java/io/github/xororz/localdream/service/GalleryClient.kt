@@ -483,6 +483,86 @@ object GalleryClient {
         Unit
     }
 
+    /** 2026-11：把额度转给指定用户（写入 transfers/{收方}/，只有收方会认领）。 */
+    suspend fun sendQuota(from: String, to: String, amount: Long): Pair<Boolean, String> = withContext(Dispatchers.IO) {
+        runCatching {
+            if (from.isBlank() || to.isBlank() || amount <= 0L) return@runCatching false to "参数不完整"
+            val safeFrom = from.filter { it.isLetterOrDigit() || it in "._-" }.ifBlank { "anonymous" }
+            val safeTo = to.filter { it.isLetterOrDigit() || it in "._-" }.ifBlank { "anonymous" }
+            val id = "${System.currentTimeMillis()}_$safeFrom"
+            val body = JSONObject().put("from", from).put("to", to).put("amount", amount)
+                .put("ts", System.currentTimeMillis()).put("status", "pending")
+            val payload = JSONObject().put("message", "transfer $safeFrom -> $safeTo $amount")
+                .put("content", Base64.getEncoder().encodeToString(body.toString().toByteArray()))
+                .toString().toByteArray()
+            val c = (URL("$API/transfers/$safeTo/$id.json").openConnection() as java.net.HttpURLConnection).apply {
+                requestMethod = "PUT"; doOutput = true
+                connectTimeout = 8000; readTimeout = 20000
+                setRequestProperty("Authorization", "token ${BuildConfig.GALLERY_TOKEN}")
+                setRequestProperty("Accept", "application/vnd.github+json")
+                setRequestProperty("Content-Type", "application/json")
+                setRequestProperty("User-Agent", "LocalDream-ET")
+            }
+            c.outputStream.use { it.write(payload) }
+            (c.responseCode in 200..201) to if (c.responseCode in 200..201) "" else "HTTP ${c.responseCode}"
+        }.getOrElse { false to (it.message ?: "发送失败") }
+    }
+
+    /** 收方登录后认领自己的转账；其他人看不到也不会到账。 */
+    suspend fun claimTransfers(ctx: android.content.Context, login: String): Long = withContext(Dispatchers.IO) {
+        if (login.isBlank()) return@withContext 0L
+        val safe = login.filter { it.isLetterOrDigit() || it in "._-" }
+        val api = "$API/transfers/$safe"
+        val token = BuildConfig.GALLERY_TOKEN
+        var credited = 0L
+        runCatching {
+            val listConn = (URL(api).openConnection() as java.net.HttpURLConnection).apply {
+                requestMethod = "GET"; connectTimeout = 8000; readTimeout = 15000
+                setRequestProperty("Authorization", "token $token")
+                setRequestProperty("Accept", "application/vnd.github+json")
+                setRequestProperty("User-Agent", "LocalDream-ET")
+            }
+            if (listConn.responseCode !in 200..299) return@runCatching
+            val arr = JSONArray(listConn.inputStream.use { it.readBytes().toString(Charsets.UTF_8) })
+            for (i in 0 until arr.length()) {
+                val o = arr.getJSONObject(i)
+                val name = o.optString("name", "")
+                if (!name.endsWith(".json")) continue
+                val url = o.optString("url", "")
+                val get = (URL(url).openConnection() as java.net.HttpURLConnection).apply {
+                    requestMethod = "GET"; connectTimeout = 6000; readTimeout = 12000
+                    setRequestProperty("Authorization", "token $token")
+                    setRequestProperty("Accept", "application/vnd.github+json")
+                    setRequestProperty("User-Agent", "LocalDream-ET")
+                }
+                if (get.responseCode != 200) continue
+                val root = JSONObject(get.inputStream.use { it.readBytes().toString(Charsets.UTF_8) })
+                val sha = root.optString("sha", "")
+                val meta = JSONObject(
+                    String(Base64.getDecoder().decode(root.optString("content", "").replace("\n", "")), Charsets.UTF_8),
+                )
+                if (meta.optString("status", "") != "pending") continue
+                val amount = meta.optLong("amount", 0L)
+                if (amount <= 0L) continue
+                QuotaManager.bonus(ctx, amount)
+                credited += amount
+                val patched = JSONObject(meta.toString()).put("status", "claimed")
+                val put = JSONObject().put("message", "claim $name").put("sha", sha)
+                    .put("content", Base64.getEncoder().encodeToString(patched.toString().toByteArray()))
+                val pc = (URL(url).openConnection() as java.net.HttpURLConnection).apply {
+                    requestMethod = "PUT"; doOutput = true
+                    connectTimeout = 8000; readTimeout = 15000
+                    setRequestProperty("Authorization", "token $token")
+                    setRequestProperty("Accept", "application/vnd.github+json")
+                    setRequestProperty("Content-Type", "application/json")
+                    setRequestProperty("User-Agent", "LocalDream-ET")
+                }
+                pc.outputStream.use { it.write(put.toString().toByteArray()) }
+            }
+        }
+        credited
+    }
+
     /** 本月下载榜：作者 -> 次数，按次数倒序。 */
     suspend fun monthlyRanking(): List<Pair<String, Int>> = withContext(Dispatchers.IO) {
         coroutineScope {
