@@ -327,12 +327,6 @@ fun GalleryScreen(navController: NavController) {
                     }
                 },
                 actions = {
-                    IconButton(onClick = { showBounty = true; refreshBounty() }) {
-                        Icon(Icons.Default.CardGiftcard, contentDescription = "悬赏")
-                    }
-                    IconButton(onClick = { showSend = true }) {
-                        Icon(Icons.Default.Send, contentDescription = "发额度")
-                    }
                     IconButton(onClick = { showRank = true }) {
                         Icon(Icons.Default.Star, contentDescription = "本月下载榜")
                     }

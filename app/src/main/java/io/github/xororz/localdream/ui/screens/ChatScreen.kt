@@ -1984,12 +1984,12 @@ private fun MessageRow(
                         }
                     }
                     when (message.kind) {
-                        // 2026-11：去掉 SelectionContainer——它吞掉长按，导致复制/引用菜单弹不出来。
-                        ChatKind.TEXT -> LinkText(
+                        // 2026-11：ClickableText/LinkText 同样会吃掉长按手势；改成纯 Text，
+                        // 长按稳定触发“复制 / 引用 / 转发 / 删除”菜单。
+                        ChatKind.TEXT -> Text(
                             text = message.text,
                             color = if (mine) Color(0xFF111111) else MaterialTheme.colorScheme.onSurface,
-                            linkColor = if (mine) Color(0xFF1A5AA0) else MaterialTheme.colorScheme.primary,
-                            onLink = onLink,
+                            style = MaterialTheme.typography.bodyMedium,
                         )
 
                         ChatKind.QUOTA -> {

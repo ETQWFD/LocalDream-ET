@@ -1,10 +1,10 @@
 {
-  "versionCode": 302,
-  "versionName": "4.0.0-et.228",
-  "title": "最新版本 v4.0.0-et.228",
-  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.228/LocalDream-ET.apk",
-  "size": 165077336,
-  "sha256": "73503b804e938e79b5d5c276a39d3b6cb52214f2e8e0551ce77ecd2a933a5c74",
-  "releaseNotes": "最新版本\n\n正文：\net.228（versionCode 302）修复图片排行榜无法使用：\n1) stats 目录不存在时 contents API 返回 404，排行榜此前直接当空数据；现在改用 git trees 递归兜底枚举 stats/*.json。\n2) 排行榜按月份过滤，读取失败不再静默空列表。\n3) 全局公告、模型下载、悬赏与额度功能延续。",
-  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.228/LocalDream-ET.apk"
+  "versionCode": 303,
+  "versionName": "4.0.0-et.229",
+  "title": "最新版本 v4.0.0-et.229",
+  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.229/LocalDream-ET.apk",
+  "size": 165074392,
+  "sha256": "efd3f3925432d588345e78ea2ad440a6dc83b56f000294275986c773bfab52c5",
+  "releaseNotes": "最新版本\n\n正文：\net.229（versionCode 303）：\n1) 图片社区顶栏的“发额度/悬赏”入口移除，只保留在公共聊天社区。\n2) 聊天文字气泡改为纯 Text，长按不再被 ClickableText 吃掉，复制/引用/转发菜单可正常弹出。\n3) 官方号 ETQWFD 额度判定改为不限：remaining/available 直接放行，不再显示额度不足。\n4) 排行榜 stats 目录兜底、模型下载 HEAD -1 修复延续。",
+  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.229/LocalDream-ET.apk"
 }

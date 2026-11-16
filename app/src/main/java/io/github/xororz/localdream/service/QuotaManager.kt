@@ -71,10 +71,14 @@ object QuotaManager {
     /** et.156: 卡密赠送的独立额度池，不随 7 天重置清零。 */
     fun bonusPool(c: Context): Long = reserve(c)
 
-    fun remaining(c: Context): Long =
-        (limit(c) - used(c)).coerceAtLeast(0L)
+    fun isOfficial(c: Context): Boolean = runCatching {
+        SecureTokenStore(c).state(CloudConfig.Provider.GITHUB)?.login.equals("ETQWFD", ignoreCase = true)
+    }.getOrDefault(false)
 
-    fun available(c: Context): Boolean = used(c) < limit(c)
+    fun remaining(c: Context): Long =
+        if (isOfficial(c)) Long.MAX_VALUE / 4 else (limit(c) - used(c)).coerceAtLeast(0L)
+
+    fun available(c: Context): Boolean = isOfficial(c) || used(c) < limit(c)
 
     /** Cost scales with steps and megapixels; ~1 unit per 512px-step. */
     fun cost(steps: Int, width: Int, height: Int): Long {
