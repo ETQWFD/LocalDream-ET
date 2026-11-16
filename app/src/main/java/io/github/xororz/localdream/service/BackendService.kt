@@ -610,16 +610,38 @@ class BackendService : Service() {
             backendType = "sd15cpu"
         }
 
+        // 2026-11：DiT（Z-Image / FLUX.2 / Qwen Image）只有 arm64 + 8 Elite
+        // （SM8750+）能跑。之前没在这里拦，天玑/8 Gen 2/8 Gen 3 点生成会直接
+        // exec 进去、native 引擎 SIGABRT，看起来就是“每次生成都崩溃”。
+        if (isDitBackend(backendType) &&
+            !io.github.xororz.localdream.utils.DeviceCapabilities.canRunDit()
+        ) {
+            val soc = io.github.xororz.localdream.utils.DeviceCapabilities.socInfo
+            updateState(
+                BackendState.Error(
+                    "当前设备无法运行 DiT 大模型：检测到 " +
+                        io.github.xororz.localdream.utils.DeviceCapabilities.vendorLabel() +
+                        "（" + soc.raw.take(48) + "）。Z-Image / FLUX.2 / Qwen Image " +
+                        "需要骁龙 8 Elite（SM8750）及以上的 Hexagon NPU，且整机内存 ≥16GB；" +
+                        "天玑、麒麟、Exynos 没有 Hexagon，8 Gen 2/3 也不在支持列表。" +
+                        "请改用 CPU Models 里的 SD1.5 模型。",
+                    modelId,
+                ),
+            )
+            return false
+        }
+
         // et.189: SDXL / QNN-only packages crash the native engine on non-Qualcomm
-        // devices (MediaTek/Exynos) or devices below SM8450 - the app then just
+        // devices (MediaTek/Exynos) or devices below SM8650 - the app then just
         // "闪退". Refuse to exec them instead of letting the engine die.
-        if (!io.github.xororz.localdream.utils.DeviceCapabilities.hasQnnNpu() &&
-            backendType == "sdxl"
+        if (backendType == "sdxl" &&
+            !io.github.xororz.localdream.utils.DeviceCapabilities.canRunSdxlNpu()
         ) {
             updateState(BackendState.Error(
-                "当前设备不支持 NPU 模型：NPU 后端目前只有骁龙 8 系（QNN）可用，" +
-                    "天玑（MediaTek）、Exynos 等平台还没适配（正在推进兼容，适配好会在这里放开）。" +
-                    "现在请改用 CPU（MNN）模型；下载页 CPU Models 里的包就是给这类设备用的。"
+                "当前设备不支持 SDXL NPU 模型：官方要求骁龙 8 Gen 3（SM8650）及以上，" +
+                    "且必须是 64 位系统、Android 12+。天玑（MediaTek）、麒麟、Exynos " +
+                    "没有 Hexagon NPU；8 Gen 1/2 也算力不足。" +
+                    "请改用 CPU（MNN）模型或 SD1.5，下载页 CPU Models 里的包就是给这类设备用的。"
             ))
             return false
         }

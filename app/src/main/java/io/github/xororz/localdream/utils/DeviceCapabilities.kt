@@ -37,8 +37,9 @@ object DeviceCapabilities {
         val info = socInfo
         if (info.vendor != SocVendor.QUALCOMM) return false
         val part = info.snapdragonPart ?: return false
-        // We ship HTP v68/v69/v73/v75/v79/v81 skels; admit SM8450 (v68) and newer.
-        return part >= 8450
+        // 官方兼容表：Hexagon V68 或更新（含骁龙 7 Gen 1 / 8s Gen 3 这类
+        // 非旗舰）。V68 起点约 SM7450，旧 6 系 v66 会直接崩，不放行。
+        return part >= 7350
     }
 
     // ---- Robust SoC / GPU identification ---------------------------------
@@ -94,7 +95,25 @@ object DeviceCapabilities {
         ).joinToString(" ") { it.orEmpty() }.lowercase()
 
         // SM8750 / SM8750-AB / qcom sm8650 ...
-        val part = Regex("sm\\D{0,2}(\\d{4})").find(hay)?.groupValues?.get(1)?.toIntOrNull()
+        var part = Regex("sm\\D{0,2}(\\d{4})").find(hay)?.groupValues?.get(1)?.toIntOrNull()
+
+        // Honor / OPPO / realme 等 ROM 经常把 Build.SOC_MODEL 留空，只在
+        // ro.board.platform 里暴露高通内部代号（pineapple/sun/kalama/taro…）。
+        // 之前只认 "sm8650" 这种字符串，这些机器就被误判成“不支持 NPU”。
+        if (part == null) {
+            val codename = listOf(
+                sysprop("ro.board.platform"), Build.BOARD, Build.HARDWARE,
+                sysprop("ro.hardware"),
+            ).joinToString(" ").lowercase()
+            val map = mapOf(
+                "taro" to 8450, "kalama" to 8550, "pineapple" to 8650,
+                "sun" to 8750, "volcano" to 8850, "cape" to 8550,
+                "parrot" to 7450, "shima" to 7325, "yupik" to 7325,
+                "holi" to 6375, "blair" to 4450, "khaje" to 6225,
+                "bengal" to 6115,
+            )
+            part = map.entries.firstOrNull { codename.contains(it.key) }?.value
+        }
 
         val vendor = when {
             hay.contains("kirin") || hay.contains("hisilicon") ||
@@ -362,6 +381,14 @@ object DeviceCapabilities {
             if (socInfo.vendor != SocVendor.QUALCOMM) return REASON_NPU_VENDOR
             if (isDit && !canRunDit()) return REASON_NPU_DIT
             if (isSdxl && !canRunSdxlNpu()) return REASON_NPU_SDXL
+        }
+        // DiT + 8B 文本编码器实际要吃 12GB 以上；只看 total 会放过 12GB 机器，
+        // 一生成就被 LMK/lowmemorykiller 杀掉（表现为“每次生成都闪退”）。
+        if (isDit) {
+            val total = totalRamBytes(context)
+            val avail = availRamBytes(context)
+            if (total < ramRequiredBytes) return REASON_RAM
+            if (avail > 0 && avail < ramRequiredBytes * 0.70) return REASON_RAM
         }
         if (ramRequiredBytes > 0 && totalRamBytes(context) < ramRequiredBytes) return REASON_RAM
         if (storageRequiredBytes > 0 &&

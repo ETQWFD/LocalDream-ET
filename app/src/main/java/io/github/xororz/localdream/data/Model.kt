@@ -1003,7 +1003,7 @@ class ModelRepository private constructor(private val context: Context) {
             ),
             runOnCpu = false,
             ditKind = "zimage",
-            ramRequiredBytes = 10L * 1024 * 1024 * 1024,
+            ramRequiredBytes = 14L * 1024 * 1024 * 1024,
             storageRequiredBytes = 10L * 1000 * 1000 * 1000,
         )
     }
@@ -1036,7 +1036,7 @@ class ModelRepository private constructor(private val context: Context) {
             ),
             runOnCpu = false,
             ditKind = "klein",
-            ramRequiredBytes = 8L * 1024 * 1024 * 1024,
+            ramRequiredBytes = 16L * 1024 * 1024 * 1024,
             storageRequiredBytes = 8L * 1000 * 1000 * 1000,
         )
     }
@@ -1067,7 +1067,7 @@ class ModelRepository private constructor(private val context: Context) {
             ),
             runOnCpu = false,
             ditKind = "qwen21",
-            ramRequiredBytes = 12L * 1024 * 1024 * 1024,
+            ramRequiredBytes = 16L * 1024 * 1024 * 1024,
             storageRequiredBytes = 13L * 1000 * 1000 * 1000,
         )
     }
@@ -1098,7 +1098,7 @@ class ModelRepository private constructor(private val context: Context) {
             ),
             runOnCpu = false,
             ditKind = "qwen21",
-            ramRequiredBytes = 12L * 1024 * 1024 * 1024,
+            ramRequiredBytes = 16L * 1024 * 1024 * 1024,
             storageRequiredBytes = 13L * 1000 * 1000 * 1000,
         )
     }
@@ -1129,7 +1129,7 @@ class ModelRepository private constructor(private val context: Context) {
             ),
             runOnCpu = false,
             ditKind = "qwen21",
-            ramRequiredBytes = 12L * 1024 * 1024 * 1024,
+            ramRequiredBytes = 16L * 1024 * 1024 * 1024,
             storageRequiredBytes = 12L * 1000 * 1000 * 1000,
         )
     }

@@ -1,10 +1,10 @@
 {
-  "versionCode": 305,
-  "versionName": "4.0.0-et.231",
-  "title": "最新版本 v4.0.0-et.231",
-  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.231/LocalDream-ET.apk",
-  "size": 165074352,
-  "sha256": "a909b1a327a907283da8cb4c920e37a54d4b720e5d5c8eabb9c448b5dc5bc6c9",
-  "releaseNotes": "最新版本\n\n正文：\net.231（versionCode 305）修复页面指示点数量：\n1) 模型列表有 CPU / NPU / DiT 三页，但底部指示点硬编码 pageCount=2，只显示两个点。\n2) 改为跟随 pagerState.pageCount，三个页面三个点，并随滑动同步高亮。\n3) 悬赏消息类型、原图预览、官方号不限额度延续。",
-  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.231/LocalDream-ET.apk"
+  "versionCode": 306,
+  "versionName": "4.0.0-et.232",
+  "title": "最新版本 v4.0.0-et.232",
+  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.232/LocalDream-ET.apk",
+  "size": 165075544,
+  "sha256": "e153503b55fbaf4a4dc1dcd36a783f74b85909da08deb0040d83e3969f7ff27a",
+  "releaseNotes": "最新版本\n\n正文：\net.232（versionCode 306）修复部分骁龙 8 / 荣耀 / OPPO 无法用 NPU 与生成崩溃：\n1) 荣耀/OPPO 等 ROM 常把 Build.SOC_MODEL 留空，只暴露高通代号 pineapple/sun/kalama/taro，旧识别逻辑判成“不支持”。现已补齐代号映射，骁龙 8 Gen 1/2/3/Elite 可正确识别。\n2) SD1.5 NPU 门槛按官方兼容表改为 Hexagon V68（约 SM7450）起，覆盖骁龙 7 Gen 1、8s Gen 3。\n3) DiT（Z-Image / FLUX.2 / Qwen Image）在启动前强制校验：必须 8 Elite（SM8750）及以上；天玑/麒麟/Exynos/8 Gen 2/3 直接给出原因，不再 exec 进 native 引擎后闪退。\n4) SDXL NPU 门槛改为官方要求的 8 Gen 3（SM8650）及以上。\n5) DiT 内存门槛提高到 16GB，并新增可用内存校验，避免 12GB 机器被 LMK 杀掉。\n说明：天玑/麒麟没有 Hexagon NPU，硬件上无法跑 NPU/DiT 模型，只能 SD1.5 CPU/GPU，这不是软件能绕过的。",
+  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.232/LocalDream-ET.apk"
 }
