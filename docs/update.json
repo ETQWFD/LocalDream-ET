@@ -1,10 +1,10 @@
 {
-  "versionCode": 295,
-  "versionName": "4.0.0-et.221",
-  "title": "最新版本 v4.0.0-et.221",
-  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.221/LocalDream-ET.apk",
-  "size": 164989064,
-  "sha256": "08a40c91ed6ea1131823d21858a993b59c432d65eecf973b757c6b15c7f6141c",
-  "releaseNotes": "最新版本\n\n作者下个星期无法更新，因为要开家长会，作者要死掉了，等下个星期看广告复活，请勿来打扰作者，谢谢。\n\n正文：\net.221（versionCode 295）聊天社区内置额度红包与悬赏公告：\n1) 聊天顶栏新增“发额度”：指定领取人 + 额度，发出即扣款并写入对方转账目录；只有该用户看到“领取”按钮，其他人点开提示“不是给你的”。\n2) 新增“发悬赏”：填写目的与额度，发布即托管扣款，聊天中渲染为“@全体人员 悬赏”，并提示额度与验收后支付。\n3) 聊天消息模型新增 QUOTA / BOUNTY 类型，旧 messages.json 缺字段按默认值解析，不影响历史消息。\n4) 悬赏提交与验收仍在图片社区悬赏页完成。",
-  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.221/LocalDream-ET.apk"
+  "versionCode": 296,
+  "versionName": "4.0.0-et.222",
+  "title": "最新版本 v4.0.0-et.222",
+  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.222/LocalDream-ET.apk",
+  "size": 165004068,
+  "sha256": "118ce2f51e32502207b9650f8c0830e17404e0155fb4c4fce736d571220e38f6",
+  "releaseNotes": "最新版本\n\n作者下个星期无法更新，因为要开家长会，作者要死掉了，等下个星期看广告复活，请勿来打扰作者，谢谢。\n\n正文：\net.222（versionCode 296）额度双池模型：\n1) 主额度每周重置回 128 万，上限 2 亿；重置只清主额度，备用额度不动。\n2) 赚取额度、收到转账统一进“备用额度”，默认 0，不重置、不设赚取上限。\n3) 额度面板新增“备用额度”与“提取额度”：输入数量后必须验证手机锁屏密码，通过后转入主额度。\n4) 聊天额度红包、悬赏、图片收益全部走新模型。",
+  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.222/LocalDream-ET.apk"
 }

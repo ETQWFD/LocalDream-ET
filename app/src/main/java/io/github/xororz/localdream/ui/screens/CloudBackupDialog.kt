@@ -167,6 +167,67 @@ fun CloudBackupDialog(onDismiss: () -> Unit) {
                             progress = { frac },
                             modifier = Modifier.fillMaxWidth(),
                         )
+                        // 2026-11：主额度 + 备用额度（赚取/转账，不随 7 天重置）。
+                        val ctxQ = LocalContext.current
+                        val reserve = io.github.xororz.localdream.service.QuotaManager.reserve(ctxQ)
+                        var showWithdraw by remember { mutableStateOf(false) }
+                        var withdrawText by remember { mutableStateOf("") }
+                        var pendingWithdraw by remember { mutableStateOf(0L) }
+                        val withdrawAuth = rememberLauncherForActivityResult(
+                            ActivityResultContracts.StartActivityForResult(),
+                        ) { res ->
+                            if (res.resultCode == android.app.Activity.RESULT_OK && pendingWithdraw > 0L) {
+                                val ok = io.github.xororz.localdream.service.QuotaManager.withdraw(ctxQ, pendingWithdraw)
+                                Toast.makeText(
+                                    ctxQ,
+                                    if (ok) "已提取 $pendingWithdraw 到主额度" else "提取失败：备用额度不足或已达 2 亿上限",
+                                    Toast.LENGTH_LONG,
+                                ).show()
+                            }
+                            pendingWithdraw = 0L
+                        }
+                        Text(
+                            text = "备用额度 $reserve（不重置，可提取到主额度）",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = androidx.compose.ui.graphics.Color(0xFFB8860B),
+                        )
+                        TextButton(onClick = { showWithdraw = true }) { Text("提取额度") }
+                        if (showWithdraw) {
+                            AlertDialog(
+                                onDismissRequest = { showWithdraw = false },
+                                title = { Text("提取备用额度") },
+                                text = {
+                                    Column {
+                                        Text("备用额度：$reserve")
+                                        OutlinedTextField(
+                                            value = withdrawText,
+                                            onValueChange = { withdrawText = it.filter { c -> c.isDigit() } },
+                                            label = { Text("提取多少") }, singleLine = true,
+                                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                        )
+                                        Text("确认后需要验证手机锁屏密码。", style = MaterialTheme.typography.labelSmall)
+                                    }
+                                },
+                                confirmButton = {
+                                    TextButton(onClick = {
+                                        val amt = withdrawText.toLongOrNull() ?: 0L
+                                        if (amt <= 0L || amt > reserve) {
+                                            Toast.makeText(ctxQ, "提取数量不合法", Toast.LENGTH_SHORT).show()
+                                        } else {
+                                            pendingWithdraw = amt
+                                            val km = androidx.core.content.ContextCompat.getSystemService(
+                                                ctxQ, android.app.KeyguardManager::class.java,
+                                            )
+                                            val it2 = km?.createConfirmDeviceCredentialIntent("验证身份", "提取额度需要验证")
+                                            if (it2 != null) withdrawAuth.launch(it2)
+                                            else Toast.makeText(ctxQ, "请先在系统设置里设置锁屏密码", Toast.LENGTH_LONG).show()
+                                            showWithdraw = false
+                                        }
+                                    }) { Text("确认提取") }
+                                },
+                                dismissButton = { TextButton(onClick = { showWithdraw = false }) { Text("取消") } },
+                            )
+                        }
                         // et.119/build197: next reset date under the progress bar.
                         val resetMs = io.github.xororz.localdream.service.QuotaManager
                             .resetEpochMs(LocalContext.current)

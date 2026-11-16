@@ -23,13 +23,19 @@ object QuotaManager {
     const val TOTAL = 1_280_000L
     // et.148: 未登录游客 42 万 / 7 天；登录用户 128 万 / 7 天；官方号 ETQWFD 无限。
     const val GUEST_TOTAL = 420_000L
+    /** 2026-11 新模型：主额度上限 2 亿；每周重置回 128 万；赚取/转账进备用额度，不重置。 */
+    const val HARD_CAP = 200_000_000L
+    const val WEEKLY_GRANT = 1_280_000L
 
     fun limit(c: Context): Long {
+        val stored = sp(c).getLong("limit", 0L)
+        if (stored > 0L) return stored.coerceAtMost(HARD_CAP)
         val tok = runCatching {
             SecureTokenStore(c).token(CloudConfig.Provider.GITHUB)
         }.getOrNull()
-        if (!tok.isNullOrBlank()) return TOTAL
-        return GUEST_TOTAL
+        val initial = if (!tok.isNullOrBlank()) WEEKLY_GRANT else GUEST_TOTAL
+        sp(c).edit().putLong("limit", initial).apply()
+        return initial
     }
     private const val RESET_DAYS = 7L
     private const val SP = "quota_prefs"
@@ -46,8 +52,13 @@ object QuotaManager {
             return
         }
         if ((now - epoch) / (24L * 60 * 60 * 1000) >= RESET_DAYS) {
-            sp(c).edit().putLong("used", 0L).putLong("epoch_ms", now).apply()
-            Log.i(TAG, "quota rolled over after $RESET_DAYS days")
+            // 只重置主额度：used 清零、limit 回到 128 万；备用额度一分不动。
+            sp(c).edit()
+                .putLong("used", 0L)
+                .putLong("limit", WEEKLY_GRANT)
+                .putLong("epoch_ms", now)
+                .apply()
+            Log.i(TAG, "quota rolled over after $RESET_DAYS days -> $WEEKLY_GRANT")
         }
     }
 
@@ -58,10 +69,10 @@ object QuotaManager {
     }
 
     /** et.156: 卡密赠送的独立额度池，不随 7 天重置清零。 */
-    fun bonusPool(c: Context): Long = sp(c).getLong("bonus_pool", 0L)
+    fun bonusPool(c: Context): Long = reserve(c)
 
     fun remaining(c: Context): Long =
-        (limit(c) - used(c) + bonusPool(c)).coerceAtLeast(0L).coerceAtMost(limit(c))
+        (limit(c) - used(c)).coerceAtLeast(0L)
 
     fun available(c: Context): Boolean = used(c) < limit(c)
 
@@ -72,13 +83,7 @@ object QuotaManager {
     }
 
     fun consume(c: Context, amount: Long) {
-        var rem = amount
-        val pool = sp(c).getLong("bonus_pool",0L)
-        if (pool > 0L) {
-            val draw = minOf(pool, rem)
-            sp(c).edit().putLong("bonus_pool", pool - draw).apply()
-            rem -= draw
-        }
+        val rem = amount
         if (rem > 0L) sp(c).edit().putLong("used", (used(c) + rem).coerceAtMost(limit(c))).apply()
     }
 
@@ -89,10 +94,22 @@ object QuotaManager {
     /** et.156: 卡密赠送额度进独立 bonus_pool，避免 used=0 时赠额被吞掉。 */
     fun bonus(c: Context, value: Long) {
         if (value <= 0L) return
-        // 2026-11：奖励额度不得把总量顶到上限以上：used + bonus 最多等于 limit。
-        val room = (limit(c) - used(c)).coerceAtLeast(0L)
-        val next = (sp(c).getLong("bonus_pool", 0L) + value).coerceAtMost(room)
-        sp(c).edit().putLong("bonus_pool", next).apply()
+        // 2026-11：赚取/收到转账统一进“备用额度”，不占主额度、不被 7 天重置。
+        val next = (sp(c).getLong("reserve_pool", 0L) + value).coerceAtLeast(0L)
+        sp(c).edit().putLong("reserve_pool", next).apply()
+    }
+
+    fun reserve(c: Context): Long = sp(c).getLong("reserve_pool", 0L)
+
+    /** 备用额度提取到主额度；只提高 limit，不动 used。 */
+    fun withdraw(c: Context, amount: Long): Boolean {
+        if (amount <= 0L) return false
+        val pool = reserve(c)
+        if (pool < amount) return false
+        val nextLimit = (limit(c) + amount).coerceAtMost(HARD_CAP)
+        if (nextLimit <= limit(c)) return false
+        sp(c).edit().putLong("reserve_pool", pool - amount).putLong("limit", nextLimit).apply()
+        return true
     }
 
     /** Next reset instant (epoch_ms + 7 days from current epoch); 0 if unset. */
