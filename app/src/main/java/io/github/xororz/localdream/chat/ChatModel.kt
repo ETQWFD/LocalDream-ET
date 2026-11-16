@@ -96,7 +96,9 @@ data class ChatMessage(
                     author = o.optString("author", "?"),
                     text = text,
                     ts = o.optLong("ts", 0L),
-                    kind = if (media == null) ChatKind.TEXT else ChatKind.parse(kindRaw),
+                    // 2026-11：任何非 TEXT 类型（QUOTA/BOUNTY 没有 media）都不能被强行
+                    // 降级成 TEXT，否则红包/悬赏消息一读回来就只剩一条普通文字。
+                    kind = ChatKind.parse(kindRaw),
                     mediaUrl = media,
                     cdnUrl = cdn,
                     durationSec = o.optInt("dur", 0),

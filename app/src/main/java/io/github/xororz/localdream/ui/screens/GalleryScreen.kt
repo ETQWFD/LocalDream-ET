@@ -456,7 +456,8 @@ fun GalleryScreen(navController: NavController) {
                             // Mirror chain instead of a single URL: a stale
                             // jsDelivr entry no longer shows as a black tile.
                             FallbackImage(
-                                urls = g.thumbUrls.ifEmpty { g.urls } + g.urls,
+                                // 预览只给原图，缩略图只用于网格；否则点开大图还是 200px 糊图。
+                                urls = g.urls,
                                 contentDescription = g.name,
                                 modifier = Modifier.aspectRatio(1f).fillMaxWidth(),
                                 contentScale = ContentScale.Crop,

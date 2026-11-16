@@ -1,10 +1,10 @@
 {
-  "versionCode": 303,
-  "versionName": "4.0.0-et.229",
-  "title": "最新版本 v4.0.0-et.229",
-  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.229/LocalDream-ET.apk",
-  "size": 165074392,
-  "sha256": "efd3f3925432d588345e78ea2ad440a6dc83b56f000294275986c773bfab52c5",
-  "releaseNotes": "最新版本\n\n正文：\net.229（versionCode 303）：\n1) 图片社区顶栏的“发额度/悬赏”入口移除，只保留在公共聊天社区。\n2) 聊天文字气泡改为纯 Text，长按不再被 ClickableText 吃掉，复制/引用/转发菜单可正常弹出。\n3) 官方号 ETQWFD 额度判定改为不限：remaining/available 直接放行，不再显示额度不足。\n4) 排行榜 stats 目录兜底、模型下载 HEAD -1 修复延续。",
-  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.229/LocalDream-ET.apk"
+  "versionCode": 304,
+  "versionName": "4.0.0-et.230",
+  "title": "最新版本 v4.0.0-et.230",
+  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.230/LocalDream-ET.apk",
+  "size": 165074320,
+  "sha256": "d2c981965b5d676e849781a8e27fcc84008ed86610e925041df2322ec94ff6c7",
+  "releaseNotes": "最新版本\n\n正文：\net.230（versionCode 304）修复悬赏消息丢失：\n1) ChatMessage.fromJson 不再把无 media 的消息强制降级为 TEXT；红包/悬赏消息重新加载后仍保持 QUOTA/BOUNTY 类型，不再只剩一条普通文字。\n2) 图片社区预览改为只给原图，缩略图仅用于网格，点开不再看到低清缩略图。\n3) 图片社区入口移除、聊天长按、官方号不限额度延续。",
+  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.230/LocalDream-ET.apk"
 }
