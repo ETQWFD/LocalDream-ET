@@ -569,8 +569,12 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
         preferences.getInt("last_viewed_page", 0)
     }
 
+    // 无 Hexagon 的设备（天玑/麒麟/Exynos/32 位）默认落在 CPU 页：
+    // 之前会恢复上次停留的 NPU/DiT 页，用户一进来看到的全是锁，
+    // 误以为“软件不能用”。CPU 页的 SD1.5 才是这些机器真实可跑的路径。
+    val startPage = if (!io.github.xororz.localdream.utils.DeviceCapabilities.hasQnnNpu()) 0 else lastViewedPage
     val pagerState = rememberPagerState(
-        initialPage = lastViewedPage,
+        initialPage = startPage,
         pageCount = { 3 },
     )
 

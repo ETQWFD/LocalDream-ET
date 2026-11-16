@@ -206,11 +206,16 @@ object DeviceCapabilities {
         return rendererCache
     }
 
-    /** Default the SD1.5 GPU (OpenCL) toggle on for phones with a known mobile GPU. */
+    /**
+     * 2026-11：PowerVR（vivo/OPPO 天玑低端机常见）的 OpenCL 驱动在 MNN
+     * 里初始化就崩，SD1.5 选 GPU 会直接闪退。只对 Adreno/Mali/Xclipse
+     * 默认开 GPU；PowerVR 一律先走 CPU，用户仍可在设置里手动开。
+     */
     fun openclRecommended(): Boolean {
         val r = glRenderer()?.lowercase().orEmpty()
+        if (r.contains("powervr")) return false
         return r.contains("adreno") || r.contains("mali") ||
-            r.contains("xclipse") || r.contains("powervr") ||
+            r.contains("xclipse") ||
             // Fallback when the renderer can't be read: trust known ARM vendors.
             (r.isBlank() && socInfo.vendor in setOf(
                 SocVendor.QUALCOMM, SocVendor.KIRIN,

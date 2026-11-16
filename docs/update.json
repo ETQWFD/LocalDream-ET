@@ -1,10 +1,10 @@
 {
-  "versionCode": 306,
-  "versionName": "4.0.0-et.232",
-  "title": "最新版本 v4.0.0-et.232",
-  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.232/LocalDream-ET.apk",
-  "size": 165075544,
-  "sha256": "e153503b55fbaf4a4dc1dcd36a783f74b85909da08deb0040d83e3969f7ff27a",
-  "releaseNotes": "最新版本\n\n正文：\net.232（versionCode 306）修复部分骁龙 8 / 荣耀 / OPPO 无法用 NPU 与生成崩溃：\n1) 荣耀/OPPO 等 ROM 常把 Build.SOC_MODEL 留空，只暴露高通代号 pineapple/sun/kalama/taro，旧识别逻辑判成“不支持”。现已补齐代号映射，骁龙 8 Gen 1/2/3/Elite 可正确识别。\n2) SD1.5 NPU 门槛按官方兼容表改为 Hexagon V68（约 SM7450）起，覆盖骁龙 7 Gen 1、8s Gen 3。\n3) DiT（Z-Image / FLUX.2 / Qwen Image）在启动前强制校验：必须 8 Elite（SM8750）及以上；天玑/麒麟/Exynos/8 Gen 2/3 直接给出原因，不再 exec 进 native 引擎后闪退。\n4) SDXL NPU 门槛改为官方要求的 8 Gen 3（SM8650）及以上。\n5) DiT 内存门槛提高到 16GB，并新增可用内存校验，避免 12GB 机器被 LMK 杀掉。\n说明：天玑/麒麟没有 Hexagon NPU，硬件上无法跑 NPU/DiT 模型，只能 SD1.5 CPU/GPU，这不是软件能绕过的。",
-  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.232/LocalDream-ET.apk"
+  "versionCode": 307,
+  "versionName": "4.0.0-et.233",
+  "title": "最新版本 v4.0.0-et.233",
+  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.233/LocalDream-ET.apk",
+  "size": 165075584,
+  "sha256": "dc1120da2b875b2c3f084a987fad0b992235eb890bc158f59be33ccc9b438c7c",
+  "releaseNotes": "最新版本\n\n正文：\net.233（versionCode 307）兼容性修复：\n1) 天玑/麒麟/Exynos/32 位设备进入模型页默认落在 CPU 页，不再恢复上次停留的 NPU/DiT 页（一进来全是锁，误以为不能用）。\n2) PowerVR（vivo/OPPO 天玑低端机常见）默认关闭 OpenCL：其驱动在 MNN 初始化即崩，SD1.5 选 GPU 会闪退；现在默认 CPU 出图，用户仍可手动开。\n3) DiT/SDXL 启动前硬件校验、16GB 内存门槛、骁龙代号识别延续。\n说明：天玑 NPU 走的是 MediaTek NeuroPilot（需专用 DLA 编译模型），与 QNN 模型不通用；官方开源仓库没有可用的预编译 SD 模型，本版无法接入。天玑机型真实可用的路径是 SD1.5 CPU/GPU。",
+  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.233/LocalDream-ET.apk"
 }
