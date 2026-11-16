@@ -1919,7 +1919,9 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                 horizontalArrangement = Arrangement.Center,
             ) {
                 TabPageIndicator(
-                    pageCount = 2,
+                    // 标签有 CPU / NPU / DiT 三个，指示点必须跟着 pager 页数走；
+                    // 原来硬编码 2，导致第三个 DiT 页没有对应的点。
+                    pageCount = pagerState.pageCount,
                     currentPage = pagerState.currentPage,
                 )
             }

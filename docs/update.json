@@ -1,10 +1,10 @@
 {
-  "versionCode": 304,
-  "versionName": "4.0.0-et.230",
-  "title": "最新版本 v4.0.0-et.230",
-  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.230/LocalDream-ET.apk",
-  "size": 165074320,
-  "sha256": "d2c981965b5d676e849781a8e27fcc84008ed86610e925041df2322ec94ff6c7",
-  "releaseNotes": "最新版本\n\n正文：\net.230（versionCode 304）修复悬赏消息丢失：\n1) ChatMessage.fromJson 不再把无 media 的消息强制降级为 TEXT；红包/悬赏消息重新加载后仍保持 QUOTA/BOUNTY 类型，不再只剩一条普通文字。\n2) 图片社区预览改为只给原图，缩略图仅用于网格，点开不再看到低清缩略图。\n3) 图片社区入口移除、聊天长按、官方号不限额度延续。",
-  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.230/LocalDream-ET.apk"
+  "versionCode": 305,
+  "versionName": "4.0.0-et.231",
+  "title": "最新版本 v4.0.0-et.231",
+  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.231/LocalDream-ET.apk",
+  "size": 165074352,
+  "sha256": "a909b1a327a907283da8cb4c920e37a54d4b720e5d5c8eabb9c448b5dc5bc6c9",
+  "releaseNotes": "最新版本\n\n正文：\net.231（versionCode 305）修复页面指示点数量：\n1) 模型列表有 CPU / NPU / DiT 三页，但底部指示点硬编码 pageCount=2，只显示两个点。\n2) 改为跟随 pagerState.pageCount，三个页面三个点，并随滑动同步高亮。\n3) 悬赏消息类型、原图预览、官方号不限额度延续。",
+  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.231/LocalDream-ET.apk"
 }
