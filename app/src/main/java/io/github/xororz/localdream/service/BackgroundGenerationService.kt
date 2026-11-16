@@ -1017,6 +1017,44 @@ class BackgroundGenerationService : Service() {
                     updateState(GenerationState.Progress(0f))
                     continue@attemptLoop
                 }
+                // 2026-11：GPU(OpenCL) 在部分 Mali/PowerVR 驱动上不是“出坏图”，
+                // 而是引擎启动/首步就直接死掉，之前一条重试都没有，用户看到的就是
+                // “每次生成都崩溃”。这里在异常路径上也做一次 GPU→CPU 回退：
+                // 标记本机 GPU 不稳定，换 CPU 参数重发一次。
+                if (attemptOpenCL && !cpuRetryDone && !isBadAlloc) {
+                    preferences.edit().putBoolean("gpu_unstable", true).apply()
+                    cpuRetryDone = true
+                    attemptOpenCL = false
+                    attemptCfg = 7f
+                    attemptSampler = "dpm++2m"
+                    attemptSteps = 20
+                    io.github.xororz.localdream.cloud.LogHub.log(
+                        io.github.xororz.localdream.cloud.LogHub.Category.GENERATE,
+                        "GPU(OpenCL) failed before producing an image (${e.message}); retry on CPU",
+                    )
+                    runCatching { Thread.sleep(1500) }
+                    if (engineModelId != null) {
+                        runCatching {
+                            startService(android.content.Intent(
+                                this@BackgroundGenerationService,
+                                io.github.xororz.localdream.service.BackendService::class.java,
+                            ).apply {
+                                action = io.github.xororz.localdream.service.BackendService.ACTION_RESTART
+                                putExtra("modelId", engineModelId)
+                                putExtra("backendType", engineBackendType)
+                            })
+                            var waited = 0L
+                            while (waited < 20_000L) {
+                                try {
+                                    java.net.Socket("127.0.0.1", io.github.xororz.localdream.utils.EnginePort.activePort).use { break }
+                                } catch (_: Exception) { Thread.sleep(400); waited += 400 }
+                            }
+                        }
+                    }
+                    updateState(GenerationState.Progress(0f))
+                    continue@attemptLoop
+                }
+
                 // et.107: only after tiering all the way down (now at 256) and still bad_alloc
                 // do we suggest CPU. Top-tier phones should keep running NPU at lower res.
                 val alreadyLowest = maxOf(attemptWidth, attemptHeight) <= 256
