@@ -62,10 +62,15 @@ object BountyClient {
         KeyFactory.getInstance("RSA").generatePublic(X509EncodedKeySpec(Base64.getDecoder().decode(b64)))
 
     /** 发布悬赏：先扣额度托管，再写入 bounties/{creator}/{id}.json（带发布者公钥）。 */
-    suspend fun create(ctx: Context, creator: String, title: String, amount: Long): Pair<Boolean, String> =
+    suspend fun create(ctx: Context, creator: String, title: String, amount: Long): Pair<Boolean, String> {
+        val (ok, err, _) = createWithId(ctx, creator, title, amount)
+        return ok to err
+    }
+
+    suspend fun createWithId(ctx: Context, creator: String, title: String, amount: Long): Triple<Boolean, String, String> =
         withContext(Dispatchers.IO) {
-            if (creator.isBlank() || title.isBlank() || amount <= 0L) return@withContext false to "请填写目的和额度"
-            if (QuotaManager.remaining(ctx) < amount) return@withContext false to "额度不足"
+            if (creator.isBlank() || title.isBlank() || amount <= 0L) return@withContext Triple(false, "请填写目的和额度", "")
+            if (QuotaManager.remaining(ctx) < amount) return@withContext Triple(false, "额度不足", "")
             QuotaManager.consume(ctx, amount)
             val id = "${System.currentTimeMillis()}"
             val json = JSONObject()
@@ -74,7 +79,7 @@ object BountyClient {
                 .put("status", "open").put("pub", publicKeyBase64(ctx))
             val ok = writeRaw("bounties/$creator/$id.json", json)
             if (!ok) QuotaManager.refund(ctx, amount)
-            ok to if (ok) "" else "发布悬赏失败"
+            Triple(ok, if (ok) "" else "发布悬赏失败", id)
         }
 
     private fun writeRaw(path: String, json: JSONObject): Boolean = runCatching {

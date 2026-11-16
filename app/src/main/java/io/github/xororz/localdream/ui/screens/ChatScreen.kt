@@ -98,6 +98,9 @@ fun ChatScreen(onBack: () -> Unit) {
     var quotaTo by remember { mutableStateOf("") }
     var quotaAmount by remember { mutableStateOf("") }
     var showBounty by remember { mutableStateOf(false) }
+    var bountyDetail by remember { mutableStateOf<org.json.JSONObject?>(null) }
+    var bountySubsChat by remember { mutableStateOf<List<org.json.JSONObject>>(emptyList()) }
+    var pendingSubmitBounty by remember { mutableStateOf<org.json.JSONObject?>(null) }
     var bountyTitle by remember { mutableStateOf("") }
     var bountyAmount by remember { mutableStateOf("") }
     var sending by remember { mutableStateOf(false) }
@@ -622,6 +625,29 @@ fun ChatScreen(onBack: () -> Unit) {
             sendImage(uri)
         }
     }
+    val bountyPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        val b = pendingSubmitBounty
+        val login = meLogin
+        if (uri != null && b != null && login != null) {
+            scope.launch {
+                val bytes = withContext(Dispatchers.IO) {
+                    runCatching { ctx.contentResolver.openInputStream(uri)?.use { it.readBytes() } }.getOrNull()
+                }
+                if (bytes == null || bytes.size > 20 * 1024 * 1024) {
+                    android.widget.Toast.makeText(ctx, "读取失败或超过 20MB", android.widget.Toast.LENGTH_LONG).show()
+                } else {
+                    val (ok, err) = withContext(Dispatchers.IO) {
+                        io.github.xororz.localdream.service.BountyClient.submit(b, login, "submission", bytes)
+                    }
+                    android.widget.Toast.makeText(
+                        ctx, if (ok) "已加密提交，只有发布者能打开" else "提交失败：$err",
+                        android.widget.Toast.LENGTH_LONG,
+                    ).show()
+                }
+                pendingSubmitBounty = null
+            }
+        }
+    }
     val videoPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) sendVideo(uri)
     }
@@ -639,6 +665,79 @@ fun ChatScreen(onBack: () -> Unit) {
 
     Scaffold(
         topBar = {
+            val bd = bountyDetail
+            if (bd != null) {
+                AlertDialog(
+                    onDismissRequest = { bountyDetail = null },
+                    title = { Text("悬赏") },
+                    text = {
+                        Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                            Text(bd.optString("title"), style = MaterialTheme.typography.titleMedium)
+                            Text("发布者 @${bd.optString("creator")} · ${bd.optLong("amount")} 额度")
+                            Text("状态：${bd.optString("status")}", style = MaterialTheme.typography.labelSmall)
+                            if (meLogin.equals(bd.optString("creator"), true)) {
+                                Text("提交成果", style = MaterialTheme.typography.titleSmall)
+                                if (bountySubsChat.isEmpty()) Text("还没有人提交")
+                                bountySubsChat.forEach { sub ->
+                                    Column(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                                        Text("@${sub.optString("submitter")} · ${sub.optString("name")}")
+                                        if (sub.optString("status") == "rejected") Text("已驳回：${sub.optString("reason")}")
+                                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                            TextButton(onClick = {
+                                                scope.launch {
+                                                    val bytes = withContext(Dispatchers.IO) {
+                                                        runCatching { io.github.xororz.localdream.service.BountyClient.decrypt(ctx, sub) }.getOrNull()
+                                                    }
+                                                    if (bytes == null) {
+                                                        android.widget.Toast.makeText(ctx, "解密失败", android.widget.Toast.LENGTH_LONG).show()
+                                                    } else {
+                                                        android.widget.Toast.makeText(ctx, "解密成功，${bytes.size} 字节（保存入口在图片社区悬赏页）", android.widget.Toast.LENGTH_LONG).show()
+                                                    }
+                                                }
+                                            }) { Text("预览") }
+                                            TextButton(onClick = {
+                                                scope.launch {
+                                                    val ok = withContext(Dispatchers.IO) {
+                                                        io.github.xororz.localdream.service.BountyClient.reject(sub, "不满意，请重新提交")
+                                                    }
+                                                    android.widget.Toast.makeText(ctx, if (ok) "已驳回" else "驳回失败", android.widget.Toast.LENGTH_SHORT).show()
+                                                    bountySubsChat = withContext(Dispatchers.IO) {
+                                                        runCatching { io.github.xororz.localdream.service.BountyClient.listSubs(bd) }.getOrDefault(emptyList())
+                                                    }
+                                                }
+                                            }) { Text("驳回") }
+                                            TextButton(onClick = {
+                                                scope.launch {
+                                                    val ok = withContext(Dispatchers.IO) {
+                                                        io.github.xororz.localdream.service.BountyClient.pay(
+                                                            meLogin.orEmpty(), sub.optString("submitter"), bd.optLong("amount"),
+                                                        )
+                                                    }
+                                                    if (ok) {
+                                                        withContext(Dispatchers.IO) {
+                                                            io.github.xororz.localdream.service.BountyClient.closeBounty(bd, "paid")
+                                                        }
+                                                        bountyDetail = null
+                                                    }
+                                                    android.widget.Toast.makeText(ctx, if (ok) "已支付，悬赏完成" else "支付失败", android.widget.Toast.LENGTH_LONG).show()
+                                                }
+                                            }) { Text("支付") }
+                                        }
+                                    }
+                                    HorizontalDivider()
+                                }
+                            } else {
+                                Button(onClick = {
+                                    pendingSubmitBounty = bd
+                                    bountyPicker.launch("*/*")
+                                }, modifier = Modifier.fillMaxWidth()) { Text("提交成果（图片/压缩包）") }
+                                Text("提交物会加密，只有 @${bd.optString("creator")} 能打开。")
+                            }
+                        }
+                    },
+                    confirmButton = { TextButton(onClick = { bountyDetail = null }) { Text("关闭") } },
+                )
+            }
             if (showQuota) {
                 AlertDialog(
                     onDismissRequest = { showQuota = false },
@@ -728,8 +827,8 @@ fun ChatScreen(onBack: () -> Unit) {
                                 android.widget.Toast.makeText(ctx, "请先登录 GitHub", android.widget.Toast.LENGTH_SHORT).show()
                             } else {
                                 scope.launch {
-                                    val (ok, err) = withContext(Dispatchers.IO) {
-                                        io.github.xororz.localdream.service.BountyClient.create(
+                                    val (ok, err, bid) = withContext(Dispatchers.IO) {
+                                        io.github.xororz.localdream.service.BountyClient.createWithId(
                                             ctx, author, bountyTitle.trim(), bountyAmount.toLongOrNull() ?: 0L,
                                         )
                                     }
@@ -741,6 +840,7 @@ fun ChatScreen(onBack: () -> Unit) {
                                                 author = author, text = bountyTitle.trim(), ts = nowSeconds(),
                                                 kind = ChatKind.BOUNTY, avatar = meAvatar,
                                                 bountyAmount = bountyAmount.toLongOrNull() ?: 0L,
+                                                bountyId = bid,
                                                 status = "open",
                                             ),
                                         )
@@ -867,10 +967,24 @@ fun ChatScreen(onBack: () -> Unit) {
                             }
                         },
                         onBountyAction = { m ->
-                            android.widget.Toast.makeText(
-                                ctx, "@全体人员 悬赏「${m.text}」${m.bountyAmount} 额度，提交入口在图片社区悬赏页",
-                                android.widget.Toast.LENGTH_LONG,
-                            ).show()
+                            scope.launch {
+                                val list = withContext(Dispatchers.IO) {
+                                    runCatching { io.github.xororz.localdream.service.BountyClient.list() }.getOrDefault(emptyList())
+                                }
+                                val b = list.firstOrNull { it.optString("id") == m.bountyId } ?: list.firstOrNull {
+                                    it.optString("creator") == m.author && it.optString("title") == m.text
+                                }
+                                if (b == null) {
+                                    android.widget.Toast.makeText(ctx, "找不到这条悬赏", android.widget.Toast.LENGTH_SHORT).show()
+                                } else {
+                                    bountyDetail = b
+                                    bountySubsChat = if (meLogin.equals(b.optString("creator"), true)) {
+                                        withContext(Dispatchers.IO) {
+                                            runCatching { io.github.xororz.localdream.service.BountyClient.listSubs(b) }.getOrDefault(emptyList())
+                                        }
+                                    } else emptyList()
+                                }
+                            }
                         },
                     )
                 }
