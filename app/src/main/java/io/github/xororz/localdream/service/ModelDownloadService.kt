@@ -590,7 +590,13 @@ class ModelDownloadService : Service() {
         for (candidate in pickFastest(url)) {
             // (a) pin authoritative total via HEAD on this mirror first.
             var (headCode, total) = headCodeAndLength(candidate)
-            if (headCode !in 200..399) {
+            // 2026-11：HEAD 失败（-1）不代表文件不可下载——很多 CDN 拒绝 HEAD 或
+            // 握手超时，但 GET 正常。此前直接把 -1 当致命错误，界面就显示
+            // “下载失败 http-1”，用户永远下不了模型。这里改为继续尝试 GET。
+            if (headCode == -1) {
+                total = 0L
+                Log.w(TAG, "HEAD $candidate failed (-1), fall back to GET without length")
+            } else if (headCode !in 200..399) {
                 lastError = Exception(getString(R.string.error_download_failed, "HTTP $headCode"))
                 Log.w(TAG, "HEAD $candidate -> $headCode, next source")
                 continue

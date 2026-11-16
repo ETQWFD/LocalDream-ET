@@ -1,10 +1,10 @@
 {
-  "versionCode": 299,
-  "versionName": "4.0.0-et.225",
-  "title": "最新版本 v4.0.0-et.225",
-  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.225/LocalDream-ET.apk",
-  "size": 165075288,
-  "sha256": "06a338f508dce24d71d4bee12005a5c35785b141382f4c816e992961d09b5a58",
-  "releaseNotes": "最新版本\n\n作者下个星期无法更新，因为要开家长会，作者要死掉了，等下个星期看广告复活，请勿来打扰作者，谢谢。\n\n正文：\net.225（versionCode 299）个人公告中心：\n1) 聊天顶栏新增“公告”，读取本人 notices 目录，按时间倒序显示。\n2) 收到转账额度、悬赏被驳回、悬赏支付到账都会写一条公告，只有对应账号能看到。\n3) 公告走 notices/{用户名}/ 目录，与转账/悬赏目录隔离。\n4) 三 ABI、备用额度、24 小时自动结算延续。",
-  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.225/LocalDream-ET.apk"
+  "versionCode": 300,
+  "versionName": "4.0.0-et.226",
+  "title": "最新版本 v4.0.0-et.226",
+  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.226/LocalDream-ET.apk",
+  "size": 165075124,
+  "sha256": "66bc2e5e6f7078556cc3debac44f1df41064306762ba45dabb87a2102475f2ce",
+  "releaseNotes": "最新版本\n\n正文：\net.226（versionCode 300）修复模型无法下载：\n1) HEAD 返回 -1 不再当成致命错误，改为继续用 GET 下载（很多 CDN 拒绝 HEAD 或握手超时）。\n2) 只有明确 4xx/5xx 才换源，避免“下载失败 http-1”直接终止。\n3) 大文件分段、续传、镜像切换逻辑保留。",
+  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.226/LocalDream-ET.apk"
 }
