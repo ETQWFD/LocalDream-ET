@@ -176,6 +176,62 @@ object BountyClient {
         out.sortedByDescending { it.optLong("ts") }
     }
 
+    private fun putWithSha(path: String, sha: String, json: JSONObject): Boolean = runCatching {
+        val c = conn("$API/$path", "PUT").apply { doOutput = true }
+        c.setRequestProperty("Content-Type", "application/json")
+        val body = JSONObject().put("message", "update $path").put("sha", sha)
+            .put("content", Base64.getEncoder().encodeToString(json.toString().toByteArray()))
+        c.outputStream.use { it.write(body.toString().toByteArray()) }
+        c.responseCode in 200..201
+    }.getOrDefault(false)
+
+    /** 驳回某个提交：写 rejected；驳回原因会随提交记录展示，发布者仍需重新验收。 */
+    suspend fun reject(sub: JSONObject, reason: String): Boolean = withContext(Dispatchers.IO) {
+        val path = sub.optString("_path")
+        val sha = sub.optString("_sha")
+        if (path.isBlank() || sha.isBlank()) return@withContext false
+        val plain = JSONObject(sub.toString())
+        plain.remove("_path"); plain.remove("_sha")
+        plain.put("status", "rejected").put("reason", reason)
+            .put("rejectedTs", System.currentTimeMillis())
+        putWithSha(path, sha, plain)
+    }
+
+    /** 关闭悬赏（paid / rejected / expired），避免重复结算。 */
+    suspend fun closeBounty(bounty: JSONObject, status: String): Boolean = withContext(Dispatchers.IO) {
+        val path = bounty.optString("path")
+        val sha = bounty.optString("sha")
+        if (path.isBlank() || sha.isBlank()) return@withContext false
+        val plain = JSONObject(bounty.toString())
+        plain.remove("path"); plain.remove("sha")
+        plain.put("status", status).put("closedTs", System.currentTimeMillis())
+        putWithSha(path, sha, plain)
+    }
+
+    /**
+     * 24 小时自动结算：发布者打开悬赏页时扫描自己超过 24h 且仍 open 的悬赏，
+     * 有提交就默认“满意”，把托管额度付给最早提交者并关闭悬赏。
+     */
+    suspend fun autoSettle(ctx: Context, creator: String, list: List<JSONObject>): Int = withContext(Dispatchers.IO) {
+        var settled = 0
+        for (b in list) {
+            if (!b.optString("creator").equals(creator, true)) continue
+            if (b.optString("status") == "paid" || b.optString("status") == "closed") continue
+            val ageH = (System.currentTimeMillis() - b.optLong("ts")) / 3_600_000L
+            if (ageH < 24L) continue
+            val subs = listSubs(b)
+            val target = subs.lastOrNull { it.optString("status") != "rejected" } ?: continue
+            val to = target.optString("submitter")
+            if (to.isBlank()) continue
+            val ok = GalleryClient.sendQuota(creator, to, b.optLong("amount")).first
+            if (ok) {
+                closeBounty(b, "paid")
+                settled++
+            }
+        }
+        settled
+    }
+
     /** 验收后把托管额度转给提交者；托管时已扣过，这里不再扣。 */
     suspend fun pay(from: String, to: String, amount: Long): Boolean =
         GalleryClient.sendQuota(from, to, amount).first

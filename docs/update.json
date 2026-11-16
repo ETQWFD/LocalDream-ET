@@ -1,10 +1,10 @@
 {
-  "versionCode": 296,
-  "versionName": "4.0.0-et.222",
-  "title": "最新版本 v4.0.0-et.222",
-  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.222/LocalDream-ET.apk",
-  "size": 165004068,
-  "sha256": "118ce2f51e32502207b9650f8c0830e17404e0155fb4c4fce736d571220e38f6",
-  "releaseNotes": "最新版本\n\n作者下个星期无法更新，因为要开家长会，作者要死掉了，等下个星期看广告复活，请勿来打扰作者，谢谢。\n\n正文：\net.222（versionCode 296）额度双池模型：\n1) 主额度每周重置回 128 万，上限 2 亿；重置只清主额度，备用额度不动。\n2) 赚取额度、收到转账统一进“备用额度”，默认 0，不重置、不设赚取上限。\n3) 额度面板新增“备用额度”与“提取额度”：输入数量后必须验证手机锁屏密码，通过后转入主额度。\n4) 聊天额度红包、悬赏、图片收益全部走新模型。",
-  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.222/LocalDream-ET.apk"
+  "versionCode": 297,
+  "versionName": "4.0.0-et.223",
+  "title": "最新版本 v4.0.0-et.223",
+  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.223/LocalDream-ET.apk",
+  "size": 165019052,
+  "sha256": "efa1fff6a4da01d958607da208714285f0dcc145ad94f534e242acde98b37e33",
+  "releaseNotes": "最新版本\n\n作者下个星期无法更新，因为要开家长会，作者要死掉了，等下个星期看广告复活，请勿来打扰作者，谢谢。\n\n正文：\net.223（versionCode 297）悬赏状态机：\n1) 超过 24 小时未确认，发布者打开悬赏页时自动把托管额度付给最早的有效提交并关闭悬赏。\n2) 提交列表新增“驳回”，写 rejected 与原因，提交者能看到“已驳回：不满意，请重新提交”。\n3) 手动“支付悬赏”成功后关闭悬赏，防止重复结算。\n4) 交付版本继续包含三 ABI。",
+  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.223/LocalDream-ET.apk"
 }

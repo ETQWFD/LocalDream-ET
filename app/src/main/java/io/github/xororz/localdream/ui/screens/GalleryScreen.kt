@@ -237,6 +237,16 @@ fun GalleryScreen(navController: NavController) {
     fun refreshBounty() {
         scope.launch {
             bountyBusy = true
+            val list = withContext(Dispatchers.IO) {
+                runCatching { io.github.xororz.localdream.service.BountyClient.list() }.getOrDefault(emptyList())
+            }
+            val login = io.github.xororz.localdream.cloud.SecureTokenStore(ctx)
+                .state(io.github.xororz.localdream.cloud.CloudConfig.Provider.GITHUB)?.login.orEmpty()
+            if (login.isNotBlank()) {
+                withContext(Dispatchers.IO) {
+                    runCatching { io.github.xororz.localdream.service.BountyClient.autoSettle(ctx, login, list) }
+                }
+            }
             bountyItems = withContext(Dispatchers.IO) {
                 runCatching { io.github.xororz.localdream.service.BountyClient.list() }.getOrDefault(emptyList())
             }
@@ -630,6 +640,14 @@ fun GalleryScreen(navController: NavController) {
                     bountySubs.forEach { sub ->
                         Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
                             Text("@${sub.optString("submitter")} · ${sub.optString("name")}", style = MaterialTheme.typography.bodySmall)
+                            val st = sub.optString("status")
+                            if (st.isNotBlank()) {
+                                Text(
+                                    if (st == "rejected") "已驳回：${sub.optString("reason")}" else st,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = if (st == "rejected") androidx.compose.ui.graphics.Color(0xFFB00020) else MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 TextButton(onClick = {
                                     scope.launch {
@@ -660,12 +678,32 @@ fun GalleryScreen(navController: NavController) {
                                         val ok = withContext(Dispatchers.IO) {
                                             io.github.xororz.localdream.service.BountyClient.pay(login, to, amount)
                                         }
+                                        if (ok) {
+                                            withContext(Dispatchers.IO) {
+                                                io.github.xororz.localdream.service.BountyClient.closeBounty(b, "paid")
+                                            }
+                                            subsFor = null
+                                        }
                                         android.widget.Toast.makeText(
                                             ctx, if (ok) "已把 $amount 额度付给 @$to，悬赏完成" else "支付失败",
                                             android.widget.Toast.LENGTH_LONG,
                                         ).show()
                                     }
                                 }) { Text("支付悬赏") }
+                                TextButton(onClick = {
+                                    scope.launch {
+                                        val ok = withContext(Dispatchers.IO) {
+                                            io.github.xororz.localdream.service.BountyClient.reject(sub, "不满意，请重新提交")
+                                        }
+                                        android.widget.Toast.makeText(
+                                            ctx, if (ok) "已驳回，提交者会看到原因" else "驳回失败",
+                                            android.widget.Toast.LENGTH_LONG,
+                                        ).show()
+                                        bountySubs = withContext(Dispatchers.IO) {
+                                            runCatching { io.github.xororz.localdream.service.BountyClient.listSubs(b) }.getOrDefault(emptyList())
+                                        }
+                                    }
+                                }) { Text("驳回") }
                             }
                             HorizontalDivider()
                         }
