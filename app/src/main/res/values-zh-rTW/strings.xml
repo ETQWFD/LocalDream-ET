@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <string name="app_name">Local Dream ET</string>
+    <string name="app_name">Nightmare Road-ET</string>
 
     <!-- Models -->
     <string name="anythingv5_description">動漫影象生成模型</string>
@@ -79,7 +79,7 @@
     <string name="got_it">知道了!</string>
     <string name="yes">是</string>
     <string name="about_app">須知</string>
-    <string name="must_read">此APP支援在CPU/GPU和部分高通NPU上執行stable diffusion影象生成。\n\n支援在 Hexagon V68 架構及以上的驍龍 NPU 上執行 SD1.5 模型。\n\n支援在驍龍 8 Gen 3 及更新的裝置上執行 SDXL 模型。\n\n若您的晶片不在上述範圍內，則只能使用 CPU/GPU 執行。\n\n本應用 Local Dream ET（開發者：ET）釋出於 https://github.com/ETQWFD/LocalDream-ET ，可在此檢視原始碼、下載版本或提交問題\n\n官網 / 文件：https://etqwfd.github.io/LocalDream-ET/help.html</string>
+    <string name="must_read">此APP支援在CPU/GPU和部分高通NPU上執行stable diffusion影象生成。\n\n支援在 Hexagon V68 架構及以上的驍龍 NPU 上執行 SD1.5 模型。\n\n支援在驍龍 8 Gen 3 及更新的裝置上執行 SDXL 模型。\n\n若您的晶片不在上述範圍內，則只能使用 CPU/GPU 執行。\n\n本應用 Nightmare Road-ET（開發者：ET）釋出於 https://github.com/ETQWFD/LocalDream-ET ，可在此檢視原始碼、下載版本或提交問題\n\n官網 / 文件：https://etqwfd.github.io/LocalDream-ET/help.html</string>
     <string name="help">幫助</string>
     <string name="more_options">更多</string>
 
@@ -486,7 +486,7 @@
     <string name="backup_import_done">已匯入 %1$d 條,跳過重複 %2$d 條,失敗 %3$d 條</string>
     <string name="backup_import_orphan_note">備份中有 %1$d 個模型未安裝,這些記錄已匯入,可在歷史篩選中選擇全部模型檢視。</string>
     <string name="backup_failed">操作失敗: %1$s</string>
-    <string name="backup_invalid_file">不是有效的 Local Dream 備份檔案</string>
+    <string name="backup_invalid_file">不是有效的 Nightmare Road 備份檔案</string>
     <string name="delete_keep_history">保留生成歷史</string>
     <string name="delete_keep_history_hint">刪除模型後歷史記錄仍可在歷史頁檢視</string>
 
@@ -561,7 +561,7 @@
     <!-- Device link (remote control between two devices) -->
     <string name="remote_link">裝置互聯</string>
     <string name="remote_host_section">受控模式（本機執行模型）</string>
-    <string name="remote_host_hint">允許同一網路中另一臺安裝 Local Dream 的裝置瀏覽本機模型並用其生成圖片。受控模式開啟期間，控制埠（8808）和生成埠（8081）會對區域網開放。</string>
+    <string name="remote_host_hint">允許同一網路中另一臺安裝 Nightmare Road 的裝置瀏覽本機模型並用其生成圖片。受控模式開啟期間，控制埠（8808）和生成埠（8081）會對區域網開放。</string>
     <string name="remote_host_start">進入受控模式</string>
     <string name="remote_host_stop">退出受控模式</string>
     <string name="remote_host_addresses">本機地址</string>
@@ -582,7 +582,7 @@
     <string name="remote_select_failed">在主機上啟動模型失敗</string>
     <string name="remote_port_hint">預設控制埠：%1$d。可用 地址:埠 形式指定其他埠。</string>
     <string name="remote_host_notify_title">受控模式執行中</string>
-    <string name="remote_host_notify">Local Dream 可被區域網內裝置控制</string>
+    <string name="remote_host_notify">Nightmare Road 可被區域網內裝置控制</string>
     <string name="remote_screen_shield">純黑螢幕（保持執行）</string>
     <string name="remote_screen_shield_exit">輕觸退出</string>
     <string name="ultrafix_import_action">匯入本機圖片</string>

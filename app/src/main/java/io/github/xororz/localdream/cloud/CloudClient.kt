@@ -122,7 +122,7 @@ object CloudClient {
         val createBody = JSONObject()
             .put("name", repo)
             .put("private", true)
-            .put("description", "LocalDream ET auto backup")
+            .put("description", "Nightmare Road-ET auto backup")
             .toString()
         val req = when (provider) {
             CloudConfig.Provider.GITHUB -> Request.Builder()

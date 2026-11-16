@@ -76,7 +76,7 @@ class LanImageService : Service() {
             startForeground(NOTIFICATION_ID, buildNotification())
         }
         // et.50: optional overlay keep-alive; no-op without overlay permission.
-        io.github.xororz.localdream.utils.OverlayKeepAlive.show(this, "LocalDream ET API 服务运行中") {
+        io.github.xororz.localdream.utils.OverlayKeepAlive.show(this, "Nightmare Road-ET API 服务运行中") {
             stopSelf()
         }
 

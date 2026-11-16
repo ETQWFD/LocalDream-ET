@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <string name="app_name">Local Dream ET</string>
+    <string name="app_name">Nightmare Road-ET</string>
 
     <!-- Models -->
     <string name="anythingv5_description">Anime Image Generation</string>
@@ -382,7 +382,7 @@
     <string name="backup_import_done">%1$d件をインポート、重複%2$d件をスキップ、%3$d件失敗</string>
     <string name="backup_import_orphan_note">バックアップ内の%1$d個のモデルは未インストールです。これらの記録はインポート済みで、履歴フィルターの「すべてのモデル」から閲覧できます。</string>
     <string name="backup_failed">操作に失敗しました: %1$s</string>
-    <string name="backup_invalid_file">有効なLocal Dreamバックアップファイルではありません</string>
+    <string name="backup_invalid_file">有効なNightmare Roadバックアップファイルではありません</string>
     <string name="delete_keep_history">生成履歴を保持</string>
     <string name="delete_keep_history_hint">モデル削除後も履歴は履歴ページで閲覧できます</string>
 
@@ -454,7 +454,7 @@
     <!-- Device link (remote control between two devices) -->
     <string name="remote_link">デバイス連携</string>
     <string name="remote_host_section">ホストモード（この端末でモデルを実行）</string>
-    <string name="remote_host_hint">同じネットワーク上の Local Dream を搭載した別の端末が、この端末のモデルを参照して画像を生成できるようにします。ホストモード中は、制御ポート（8808）と生成ポート（8081）がローカルネットワークに開放されます。</string>
+    <string name="remote_host_hint">同じネットワーク上の Nightmare Road を搭載した別の端末が、この端末のモデルを参照して画像を生成できるようにします。ホストモード中は、制御ポート（8808）と生成ポート（8081）がローカルネットワークに開放されます。</string>
     <string name="remote_host_start">ホストモードを開始</string>
     <string name="remote_host_stop">ホストモードを終了</string>
     <string name="remote_host_addresses">この端末のアドレス</string>
@@ -475,7 +475,7 @@
     <string name="remote_select_failed">ホストでのモデル起動に失敗しました</string>
     <string name="remote_port_hint">既定の制御ポート：%1$d。アドレス:ポート の形式で変更できます。</string>
     <string name="remote_host_notify_title">ホストモード実行中</string>
-    <string name="remote_host_notify">Local Dream はローカルネットワークから操作できます</string>
+    <string name="remote_host_notify">Nightmare Road はローカルネットワークから操作できます</string>
     <string name="remote_screen_shield">黒画面（動作を維持）</string>
     <string name="remote_screen_shield_exit">タップで戻る</string>
     <string name="ultrafix_import_action">ローカル画像を読み込む</string>

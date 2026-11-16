@@ -1,10 +1,10 @@
 {
-  "versionCode": 308,
-  "versionName": "4.0.0-et.234",
-  "title": "最新版本 v4.0.0-et.234",
-  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.234/LocalDream-ET.apk",
-  "size": 165077508,
-  "sha256": "4d1b9e38ebd3f02b8dc06e958e392563208a0c4dc46478686818f711a9623692",
-  "releaseNotes": "最新版本\n\n正文：\net.234（versionCode 308）修复天玑/荣耀/OPPO 生成崩溃：\n1) GPU(OpenCL) 在 Mali/PowerVR 上启动即死的场景新增自动回退：标记本机 GPU 不稳定、重启引擎、改用 CPU 参数重发一次，不会再“每次生成都闪退”。\n2) 天玑/麒麟设备默认 CPU 页、PowerVR 默认关闭 OpenCL 延续。\n3) DiT/SDXL 启动前硬件校验、16GB 内存门槛延续。\n说明：天玑 NPU 需要 MediaTek NeuroPilot 专用编译模型，开源仓库没有可用预编译包，本版仍以 CPU/GPU 真实出图为准。",
-  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.234/LocalDream-ET.apk"
+  "versionCode": 309,
+  "versionName": "4.0.0-et.235",
+  "title": "最新版本 v4.0.0-et.235（Nightmare Road-ET）",
+  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.235/LocalDream-ET.apk",
+  "size": 165078852,
+  "sha256": "6145179f9ed27b5db18218a020f0bf973ac9316351c530512deb1f6f30be42de",
+  "releaseNotes": "最新版本\n\n正文：\net.235（versionCode 309）：\n1) 修复退出登录后发图仍署名自己：未登录现在按匿名作者发布，不再回落到 ETQWFD；页面也不再缓存旧的登录名。\n2) 修复聊天里别人发的文字消息长按无反应：改用 detectTapGestures 自己判定长按，复制/引用/转发菜单稳定弹出。\n3) 软件更名为 Nightmare Road-ET（噩梦之路-ET），界面、通知、日志、官网文案同步替换；仓库地址与更新通道保持不变。\n4) 新增 MIT LICENSE。\n5) 天玑/麒麟 CPU 兼容、PowerVR 关 OpenCL、GPU 崩溃自动回 CPU、DiT/SDXL 启动校验延续。",
+  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.235/LocalDream-ET.apk"
 }

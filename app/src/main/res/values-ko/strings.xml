@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <string name="app_name">Local Dream ET</string>
+    <string name="app_name">Nightmare Road-ET</string>
 
     <!-- Models -->
     <string name="anythingv5_description">애니풍 이미지 생성</string>
@@ -382,7 +382,7 @@
     <string name="backup_import_done">%1$d개 가져옴, 중복 %2$d개 건너뜀, %3$d개 실패</string>
     <string name="backup_import_orphan_note">백업에 설치되지 않은 모델 %1$d개가 있습니다. 해당 기록은 가져왔으며 기록 필터의 \'모든 모델\'에서 볼 수 있습니다.</string>
     <string name="backup_failed">작업 실패: %1$s</string>
-    <string name="backup_invalid_file">유효한 Local Dream 백업 파일이 아닙니다</string>
+    <string name="backup_invalid_file">유효한 Nightmare Road 백업 파일이 아닙니다</string>
     <string name="delete_keep_history">생성 기록 유지</string>
     <string name="delete_keep_history_hint">모델 삭제 후에도 기록 페이지에서 볼 수 있습니다</string>
 
@@ -454,7 +454,7 @@
     <!-- Device link (remote control between two devices) -->
     <string name="remote_link">기기 연결</string>
     <string name="remote_host_section">호스트 모드(이 기기에서 모델 실행)</string>
-    <string name="remote_host_hint">같은 네트워크의 다른 Local Dream 기기가 이 기기의 모델을 탐색하고 이미지를 생성할 수 있게 합니다. 호스트 모드 동안 제어 포트(8808)와 생성 포트(8081)가 로컬 네트워크에 개방됩니다.</string>
+    <string name="remote_host_hint">같은 네트워크의 다른 Nightmare Road 기기가 이 기기의 모델을 탐색하고 이미지를 생성할 수 있게 합니다. 호스트 모드 동안 제어 포트(8808)와 생성 포트(8081)가 로컬 네트워크에 개방됩니다.</string>
     <string name="remote_host_start">호스트 모드 시작</string>
     <string name="remote_host_stop">호스트 모드 종료</string>
     <string name="remote_host_addresses">이 기기의 주소</string>
@@ -475,7 +475,7 @@
     <string name="remote_select_failed">호스트에서 모델을 시작하지 못했습니다</string>
     <string name="remote_port_hint">기본 제어 포트: %1$d. 주소:포트 형식으로 변경할 수 있습니다.</string>
     <string name="remote_host_notify_title">호스트 모드 실행 중</string>
-    <string name="remote_host_notify">Local Dream을 로컬 네트워크에서 제어할 수 있습니다</string>
+    <string name="remote_host_notify">Nightmare Road을 로컬 네트워크에서 제어할 수 있습니다</string>
     <string name="remote_screen_shield">검은 화면(계속 실행)</string>
     <string name="remote_screen_shield_exit">탭하여 종료</string>
     <string name="ultrafix_import_action">로컬 이미지 가져오기</string>

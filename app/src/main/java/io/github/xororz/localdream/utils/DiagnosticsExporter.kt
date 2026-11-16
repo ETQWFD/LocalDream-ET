@@ -36,7 +36,7 @@ object DiagnosticsExporter {
         val sb = StringBuilder()
         val ts = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
 
-        sb.appendLine("==== LocalDream ET Diagnostic Report ====")
+        sb.appendLine("==== Nightmare Road-ET Diagnostic Report ====")
         sb.appendLine("generated: ${Date()}")
         appendAppInfo(context, sb)
         appendDeviceInfo(context, sb)

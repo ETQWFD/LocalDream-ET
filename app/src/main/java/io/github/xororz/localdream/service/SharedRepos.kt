@@ -45,7 +45,7 @@ object SharedRepos {
     private fun createRepo(name: String): Boolean {
         val body = JSONObject()
             .put("name", name)
-            .put("description", "LocalDream ET shared community data")
+            .put("description", "Nightmare Road-ET shared community data")
             .put("private", false)
             .put("auto_init", true)
             .toString()
@@ -98,7 +98,7 @@ object SharedRepos {
         ensureFile(
             GALLERY,
             "README.md",
-            "# LocalDreamET-Gallery\n\nLocalDream ET 图片社区共享仓库，所有作品由 App 上传。\n",
+            "# LocalDreamET-Gallery\n\nNightmare Road-ET 图片社区共享仓库，所有作品由 App 上传。\n",
             "init: gallery readme",
         )
         bootstrapped = true

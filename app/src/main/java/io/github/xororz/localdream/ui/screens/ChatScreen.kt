@@ -1939,17 +1939,22 @@ private fun MessageRow(
             Surface(
                 modifier = Modifier
                     .widthIn(max = 272.dp)
-                    .combinedClickable(
-                        onClick = {
-                            when (message.kind) {
-                                ChatKind.IMAGE -> onOpenMedia(listOfNotNull(message.mediaUrl, message.cdnUrl))
-                                ChatKind.VIDEO -> onOpenVideo(listOfNotNull(message.mediaUrl, message.cdnUrl))
-                                ChatKind.AUDIO -> onPlayAudio()
-                                else -> Unit
-                            }
-                        },
-                        onLongClick = { showMenu = true },
-                    ),
+                    // 2026-11：combinedClickable 在部分 ROM 上会被外层滚动/图片手势
+                    // 抢走，别人发的文字气泡长按没反应。改用 detectTapGestures 自己
+                    // 判定长按，保证每条消息都能弹复制/引用菜单。
+                    .pointerInput(message.ts, message.author, message.kind) {
+                        detectTapGestures(
+                            onLongPress = { showMenu = true },
+                            onTap = {
+                                when (message.kind) {
+                                    ChatKind.IMAGE -> onOpenMedia(listOfNotNull(message.mediaUrl, message.cdnUrl))
+                                    ChatKind.VIDEO -> onOpenVideo(listOfNotNull(message.mediaUrl, message.cdnUrl))
+                                    ChatKind.AUDIO -> onPlayAudio()
+                                    else -> Unit
+                                }
+                            },
+                        )
+                    },
                 color = if (mine) Color(0xFF95EC69) else MaterialTheme.colorScheme.surfaceContainerHigh,
                 shape = RoundedCornerShape(
                     topStart = if (mine) 10.dp else 2.dp,

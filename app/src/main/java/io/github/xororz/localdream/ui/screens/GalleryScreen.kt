@@ -931,8 +931,10 @@ private fun UploadDialog(ctx: Context, onPublished: () -> Unit = {}, onDismiss: 
     val pickedUri: Uri? = pickedUris.firstOrNull()
     var pickedBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var pickedFile by remember { mutableStateOf<File?>(null) }
-    val token = remember { SecureTokenStore(ctx).token(CloudConfig.Provider.GITHUB) }
-    val login = remember { SecureTokenStore(ctx).state(CloudConfig.Provider.GITHUB)?.login }
+    // 2026-11：不能 remember。设置里退出登录后页面不会重建，remember 的
+    // login 仍是旧账号名，于是“已退出还显示我的名字”。每次重组直接读存储。
+    val token = SecureTokenStore(ctx).token(CloudConfig.Provider.GITHUB)
+    val login = SecureTokenStore(ctx).state(CloudConfig.Provider.GITHUB)?.login
 
     // 2026-11：相册支持一次选多张，逐张独立发布（后台也会分别生成条目）。
     // 2026-11：系统照片选择器，一次最多 100 张。
@@ -961,7 +963,7 @@ private fun UploadDialog(ctx: Context, onPublished: () -> Unit = {}, onDismiss: 
                 Text("上传作品", style = MaterialTheme.typography.titleMedium)
                 if (login == null) {
                     Text(
-                        "未登录 GitHub：将使用 App 内置发布令牌；登录后作品会署名你的账号。",
+                        "未登录 GitHub：作品将以匿名作者发布；登录后作品会署名你的账号。",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -1101,7 +1103,10 @@ private fun UploadDialog(ctx: Context, onPublished: () -> Unit = {}, onDismiss: 
                                     val targets: List<Pair<Uri?, File?>> =
                                         if (pickedUris.isNotEmpty()) pickedUris.map { it to null }
                                         else listOf(pickedUri to pickedFile)
-                                    val author = login ?: "ETQWFD"
+                                    // 2026-11：退出登录后 login 为空时，旧代码回落成
+                                    // "ETQWFD"，于是匿名发布被记到官方号名下。
+                                    // 未登录必须按匿名作者发布。
+                                    val author = login?.takeIf { it.isNotBlank() } ?: "匿名"
                                     var ok = 0
                                     var fail = 0
                                     var lastErr = ""

@@ -5957,7 +5957,7 @@ private fun EtAboutDialog(onDismiss: () -> Unit) {
         title = { androidx.compose.material3.Text("关于作者") },
         text = {
             androidx.compose.foundation.layout.Column {
-                androidx.compose.material3.Text("LocalDream ET 由 ET 发起，感谢以下贡献者：")
+                androidx.compose.material3.Text("Nightmare Road-ET 由 ET 发起，感谢以下贡献者：")
                 androidx.compose.foundation.layout.Spacer(androidx.compose.ui.Modifier.height(8.dp))
                 contributors.forEach { (login, avatar) ->
                     androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {

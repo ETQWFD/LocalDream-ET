@@ -65,7 +65,7 @@ fun LogsPage(onBack: () -> Unit) {
 
     val text = remember(filter) {
         buildString {
-            appendLine("==== LocalDream ET Logs ====")
+            appendLine("==== Nightmare Road-ET Logs ====")
             appendLine("generated: ${Date()}")
             appendLine()
             appendLine("---- In-app events ----")
@@ -183,7 +183,7 @@ private fun uploadLogs(context: Context, scope: CoroutineScope) {
 /** et.32: full log aggregation for upload. Non-empty; large sources truncated head+tail. */
 internal fun aggregateAllLogs(context: Context): String {
     val sb = StringBuilder()
-    sb.appendLine("=== LocalDream ET diagnostics ===")
+    sb.appendLine("=== Nightmare Road-ET diagnostics ===")
     sb.appendLine("generated_at: ${SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date())}")
     sb.appendLine("device: ${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL} (abi=${android.os.Build.SUPPORTED_ABIS?.joinToString()})")
     sb.appendLine()
@@ -220,7 +220,7 @@ internal fun aggregateAllLogs(context: Context): String {
             .filter { it.name.startsWith("convert_") && it.name.endsWith(".log") },
     )
     val out = sb.toString()
-    return if (out.isBlank()) "=== LocalDream ET: no logs at ${Date()} ===" else out
+    return if (out.isBlank()) "=== Nightmare Road-ET: no logs at ${Date()} ===" else out
 }
 
 private fun capHeadTail(text: String, headBytes: Int, tailBytes: Int): String {

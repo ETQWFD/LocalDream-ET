@@ -44,7 +44,7 @@ object OverlayKeepAlive {
     @JvmOverloads
     fun show(
         service: Service,
-        statusText: String = "LocalDream ET 推理中",
+        statusText: String = "Nightmare Road-ET 推理中",
         onStop: (() -> Unit)? = null,
     ) {
         val ctx = service.applicationContext
