@@ -1,10 +1,10 @@
 {
-  "versionCode": 300,
-  "versionName": "4.0.0-et.226",
-  "title": "最新版本 v4.0.0-et.226",
-  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.226/LocalDream-ET.apk",
-  "size": 165075124,
-  "sha256": "66bc2e5e6f7078556cc3debac44f1df41064306762ba45dabb87a2102475f2ce",
-  "releaseNotes": "最新版本\n\n正文：\net.226（versionCode 300）修复模型无法下载：\n1) HEAD 返回 -1 不再当成致命错误，改为继续用 GET 下载（很多 CDN 拒绝 HEAD 或握手超时）。\n2) 只有明确 4xx/5xx 才换源，避免“下载失败 http-1”直接终止。\n3) 大文件分段、续传、镜像切换逻辑保留。",
-  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.226/LocalDream-ET.apk"
+  "versionCode": 301,
+  "versionName": "4.0.0-et.227",
+  "title": "最新版本 v4.0.0-et.227",
+  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.227/LocalDream-ET.apk",
+  "size": 165076608,
+  "sha256": "ca0214fc2b1e2a48d93a03dc496df33b10f3d796fac70efa445499a21b74b31b",
+  "releaseNotes": "最新版本\n\n正文：\net.227（versionCode 301）全局公告：\n1) 公告中心新增全局公告目录 notices/_global，所有用户（含未登录）都能看到《作者的话》。\n2) 个人公告照旧只本人可见，全局公告与个人公告按时间合并排序。\n3) 模型下载 HEAD -1 修复、悬赏/额度/通知延续。",
+  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.227/LocalDream-ET.apk"
 }

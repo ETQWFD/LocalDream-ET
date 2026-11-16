@@ -40,9 +40,29 @@ object NoticesClient {
         }.getOrDefault(false)
     }
 
-    suspend fun list(login: String): List<JSONObject> = withContext(Dispatchers.IO) {
-        if (login.isBlank()) return@withContext emptyList()
+    private fun readDir(dir: String): MutableList<JSONObject> {
         val out = mutableListOf<JSONObject>()
+        runCatching {
+            val c = conn("$API/notices/$dir")
+            if (c.responseCode !in 200..299) return@runCatching
+            val arr = JSONArray(c.inputStream.use { it.readBytes().toString(Charsets.UTF_8) })
+            for (i in 0 until arr.length()) {
+                val f = arr.getJSONObject(i)
+                if (!f.optString("name").endsWith(".json")) continue
+                val r = conn(f.optString("url")).inputStream.use { it.readBytes().toString(Charsets.UTF_8) }
+                val root = JSONObject(r)
+                out += JSONObject(
+                    String(Base64.getDecoder().decode(root.optString("content").replace("\n", "")), Charsets.UTF_8),
+                )
+            }
+        }
+        return out
+    }
+
+    suspend fun list(login: String): List<JSONObject> = withContext(Dispatchers.IO) {
+        // 全局公告 + 本人公告；未登录也能看到作者公告。
+        val out = readDir("_global")
+        if (login.isBlank()) return@withContext out.sortedByDescending { it.optLong("ts") }
         runCatching {
             val c = conn("$API/notices/${safe(login)}")
             if (c.responseCode !in 200..299) return@runCatching
