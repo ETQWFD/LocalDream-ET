@@ -274,7 +274,17 @@ fun GalleryScreen(navController: NavController) {
                     val (ok, err) = withContext(Dispatchers.IO) {
                         GalleryClient.sendQuota(login, to, amount)
                     }
-                    if (!ok) io.github.xororz.localdream.service.QuotaManager.refund(ctx, amount)
+                    if (!ok) {
+                        io.github.xororz.localdream.service.QuotaManager.refund(ctx, amount)
+                    } else {
+                        withContext(Dispatchers.IO) {
+                            runCatching {
+                                io.github.xororz.localdream.service.NoticesClient.post(
+                                    to, "收到转账额度", "来自 @$login 的 $amount 额度已发送，进社区领取后到账",
+                                )
+                            }
+                        }
+                    }
                     android.widget.Toast.makeText(
                         ctx,
                         if (ok) "已向 @$to 发送 $amount 额度" else "发送失败：$err",

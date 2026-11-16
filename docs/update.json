@@ -1,10 +1,10 @@
 {
-  "versionCode": 298,
-  "versionName": "4.0.0-et.224",
-  "title": "最新版本 v4.0.0-et.224",
-  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.224/LocalDream-ET.apk",
-  "size": 165054832,
-  "sha256": "33f890cf647c0df9f811da470122c7736d3ff9c8be2e94b8b74c3ca0786ed571",
-  "releaseNotes": "最新版本\n\n作者下个星期无法更新，因为要开家长会，作者要死掉了，等下个星期看广告复活，请勿来打扰作者，谢谢。\n\n正文：\net.224（versionCode 298）聊天内悬赏闭环：\n1) 聊天悬赏卡片可打开详情：非发布者可提交图片/压缩包（≤20MB，RSA+AES 加密）。\n2) 发布者可在聊天内预览解密、驳回、支付，支付后关闭悬赏。\n3) 悬赏消息写入 bountyId，旧消息按标题/作者兜底匹配。\n4) 24 小时自动结算、备用额度、红包额度延续。",
-  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.224/LocalDream-ET.apk"
+  "versionCode": 299,
+  "versionName": "4.0.0-et.225",
+  "title": "最新版本 v4.0.0-et.225",
+  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.225/LocalDream-ET.apk",
+  "size": 165075288,
+  "sha256": "06a338f508dce24d71d4bee12005a5c35785b141382f4c816e992961d09b5a58",
+  "releaseNotes": "最新版本\n\n作者下个星期无法更新，因为要开家长会，作者要死掉了，等下个星期看广告复活，请勿来打扰作者，谢谢。\n\n正文：\net.225（versionCode 299）个人公告中心：\n1) 聊天顶栏新增“公告”，读取本人 notices 目录，按时间倒序显示。\n2) 收到转账额度、悬赏被驳回、悬赏支付到账都会写一条公告，只有对应账号能看到。\n3) 公告走 notices/{用户名}/ 目录，与转账/悬赏目录隔离。\n4) 三 ABI、备用额度、24 小时自动结算延续。",
+  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.225/LocalDream-ET.apk"
 }

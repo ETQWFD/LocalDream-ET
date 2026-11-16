@@ -101,6 +101,8 @@ fun ChatScreen(onBack: () -> Unit) {
     var bountyDetail by remember { mutableStateOf<org.json.JSONObject?>(null) }
     var bountySubsChat by remember { mutableStateOf<List<org.json.JSONObject>>(emptyList()) }
     var pendingSubmitBounty by remember { mutableStateOf<org.json.JSONObject?>(null) }
+    var showNotices by remember { mutableStateOf(false) }
+    var noticeItems by remember { mutableStateOf<List<org.json.JSONObject>>(emptyList()) }
     var bountyTitle by remember { mutableStateOf("") }
     var bountyAmount by remember { mutableStateOf("") }
     var sending by remember { mutableStateOf(false) }
@@ -700,6 +702,13 @@ fun ChatScreen(onBack: () -> Unit) {
                                                     val ok = withContext(Dispatchers.IO) {
                                                         io.github.xororz.localdream.service.BountyClient.reject(sub, "不满意，请重新提交")
                                                     }
+                                                    if (ok) withContext(Dispatchers.IO) {
+                                                        runCatching {
+                                                            io.github.xororz.localdream.service.NoticesClient.post(
+                                                                sub.optString("submitter"), "悬赏被驳回", "不满意，请重新提交",
+                                                            )
+                                                        }
+                                                    }
                                                     android.widget.Toast.makeText(ctx, if (ok) "已驳回" else "驳回失败", android.widget.Toast.LENGTH_SHORT).show()
                                                     bountySubsChat = withContext(Dispatchers.IO) {
                                                         runCatching { io.github.xororz.localdream.service.BountyClient.listSubs(bd) }.getOrDefault(emptyList())
@@ -716,6 +725,12 @@ fun ChatScreen(onBack: () -> Unit) {
                                                     if (ok) {
                                                         withContext(Dispatchers.IO) {
                                                             io.github.xororz.localdream.service.BountyClient.closeBounty(bd, "paid")
+                                                            runCatching {
+                                                                io.github.xororz.localdream.service.NoticesClient.post(
+                                                                    sub.optString("submitter"), "收到悬赏额度",
+                                                                    "「${bd.optString("title")}」${bd.optLong("amount")} 额度已到账",
+                                                                )
+                                                            }
                                                         }
                                                         bountyDetail = null
                                                     }
@@ -736,6 +751,31 @@ fun ChatScreen(onBack: () -> Unit) {
                         }
                     },
                     confirmButton = { TextButton(onClick = { bountyDetail = null }) { Text("关闭") } },
+                )
+            }
+            if (showNotices) {
+                AlertDialog(
+                    onDismissRequest = { showNotices = false },
+                    title = { Text("公告") },
+                    text = {
+                        Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                            if (noticeItems.isEmpty()) Text("还没有公告")
+                            noticeItems.forEach { n ->
+                                Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+                                    Text(n.optString("title"), style = MaterialTheme.typography.titleSmall)
+                                    val body = n.optString("body")
+                                    if (body.isNotBlank()) Text(body, style = MaterialTheme.typography.bodySmall)
+                                    val ts = n.optLong("ts")
+                                    if (ts > 0) {
+                                        val fmt = remember { java.text.SimpleDateFormat("MM-dd HH:mm", java.util.Locale.getDefault()) }
+                                        Text(fmt.format(java.util.Date(ts)), style = MaterialTheme.typography.labelSmall)
+                                    }
+                                }
+                                HorizontalDivider()
+                            }
+                        }
+                    },
+                    confirmButton = { TextButton(onClick = { showNotices = false }) { Text("关闭") } },
                 )
             }
             if (showQuota) {
@@ -871,6 +911,18 @@ fun ChatScreen(onBack: () -> Unit) {
                     }
                 },
                 actions = {
+                    IconButton(onClick = {
+                        showNotices = true
+                        scope.launch {
+                            noticeItems = withContext(Dispatchers.IO) {
+                                runCatching {
+                                    io.github.xororz.localdream.service.NoticesClient.list(meLogin.orEmpty())
+                                }.getOrDefault(emptyList())
+                            }
+                        }
+                    }) {
+                        Icon(Icons.Default.Notifications, contentDescription = "公告")
+                    }
                     IconButton(onClick = { showBounty = true }) {
                         Icon(Icons.Default.Campaign, contentDescription = "发悬赏")
                     }
