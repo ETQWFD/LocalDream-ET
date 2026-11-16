@@ -1,10 +1,10 @@
 {
-  "versionCode": 301,
-  "versionName": "4.0.0-et.227",
-  "title": "最新版本 v4.0.0-et.227",
-  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.227/LocalDream-ET.apk",
-  "size": 165076608,
-  "sha256": "ca0214fc2b1e2a48d93a03dc496df33b10f3d796fac70efa445499a21b74b31b",
-  "releaseNotes": "最新版本\n\n正文：\net.227（versionCode 301）全局公告：\n1) 公告中心新增全局公告目录 notices/_global，所有用户（含未登录）都能看到《作者的话》。\n2) 个人公告照旧只本人可见，全局公告与个人公告按时间合并排序。\n3) 模型下载 HEAD -1 修复、悬赏/额度/通知延续。",
-  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.227/LocalDream-ET.apk"
+  "versionCode": 302,
+  "versionName": "4.0.0-et.228",
+  "title": "最新版本 v4.0.0-et.228",
+  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.228/LocalDream-ET.apk",
+  "size": 165077336,
+  "sha256": "73503b804e938e79b5d5c276a39d3b6cb52214f2e8e0551ce77ecd2a933a5c74",
+  "releaseNotes": "最新版本\n\n正文：\net.228（versionCode 302）修复图片排行榜无法使用：\n1) stats 目录不存在时 contents API 返回 404，排行榜此前直接当空数据；现在改用 git trees 递归兜底枚举 stats/*.json。\n2) 排行榜按月份过滤，读取失败不再静默空列表。\n3) 全局公告、模型下载、悬赏与额度功能延续。",
+  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.228/LocalDream-ET.apk"
 }

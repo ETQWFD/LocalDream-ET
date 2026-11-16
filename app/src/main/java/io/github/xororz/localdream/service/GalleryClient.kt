@@ -568,13 +568,37 @@ object GalleryClient {
         coroutineScope {
             val token = BuildConfig.GALLERY_TOKEN
             val list = runCatching {
+                // 2026-11：stats 目录可能还没被创建（第一次下载前不存在，contents API 返回 404），
+                // 排行榜就会永远显示“还没有下载记录”。这里用 git trees 兜底枚举 stats/*.json。
                 val c = (URL("$API/stats").openConnection() as java.net.HttpURLConnection).apply {
                     requestMethod = "GET"; connectTimeout = 8000; readTimeout = 15000
                     setRequestProperty("Authorization", "token $token")
                     setRequestProperty("Accept", "application/vnd.github+json")
                     setRequestProperty("User-Agent", "LocalDream-ET")
                 }
-                if (c.responseCode !in 200..299) emptyList() else {
+                if (c.responseCode !in 200..299) {
+                    // 兜底：直接从 git tree 找 stats/*.json
+                    runCatching {
+                        val treeUrl = "https://api.github.com/repos/ETQWFD/LocalDreamET-Gallery/git/trees/main?recursive=1"
+                        val t = (URL(treeUrl).openConnection() as java.net.HttpURLConnection).apply {
+                            requestMethod = "GET"; connectTimeout = 8000; readTimeout = 20000
+                            setRequestProperty("Authorization", "token $token")
+                            setRequestProperty("Accept", "application/vnd.github+json")
+                            setRequestProperty("User-Agent", "LocalDream-ET")
+                        }
+                        val root = JSONObject(t.inputStream.use { it.readBytes().toString(Charsets.UTF_8) })
+                        val arr = root.optJSONArray("tree") ?: JSONArray()
+                        (0 until arr.length()).mapNotNull { i ->
+                            val o = arr.getJSONObject(i)
+                            val path = o.optString("path", "")
+                            if (!path.startsWith("stats/") || !path.endsWith(".json")) null
+                            else {
+                                val name = path.removePrefix("stats/").removeSuffix(".json")
+                                name to "https://api.github.com/repos/ETQWFD/LocalDreamET-Gallery/contents/$path"
+                            }
+                        }
+                    }.getOrDefault(emptyList())
+                } else {
                     val arr = JSONArray(c.inputStream.use { it.readBytes().toString(Charsets.UTF_8) })
                     (0 until arr.length()).mapNotNull { i ->
                         val o = arr.getJSONObject(i)
