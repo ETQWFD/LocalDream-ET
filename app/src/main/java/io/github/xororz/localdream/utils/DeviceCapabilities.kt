@@ -330,11 +330,18 @@ object DeviceCapabilities {
         if (am.isLowRamDevice) return 384
         val total = totalRamBytes(context)
         val gb = total / (1024.0 * 1024.0 * 1024.0)
-        return when {
+        val ramBased = when {
             gb <= 4.0 -> 384
             gb <= 6.0 -> 512
             gb <= 10.0 -> 640
             else -> 768
+        }
+        // 用户在设置里选的引擎档位优先；AUTO 时仍按内存自适应。
+        val mode = EngineProfile.selected(context)
+        return if (mode == EngineProfile.Mode.AUTO) {
+            ramBased
+        } else {
+            minOf(ramBased, EngineProfile.longEdgeCap(context))
         }
     }
 

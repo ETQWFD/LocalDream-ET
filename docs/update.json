@@ -1,10 +1,10 @@
 {
-  "versionCode": 309,
-  "versionName": "4.0.0-et.235",
-  "title": "最新版本 v4.0.0-et.235（Nightmare Road-ET）",
-  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.235/LocalDream-ET.apk",
-  "size": 165078852,
-  "sha256": "6145179f9ed27b5db18218a020f0bf973ac9316351c530512deb1f6f30be42de",
-  "releaseNotes": "最新版本\n\n正文：\net.235（versionCode 309）：\n1) 修复退出登录后发图仍署名自己：未登录现在按匿名作者发布，不再回落到 ETQWFD；页面也不再缓存旧的登录名。\n2) 修复聊天里别人发的文字消息长按无反应：改用 detectTapGestures 自己判定长按，复制/引用/转发菜单稳定弹出。\n3) 软件更名为 Nightmare Road-ET（噩梦之路-ET），界面、通知、日志、官网文案同步替换；仓库地址与更新通道保持不变。\n4) 新增 MIT LICENSE。\n5) 天玑/麒麟 CPU 兼容、PowerVR 关 OpenCL、GPU 崩溃自动回 CPU、DiT/SDXL 启动校验延续。",
-  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.235/LocalDream-ET.apk"
+  "versionCode": 310,
+  "versionName": "4.0.0-et.236",
+  "title": "最新版本 v4.0.0-et.236（Nightmare Road-ET）",
+  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.236/LocalDream-ET.apk",
+  "size": 165086824,
+  "sha256": "3d622a84a7741c30fbfe1b1c4238c9ff59c5bf31c337104f04a02bb3b7fab7bc",
+  "releaseNotes": "最新版本\n\n正文：\net.236（versionCode 310）：\n1) 新增三档引擎模式，设置里可切换：低配（强制 CPU/384/关 OpenCL）、中配（CPU或 OpenCL/512）、高配（GPU 优先/768）；AUTO 按内存和架构自动选档。\n2) 引擎档位同时影响长边上限、默认速度档和 OpenCL 开关，出图页仍可单独微调。\n3) 服务端源码、源码内标题、官网文案统一改为 Nightmare Road-ET；包名 etc.github.ai 与更新通道不变。\n4) 匿名发布、聊天长按、MIT LICENSE 延续。",
+  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.236/LocalDream-ET.apk"
 }

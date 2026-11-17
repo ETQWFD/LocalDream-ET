@@ -326,6 +326,9 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                 .getBoolean("unlock_model_limit", false),
         )
     }
+    var engineMode by remember {
+        mutableStateOf(io.github.xororz.localdream.utils.EngineProfile.selected(context))
+    }
     var recycleEngine by remember {
         mutableStateOf(
             context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
@@ -2017,6 +2020,41 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                                         ).show()
                                     },
                                 )
+                            }
+                            Text(
+                                "引擎档位（自动按内存切换，也可手动指定）",
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.padding(top = 12.dp),
+                            )
+                            Text(
+                                "低配引擎：强制 CPU、384 长边、关 OpenCL；中配引擎：CPU/OpenCL、512；高配引擎：GPU 优先、768。三档共用同一套原生库，按机型能力切换运行参数。",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            ) {
+                                io.github.xororz.localdream.utils.EngineProfile.Mode.entries.forEach { mode ->
+                                    TextButton(onClick = {
+                                        io.github.xororz.localdream.utils.EngineProfile.set(context, mode)
+                                        engineMode = mode
+                                        android.widget.Toast.makeText(
+                                            context,
+                                            "已切换为${mode.label}，下次出图生效",
+                                            android.widget.Toast.LENGTH_SHORT,
+                                        ).show()
+                                    }) {
+                                        Text(
+                                            mode.label,
+                                            fontWeight = if (engineMode == mode) {
+                                                androidx.compose.ui.text.font.FontWeight.Bold
+                                            } else {
+                                                androidx.compose.ui.text.font.FontWeight.Normal
+                                            },
+                                        )
+                                    }
+                                }
                             }
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,

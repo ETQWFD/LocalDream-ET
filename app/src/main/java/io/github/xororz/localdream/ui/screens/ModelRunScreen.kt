@@ -379,7 +379,16 @@ fun ModelRunScreen(
         mutableStateOf(
             context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
                 .getString("speed_tier", null)
-                ?: if (lowEndDevice) "fast" else "balanced",
+                ?: if (lowEndDevice) {
+                    "fast"
+                } else if (
+                    io.github.xororz.localdream.utils.EngineProfile.selected(context) ==
+                    io.github.xororz.localdream.utils.EngineProfile.Mode.AUTO
+                ) {
+                    "balanced"
+                } else {
+                    io.github.xororz.localdream.utils.EngineProfile.speedTier(context)
+                },
         )
     }
     // et.40: first-run hint on low-end devices that the fast tier is the default.
@@ -1618,7 +1627,7 @@ fun ModelRunScreen(
                 model?.runOnCpu == true &&
                     model.isDit != true &&
                     model.usesFixedCanvas != true &&
-                    io.github.xororz.localdream.utils.DeviceCapabilities.openclRecommended()
+                    io.github.xororz.localdream.utils.EngineProfile.allowOpenCl(context)
             }
             batchCounts = prefs.batchCounts
             scheduler = if (isFirstRun) defaults.scheduler else prefs.scheduler

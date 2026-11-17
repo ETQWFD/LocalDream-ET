@@ -1,7 +1,7 @@
 /*
- * Local Dream ET Server - 本地 AI 出图 HTTP API 外壳
+ * Nightmare Road-ET Server - 本地 AI 出图 HTTP API 外壳
  * ---------------------------------------------------------------------------
- * 版权所有 (c) 2026  Local Dream ET Server  (ET)
+ * 版权所有 (c) 2026  Nightmare Road-ET Server  (ET)
  * 版本: 1.1.2
  *
  * 本程序是一层“外壳 / 鉴权反向代理 / 看门狗”，真实的出图推理由子进程
@@ -89,7 +89,7 @@
 #endif
 
 /* ============================ 全局配置 ============================ */
-#define APP_NAME      "Local Dream ET Server"
+#define APP_NAME      "Nightmare Road-ET Server"
 #define APP_VERSION   "1.6.13"
 #define COPYRIGHT_STR "Copyright (C) 2026 etc"
 
@@ -459,7 +459,7 @@ static void save_config(void) {
     mkdir_p(g_datadir, "config");
     FILE* f = fopen(g_config_path, "w");
     if (!f) { log_line("无法写入配置: %s", g_config_path); return; }
-    fprintf(f, "# Local Dream ET Server 配置 (Copyright (C) 2026 etc)\n");
+    fprintf(f, "# Nightmare Road-ET Server 配置 (Copyright (C) 2026 etc)\n");
     fprintf(f, "port=%d\n", g_cfg.port);
     fprintf(f, "inner_port=%d\n", g_cfg.inner_port);
     fprintf(f, "api_key=%s\n", g_cfg.api_key);
@@ -1400,7 +1400,7 @@ static void serve_home(sock_t c) {
     snprintf(html,sizeof(html),
 "<!doctype html><html lang=\"zh\"><head><meta charset=\"utf-8\">"
 "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
-"<title>Local Dream ET Server</title><style>"
+"<title>Nightmare Road-ET Server</title><style>"
 "body{font-family:'Segoe UI','Microsoft YaHei',sans-serif;background:#f3f4f6;margin:0;padding:24px;color:#1f2937}"
 ".card{max-width:560px;margin:0 auto;background:#fff;border-radius:16px;box-shadow:0 2px 12px rgba(0,0,0,.08);padding:28px}"
 "h1{font-size:20px;margin:0 0 4px}.sub{color:#6b7280;font-size:13px;margin-bottom:20px}"
@@ -1409,7 +1409,7 @@ static void serve_home(sock_t c) {
 "button{background:#2563eb;color:#fff;border:0;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:12px;white-space:nowrap}"
 "button:hover{background:#1d4ed8}.ok{color:#16a34a;font-size:12px}"
 "</style></head><body><div class=\"card\">"
-"<h1>Local Dream ET Server</h1><div class=\"sub\">本地离线 AI 出图服务已运行</div>"
+"<h1>Nightmare Road-ET Server</h1><div class=\"sub\">本地离线 AI 出图服务已运行</div>"
 "<div class=\"row\"><div><div class=\"label\">API 地址（其他软件填这个）</div><div class=\"val\">%s</div></div>"
 "<button onclick=\"cp('%s',this)\">复制</button></div>"
 "<div class=\"row\"><div><div class=\"label\">API Key（请求头 Authorization: Bearer）</div><div class=\"val\">%s</div></div>"
@@ -2330,7 +2330,7 @@ static LRESULT CALLBACK WndProc(HWND h,UINT m,WPARAM w,LPARAM l){
         ZeroMemory(&gh_nid,sizeof(gh_nid));
         gh_nid.cbSize=sizeof(gh_nid); gh_nid.hWnd=h; gh_nid.uID=1;
         gh_nid.uFlags=NIF_ICON|NIF_TIP; gh_nid.hIcon=LoadIcon(NULL,IDI_APPLICATION);
-        wcscpy(gh_nid.szTip,L"Local Dream ET Server");
+        wcscpy(gh_nid.szTip,L"Nightmare Road-ET Server");
         gh_has_tray = Shell_NotifyIconW(NIM_ADD,&gh_nid)?1:0;
         SetTimer(h,1,1000,NULL);
         return 0; }
@@ -2411,7 +2411,7 @@ static void gui_thread(void){
 
 /* v1.6.5：--diag 诊断：打印端口/引擎/模型/网络连通性，不启动服务 */
 static void run_diag(void) {
-    printf("===== Local Dream ET Server 诊断 =====\n");
+    printf("===== Nightmare Road-ET Server 诊断 =====\n");
     printf("版本: %s\n", APP_VERSION);
     printf("程序目录: %s\n", g_progdir);
     printf("数据目录: %s\n", g_datadir);
