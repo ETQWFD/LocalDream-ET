@@ -1,22 +1,22 @@
 {
   "name": "Nightmare Road-ET Server",
-  "version": "1.6.13",
-  "versionCode": 173,
-  "tag": "server-1.6.13",
+  "version": "1.6.15",
+  "versionCode": 175,
+  "tag": "server-1.6.15",
   "prerelease": false,
   "channel": "github",
   "platforms": {
     "windows": {
-      "file": "LocalDreamET-Server-1.6.13-windows-x86_64.zip",
-      "size": 145119,
-      "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/server-1.6.13/LocalDreamET-Server-1.6.13-windows-x86_64.zip"
+      "file": "NightmareRoad-ET-Server-1.6.15-windows-x86_64.zip",
+      "size": 145262,
+      "url": "https://github.com/ETQWFD/NightmareRoad-ET/releases/download/server-1.6.15/NightmareRoad-ET-Server-1.6.15-windows-x86_64.zip"
     },
     "linux-x86_64": {
-      "file": "LocalDreamET-Server-1.6.13-linux-x86_64.tar.gz",
-      "size": 41427,
-      "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/server-1.6.13/LocalDreamET-Server-1.6.13-linux-x86_64.tar.gz"
+      "file": "NightmareRoad-ET-Server-1.6.15-linux-x86_64.tar.gz",
+      "size": 142369,
+      "url": "https://github.com/ETQWFD/NightmareRoad-ET/releases/download/server-1.6.15/NightmareRoad-ET-Server-1.6.15-linux-x86_64.tar.gz"
     }
   },
-  "notes": "v1.6.13：默认端口 4080，出图网站 /admin 与 /gen 均可打开。",
+  "notes": "v1.6.15：服务端全面改名 Nightmare Road-ET，仓库地址同步更新。",
   "port": 4080
 }
