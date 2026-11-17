@@ -133,6 +133,27 @@ object DeviceCapabilities {
 
     fun snapdragonPart(): Int? = socInfo.snapdragonPart
 
+    /**
+     * et.242: 天玑高端机判定。天玑 9000 起步的 Mali-G710/G715/G720/G925 带
+     * 可用的 vendor OpenCL，MNN 的 GPU 后端能在这些机器上真实出图；低端
+     * 天玑（Helio/PowerVR）则必须留在 CPU，避免驱动段错误。
+     * 平台代号来自 ro.board.platform：mt6983=D9000、mt6985=D9200、
+     * mt6989=D9300、mt6991=D9400，mt6895/mt6893 等也按高端处理。
+     */
+    fun isHighEndMediaTek(context: Context): Boolean {
+        if (socInfo.vendor != SocVendor.MEDIATEK) return false
+        if (!is64Bit()) return false
+        val plat = listOf(
+            sysprop("ro.board.platform"), sysprop("ro.soc.model"),
+            Build.BOARD, Build.HARDWARE,
+        ).joinToString(" ").lowercase()
+        val digits = Regex("mt(\\d{4})").find(plat)?.groupValues?.get(1)?.toIntOrNull()
+        val highEnd = digits != null && digits >= 6890
+        if (!highEnd) return false
+        val totalGb = totalRamBytes(context) / (1024.0 * 1024.0 * 1024.0)
+        return totalGb >= 7.0
+    }
+
     /** Localized short label of the detected chip vendor. */
     fun vendorLabel(): String = when (socInfo.vendor) {
         SocVendor.QUALCOMM -> "高通骁龙"

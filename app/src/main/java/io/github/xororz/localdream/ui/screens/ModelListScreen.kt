@@ -1714,10 +1714,17 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
 
             if (npuUnavailable) {
                 val socLabel = io.github.xororz.localdream.utils.DeviceCapabilities.vendorLabel()
+                val highEndMtk = io.github.xororz.localdream.utils.DeviceCapabilities
+                    .isHighEndMediaTek(context)
                 Text(
-                    text = "本机为 ${socLabel} 芯片：天玑/麒麟/Exynos 的 NPU 走厂商私有 NeuroPilot/DLA 栈，" +
-                        "需要 NDA 授权和预编译模型，第三方 App 无法直接调用，因此 NPU/DiT 模型会报“后端启动失败”。" +
-                        "已自动切到 CPU 引擎出图（SD1.5，长边自动压到 256–384、步数建议 8–12），可直接使用 CPU Models。",
+                    text = if (highEndMtk) {
+                        "本机为 ${socLabel} 高端芯片：厂商 NPU 需要 NDA 授权的 NeuroPilot/DLA，第三方 App 无法直接调用；" +
+                            "已启用 Mali GPU(OpenCL) 加速跑 SD1.5（长边最高 512），GPU 驱动异常时会自动回 CPU，不需要 NPU 也能真实出图。"
+                    } else {
+                        "本机为 ${socLabel} 芯片：天玑/麒麟/Exynos 的 NPU 走厂商私有 NeuroPilot/DLA 栈，" +
+                            "需要 NDA 授权和预编译模型，第三方 App 无法直接调用，因此 NPU/DiT 模型会报“后端启动失败”。" +
+                            "已自动切到 CPU 引擎出图（SD1.5，长边自动压到 256–384、步数建议 8–12），可直接使用 CPU Models。"
+                    },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 6.dp),

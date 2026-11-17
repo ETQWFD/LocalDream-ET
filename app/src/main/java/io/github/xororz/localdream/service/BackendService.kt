@@ -593,9 +593,16 @@ class BackendService : Service() {
             it.vendor != io.github.xororz.localdream.utils.DeviceCapabilities.SocVendor.QUALCOMM
         }
         if (mtkLike && (backendType == "sd15cpu" || backendType == "sdxlmnn")) {
+            val highEndMtk = io.github.xororz.localdream.utils.DeviceCapabilities
+                .isHighEndMediaTek(this)
             val totalGb = io.github.xororz.localdream.utils.DeviceCapabilities
                 .totalRamBytes(this) / (1024.0 * 1024.0 * 1024.0)
-            val cap = if (totalGb <= 4.0) 256 else 384
+            // 高端天玑有可用 GPU，可放到 512；低端仍压到 256–384 保命。
+            val cap = when {
+                highEndMtk -> 512
+                totalGb <= 4.0 -> 256
+                else -> 384
+            }
             val longEdge = maxOf(width, height)
             if (longEdge > cap) {
                 val scale = cap.toDouble() / longEdge.toDouble()
@@ -921,11 +928,18 @@ class BackendService : Service() {
             )
             if (isMediaTek) {
                 env["MNN_OPENCL_FUSED_PROJ_DISABLE"] = "1"
-                // et.155: 天玑全系（含 9400/9400+）强制 CPU 后端，避免 Mali 驱动
-                // 在 sd15cpu/MNN 里段错误(code=139)。用户在 UI 选 GPU 也不生效。
-                env["MNN_FORCE_CPU"] = "1"
-                env["MNN_GPU_POLICY"] = "0"
-                Log.i(TAG, "MediaTek 平台：强制 CPU 后端，已禁用 OpenCL fused projection（适配天玑 9400/9400+）")
+                // et.242：天玑 9000 及以上的高端机（Mali-G710/G715/G720/G925）
+                // 保留 OpenCL 路径，用户在设置里选 GPU 时能真实加速出图；
+                // 低端天玑/Helio（PowerVR、老 Mali）继续强制 CPU，避免段错误。
+                val highEndMtk = io.github.xororz.localdream.utils.DeviceCapabilities
+                    .isHighEndMediaTek(this)
+                if (highEndMtk) {
+                    Log.i(TAG, "高端天玑：允许 OpenCL GPU 后端（失败会自动回退 CPU）")
+                } else {
+                    env["MNN_FORCE_CPU"] = "1"
+                    env["MNN_GPU_POLICY"] = "0"
+                    Log.i(TAG, "MediaTek 低端/未知平台：强制 CPU 后端，已禁用 OpenCL fused projection")
+                }
             }
             Log.i(TAG, "engine threads: RAYON/OMP=$bigCores of ${Runtime.getRuntime().availableProcessors()} cores (big-core count by max-freq)")
             if (ditEngineDir != null) {
@@ -1078,6 +1092,16 @@ class BackendService : Service() {
             // exiting is expected and must not poison the shared backendState.
             if (isLiveCrash(proc)) {
                 val detail = tail.joinToString(" / ").takeLast(600)
+                // et.242：高端天玑走 OpenCL 时，个别 Mali 驱动仍会 SIGSEGV(139)。
+                // 记一次 gpu_unstable，后续生成自动回 CPU，用户不用卸载重装。
+                if (exitCode == 139 &&
+                    io.github.xororz.localdream.utils.DeviceCapabilities.socInfo.vendor ==
+                    io.github.xororz.localdream.utils.DeviceCapabilities.SocVendor.MEDIATEK
+                ) {
+                    getSharedPreferences("app_prefs", MODE_PRIVATE)
+                        .edit().putBoolean("gpu_unstable", true).apply()
+                    Log.w(TAG, "MediaTek SIGSEGV: gpu_unstable=true, next run uses CPU")
+                }
                 val reason = when (exitCode) {
                     137 -> "被系统内存不足终止(SIGKILL/OOM)"
                     134 -> "原生崩溃(SIGABRT)"
