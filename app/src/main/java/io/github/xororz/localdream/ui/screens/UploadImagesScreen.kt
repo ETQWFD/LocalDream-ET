@@ -125,13 +125,13 @@ fun UploadImagesScreen(onBack: () -> Unit, onGoGenerate: () -> Unit) {
             sources += collectImages(File(context.filesDir, "history"))
             // 2) Public / private-fallback outputs dir (where this page used to look).
             sources += collectImages(Storage.outputsDir(context))
-            // 3) Gallery/Pictures/LocalDream copies written by "save to gallery".
+            // 3) Gallery/Pictures/NightmareRoad-ET copies written by "save to gallery".
             runCatching {
                 val pics = File(
                     android.os.Environment.getExternalStoragePublicDirectory(
                         android.os.Environment.DIRECTORY_PICTURES,
                     ),
-                    "LocalDream",
+                    "NightmareRoad-ET",
                 )
                 sources += collectImages(pics)
             }

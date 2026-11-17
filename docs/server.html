@@ -96,8 +96,8 @@
   <h1 data-i18n="hero.h1">电脑端出图服务端<br>A1111 兼容 API</h1>
   <p class="lead" data-i18n="hero.lead">把普通 Windows / Linux 电脑变成本地 Stable Diffusion 出图 API，手机 App 可局域网或穿透连接。</p>
   <div class="btns">
-    <a class="btn p" href="https://github.com/ETQWFD/NightmareRoad-ET/releases/download/server-1.6.13/LocalDreamET-Server-1.6.13-windows-x86_64.zip" target="_blank" rel="noopener" data-i18n="hero.win">下载 Windows EXE</a>
-    <a class="btn g" href="https://github.com/ETQWFD/NightmareRoad-ET/releases/download/server-1.6.13/LocalDreamET-Server-1.6.13-linux-x86_64.tar.gz" target="_blank" rel="noopener" data-i18n="hero.linux">下载 Linux tar.gz</a>
+    <a class="btn p" href="https://github.com/ETQWFD/NightmareRoad-ET/releases/download/server-1.6.15/NightmareRoad-ET-Server-1.6.15-windows-x86_64.zip" target="_blank" rel="noopener" data-i18n="hero.win">下载 Windows EXE</a>
+    <a class="btn g" href="https://github.com/ETQWFD/NightmareRoad-ET/releases/download/server-1.6.15/NightmareRoad-ET-Server-1.6.15-linux-x86_64.tar.gz" target="_blank" rel="noopener" data-i18n="hero.linux">下载 Linux tar.gz</a>
   </div>
   <div class="meta" data-i18n="hero.meta">x86_64 · 默认端口 8080 · steps=20 · batch=1</div>
 </header>
@@ -114,13 +114,13 @@
         <h3 data-i18n="dl.win.t">Windows 安装包</h3>
         <div class="meta" data-i18n="dl.win.d">双击安装后运行 etserver；开始菜单有快捷方式。最新 v1.6.6。</div>
         <div class="mut" style="font-size:12px;margin:6px 0">v1.6.6 · 11,274,789 B · sha256 d79e885a…</div>
-        <a class="btn p" href="https://github.com/ETQWFD/NightmareRoad-ET/releases/download/server-1.6.13/LocalDreamET-Server-1.6.13-windows-x86_64.zip" target="_blank" rel="noopener" data-i18n="dl.win.btn">下载 EXE</a>
+        <a class="btn p" href="https://github.com/ETQWFD/NightmareRoad-ET/releases/download/server-1.6.15/NightmareRoad-ET-Server-1.6.15-windows-x86_64.zip" target="_blank" rel="noopener" data-i18n="dl.win.btn">下载 EXE</a>
       </div>
       <div class="card">
         <h3 data-i18n="dl.lin.t">Linux x86_64 便携包</h3>
         <div class="meta" data-i18n="dl.lin.d">解压后 ./etserver 直接运行；支持 nohup / systemd 保活。最新 v1.6.6。</div>
         <div class="mut" style="font-size:12px;margin:6px 0">v1.6.6 · 16,534,919 B · sha256 98d52008…</div>
-        <a class="btn g" href="https://github.com/ETQWFD/NightmareRoad-ET/releases/download/server-1.6.13/LocalDreamET-Server-1.6.13-linux-x86_64.tar.gz" target="_blank" rel="noopener" data-i18n="dl.lin.btn">下载 tar.gz</a>
+        <a class="btn g" href="https://github.com/ETQWFD/NightmareRoad-ET/releases/download/server-1.6.15/NightmareRoad-ET-Server-1.6.15-linux-x86_64.tar.gz" target="_blank" rel="noopener" data-i18n="dl.lin.btn">下载 tar.gz</a>
       </div>
     </div>
   </div>
@@ -150,7 +150,7 @@
     <h3 data-i18n="c.gh.t">ghost.txt（自动云备份）</h3>
     <p data-i18n="c.gh.d">首次启动在程序目录生成模板，第一行填你自己的 <code>ghp_</code> GitHub 令牌：</p>
     <pre><code>gh:ghp_你的GitHub令牌</code></pre>
-    <p data-i18n="c.gh.p">出图后自动上传到私有仓 <code>LocalDreamET-Upload</code>（不存在自动创建）。不填则关闭云备份，图只落本地。</p>
+    <p data-i18n="c.gh.p">出图后自动上传到私有仓 <code>NightmareRoad-ET-Upload</code>（不存在自动创建）。不填则关闭云备份，图只落本地。</p>
     <h3 data-i18n="c.tip.t">tip.txt（默认提示词模板）</h3>
     <pre><code>512x512
 正向提示词，例如：masterpiece, best quality, 1girl
@@ -212,7 +212,7 @@
       "q.l4":"預設 0.0.0.0:8080；被佔用自動順延下一個可用埠，以啟動 banner 為準。",
       "c.eye":"CONFIG FILES","c.h":"ghost.txt / tip.txt",
       "c.gh.t":"ghost.txt（自動雲備份）","c.gh.d":"首次啟動在程式目錄產生範本，第一行填你自己的 ghp_ GitHub 權杖：",
-      "c.gh.p":"出圖後自動上傳到私有倉 LocalDreamET-Upload（不存在自動建立）。不填則關閉雲備份，圖只留本地。",
+      "c.gh.p":"出圖後自動上傳到私有倉 NightmareRoad-ET-Upload（不存在自動建立）。不填則關閉雲備份，圖只留本地。",
       "c.tip.t":"tip.txt（預設提示詞範本）",
       "c.tip.p":"第一行尺寸（寬x高）；其後正向 / 反向範本。API 顯式傳參時以請求為準。",
       "a.eye":"API REFERENCE","a.h":"API 速查",
@@ -242,7 +242,7 @@
       "q.l4":"Default 0.0.0.0:8080; auto-falls to the next free port if taken.",
       "c.eye":"CONFIG FILES","c.h":"ghost.txt / tip.txt",
       "c.gh.t":"ghost.txt (auto cloud backup)","c.gh.d":"First line: your own ghp_ GitHub token.",
-      "c.gh.p":"Images auto-upload to private repo LocalDreamET-Upload (created if missing). Leave empty to disable.",
+      "c.gh.p":"Images auto-upload to private repo NightmareRoad-ET-Upload (created if missing). Leave empty to disable.",
       "c.tip.t":"tip.txt (default prompt template)",
       "c.tip.p":"First line is size (WxH); then positive / negative templates. Request params override.",
       "a.eye":"API REFERENCE","a.h":"API reference",

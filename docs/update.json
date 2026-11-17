@@ -1,10 +1,10 @@
 {
-  "versionCode": 312,
-  "versionName": "4.0.0-et.238",
-  "title": "最新版本 v4.0.0-et.238（Nightmare Road-ET）",
-  "apkUrl": "https://github.com/ETQWFD/NightmareRoad-ET/releases/download/et.238/NightmareRoad-ET.apk",
-  "size": 165091696,
-  "sha256": "a812c5644e576f616fe5016459e21c6adb440da3560ea242c761ab41dcc59e4d",
-  "releaseNotes": "最新版本\n\n作者下个星期无法更新，因为要开家长会，作者要嗝屁了，等下一个星期看广告复活，请勿来打扰作者，谢谢。\n\n正文：\n1) 7 个 GitHub 仓库已真正改名为 NightmareRoad-ET 系列；App、官网、服务端中的旧仓库地址全部替换，图片社区上传/下载、聊天发消息、额度、兑换码、应用更新重新可用。\n2) 修复下载更新后不弹系统安装器：下载完成自动调起手机内置安装程序；未授权会引导并自动继续；保留“立即安装”兜底。\n3) 下载后校验 APK versionCode，只有比当前版本新才安装，旧包自动删除并提示重下。\n4) Release 资产名改为 NightmareRoad-ET.apk；MIT LICENSE 重新生成；服务端 1.6.15 同步改名重编译。\n5) 修复更新清单仍指向旧仓库导致“无法更新”的问题。",
-  "url": "https://github.com/ETQWFD/NightmareRoad-ET/releases/download/et.238/NightmareRoad-ET.apk"
+  "versionCode": 313,
+  "versionName": "4.0.0-et.239",
+  "title": "最新版本 v4.0.0-et.239（Nightmare Road-ET）",
+  "apkUrl": "https://github.com/ETQWFD/NightmareRoad-ET/releases/download/et.239/NightmareRoad-ET.apk",
+  "size": 165092388,
+  "sha256": "90ec1b122ba5a1c86e13e410ba7d015f790b1ef176ffb40741ba0d5256f171c0",
+  "releaseNotes": "最新版本\n\n作者下个星期可能不更新，因为作者要嗝屁了，请勿来打扰；请在下下个星期再来打扰，因为作者又看广告复活了。纯属因为中专考试成绩出来要开家长会，作者要嗝屁了。作者不在的时候，一切由 @Qian七安~ @违规用户 负责，如有任何问题进群找管理员。本次最后一个版本更新内容：悬赏很抱歉对大家带来不便，作者承诺将在下个星期风波过后再更新，和看广告复活。\n\n1) 修复公共聊天图片/视频加载空白：增加 raw、jsDelivr、gitmirror、kkgithub 多镜像直连回退，保存相册与视频播放也走镜像兜底。\n2) 悬赏发布/提交失败时回传真实 HTTP 状态与错误信息；提交记录补齐路径和 SHA，便于后续驳回/更新；失败自动退还托管额度。\n3) 官网评论必须填写手机号/QQ/邮箱才能提交；后台评论/反馈卡片可直接删除垃圾内容。\n4) 评分分布条改为实色高亮并设置最小宽度，避免星星变化后进度条不动。\n5) 清理可见的旧品牌目录、旧仓库链接、旧下载资产名；官网截图替换为最新版本界面；服务端下载链接指向 1.6.15。",
+  "url": "https://github.com/ETQWFD/NightmareRoad-ET/releases/download/et.239/NightmareRoad-ET.apk"
 }

@@ -340,7 +340,7 @@ object ChinesePrompt {
             connectTimeout = MT_TIMEOUT_MS
             readTimeout = MT_TIMEOUT_MS
             instanceFollowRedirects = true
-            setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android) LocalDreamET")
+            setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android) NightmareRoad-ET")
         }
         if (conn.responseCode != 200) return null
         val text = conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
@@ -364,7 +364,7 @@ object ChinesePrompt {
             doOutput = true
             instanceFollowRedirects = true
             setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
-            setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android) LocalDreamET")
+            setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android) NightmareRoad-ET")
         }
         conn.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
         val code = conn.responseCode

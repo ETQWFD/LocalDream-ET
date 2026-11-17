@@ -24,6 +24,7 @@
   .card .body{font-size:14.5px;white-space:pre-wrap}
   button{padding:8px 14px;border:1px solid var(--ink);border-radius:8px;background:var(--ink);color:#fff;font-weight:600;cursor:pointer;font:inherit}
   button.g{background:#fff;color:var(--ink)}
+  button.del{margin-left:8px;padding:4px 10px;font-size:12px;background:#b3261e;color:#fff;border-color:#b3261e}
   .empty{color:var(--mut);padding:24px;text-align:center}
 </style>
   <link rel="stylesheet" href="assets/et-dark.css">
@@ -84,13 +85,14 @@
       .then(function(r){return r.json();})
       .then(function(files){
         var js=(files||[]).filter(function(f){return /\.json$/.test(f.name);});
-        return Promise.all(js.map(function(f){return fetch(RAW+"/feedback/"+f.name).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;});}));
+        return Promise.all(js.map(function(f){return fetch(RAW+"/feedback/"+f.name).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}).then(function(j){return j?Object.assign(j,{_name:f.name,_sha:f.sha}):null;});}));
       })
       .then(function(arr){
         arr=(arr||[]).filter(Boolean).sort(function(a,b){return(b.ts||0)-(a.ts||0);});
         if(!arr.length){$("list").innerHTML='<div class="empty">暂无反馈。</div>';$("status").textContent="共 0 条。";return;}
         $("list").innerHTML=arr.map(function(f){
-          return '<div class="card"><div class="meta"><b>'+esc(f.model||"未知机型")+'</b> · Android '+esc(f.androidVer||"?")+' · '+esc(fmtTs(f.ts))+'</div><div class="body">'+esc(decodeMaybe(String(f.text||"")))+'</div>'+
+          var delBtn='<button class="del" data-path="feedback/'+esc(f._name)+'" data-sha="'+esc(f._sha||"")+'">删除</button>';
+          return '<div class="card"><div class="meta"><b>'+esc(f.model||"未知机型")+'</b> · Android '+esc(f.androidVer||"?")+' · '+esc(fmtTs(f.ts))+' '+delBtn+'</div><div class="body">'+esc(decodeMaybe(String(f.text||"")))+'</div>'+
             (f.contact?'<div class="meta" style="margin-top:6px">联系方式：<b>'+esc(({phone:"手机号",qq:"QQ",email:"邮箱"}[f.contactType]||"其他"))+'</b> '+esc(String(f.contact))+'</div>':'')+
             renderMedia(f)+'</div>';
         }).join("");
@@ -107,7 +109,7 @@
       .then(function(r){return r.ok?r.json():[];})
       .then(function(files){
         var js=(files||[]).filter(function(f){return /\.json$/.test(f.name);});
-        return Promise.all(js.map(function(f){return fetch(RAW+"/comments/"+f.name).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;});}));
+        return Promise.all(js.map(function(f){return fetch(RAW+"/comments/"+f.name).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}).then(function(j){return j?Object.assign(j,{_name:f.name,_sha:f.sha}):null;});}));
       })
       .then(function(arr){
         arr=(arr||[]).filter(Boolean).sort(function(a,b){return(b.ts||0)-(a.ts||0);}).slice(0,60);
@@ -115,7 +117,8 @@
         var html='<h2 style="margin:26px 0 10px">网页反馈 / 评论（'+arr.length+'）</h2>';
         html+=arr.map(function(c){
           var t=(f2=>f2)({phone:"手机号",qq:"QQ",email:"邮箱"}[c.contactType]||"其他");
-          return '<div class="card"><div class="meta"><b>'+esc(c.nick||"匿名")+'</b> · '+esc(fmtTs(c.ts))+'</div>'+
+          var delBtn='<button class="del" data-path="comments/'+esc(c._name)+'" data-sha="'+esc(c._sha||"")+'">删除</button>';
+          return '<div class="card"><div class="meta"><b>'+esc(c.nick||"匿名")+'</b> · '+esc(fmtTs(c.ts))+' '+delBtn+'</div>'+
             '<div class="body">'+esc(decodeMaybe(String(c.text||"")))+'</div>'+
             (c.contact?'<div class="meta" style="margin-top:6px">联系方式：<b>'+esc(t)+'</b> '+esc(String(c.contact))+'</div>':'')+
             '</div>';
@@ -124,6 +127,15 @@
       })
       .catch(function(){});
   }
+
+  function deleteFile(path,sha){
+    if(!path)return;
+    if(!confirm("确认删除这条评论/反馈？"))return;
+    fetch(API+"/"+path,{method:"DELETE",headers:{"Authorization":"Bearer "+ghTok(),"Accept":"application/vnd.github+json","Content-Type":"application/json"},body:JSON.stringify({message:"delete "+path,sha:sha,branch:"main"})})
+      .then(function(r){if(!r.ok)return r.text().then(function(t){throw new Error("HTTP "+r.status+" "+t);});$("status").textContent="已删除，正在刷新…";load();})
+      .catch(function(e){$("status").textContent="删除失败："+e.message;alert("删除失败："+e.message);});
+  }
+  $("list").addEventListener("click",function(e){var b=e.target.closest&&e.target.closest(".del");if(b)deleteFile(b.dataset.path,b.dataset.sha);});
 
   $("reload").addEventListener("click",load);
   load();

@@ -77,19 +77,22 @@ object BountyClient {
                 .put("id", id).put("creator", creator).put("title", title)
                 .put("amount", amount).put("ts", System.currentTimeMillis())
                 .put("status", "open").put("pub", publicKeyBase64(ctx))
-            val ok = writeRaw("bounties/$creator/$id.json", json)
+            val (ok, err) = writeRaw("bounties/$creator/$id.json", json)
             if (!ok) QuotaManager.refund(ctx, amount)
-            Triple(ok, if (ok) "" else "发布悬赏失败", id)
+            Triple(ok, if (ok) "" else err, id)
         }
 
-    private fun writeRaw(path: String, json: JSONObject): Boolean = runCatching {
+    private fun writeRaw(path: String, json: JSONObject): Pair<Boolean, String> = runCatching {
         val c = conn("$API/$path", "PUT").apply { doOutput = true }
         c.setRequestProperty("Content-Type", "application/json")
         val body = JSONObject().put("message", "bounty $path")
             .put("content", Base64.getEncoder().encodeToString(json.toString().toByteArray()))
         c.outputStream.use { it.write(body.toString().toByteArray()) }
-        c.responseCode in 200..201
-    }.getOrDefault(false)
+        val code = c.responseCode
+        if (code in 200..201) return@runCatching true to ""
+        val detail = runCatching { c.errorStream?.bufferedReader()?.readText().orEmpty() }.getOrDefault("")
+        false to "HTTP $code ${detail.take(80)}"
+    }.getOrDefault(false to "网络错误")
 
     /** 列出所有悬赏（按创建人目录遍历）。 */
     suspend fun list(): List<JSONObject> = withContext(Dispatchers.IO) {
@@ -141,8 +144,8 @@ object BountyClient {
                     .put("iv", Base64.getEncoder().encodeToString(iv))
                     .put("data", Base64.getEncoder().encodeToString(data))
                     .put("ts", System.currentTimeMillis())
-                val ok = writeRaw("bounties/$creator/$id/subs/$name", json)
-                ok to if (ok) "" else "提交失败"
+                val (ok, err) = writeRaw("bounties/$creator/$id/subs/$name", json)
+                ok to if (ok) "" else err
             }.getOrElse { false to (it.message ?: "提交失败") }
         }
 
@@ -175,7 +178,7 @@ object BountyClient {
                 val root = JSONObject(r)
                 out += JSONObject(
                     String(Base64.getDecoder().decode(root.optString("content").replace("\n", "")), Charsets.UTF_8),
-                )
+                ).put("_path", f.optString("path")).put("_sha", f.optString("sha"))
             }
         }
         out.sortedByDescending { it.optLong("ts") }

@@ -913,7 +913,7 @@ private data class LocalArt(val file: File)
  *
  * et.168 root-cause fix: the old dialog only listed *.png directly under
  * filesDir, but generated images are written to MediaStore
- * (Pictures/LocalDream) / <root>/outputs, so the picker was always empty and
+ * (Pictures/NightmareRoad-ET) / <root>/outputs, so the picker was always empty and
  * "发布失败" was guaranteed. Now the user can (a) pick any picture from the
  * phone album, or (b) choose a recent output scanned from the real output
  * folders.
@@ -1384,7 +1384,7 @@ private suspend fun purchaseItem(ctx: Context, item: GalleryClient.GalleryItem):
             }.getOrNull() ?: wm
             val out = ByteArrayOutputStream()
             hi.compress(Bitmap.CompressFormat.PNG, 100, out)
-            saveToGallery(ctx, "LocalDreamET_${item.name.replace('/', '_')}", out.toByteArray())
+            saveToGallery(ctx, "NightmareRoad-ET_${item.name.replace('/', '_')}", out.toByteArray())
             qm.consume(ctx, item.price.toLong())
             runCatching { GalleryClient.bumpDownload(item.author) }
             // 85% to the author, 15% to the platform; failures never block the
@@ -1414,7 +1414,7 @@ private fun saveToGallery(ctx: Context, name: String, png: ByteArray): Boolean {
     val values = android.content.ContentValues().apply {
         put(android.provider.MediaStore.Images.Media.DISPLAY_NAME, name)
         put(android.provider.MediaStore.Images.Media.MIME_TYPE, "image/png")
-        put(android.provider.MediaStore.Images.Media.RELATIVE_PATH, "Pictures/LocalDreamET")
+        put(android.provider.MediaStore.Images.Media.RELATIVE_PATH, "Pictures/NightmareRoad-ET")
     }
     val uri = ctx.contentResolver.insert(
         android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values

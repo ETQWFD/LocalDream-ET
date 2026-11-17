@@ -275,7 +275,7 @@ fun DataBackupDialog(installedModelIds: Set<String>, onDismiss: () -> Unit) {
                             onClick = {
                                 val name = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US)
                                     .format(Date())
-                                exportLauncher.launch("LocalDream_history_$name.zip")
+                                exportLauncher.launch("NightmareRoad_history_$name.zip")
                             },
                             enabled = currentStats != null &&
                                 (if (favoritesOnly) currentStats.favoriteCount else currentStats.totalCount) > 0,

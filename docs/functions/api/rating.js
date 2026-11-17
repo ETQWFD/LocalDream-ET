@@ -1,5 +1,5 @@
 // GET  /api/rating            → 代理公开仓库 summary.json（前端通常直读 raw）
-// POST /api/rating  {score, fp}  写票到 ETQWFD/LocalDream-ET-ratings：
+// POST /api/rating  {score, fp}  写票到 ETQWFD/NightmareRoad-ET-ratings：
 //   ratings/<fp>.json 一票，幂等；再读-改-写 summary.json（avg/count/dist/highest/updatedAt）。
 import {
   json, corsHeaders, readBody, extractClientIp, extractGeo, parseUa,

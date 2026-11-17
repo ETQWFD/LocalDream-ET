@@ -4,11 +4,11 @@
 > 本运行时无已登录的 EdgeOne / Cloudflare CLI，函数未替你部署；下列代码已写好、可一键上线。
 
 ## 0. 存储位置（已由作者建好）
-- 公开仓库：`ETQWFD/LocalDream-ET-ratings`（public，分支 main）。
+- 公开仓库：`ETQWFD/NightmareRoad-ET-ratings`（public，分支 main）。
 - `summary.json`：`{avg, count, highest, dist:{"1".."5"}, updatedAt}`，raw 直链
-  `https://raw.githubusercontent.com/ETQWFD/LocalDream-ET-ratings/main/summary.json`（已实测 `Access-Control-Allow-Origin: *`、max-age=300）。
+  `https://raw.githubusercontent.com/ETQWFD/NightmareRoad-ET-ratings/main/summary.json`（已实测 `Access-Control-Allow-Origin: *`、max-age=300）。
 - 每票：`ratings/<fpHash>.json` = `{score, country, prov, model, ua, ts}`；评论：`comments/<id>.json` = `{nick, text, ts}`。
-- 列目录：`https://api.github.com/repos/ETQWFD/LocalDream-ET-ratings/contents/ratings`（数组，过滤 `.gitkeep`）。
+- 列目录：`https://api.github.com/repos/ETQWFD/NightmareRoad-ET-ratings/contents/ratings`（数组，过滤 `.gitkeep`）。
 - **跨设备持久化**：所有读写都在这个公开仓库，任何设备刷新即见同一份数据，不是 localStorage。
 
 ## 1. 端点（函数代码在 docs/functions/api/）
@@ -39,7 +39,7 @@
 
 ## 4. 用户在控制台要做的精确动作
 1. 建一个 **fine-grained Personal Access Token**：
-   - Repository access → 仅选 `ETQWFD/LocalDream-ET-ratings`；
+   - Repository access → 仅选 `ETQWFD/NightmareRoad-ET-ratings`；
    - Permissions → **Contents: Read and write**、Metadata: Read-only。
 2. 部署 `docs/functions/` 到 **EdgeOne Pages**（首选）或 **Cloudflare Pages Functions**：
    - 构建输出目录 = `docs/`（这样 `/functions/api/*` 路由到 `/api/*`）；

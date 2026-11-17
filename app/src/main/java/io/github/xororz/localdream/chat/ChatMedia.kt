@@ -12,6 +12,8 @@ import io.github.xororz.localdream.cloud.CloudConfig
 import io.github.xororz.localdream.cloud.SecureTokenStore
 import io.github.xororz.localdream.net.ProgressBody
 import java.io.File
+import java.net.HttpURLConnection
+import java.net.URL
 import java.util.Base64
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
@@ -92,6 +94,36 @@ object ChatRepository {
     fun rawUrl(path: String): String = "https://raw.githubusercontent.com/$OWNER/$REPO/main/$path"
 
     fun cdnUrl(path: String): String = "https://cdn.jsdelivr.net/gh/$OWNER/$REPO@main/$path"
+
+    /** All public mirrors for one repo path, ordered by usual reachability. */
+    fun mirrorUrls(path: String): List<String> = listOf(
+        rawUrl(path),
+        cdnUrl(path),
+        "https://raw.gitmirror.com/$OWNER/$REPO/main/$path",
+        "https://raw.kkgithub.com/$OWNER/$REPO/main/$path",
+    )
+
+    /** Derive the repo path from an existing raw/CDN URL and expand all mirrors. */
+    fun mirrorUrlsFromUrls(urls: List<String>): List<String> {
+        val path = urls.firstNotNullOfOrNull { u ->
+            u?.substringAfter("/main/", "")?.takeIf { it.isNotBlank() && !it.contains("://") }
+        } ?: return urls.filterNotNull()
+        return mirrorUrls(path)
+    }
+
+    /** Direct public download; used when the authenticated Contents API cannot decode the file. */
+    suspend fun downloadDirect(url: String?): ByteArray? = withContext(Dispatchers.IO) {
+        if (url.isNullOrBlank()) return@withContext null
+        runCatching {
+            val c = (URL(url).openConnection() as HttpURLConnection).apply {
+                connectTimeout = 10_000
+                readTimeout = 25_000
+                instanceFollowRedirects = true
+                setRequestProperty("User-Agent", "NightmareRoad-ET")
+            }
+            c.inputStream.use { it.readBytes() }.takeIf { it.isNotEmpty() }
+        }.getOrNull()
+    }
 
     /** PAT used for writes: the user's own token first, owner token as fallback. */
     /**

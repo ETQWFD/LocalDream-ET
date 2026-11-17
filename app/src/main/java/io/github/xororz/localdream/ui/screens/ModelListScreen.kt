@@ -1051,7 +1051,7 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                                     put(MediaStore.Downloads.MIME_TYPE, "text/plain")
                                     put(
                                         MediaStore.Downloads.RELATIVE_PATH,
-                                        Environment.DIRECTORY_DOWNLOADS + "/LocalDream",
+                                        Environment.DIRECTORY_DOWNLOADS + "/NightmareRoad-ET",
                                     )
                                 }
                                 val resolver = context.contentResolver
@@ -1062,13 +1062,13 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                                 resolver.openOutputStream(uri)?.use { out ->
                                     out.write(capturedLogs.toByteArray(Charsets.UTF_8))
                                 } ?: throw java.io.IOException("openOutputStream failed")
-                                "Downloads/LocalDream/$filename"
+                                "Downloads/NightmareRoad-ET/$filename"
                             } else {
                                 val dir = File(
                                     Environment.getExternalStoragePublicDirectory(
                                         Environment.DIRECTORY_DOWNLOADS,
                                     ),
-                                    "LocalDream",
+                                    "NightmareRoad-ET",
                                 )
                                 if (!dir.exists()) dir.mkdirs()
                                 val file = File(dir, filename)
@@ -6070,7 +6070,7 @@ private fun EtStorageDialog(onDismiss: () -> Unit) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val sp = ctx.getSharedPreferences("app_prefs", android.content.Context.MODE_PRIVATE)
     var current by androidx.compose.runtime.remember {
-        androidx.compose.runtime.mutableStateOf(sp.getString("model_dir", "/storage/emulated/0/LocalDreamET/models") ?: "/storage/emulated/0/LocalDreamET/models")
+        androidx.compose.runtime.mutableStateOf(sp.getString("model_dir", "/storage/emulated/0/NightmareRoad-ET/models") ?: "/storage/emulated/0/NightmareRoad-ET/models")
     }
     val picker = androidx.activity.compose.rememberLauncherForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.OpenDocumentTree()
@@ -6081,7 +6081,7 @@ private fun EtStorageDialog(onDismiss: () -> Unit) {
                     uri,
                     android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION
                 )
-                // et.168 fix: tree URIs like content://.../tree/primary%3ALocalDreamET
+                // et.168 fix: tree URIs like content://.../tree/primary%3ANightmareRoad-ET
                 // are NOT filesystem paths. Storing uri.path made downloads write
                 // into "/tree/primary:..." (missing), so a picked model still
                 // showed as "未下载". Convert the document id back to a real path.

@@ -7,7 +7,7 @@ import java.io.File
 /**
  * Central, user-visible storage for all downloaded/generated files.
  *
- * Primary location:  /storage/emulated/0/LocalDreamET
+ * Primary location:  /storage/emulated/0/NightmareRoad-ET
  *   - models/          downloaded and converted models
  *   - temp_downloads/  partial downloads / extraction scratch
  *
@@ -17,7 +17,8 @@ import java.io.File
  * back to an app-private directory so nothing crashes.
  */
 object Storage {
-    const val DIR_NAME = "LocalDreamET"
+    const val DIR_NAME = "NightmareRoad-ET"
+    private const val LEGACY_DIR_NAME = "LocalDreamET"
     const val MODELS = "models"
     const val TEMP = "temp_downloads"
     const val OUTPUTS = "outputs"
@@ -49,12 +50,20 @@ object Storage {
                 return f
             }
         }
+        migrateLegacyPublicDir()
         val pub = publicRoot()
         return if (runCatching { (pub.exists() || pub.mkdirs()) && pub.canWrite() }.getOrDefault(false)) {
             pub
         } else {
             File(context.filesDir, DIR_NAME)
         }
+    }
+
+    /** Move the old LocalDreamET public folder once to the new branded folder. */
+    private fun migrateLegacyPublicDir() = runCatching {
+        val old = File(Environment.getExternalStorageDirectory(), LEGACY_DIR_NAME)
+        val now = publicRoot()
+        if (old.exists() && !now.exists()) old.renameTo(now)
     }
 
     /** List removable SD-card roots (exclude the primary internal volume). */

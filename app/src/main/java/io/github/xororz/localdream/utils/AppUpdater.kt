@@ -311,7 +311,7 @@ object AppUpdater {
         onProgress: (downloaded: Long, total: Long) -> Unit,
     ): File = withContext(Dispatchers.IO) {
         // et.21: write the update APK into the user-visible shared folder
-        // /storage/emulated/0/LocalDreamET/temp_downloads (survives cache
+        // /storage/emulated/0/NightmareRoad-ET/temp_downloads (survives cache
         // clears and is directly readable by the system package installer),
         // transparently falling back to filesDir before storage permission.
         val dir = io.github.xororz.localdream.utils.Storage.tempDir(context)

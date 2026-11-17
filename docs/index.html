@@ -120,7 +120,7 @@
   .distrow{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--mut);margin:4px 0}
   .distrow .lab{width:24px}
   .distrow .track{flex:1;height:6px;background:var(--accent-soft);border-radius:3px;overflow:hidden}
-  .distrow .fill{height:100%;background:var(--ink)}
+  .distrow .fill{display:block;height:100%;background:var(--accent);min-width:2px}
   .distrow .n{width:36px;text-align:right;font-variant-numeric:tabular-nums}
   .cmt{border-top:1px solid var(--line);padding:14px 0}
   .cmt .n{font-weight:600;font-size:13.5px}
@@ -241,7 +241,7 @@
       <p data-i18n="flow.p">输入提示，App 本地加载模型并生成图片。无需等待云端队列，不担心审核。</p>
     </div>
     <div class="steps">
-      <div class="step"><div class="num">01</div><h3 data-i18n="s1.t">下载模型</h3><p data-i18n="s1.d">在 App 内或公共目录 LocalDreamET/models 放入模型文件，自动识别 CPU 直读或待转换。</p></div>
+      <div class="step"><div class="num">01</div><h3 data-i18n="s1.t">下载模型</h3><p data-i18n="s1.d">在 App 内或公共目录 NightmareRoad-ET/models 放入模型文件，自动识别 CPU 直读或待转换。</p></div>
       <div class="step"><div class="num">02</div><h3 data-i18n="s2.t">输入提示词</h3><p data-i18n="s2.d">英文描述你想要的画面，可选图生图参考图与重绘强度。</p></div>
       <div class="step"><div class="num">03</div><h3 data-i18n="s3.t">本地出图</h3><p data-i18n="s3.d">NPU 或 CPU 推理，图片直接保存到本机相册，可云备份到私有仓。</p></div>
     </div>
@@ -301,7 +301,7 @@
           <option value="qq">QQ</option>
           <option value="email">邮箱</option>
         </select>
-        <input id="cmtContact" maxlength="60" placeholder="填写联系方式（可选，方便我们回复你）" />
+        <input id="cmtContact" maxlength="60" placeholder="必填：手机号 / QQ / 邮箱，方便后台联系你" />
       </div>
       <textarea id="cmtText" maxlength="300" rows="3" data-i18n-ph="cmt.text" placeholder="留下使用反馈（禁止链接 / 图片 / 辱骂）"></textarea>
       <button class="btn p" id="cmtSubmit" type="button" data-i18n="cmt.btn">发表评论</button>
@@ -317,7 +317,7 @@
     </div>
     <details><summary data-i18n="q1.q">出图很慢 / 提示内存不足？</summary><p data-i18n="q1.a">降低分辨率与步数；低端机保持 256×256 / 8 步安全档，或改用 Windows / Linux 服务端出图。</p></details>
     <details><summary data-i18n="q2.q">NPU 不生效 / 模型不加载？</summary><p data-i18n="q2.a">QNN NPU 仅骁龙 Hexagon 机型支持；其它机型自动用 CPU / GPU。模型需下载完整并完成转换后才会就绪。</p></details>
-    <details><summary data-i18n="q3.q">为什么读不到模型列表？</summary><p data-i18n="q3.a">请在系统设置给 App「所有文件访问」权限，并把模型放到公共目录 <code>LocalDreamET/models</code>。</p></details>
+    <details><summary data-i18n="q3.q">为什么读不到模型列表？</summary><p data-i18n="q3.a">请在系统设置给 App「所有文件访问」权限，并把模型放到公共目录 <code>NightmareRoad-ET/models</code>。</p></details>
     <details><summary data-i18n="q4.q">微信里打不开 / 提示已停止访问？</summary><p data-i18n="q4.a">第三方域名可能被微信拦截，请点右上角「···」用系统浏览器打开。</p></details>
   </div>
 </section>
@@ -402,6 +402,7 @@
   $("stars").addEventListener("click",function(e){var v=e.target.getAttribute&&e.target.getAttribute("data-v");if(!v)return;if(localVoted()!=null){$("rateNote").textContent="本设备已经评过分了（每设备一票，不能重复打分）。";return;}$("rateNote").textContent="提交中…";var oldV=null;getJSON(RAW+"/ratings/"+MYFP+".json").then(function(o){oldV=o?Number(o.score):null;}).catch(function(){}).then(function(){return ghPut("ratings/"+MYFP+".json",{score:Number(v),ts:Date.now(),fp:MYFP},"rate");}).then(function(){return ghMeta("summary.json");}).then(function(m){return m?fetch(m.download_url).then(function(r){return r.json();}):{dist:{}};}).then(function(s){s.dist=s.dist||{};for(var k=1;k<=5;k++)s.dist[k]=s.dist[k]||0;if(oldV!=null&&s.dist[oldV]>0)s.dist[oldV]-=1;s.dist[v]=(s.dist[v]||0)+1;var t=0,c=0;for(var k=1;k<=5;k++){t+=(s.dist[k]||0)*k;c+=(s.dist[k]||0);}s.avg=c?Math.round(t/c*10)/10:0;s.count=c;s.updatedAt=Date.now();return ghPut("summary.json",s,"sum");}).then(function(){try{localStorage.setItem(VOTED_KEY,String(v));}catch(e){}sessionStorage.removeItem("etld_sum");return boot();}).then(function(){$("rateNote").textContent="感谢评分！每设备一票，之后不能重复提交。";}).catch(function(err){$("rateNote").textContent="提交失败："+(err.message||"")+"，稍后重试。";});});
   $("cmtSubmit").addEventListener("click",function(){var nick=$("cmtNick").value.trim(),text=$("cmtText").value.trim();
   var ctype=$("cmtContactType").value,contact=$("cmtContact").value.trim();
+  if(!contact){alert("请填写联系方式（手机号 / QQ / 邮箱），不填写无法发表评论。");return;}
   if(contact){
     if(ctype==="phone"&&!/^[0-9+\- ]{6,20}$/.test(contact)){alert("手机号格式不正确");return;}
     if(ctype==="qq"&&!/^[0-9]{5,12}$/.test(contact)){alert("QQ 号应为 5-12 位数字");return;}
@@ -430,7 +431,7 @@
       "why3.t":"模型管理","why3.d":"自動識別 CPU 直讀模型與待轉換模型，檔案齊全才標記就緒。",
       "why4.t":"雲備份","why4.d":"可選 GitHub / Gitee 私有倉備份圖片與日誌，權杖只存系統密鑰庫。",
       "flow.eye":"FROM PROMPT TO IMAGE","flow.h":"從提示詞到本地出圖","flow.p":"輸入提示，App 本地載入模型並生成圖片。無需等待雲端佇列，不擔心審核。",
-      "s1.t":"下載模型","s1.d":"在 App 內或公共目錄 LocalDreamET/models 放入模型檔案，自動識別 CPU 直讀或待轉換。",
+      "s1.t":"下載模型","s1.d":"在 App 內或公共目錄 NightmareRoad-ET/models 放入模型檔案，自動識別 CPU 直讀或待轉換。",
       "s2.t":"輸入提示詞","s2.d":"英文描述你想要的畫面，可選圖生圖參考圖與重繪強度。",
       "s3.t":"本地出圖","s3.d":"NPU 或 CPU 推理，圖片直接儲存到本機相簿，可雲備份到私有倉。",
       "shots.eye":"SCREENSHOTS","shots.h":"介面截圖","shots.p":"主介面、出圖與修圖流程。",
@@ -440,7 +441,7 @@
       "q.eye":"FAQ","q.h":"常見問題",
       "q1.q":"出圖很慢 / 提示記憶體不足？","q1.a":"降低解析度與步數；低端機保持 256×256 / 8 步安全檔，或改用 Windows / Linux 伺服器出圖。",
       "q2.q":"NPU 不生效 / 模型不載入？","q2.a":"QNN NPU 僅驍龍 Hexagon 機型支援；其它機型自動用 CPU / GPU。模型需下載完整並完成轉換後才會就緒。",
-      "q3.q":"為什麼讀不到模型列表？","q3.a":"請在系統設定給 App「所有檔案存取」權限，並把模型放到公共目錄 LocalDreamET/models。",
+      "q3.q":"為什麼讀不到模型列表？","q3.a":"請在系統設定給 App「所有檔案存取」權限，並把模型放到公共目錄 NightmareRoad-ET/models。",
       "q4.q":"微信裡打不開 / 提示已停止存取？","q4.a":"第三方網域可能被微信攔截，請點右上角「···」用系統瀏覽器開啟。",
       "foot.copy":"本地離線 Stable Diffusion · Copyright © 2026 ET","foot.qq":"加入 QQ 群"
     },
@@ -458,7 +459,7 @@
       "why3.t":"Model manager","why3.d":"Auto-detects CPU-ready and convertible models; ready only when files are complete.",
       "why4.t":"Cloud backup","why4.d":"Optional private GitHub / Gitee backup; token stored in system keystore.",
       "flow.eye":"FROM PROMPT TO IMAGE","flow.h":"From prompt to local image","flow.p":"Type a prompt, the app loads a local model and generates. No cloud queue, no review queue.",
-      "s1.t":"Get a model","s1.d":"Drop a model into LocalDreamET/models; the app auto-detects CPU-ready or convertible.",
+      "s1.t":"Get a model","s1.d":"Drop a model into NightmareRoad-ET/models; the app auto-detects CPU-ready or convertible.",
       "s2.t":"Write a prompt","s2.d":"Describe the image in English. Optional img2img reference and denoise strength.",
       "s3.t":"Generate locally","s3.d":"NPU or CPU inference; image saved to your gallery and optionally backed up.",
       "shots.eye":"SCREENSHOTS","shots.h":"Screenshots","shots.p":"Main UI, generation and editing flow.",
@@ -468,7 +469,7 @@
       "q.eye":"FAQ","q.h":"FAQ",
       "q1.q":"Slow generation / out of memory?","q1.a":"Lower resolution and steps; low-end devices stay at 256×256 / 8 steps, or use the Windows / Linux server.",
       "q2.q":"NPU not working / model not loading?","q2.a":"QNN NPU supports Snapdragon Hexagon only; others use CPU / GPU. Models must finish downloading and converting.",
-      "q3.q":"Why is the model list empty?","q3.a":"Grant \"All files access\" and put models into LocalDreamET/models.",
+      "q3.q":"Why is the model list empty?","q3.a":"Grant \"All files access\" and put models into NightmareRoad-ET/models.",
       "q4.q":"WeChat blocks the page?","q4.a":"Third-party domains may be blocked by WeChat; open in your system browser via ··· menu.",
       "foot.copy":"Local offline Stable Diffusion · Copyright © 2026 ET","foot.qq":"Join QQ group"
     }

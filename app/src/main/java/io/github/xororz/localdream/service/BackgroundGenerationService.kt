@@ -47,7 +47,7 @@ class BackgroundGenerationService : Service() {
         val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
         wakeLock = pm.newWakeLock(
             PowerManager.PARTIAL_WAKE_LOCK,
-            "LocalDreamET:generation",
+            "NightmareRoad-ET:generation",
         ).also {
             runCatching { it.acquire() }
         }
@@ -55,7 +55,7 @@ class BackgroundGenerationService : Service() {
             val wm = getSystemService(Context.WIFI_SERVICE) as android.net.wifi.WifiManager
             wifiLock = wm.createWifiLock(
                 android.net.wifi.WifiManager.WIFI_MODE_FULL_HIGH_PERF,
-                "LocalDreamET:generation",
+                "NightmareRoad-ET:generation",
             ).apply { setReferenceCounted(false); acquire() }
         }
     }

@@ -275,22 +275,10 @@ fun ChatScreen(onBack: () -> Unit) {
         val kind = m.kind
         if (kind != ChatKind.IMAGE && kind != ChatKind.VIDEO) return
         scope.launch {
-            var bytes = withContext(Dispatchers.IO) { ChatRepository.fetchRepoFile(m.mediaUrl.orEmpty()) }
-            // 2026-11：仓库取不到时直接按公开 URL 下载（CDN/raw 都可以）。
-            if (bytes == null) {
-                val direct = m.cdnUrl.orEmpty().ifBlank { m.mediaUrl.orEmpty() }
-                if (direct.isNotBlank()) {
-                    bytes = withContext(Dispatchers.IO) {
-                        runCatching {
-                            val c = (java.net.URL(direct).openConnection() as java.net.HttpURLConnection)
-                            c.connectTimeout = 10000; c.readTimeout = 20000
-                            if (c.responseCode in 200..299) c.inputStream.use { it.readBytes() } else null
-                        }.getOrNull()
-                    }
-                }
-            }
-            if ((bytes == null || bytes.isEmpty()) && !m.cdnUrl.isNullOrBlank()) {
-                bytes = withContext(Dispatchers.IO) { ChatRepository.fetchRepoFile(m.cdnUrl) }
+            var bytes = withContext(Dispatchers.IO) {
+                ChatRepository.fetchRepoFile(m.mediaUrl.orEmpty())
+                    ?: ChatRepository.downloadDirect(m.mediaUrl)
+                    ?: ChatRepository.downloadDirect(m.cdnUrl)
             }
             if (bytes == null || bytes.isEmpty()) {
                 Toast.makeText(ctx, "文件下载失败", Toast.LENGTH_SHORT).show()
@@ -300,7 +288,7 @@ fun ChatScreen(onBack: () -> Unit) {
             val mime = if (kind == ChatKind.VIDEO) "video/mp4" else "image/png"
             // Prefer the original scene/format when the URL exposes one.
             val ok = withContext(Dispatchers.IO) {
-                saveBytesToGallery(ctx, bytes, "LocalDreamET_${m.ts}.$ext", mime)
+                saveBytesToGallery(ctx, bytes, "NightmareRoad-ET_${m.ts}.$ext", mime)
             }
             Toast.makeText(
                 ctx,
@@ -1396,6 +1384,8 @@ fun ChatScreen(onBack: () -> Unit) {
                             scope.launch {
                                 val bytes = withContext(Dispatchers.IO) {
                                     ChatRepository.fetchRepoFile(target.mediaUrl)
+                                        ?: ChatRepository.downloadDirect(target.mediaUrl)
+                                        ?: ChatRepository.downloadDirect(target.cdnUrl)
                                 }
                                 if (bytes == null || bytes.isEmpty()) {
                                     Toast.makeText(ctx, "文件下载失败", Toast.LENGTH_SHORT).show()
@@ -1404,7 +1394,7 @@ fun ChatScreen(onBack: () -> Unit) {
                                 val ext = if (target.kind == ChatKind.VIDEO) "mp4" else "png"
                                 val mime = if (target.kind == ChatKind.VIDEO) "video/mp4" else "image/png"
                                 val ok = withContext(Dispatchers.IO) {
-                                    saveBytesToGallery(ctx, bytes, "LocalDreamET_${target.ts}.$ext", mime)
+                                    saveBytesToGallery(ctx, bytes, "NightmareRoad-ET_${target.ts}.$ext", mime)
                                 }
                                 Toast.makeText(
                                     ctx,
@@ -1751,7 +1741,8 @@ private fun ProfileEditDialog(
 private fun InAppVideoDialog(urls: List<String>, onDismiss: () -> Unit) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
-    var index by remember(urls) { mutableIntStateOf(0) }
+    val mirrors = remember(urls) { ChatRepository.mirrorUrlsFromUrls(urls) }
+    var index by remember(mirrors) { mutableIntStateOf(0) }
     var downloadTrigger by remember(urls) { mutableIntStateOf(0) }
     var localFile by remember(urls) { mutableStateOf<java.io.File?>(null) }
     var failed by remember(urls) { mutableStateOf(false) }
@@ -1767,7 +1758,10 @@ private fun InAppVideoDialog(urls: List<String>, onDismiss: () -> Unit) {
     // authenticated API and play the local file (MediaPlayer handles it).
     LaunchedEffect(downloadTrigger) {
         if (downloadTrigger == 0) return@LaunchedEffect
-        val bytes = withContext(Dispatchers.IO) { ChatRepository.fetchRepoFile(urls.lastOrNull()) }
+        val bytes = withContext(Dispatchers.IO) {
+            ChatRepository.fetchRepoFile(mirrors.lastOrNull())
+                ?: ChatRepository.downloadDirect(mirrors.lastOrNull())
+        }
         if (bytes == null || bytes.isEmpty()) {
             failed = true
             return@LaunchedEffect
@@ -1791,7 +1785,7 @@ private fun InAppVideoDialog(urls: List<String>, onDismiss: () -> Unit) {
                             setMediaController(controller)
                             setOnPreparedListener { controller.show() }
                             setOnErrorListener { _, _, _ ->
-                                if (index < urls.lastIndex) {
+                                if (index < mirrors.lastIndex) {
                                     index += 1
                                 } else if (localFile == null) {
                                     downloadTrigger += 1
@@ -1804,7 +1798,7 @@ private fun InAppVideoDialog(urls: List<String>, onDismiss: () -> Unit) {
                     },
                     update = { view ->
                         runCatching {
-                            val src = localFile?.absolutePath ?: urls.getOrNull(index)
+                            val src = localFile?.absolutePath ?: mirrors.getOrNull(index)
                             if (src != null) {
                                 view.setVideoURI(android.net.Uri.parse(src))
                                 view.start()
@@ -1829,14 +1823,14 @@ private fun InAppVideoDialog(urls: List<String>, onDismiss: () -> Unit) {
     }
 }
 
-/** Saves bytes into the public Pictures/LocalDreamET album. */
+/** Saves bytes into the public Pictures/NightmareRoad-ET album. */
 private fun saveBytesToGallery(ctx: android.content.Context, bytes: ByteArray, name: String, mime: String): Boolean {
     return runCatching {
         val values = android.content.ContentValues().apply {
             put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, name)
             put(android.provider.MediaStore.MediaColumns.MIME_TYPE, mime)
             put(android.provider.MediaStore.MediaColumns.RELATIVE_PATH,
-                if (mime.startsWith("video")) "Movies/LocalDreamET" else "Pictures/LocalDreamET")
+                if (mime.startsWith("video")) "Movies/NightmareRoad-ET" else "Pictures/NightmareRoad-ET")
             put(android.provider.MediaStore.MediaColumns.IS_PENDING, 1)
         }
         val collection = if (mime.startsWith("video"))
@@ -2207,15 +2201,16 @@ private fun Avatar(
 /** Tries the CDN mirror first, then the canonical raw URL, then the other one. */
 @Composable
 private fun RemoteImage(urls: List<String>, modifier: Modifier = Modifier) {
-    var index by remember(urls) { mutableIntStateOf(0) }
+    val mirrors = remember(urls) { ChatRepository.mirrorUrlsFromUrls(urls) }
+    var index by remember(mirrors) { mutableIntStateOf(0) }
     Box(modifier = modifier.background(MaterialTheme.colorScheme.surfaceContainerHighest)) {
         AsyncImage(
-            model = urls.getOrNull(index),
+            model = mirrors.getOrNull(index),
             contentDescription = null,
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize(),
             onError = {
-                if (index < urls.lastIndex) index++ else if (index > 0) index = 0
+                if (index < mirrors.lastIndex) index++ else if (index > 0) index = 0
             },
         )
     }

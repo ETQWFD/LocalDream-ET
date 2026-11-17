@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths>
     <!-- et.21: downloaded update APKs land in the shared public folder
-         /storage/emulated/0/LocalDreamET/temp_downloads so they survive cache
+         /storage/emulated/0/NightmareRoad-ET/temp_downloads so they survive cache
          clears and the system package installer can read them directly. -->
     <external-storage-path
         name="public_updates"
-        path="LocalDreamET/temp_downloads/" />
-    <!-- et.24: exported diagnostic reports live at LocalDreamET/diagnostics_*.txt. -->
+        path="NightmareRoad-ET/temp_downloads/" />
+    <!-- et.24: exported diagnostic reports live at NightmareRoad-ET/diagnostics_*.txt. -->
     <external-path
         name="public_diagnostics"
-        path="LocalDreamET/" />
+        path="NightmareRoad-ET/" />
     <!-- Internal-storage fallback when All-files-access is not granted:
-         filesDir/LocalDreamET/temp_downloads (covered by files_root). -->
+         filesDir/NightmareRoad-ET/temp_downloads (covered by files_root). -->
     <files-path
         name="files_root"
         path="." />

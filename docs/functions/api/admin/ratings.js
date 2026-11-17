@@ -1,6 +1,6 @@
 // GET  /api/admin/ratings?score=&region=&device=   （需 X-Admin-Key）
 // POST /api/admin/ratings  {action:"delete", id}  删票后【从目录现存票重算】 summary.json
-// 数据存在公开仓库 ETQWFD/LocalDream-ET-ratings；鉴权沿用 _lib.checkAdmin。
+// 数据存在公开仓库 ETQWFD/NightmareRoad-ET-ratings；鉴权沿用 _lib.checkAdmin。
 import {
   json, corsHeaders, checkAdmin, readBody,
   ghList, ghGetJSON, ghDelete, ghPut,

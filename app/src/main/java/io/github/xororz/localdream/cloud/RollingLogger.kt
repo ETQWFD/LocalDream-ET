@@ -11,7 +11,7 @@ import java.util.Locale
 
 /**
  * Lightweight size-rotating app log written to the public folder
- * /storage/emulated/0/LocalDreamET/logs/app.log. Keeps app.log + app.1.log +
+ * /storage/emulated/0/NightmareRoad-ET/logs/app.log. Keeps app.log + app.1.log +
  * app.2.log (~2 MB each); when app.log fills, rename rotates (app.1 -> app.2,
  * app.log -> app.1) and starts a fresh app.log. If public storage is not
  * writable it falls back to filesDir. There is intentionally NO delete API.

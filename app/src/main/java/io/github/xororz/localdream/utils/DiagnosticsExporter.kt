@@ -20,7 +20,7 @@ import java.util.Locale
  *
  * Every section is wrapped in runCatching: a failing collector writes
  * "unavailable: <reason>" instead of crashing the whole export. The report is
- * written to the public LocalDreamET folder and shared via FileProvider.
+ * written to the public NightmareRoad-ET folder and shared via FileProvider.
  */
 object DiagnosticsExporter {
 

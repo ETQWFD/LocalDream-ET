@@ -79,7 +79,7 @@
     <string name="got_it">知道了!</string>
     <string name="yes">是</string>
     <string name="about_app">須知</string>
-    <string name="must_read">此APP支援在CPU/GPU和部分高通NPU上執行stable diffusion影象生成。\n\n支援在 Hexagon V68 架構及以上的驍龍 NPU 上執行 SD1.5 模型。\n\n支援在驍龍 8 Gen 3 及更新的裝置上執行 SDXL 模型。\n\n若您的晶片不在上述範圍內，則只能使用 CPU/GPU 執行。\n\n本應用 Nightmare Road-ET（開發者：ET）釋出於 https://github.com/ETQWFD/LocalDream-ET ，可在此檢視原始碼、下載版本或提交問題\n\n官網 / 文件：https://etqwfd.github.io/LocalDream-ET/help.html</string>
+    <string name="must_read">此APP支援在CPU/GPU和部分高通NPU上執行stable diffusion影象生成。\n\n支援在 Hexagon V68 架構及以上的驍龍 NPU 上執行 SD1.5 模型。\n\n支援在驍龍 8 Gen 3 及更新的裝置上執行 SDXL 模型。\n\n若您的晶片不在上述範圍內，則只能使用 CPU/GPU 執行。\n\n本應用 Nightmare Road-ET（開發者：ET）釋出於 https://github.com/ETQWFD/NightmareRoad-ET ，可在此檢視原始碼、下載版本或提交問題\n\n官網 / 文件：https://etc.tw.kg/help.html</string>
     <string name="help">幫助</string>
     <string name="more_options">更多</string>
 

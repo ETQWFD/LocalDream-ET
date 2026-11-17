@@ -1,5 +1,5 @@
 // ============================================================
-//  LocalDream ET · 评论/评分/在线 无服务器函数 公共库
+//  Nightmare Road-ET · 评论/评分/在线 无服务器函数 公共库
 //  运行环境：腾讯云 EdgeOne Pages Functions（同构可直接部署到
 //  Cloudflare Pages Functions，绑定同名 KV 即可，无需改代码）。
 //  所有密钥只从 context.env 读取，绝不出现在前端包。
@@ -199,12 +199,12 @@ export function todayKey() {
 }
 
 // ---------- GitHub Contents API（写票/删票，持有 GITHUB_TOKEN） ----------
-// 存储仓库：ETQWFD/LocalDream-ET-ratings（public，匿名可读）。令牌只从 env.GITHUB_TOKEN 读。
-export const GH_REPO = "ETQWFD/LocalDream-ET-ratings";
+// 存储仓库：ETQWFD/NightmareRoad-ET-ratings（public，匿名可读）。令牌只从 env.GITHUB_TOKEN 读。
+export const GH_REPO = "ETQWFD/NightmareRoad-ET-ratings";
 export const GH_API = "https://api.github.com/repos/" + GH_REPO;
 
 function ghHeaders(env, extra) {
-  const h = Object.assign({ "Accept": "application/vnd.github+json", "User-Agent": "LocalDream-ET-Rating" }, extra || {});
+  const h = Object.assign({ "Accept": "application/vnd.github+json", "User-Agent": "NightmareRoad-ET-Rating" }, extra || {});
   if (env && env.GITHUB_TOKEN) h["Authorization"] = "Bearer " + env.GITHUB_TOKEN;
   return h;
 }
