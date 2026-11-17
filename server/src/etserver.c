@@ -90,7 +90,7 @@
 
 /* ============================ 全局配置 ============================ */
 #define APP_NAME      "Nightmare Road-ET Server"
-#define APP_VERSION   "1.6.13"
+#define APP_VERSION   "1.6.15"
 #define COPYRIGHT_STR "Copyright (C) 2026 etc"
 
 #define DEFAULT_PORT 4080      /* 对外监听端口 */
@@ -219,7 +219,7 @@ static void detect_progdir(void) {
 /* 选择可写数据目录。
  * 安装在 Program Files 等受保护目录时普通用户无写权限，
  * 此时把 models/config/logs 放到用户目录，避免 Permission denied。
- * Linux：优先程序目录，其次 $HOME/.local/share/LocalDreamET-Server。 */
+ * Linux：优先程序目录，其次 $HOME/.local/share/NightmareRoad-ET-Server。 */
 static void setup_datadir(void) {
     /* 首选：程序目录自身可写（绿色版 / 用户目录安装）。用本地候选路径先判断。 */
     char prog_models[1100];
@@ -233,13 +233,13 @@ static void setup_datadir(void) {
         base=getenv("LOCALAPPDATA");
         if(!base || !base[0]) base=getenv("USERPROFILE");
         if(base && base[0])
-            snprintf(g_datadir,sizeof(g_datadir),"%s%sLocalDreamET-Server",base,DIRSEP);
+            snprintf(g_datadir,sizeof(g_datadir),"%s%sNightmareRoad-ET-Server",base,DIRSEP);
         else
             snprintf(g_datadir,sizeof(g_datadir),"%s",g_progdir);
 #else
         base=getenv("HOME");
         if(base && base[0])
-            snprintf(g_datadir,sizeof(g_datadir),"%s%s.local%sshare%sLocalDreamET-Server",
+            snprintf(g_datadir,sizeof(g_datadir),"%s%s.local%sshare%sNightmareRoad-ET-Server",
                      base,DIRSEP,DIRSEP,DIRSEP);
         else
             snprintf(g_datadir,sizeof(g_datadir),"%s",g_progdir);
@@ -273,7 +273,7 @@ static void ensure_ghost_tip_templates(void) {
         f=fopen(p,"w");
         if(f){ fprintf(f,"gh:ghp_你的GitHub令牌\n");
                fprintf(f,"# 在此填入你的 GitHub PAT（Settings->Developer settings->Personal access tokens，勾选 repo）\n");
-               fprintf(f,"# 填入后生成的图会自动上传到你自己的私有仓库 LocalDreamET-Upload（不存在会自动创建）。\n");
+               fprintf(f,"# 填入后生成的图会自动上传到你自己的私有仓库 NightmareRoad-ET-Upload（不存在会自动创建）。\n");
                fclose(f); log_line("已生成模板 %s（请填入 gh:ghp_xxx 令牌）", p); }
     } else fclose(f);
 
@@ -324,17 +324,17 @@ static int gh_upload_image(const char* localpath, const char* remotename) {
     snprintf(cmd,sizeof(cmd),
       "curl -s -o /dev/null -X POST https://api.github.com/user/repos "
       "-H \"Authorization: token %s\" -H \"Accept: application/vnd.github+json\" "
-      "-d \"{\\\"name\\\":\\\"LocalDreamET-Upload\\\",\\\"private\\\":true}\"", g_gh_token);
+      "-d \"{\\\"name\\\":\\\"NightmareRoad-ET-Upload\\\",\\\"private\\\":true}\"", g_gh_token);
     system(cmd);
-    /* 2) base64 文件并 PUT 到 <owner>/LocalDreamET-Upload/<remotename> */
+    /* 2) base64 文件并 PUT 到 <owner>/NightmareRoad-ET-Upload/<remotename> */
     snprintf(cmd,sizeof(cmd),
       "b64=$(base64 -w0 \"%s\" 2>/dev/null || base64 \"%s\" | tr -d '\\n'); "
       "curl -s -o /dev/null -X PUT "
-      "\"https://api.github.com/repos/%s/LocalDreamET-Upload/contents/%s\" "
+      "\"https://api.github.com/repos/%s/NightmareRoad-ET-Upload/contents/%s\" "
       "-H \"Authorization: token %s\" -H \"Accept: application/vnd.github+json\" "
       "-d \"{\\\"message\\\":\\\"upload %s\\\",\\\"content\\\":$b64}\"",
       localpath, localpath, owner, remotename, g_gh_token, remotename);
-    log_line("已尝试上传图片到 %s/LocalDreamET-Upload（火并，失败不影响出图）", owner);
+    log_line("已尝试上传图片到 %s/NightmareRoad-ET-Upload（火并，失败不影响出图）", owner);
     return system(cmd);
 }
 
@@ -832,7 +832,7 @@ static int http_probe_size(const char* url, long long* total_out) {
     snprintf(hdrfile,sizeof(hdrfile),"%s%s.probe%d.tmp", g_datadir, DIRSEP, ++probe_n);
     char cmd[3200];
     snprintf(cmd,sizeof(cmd),
-        "curl -sL -m 30 --connect-timeout 15 --max-redirs 10 -A \"LocalDreamET/1.5\" -H \"Range: bytes=0-0\" -o /dev/null -D \"%s\" \"%s\"",
+        "curl -sL -m 30 --connect-timeout 15 --max-redirs 10 -A \"NightmareRoadET/1.5\" -H \"Range: bytes=0-0\" -o /dev/null -D \"%s\" \"%s\"",
         hdrfile, url);
     int rc = system(cmd);
     if (rc!=0) { remove(hdrfile); return 0; }
@@ -882,7 +882,7 @@ static int download_one_source(const ModelSrc* s, const char* out) {
     char cmd[2600];
     snprintf(cmd,sizeof(cmd),
         "curl -L -C - --connect-timeout 30 --retry 3 --retry-delay 3 --retry-all-errors "
-        "-A \"LocalDreamET/1.5\" --progress-bar -o \"%s\" \"%s\"",
+        "-A \"NightmareRoadET/1.5\" --progress-bar -o \"%s\" \"%s\"",
         part, s->url);
     log_line("  执行: %s", cmd);
     int rc = system(cmd);
@@ -2083,7 +2083,7 @@ static void show_banner(void) {
     printf("  [模型    ]  %s\n", g_cfg.model_id[0]?g_cfg.model_id:"(未选择)");
     printf("  [实际端口]  %d（端口被占时自动顺延到下一个可用端口）\n", g_cfg.port);
     printf("  [API Key]  %s\n", g_cfg.api_key);
-    printf("  [云备份]  ghost.txt: %s\n", g_gh_token[0]?"已载入令牌(自动上传私有仓 LocalDreamET-Upload)":"未配置令牌(在 ghost.txt 填 gh:ghp_xxx)");
+    printf("  [云备份]  ghost.txt: %s\n", g_gh_token[0]?"已载入令牌(自动上传私有仓 NightmareRoad-ET-Upload)":"未配置令牌(在 ghost.txt 填 gh:ghp_xxx)");
     printf("  [内容限制]  %s   [主题] %s   [重启次数] %d\n",
            g_cfg.content_filter?"开启(拦截)":"无限制",
            g_cfg.dark_theme?"暗黑":"明亮", g_restart_count);
@@ -2396,11 +2396,11 @@ static void gui_thread(void){
     char lan[128]; collect_ips(); snprintf(lan,sizeof(lan),"%s",g_recommended_ip);
     snprintf(g_addr_disp,sizeof(g_addr_disp),"http://%s:%d", lan, g_cfg.port);
     WNDCLASSW wc={0}; wc.lpfnWndProc=WndProc; wc.hInstance=GetModuleHandleW(NULL);
-    wc.lpszClassName=L"LocalDreamETServer"; wc.hCursor=LoadCursor(NULL,IDC_ARROW);
+    wc.lpszClassName=L"NightmareRoadETServer"; wc.hCursor=LoadCursor(NULL,IDC_ARROW);
     wc.hbrBackground=(HBRUSH)(COLOR_WINDOW+1);
     RegisterClassW(&wc);
     wchar_t wtitle[128]; u8w(APP_NAME "  v" APP_VERSION,wtitle,128);
-    gh_main=CreateWindowW(L"LocalDreamETServer",wtitle,
+    gh_main=CreateWindowW(L"NightmareRoadETServer",wtitle,
         WS_OVERLAPPEDWINDOW|WS_CLIPCHILDREN,CW_USEDEFAULT,CW_USEDEFAULT,600,460,
         NULL,NULL,GetModuleHandleW(NULL),NULL);
     ShowWindow(gh_main,SW_SHOW);

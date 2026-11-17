@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build Local Dream ET Server shell (Copyright (C) 2026 etc)
+# Build Nightmare Road-ET Server shell (Copyright (C) 2026 etc)
 set -e
 HERE="$(cd "$(dirname "$0")" && pwd)"; cd "$HERE"
 mkdir -p build build-win
