@@ -863,17 +863,25 @@ fun ChatScreen(onBack: () -> Unit) {
                                     if (!ok) {
                                         android.widget.Toast.makeText(ctx, "发布失败：$err", android.widget.Toast.LENGTH_LONG).show()
                                     } else {
-                                        post(
-                                            ChatMessage(
-                                                author = author, text = bountyTitle.trim(), ts = nowSeconds(),
-                                                kind = ChatKind.BOUNTY, avatar = meAvatar,
-                                                bountyAmount = bountyAmount.toLongOrNull() ?: 0L,
-                                                bountyId = bid,
-                                                status = "open",
-                                            ),
+                                        val bountyMessage = ChatMessage(
+                                            author = author, text = bountyTitle.trim(), ts = nowSeconds(),
+                                            kind = ChatKind.BOUNTY, avatar = meAvatar,
+                                            bountyAmount = bountyAmount.toLongOrNull() ?: 0L,
+                                            bountyId = bid,
+                                            status = "open",
                                         )
-                                        showBounty = false; bountyTitle = ""; bountyAmount = ""
-                                        android.widget.Toast.makeText(ctx, "悬赏已发布，额度已托管", android.widget.Toast.LENGTH_LONG).show()
+                                        val sendResult = withContext(Dispatchers.IO) {
+                                            ChatRepository.send(ctx, bountyMessage)
+                                        }
+                                        sendResult.onSuccess {
+                                            messages = messages + bountyMessage
+                                            refresh()
+                                            showBounty = false; bountyTitle = ""; bountyAmount = ""
+                                            android.widget.Toast.makeText(ctx, "悬赏已发布，额度已托管", android.widget.Toast.LENGTH_LONG).show()
+                                        }.onFailure { e ->
+                                            status = e.message ?: "聊天消息发送失败"
+                                            android.widget.Toast.makeText(ctx, "悬赏已托管，但聊天消息未发送：${e.message}", android.widget.Toast.LENGTH_LONG).show()
+                                        }
                                     }
                                 }
                             }

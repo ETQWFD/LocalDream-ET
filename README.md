@@ -76,7 +76,7 @@ RELEASE_KEY_PASSWORD=...
 5. `FileProvider` 授予安装器读取权限，`ACTION_VIEW` + `application/vnd.android.package-archive`
    直接打开系统打包安装程序。
 
-发布新版本时：上传新 APK 到 Release（命名 `Nightmare Road-ET.apk`），
+发布新版本时：上传新 APK 到 Release（命名 `NightmareRoad-ET.apk`），
 并更新 `docs/update.json` 的 `versionCode / versionName / releaseNotes`。
 
 

@@ -31,6 +31,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import okhttp3.Protocol
 import okhttp3.Request
 
 class ModelDownloadService : Service() {
@@ -53,6 +54,9 @@ class ModelDownloadService : Service() {
         .connectTimeout(12, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
         .retryOnConnectionFailure(true)
+        // Some domestic CDNs mishandle HTTP/2 upgrade and surface a protocol
+        // level "http-1" failure before any byte lands; pin HTTP/1.1.
+        .protocols(listOf(Protocol.HTTP_1_1))
         .build()
 
     /**
@@ -115,12 +119,24 @@ class ModelDownloadService : Service() {
 
     /** (HEAD code, authoritative Content-Length) for [url]; length -1 when unknown. */
     private fun headCodeAndLength(url: String): Pair<Int, Long> {
-        val request = Request.Builder().url(url).head().build()
-        return runCatching {
-            client.newCall(request).execute().use { r ->
+        val head = runCatching {
+            client.newCall(Request.Builder().url(url).head().build()).execute().use { r ->
                 r.code to (r.header("Content-Length")?.toLongOrNull() ?: -1L)
             }
         }.getOrDefault(-1 to -1L)
+        if (head.first in 200..399 && head.second > 0L) return head
+        // CDNs often reject HEAD but answer a 1-byte Range request. Parse either
+        // Content-Range ("bytes 0-0/<total>") or Content-Length so the dialog
+        // does not stay at "0 B / 未知大小" before the stream starts.
+        return runCatching {
+            client.newCall(
+                Request.Builder().url(url).header("Range", "bytes=0-0").build()
+            ).execute().use { r ->
+                val total = r.header("Content-Range")?.substringAfterLast('/')?.toLongOrNull()
+                    ?: r.header("Content-Length")?.toLongOrNull() ?: -1L
+                r.code to total
+            }
+        }.getOrDefault(head)
     }
 
     companion object {
