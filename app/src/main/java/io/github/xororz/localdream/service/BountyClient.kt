@@ -217,23 +217,41 @@ object BountyClient {
     }
 
     /**
-     * 24 小时自动结算：发布者打开悬赏页时扫描自己超过 24h 且仍 open 的悬赏，
-     * 有提交就默认“满意”，把托管额度付给最早提交者并关闭悬赏。
+     * et.240：24 小时自动结算。原来只扫描“当前用户自己发布”的悬赏，别人打开
+     * 悬赏页时永远不会触发，托管额度就一直卡住。现在任何用户打开悬赏列表都会
+     * 扫描全部超过 24 小时仍 open 的悬赏：默认发布者“满意”，把托管额度付给
+     * 最早一位未被驳回的提交者，并给双方各写一条公告。
      */
     suspend fun autoSettle(ctx: Context, creator: String, list: List<JSONObject>): Int = withContext(Dispatchers.IO) {
         var settled = 0
         for (b in list) {
-            if (!b.optString("creator").equals(creator, true)) continue
-            if (b.optString("status") == "paid" || b.optString("status") == "closed") continue
+            val bountyCreator = b.optString("creator")
+            if (bountyCreator.isBlank()) continue
+            val st = b.optString("status")
+            if (st == "paid" || st == "closed" || st == "rejected") continue
             val ageH = (System.currentTimeMillis() - b.optLong("ts")) / 3_600_000L
             if (ageH < 24L) continue
-            val subs = listSubs(b)
-            val target = subs.lastOrNull { it.optString("status") != "rejected" } ?: continue
+            val subs = runCatching { listSubs(b) }.getOrDefault(emptyList())
+            val target = subs.firstOrNull { it.optString("status") != "rejected" } ?: continue
             val to = target.optString("submitter")
             if (to.isBlank()) continue
-            val ok = GalleryClient.sendQuota(creator, to, b.optLong("amount")).first
+            val amount = b.optLong("amount")
+            if (amount <= 0L) continue
+            val ok = GalleryClient.sendQuota(bountyCreator, to, amount).first
             if (ok) {
                 closeBounty(b, "paid")
+                runCatching {
+                    NoticesClient.post(
+                        to, "悬赏自动支付",
+                        "「${b.optString("title")}」超过 24 小时未验收，系统默认发布者满意，$amount 额度已到账。",
+                    )
+                }
+                runCatching {
+                    NoticesClient.post(
+                        bountyCreator, "悬赏已自动结算",
+                        "「${b.optString("title")}」超过 24 小时未确认，已向 @$to 支付 $amount 额度。如需驳回请在 24 小时内操作。",
+                    )
+                }
                 settled++
             }
         }

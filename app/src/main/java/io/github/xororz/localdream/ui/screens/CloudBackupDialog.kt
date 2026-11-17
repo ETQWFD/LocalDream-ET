@@ -155,8 +155,10 @@ fun CloudBackupDialog(onDismiss: () -> Unit) {
                                 style = MaterialTheme.typography.labelMedium,
                             )
                             Spacer(modifier = Modifier.padding(horizontal = 4.dp))
-                            // et.216: official account ETQWFD shows "不限" instead of number.
-                            val isOfficial = auth?.login.equals("ETQWFD", ignoreCase = true)
+                            // et.216/et.240: 官方号显示“不限”；判定走 QuotaManager，
+                            // 登录态取不到时也不会把官方号误显示成有限额度。
+                            val isOfficial = io.github.xororz.localdream.service.QuotaManager
+                                .isOfficial(LocalContext.current)
                             Text(
                                 text = if (isOfficial) "额度 不限" else "额度 ${qUsed}/${qTotal}",
                                 style = MaterialTheme.typography.bodySmall,

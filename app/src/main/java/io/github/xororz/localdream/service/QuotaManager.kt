@@ -71,8 +71,21 @@ object QuotaManager {
     /** et.156: 卡密赠送的独立额度池，不随 7 天重置清零。 */
     fun bonusPool(c: Context): Long = reserve(c)
 
+    /**
+     * et.240：官方号判定。此前只看 SecureTokenStore 的登录态，令牌加密失败/账号
+     * 状态未落盘时官方号会被当成普通号，出现“官方号也限额度”。这里同时查
+     * 多个来源：登录态、缓存登录名、聊天/图片社区写入时记录的作者名。
+     */
+    private val OFFICIAL_LOGINS = setOf("etqwfd", "etc官方", "etc-official", "nightmareroad-et")
+
     fun isOfficial(c: Context): Boolean = runCatching {
-        SecureTokenStore(c).state(CloudConfig.Provider.GITHUB)?.login.equals("ETQWFD", ignoreCase = true)
+        val names = mutableListOf<String>()
+        SecureTokenStore(c).state(CloudConfig.Provider.GITHUB)?.login?.let { names += it }
+        val prefs = c.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+        for (k in listOf("last_login", "cloud_login", "chat_login", "gallery_login")) {
+            prefs.getString(k, null)?.let { names += it }
+        }
+        names.any { it.trim().lowercase() in OFFICIAL_LOGINS }
     }.getOrDefault(false)
 
     fun remaining(c: Context): Long =
@@ -87,8 +100,9 @@ object QuotaManager {
     }
 
     fun consume(c: Context, amount: Long) {
-        val rem = amount
-        if (rem > 0L) sp(c).edit().putLong("used", (used(c) + rem).coerceAtMost(limit(c))).apply()
+        // 官方号不限额度：不写 used，避免出现“额度被扣到上限”的假限制。
+        if (amount <= 0L || isOfficial(c)) return
+        sp(c).edit().putLong("used", (used(c) + amount).coerceAtMost(limit(c))).apply()
     }
 
     fun refund(c: Context, amount: Long) {
