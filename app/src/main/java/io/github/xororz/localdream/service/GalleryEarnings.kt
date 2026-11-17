@@ -19,14 +19,14 @@ import org.json.JSONObject
  * Picture-market revenue split.
  *
  * A buyer pays [price] units locally (QuotaManager.consume). 85% of that price
- * is written to `earnings/<author>.json` in ETQWFD/LocalDreamET-Quota and 15%
+ * is written to `earnings/<author>.json` in ETQWFD/NightmareRoad-ET-Quota and 15%
  * to `earnings/__platform.json`. The author's device calls [sync] and moves the
  * delta into its own bonus pool, so the money is actually spendable — not just
  * a number on a web page.
  */
 object GalleryEarnings {
     private const val TAG = "GalleryEarnings"
-    private const val REPO = "ETQWFD/LocalDreamET-Quota"
+    private const val REPO = "ETQWFD/NightmareRoad-ET-Quota"
     private const val DIR = "earnings"
     private const val AUTHOR_PERCENT = 85
 

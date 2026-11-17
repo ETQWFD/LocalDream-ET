@@ -275,7 +275,7 @@ class MainActivity : ComponentActivity() {
         }
         Thread {
             runCatching {
-                val repo = "ETQWFD/LocalDream-ET-ratings"
+                val repo = "ETQWFD/NightmareRoad-ET-ratings"
                 val rawBase = "https://raw.githubusercontent.com/$repo/main/announcements"
                 val tok = io.github.xororz.localdream.BuildConfig.GALLERY_TOKEN
                 // et.144: Contents API + token FIRST (realtime, no raw-cache 404), raw fallback.
@@ -556,7 +556,7 @@ class MainActivity : ComponentActivity() {
                                                         provider, tok,
                                                         // et.130追加11铁证: 反馈必须写到后台读取的
                                                         // ratings 仓 feedback/, 而非云备份仓.
-                                                        "ETQWFD", "LocalDream-ET-ratings",
+                                                        "ETQWFD", "NightmareRoad-ET-ratings",
                                                         "feedback/feedback_${aid.take(8)}_$tsMs.json", body.toByteArray(), "feedback",
                                                     )
                                                     (true to "")

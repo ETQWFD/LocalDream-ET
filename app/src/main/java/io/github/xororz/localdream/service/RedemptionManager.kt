@@ -31,7 +31,7 @@ import java.net.URL
  */
 object RedemptionManager {
     private const val TAG = "Redemption"
-    private const val REPO = "ETQWFD/LocalDreamET-Quota"
+    private const val REPO = "ETQWFD/NightmareRoad-ET-Quota"
     private const val CONNECT_MS = 10000
     private const val READ_MS = 15000
     private const val MAX_NET_TRIES = 3 // initial + 2 retries
@@ -203,7 +203,7 @@ object RedemptionManager {
         val store = SecureTokenStore(context)
         val provider = CloudConfig.Provider.GITHUB
         // et.146: 未做 GitHub 设备登录时，回退到内置 gallery 令牌；该令牌对
-        // LocalDreamET-Quota 仓有读写权限，兑换码不需要用户先登录。
+        // NightmareRoad-ET-Quota 仓有读写权限，兑换码不需要用户先登录。
         var tok = store.token(provider)
         if (tok.isNullOrBlank()) tok = io.github.xororz.localdream.BuildConfig.GALLERY_TOKEN
         if (tok.isNullOrBlank()) return Result.NeedLogin

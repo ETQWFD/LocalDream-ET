@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
-<title>管理后台 — Local Dream ET</title>
+<title>管理后台 — Nightmare Road-ET</title>
 <link rel="icon" href="assets/favicon.ico" sizes="any" />
 <link rel="icon" href="assets/icon-192.png" type="image/png" />
 <style>
@@ -71,8 +71,8 @@
 <script>
 (function(){
   "use strict";
-  var RAW="https://raw.githubusercontent.com/ETQWFD/LocalDream-ET-ratings/main";
-  var API="https://api.github.com/repos/ETQWFD/LocalDream-ET-ratings/contents";
+  var RAW="https://raw.githubusercontent.com/ETQWFD/NightmareRoad-ET-ratings/main";
+  var API="https://api.github.com/repos/ETQWFD/NightmareRoad-ET-ratings/contents";
   function $(id){return document.getElementById(id);}
   function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
   function fmtTs(ts){if(ts==null||ts==="")return"";try{var t=ts;if(typeof t==="number"&&t<1e12)t=t*1000;else if(typeof t==="string"&&/^\d+$/.test(t)&&Number(t)<1e12)t=Number(t)*1000;return new Date(t).toLocaleString("zh-CN",{year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false});}catch(e){return String(ts);}}

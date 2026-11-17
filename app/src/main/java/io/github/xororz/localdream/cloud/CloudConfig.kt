@@ -11,7 +11,7 @@ object CloudConfig {
     enum class Provider { GITHUB, GITEE }
 
     /** Fixed private backup repo name (exact casing required). */
-    const val BACKUP_REPO = "LocalDreamET-Backup"
+    const val BACKUP_REPO = "NightmareRoad-ET-Backup"
 
     /**
      * Update mirror channel (et.25). GitHub is the authoritative/primary channel;

@@ -6039,7 +6039,7 @@ private fun EtFeedbackDialog(onDismiss: () -> Unit) {
                         runCatching {
                             io.github.xororz.localdream.cloud.CloudClient.uploadContent(
                                 io.github.xororz.localdream.cloud.CloudConfig.Provider.GITHUB,
-                                token, "ETQWFD", "LocalDream-ET-ratings",
+                                token, "ETQWFD", "NightmareRoad-ET-ratings",
                                 "feedback/fb_${System.currentTimeMillis()}.json", body, "feedback"
                             )
                         }

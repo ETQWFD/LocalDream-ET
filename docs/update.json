@@ -1,10 +1,10 @@
 {
-  "versionCode": 310,
-  "versionName": "4.0.0-et.236",
-  "title": "最新版本 v4.0.0-et.236（Nightmare Road-ET）",
-  "apkUrl": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.236/LocalDream-ET.apk",
-  "size": 165086824,
-  "sha256": "3d622a84a7741c30fbfe1b1c4238c9ff59c5bf31c337104f04a02bb3b7fab7bc",
-  "releaseNotes": "最新版本\n\n正文：\net.236（versionCode 310）：\n1) 新增三档引擎模式，设置里可切换：低配（强制 CPU/384/关 OpenCL）、中配（CPU或 OpenCL/512）、高配（GPU 优先/768）；AUTO 按内存和架构自动选档。\n2) 引擎档位同时影响长边上限、默认速度档和 OpenCL 开关，出图页仍可单独微调。\n3) 服务端源码、源码内标题、官网文案统一改为 Nightmare Road-ET；包名 etc.github.ai 与更新通道不变。\n4) 匿名发布、聊天长按、MIT LICENSE 延续。",
-  "url": "https://github.com/ETQWFD/LocalDream-ET/releases/download/et.236/LocalDream-ET.apk"
+  "versionCode": 311,
+  "versionName": "4.0.0-et.237",
+  "title": "最新版本 v4.0.0-et.237（Nightmare Road-ET）",
+  "apkUrl": "https://github.com/ETQWFD/NightmareRoad-ET/releases/download/et.237/NightmareRoad-ET.apk",
+  "size": 165091732,
+  "sha256": "59c221dd0056259b7c19a5e2304fb38a714330656e88699a5bd5d906a8206c88",
+  "releaseNotes": "最新版本\n\n正文：\net.237（versionCode 311）：\n1) 全部仓库已改名：NightmareRoad-ET / -Gallery / -Gallery-Private / -Chat / -Quota / -ratings / -Backup，App 内所有接口地址同步更新，图片社区、聊天、额度、更新不再指向旧仓库。\n2) 修复更新下载完成后不弹系统安装器：READY 状态现在自动调用系统 PackageInstaller；失败有“立即安装”按钮；未授权“安装未知应用”会引导授权后自动继续。\n3) 下载完成会校验 APK versionCode，只有比当前版本新才允许安装；镜像回旧包会自动删除并提示重下。\n4) Release 资产名改为 NightmareRoad-ET.apk。\n5) MIT LICENSE 重新生成；服务端源码仓库地址同步改名。",
+  "url": "https://github.com/ETQWFD/NightmareRoad-ET/releases/download/et.237/NightmareRoad-ET.apk"
 }

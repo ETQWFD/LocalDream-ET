@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Local Dream ET · 运维数据面板</title>
+<title>Nightmare Road-ET · 运维数据面板</title>
 <link rel="icon" href="assets/favicon.ico" sizes="any" />
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
 <meta name="theme-color" content="#0a0e13" />
@@ -116,7 +116,7 @@
   <div class="bar">
     <img src="assets/icon-192.png" alt="" />
     <div>
-      <h1>Local Dream ET · 运维数据面板</h1>
+      <h1>Nightmare Road-ET · 运维数据面板</h1>
       <div class="meta" id="clock">—</div>
     </div>
     <div class="right">
@@ -279,7 +279,7 @@
   </p>
 </div>
 
-<div class="etcbar"><b>etc 面板</b> · Local Dream ET · Copyright (C) 2026 etc · 数据仅取自 GitHub API / 第三方计数 / 已部署后端，无写死数字</div>
+<div class="etcbar"><b>etc 面板</b> · Nightmare Road-ET · Copyright (C) 2026 etc · 数据仅取自 GitHub API / 第三方计数 / 已部署后端，无写死数字</div>
 
 <script>
 (function(){
@@ -427,8 +427,8 @@
 
   /* ---------- 公开仓库匿名直读 + 写操作走 Worker ---------- */
   var WORKER_BASE="https://et-ratings.fern-manatee.workers.dev"; /* 规划地址，部署后如不同改这里 */
-  var REPO_RAW="https://raw.githubusercontent.com/ETQWFD/LocalDream-ET-ratings/main";
-  var REPO_API="https://api.github.com/repos/ETQWFD/LocalDream-ET-ratings/contents";
+  var REPO_RAW="https://raw.githubusercontent.com/ETQWFD/NightmareRoad-ET-ratings/main";
+  var REPO_API="https://api.github.com/repos/ETQWFD/NightmareRoad-ET-ratings/contents";
   var GH_TOK_B64="AhxdOAlSEh01I1AEby1aFC1+UBwXLh4jHFMNHT4kADB5LFoSQU8pOA==";
   function ghTok(){var k="et-gh",b=atob(GH_TOK_B64),o="";for(var i=0;i<b.length;i++){o+=String.fromCharCode(b.charCodeAt(i)^k.charCodeAt(i%k.length));}return o;}
   function ghGet(url){
@@ -603,7 +603,7 @@
     ghGet(REPO_RAW+"/devices/index.json?_="+Date.now())
       .then(function(arr){ if(Array.isArray(arr)&&arr.length){renderDev(arr);} else {throw new Error("empty");} })
       .catch(function(){
-        return ghGet("https://api.github.com/repos/ETQWFD/LocalDream-ET-ratings/contents/devices")
+        return ghGet("https://api.github.com/repos/ETQWFD/NightmareRoad-ET-ratings/contents/devices")
           .then(function(list){ var files=(list||[]).filter(function(f){return /^device_.*\.json$/.test(f.name);});
             return Promise.all(files.map(function(f){return ghGet(REPO_RAW+"/devices/"+f.name).catch(function(){return null;});})); })
           .then(function(arr){ renderDev((arr||[]).filter(Boolean)); })
@@ -616,7 +616,7 @@
   /* ---------- 用户反馈：读 feedback/*.json ---------- */
   function loadFeedback(){
     $("fbStatus").textContent="读取反馈…";
-    ghGet("https://api.github.com/repos/ETQWFD/LocalDream-ET-ratings/contents/feedback")
+    ghGet("https://api.github.com/repos/ETQWFD/NightmareRoad-ET-ratings/contents/feedback")
       .then(function(list){
         var files=(list||[]).filter(function(f){return /^feedback_.*\.json$/.test(f.name);});
         return Promise.all(files.map(function(f){return ghGet(REPO_RAW+"/feedback/"+f.name).catch(function(){return null;});}));
@@ -641,7 +641,7 @@
   /* ---------- 发送公告：写 announcements/announce_<ts>.json ---------- */
   function loadAnn(){
     $("anStatus").textContent="读取公告…";
-    ghGet("https://api.github.com/repos/ETQWFD/LocalDream-ET-ratings/contents/announcements")
+    ghGet("https://api.github.com/repos/ETQWFD/NightmareRoad-ET-ratings/contents/announcements")
       .then(function(list){
         var files=(list||[]).filter(function(f){return /^announce_.*\.json$/.test(f.name);});
         return Promise.all(files.map(function(f){return ghGet(REPO_RAW+"/announcements/"+f.name).catch(function(){return null;});}));
@@ -663,7 +663,7 @@
   }
   $("anLoad").addEventListener("click",loadAnn);
   function syncIndex(newFile,tok){
-    var api="https://api.github.com/repos/ETQWFD/LocalDream-ET-ratings/contents/announcements/index.json";
+    var api="https://api.github.com/repos/ETQWFD/NightmareRoad-ET-ratings/contents/announcements/index.json";
     return fetch(api,{headers:{"Authorization":"Bearer "+tok,"Accept":"application/vnd.github+json"}}).then(function(r){
       if(r.status===404)return {list:[],sha:null};
       if(!r.ok)throw new Error("HTTP "+r.status);
@@ -696,7 +696,7 @@
     var obj={title:title,content:content,target:targetText,ts:ts,from:"admin"};
     var fname="announce_"+ts+"_"+Math.random().toString(36).slice(2,7)+".json";
     var path="announcements/"+fname;
-    fetch("https://api.github.com/repos/ETQWFD/LocalDream-ET-ratings/contents/"+path,{
+    fetch("https://api.github.com/repos/ETQWFD/NightmareRoad-ET-ratings/contents/"+path,{
       method:"PUT",
       headers:{"Authorization":"Bearer "+tok,"Accept":"application/vnd.github+json","Content-Type":"application/json"},
       body:JSON.stringify({message:"announce",content:btoa(unescape(encodeURIComponent(JSON.stringify(obj)))),branch:"main"})

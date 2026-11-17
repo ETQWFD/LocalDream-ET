@@ -1334,7 +1334,7 @@ private suspend fun purchaseItem(ctx: Context, item: GalleryClient.GalleryItem):
             if (bytes == null) {
                 runCatching {
                     val conn = (java.net.URL(
-                        "https://api.github.com/repos/ETQWFD/LocalDreamET-Gallery/contents/png/${item.name}"
+                        "https://api.github.com/repos/ETQWFD/NightmareRoad-ET-Gallery/contents/png/${item.name}"
                     ).openConnection() as java.net.HttpURLConnection)
                     conn.connectTimeout = 12000
                     conn.readTimeout = 30000
@@ -1400,7 +1400,7 @@ private suspend fun purchaseItem(ctx: Context, item: GalleryClient.GalleryItem):
                 runCatching {
                     io.github.xororz.localdream.cloud.CloudClient.uploadContent(
                         CloudConfig.Provider.GITHUB,
-                        tok, "ETQWFD", "LocalDreamET-Backup",
+                        tok, "ETQWFD", "NightmareRoad-ET-Backup",
                         "png/purchased_${item.name}", data, "purchase backup"
                     )
                 }

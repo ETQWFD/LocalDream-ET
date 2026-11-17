@@ -21,8 +21,8 @@ import org.json.JSONObject
  * screen.
  */
 object SharedRepos {
-    const val CHAT = "LocalDreamET-Chat"
-    const val GALLERY = "LocalDreamET-Gallery"
+    const val CHAT = "NightmareRoad-ET-Chat"
+    const val GALLERY = "NightmareRoad-ET-Gallery"
     private const val OWNER = "ETQWFD"
 
     private val client = OkHttpClient.Builder()
@@ -98,7 +98,7 @@ object SharedRepos {
         ensureFile(
             GALLERY,
             "README.md",
-            "# LocalDreamET-Gallery\n\nNightmare Road-ET 图片社区共享仓库，所有作品由 App 上传。\n",
+            "# NightmareRoad-ET-Gallery\n\nNightmare Road-ET 图片社区共享仓库，所有作品由 App 上传。\n",
             "init: gallery readme",
         )
         bootstrapped = true

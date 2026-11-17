@@ -1,6 +1,6 @@
 <div align="center">
 
-# Nightmare Road-ET  <img src="./docs/icon.png" width="32" alt="Local Dream ET">
+# Nightmare Road-ET  <img src="./docs/icon.png" width="32" alt="Nightmare Road-ET">
 
 **安卓本地 Stable Diffusion · 骁龙 NPU / CPU / GPU 加速**
 ### ET 定制版（开发者：ET）
@@ -12,14 +12,14 @@
 - **应用内直接下载**：发现新版本后在 App 内下载并显示百分比 / 已下载大小。
 - **下载完直接安装**：首次自动申请 `REQUEST_INSTALL_PACKAGES`（“允许安装未知应用”），
   授权后立即调起**系统打包安装程序（Package Installer）**覆盖安装，全程不经过文件管理器或任何应用商店。
-- **品牌**：应用名 *Local Dream ET*，独立包名 `io.github.etqwfd.localdreamet`，设置页显示开发者与版本。
+- **品牌**：应用名 *Nightmare Road-ET*，包名 `etc.github.ai`，设置页显示开发者与版本。
 - **32 位**：`abiFilters` 增加 `armeabi-v7a`（仅 CPU/GPU，说明见下文）。
 
 ## 官网与下载
 
 - 官网（GitHub Pages）：<https://etc.tw.kg/>
-- 更新清单：<https://etqwfd.github.io/Nightmare Road-ET/update.json>
-- 最新安装包：见 [Releases](https://github.com/ETQWFD/LocalDream-ET/releases)，资产固定名 `LocalDream-ET.apk`。
+- 更新清单：<https://etc.tw.kg/update.json>
+- 最新安装包：见 [Releases](https://github.com/ETQWFD/NightmareRoad-ET/releases)，资产固定名 `NightmareRoad-ET.apk`。
 
 ## 关于原生引擎与 32 位（重要）
 

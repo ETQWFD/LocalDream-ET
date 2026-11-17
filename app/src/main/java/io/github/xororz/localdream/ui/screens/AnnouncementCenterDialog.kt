@@ -79,7 +79,7 @@ private fun loadAll(context: Context): List<AnnouncementItem> {
     var tok = store.token(CloudConfig.Provider.GITHUB)
     if (tok.isNullOrBlank()) tok = io.github.xororz.localdream.BuildConfig.GALLERY_TOKEN
     if (tok.isNullOrBlank()) return emptyList()
-    val repo = "ETQWFD/LocalDream-ET-ratings"
+    val repo = "ETQWFD/NightmareRoad-ET-ratings"
     // et.147: 国内 API 被墙时用镜像拉 index.json 与公告正文。
     fun mirrorUrls(file: String) = listOf(
         // 2026-11：jsDelivr 在国内通常可用且不需要鉴权；把它放第一位，

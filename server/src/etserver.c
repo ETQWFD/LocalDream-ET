@@ -363,7 +363,7 @@ static void report_first_run(void) {
       "content=$(printf '{\"type\":\"Server\",\"lan_ip\":\"%s\",\"public_ip\":\"%s\",\"region\":\"%s\",\"ts\":%ld}' "
       "| base64 -w0); "
       "curl -s -o /dev/null -w \"%%{http_code}\" -X PUT "
-      "\"https://api.github.com/repos/ETQWFD/LocalDream-ET-ratings/contents/devices/device_server_%s.json\" "
+      "\"https://api.github.com/repos/ETQWFD/NightmareRoad-ET-ratings/contents/devices/device_server_%s.json\" "
       "-H \"Authorization: token %s\" -H \"Accept: application/vnd.github+json\" "
       "-d \"{\\\"message\\\":\\\"report device %s\\\",\\\"content\\\":$content}\"",
       g_recommended_ip, pub[0]?pub:"unknown", region[0]?region:"unknown", ts, rand8, g_gh_token, rand8);
@@ -375,7 +375,7 @@ static void report_first_run(void) {
 /* ------------------------- 46 位随机 Key ------------------------- */
 static const char KEYSET[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 
-/* v1.6.5：启动时拉取 ETQWFD/LocalDream-ET-ratings 仓 announcements/ 公告，
+/* v1.6.5：启动时拉取 ETQWFD/NightmareRoad-ET-ratings 仓 announcements/ 公告，
    target 含“服务端”或“全部”的打印显示。 */
 static void fetch_announcements(void) {
     char cmd[2048];
@@ -383,13 +383,13 @@ static void fetch_announcements(void) {
     if(g_gh_token[0])
       snprintf(cmd,sizeof(cmd),
       "curl -s --max-time 8 -H \"Authorization: token %s\" -H \"Accept: application/vnd.github+json\" "
-      "\"https://api.github.com/repos/ETQWFD/LocalDream-ET-ratings/contents/announcements\" "
+      "\"https://api.github.com/repos/ETQWFD/NightmareRoad-ET-ratings/contents/announcements\" "
       "| grep '\"download_url\"' | sed 's/.*\"download_url\": *\"//;s/\".*//' "
       "| while read u; do curl -s --max-time 8 \"$u\"; echo; done", g_gh_token);
     else
       snprintf(cmd,sizeof(cmd),
       "curl -s --max-time 8 "
-      "\"https://api.github.com/repos/ETQWFD/LocalDream-ET-ratings/contents/announcements\" "
+      "\"https://api.github.com/repos/ETQWFD/NightmareRoad-ET-ratings/contents/announcements\" "
       "| grep '\"download_url\"' | sed 's/.*\"download_url\": *\"//;s/\".*//' "
       "| while read u; do curl -s --max-time 8 \"$u\"; echo; done");
     FILE* pp=popen(cmd,"r"); if(!pp) return;

@@ -27,7 +27,7 @@ import javax.crypto.spec.SecretKeySpec
  * 只有发布者设备上的私钥能解开，仓库里拿到 JSON 也看不到内容。
  */
 object BountyClient {
-    private const val API = "https://api.github.com/repos/ETQWFD/LocalDreamET-Gallery/contents"
+    private const val API = "https://api.github.com/repos/ETQWFD/NightmareRoad-ET-Gallery/contents"
     private const val PREFS = "bounty_keys"
     private const val KEY_PRIVATE = "private_pkcs8"
 

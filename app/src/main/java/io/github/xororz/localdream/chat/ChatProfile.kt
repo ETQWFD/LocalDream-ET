@@ -26,7 +26,7 @@ data class ChatProfile(
 
 object ChatProfileRepo {
     private const val OWNER = "ETQWFD"
-    private const val REPO = "LocalDreamET-Chat"
+    private const val REPO = "NightmareRoad-ET-Chat"
     private const val DIR = "profiles"
     private val cache = ConcurrentHashMap<String, ChatProfile>()
     private val client = OkHttpClient.Builder()

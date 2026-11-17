@@ -11,11 +11,11 @@ import io.github.xororz.localdream.cloud.SecureTokenStore
  *
  * A single local budget of [TOTAL] units per device, auto-reset every [RESET_DAYS]
  * days. Consumption scales with steps and resolution. The whole thing is a local
- * cache: reports to the public repo ETQWFD/LocalDreamET-Quota are best-effort and
+ * cache: reports to the public repo ETQWFD/NightmareRoad-ET-Quota are best-effort and
  * MUST never block or fail the generation flow.
  *
  * et.133 中文注释：额度系统。本地 SP 缓存当前额度；每次生成前扣减、兑换码直连
- * ETQWFD/LocalDreamET-Quota 仓库读取并回写已用状态；官方号 ETQWFD 跳过 128 万额度门控。
+ * ETQWFD/NightmareRoad-ET-Quota 仓库读取并回写已用状态；官方号 ETQWFD 跳过 128 万额度门控。
  * 任何网络失败都降级为本地估算，绝不阻塞出图。
  */
 object QuotaManager {
@@ -39,7 +39,7 @@ object QuotaManager {
     }
     private const val RESET_DAYS = 7L
     private const val SP = "quota_prefs"
-    private const val QUOTA_REPO = "ETQWFD/LocalDreamET-Quota"
+    private const val QUOTA_REPO = "ETQWFD/NightmareRoad-ET-Quota"
 
     private fun sp(c: Context) =
         c.getSharedPreferences(SP, Context.MODE_PRIVATE)

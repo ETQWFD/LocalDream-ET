@@ -26,7 +26,7 @@ import org.json.JSONObject
  * Public chat transport.
  *
  * Messages and uploaded media both live in the public repo
- * ETQWFD/LocalDreamET-Chat (branch main):
+ * ETQWFD/NightmareRoad-ET-Chat (branch main):
  *   messages.json          – the whole (small) message log, read-modify-write
  *   media/img_<ts>.jpg     – images posted from the chat
  *   media/vid_<ts>.mp4     – short videos
@@ -38,7 +38,7 @@ import org.json.JSONObject
  */
 object ChatRepository {
     private const val OWNER = "ETQWFD"
-    private const val REPO = "LocalDreamET-Chat"
+    private const val REPO = "NightmareRoad-ET-Chat"
     private const val FILE = "messages.json"
     private const val MEDIA_DIR = "media"
 
@@ -319,7 +319,7 @@ object ChatRepository {
             onProgress?.invoke(1f)
             // A file uploaded seconds ago is not in jsDelivr's cache yet; purge it
             // so other members do not see a broken image/video.
-            MirrorPurge.jsdelivr("LocalDreamET-Chat", path)
+            MirrorPurge.jsdelivr("NightmareRoad-ET-Chat", path)
             MediaUpload(rawUrl(path), cdnUrl(path), "")
         } catch (e: java.io.IOException) {
             MediaUpload(null, null, if (e.message?.contains("Canceled") == true) "已取消上传" else (e.message ?: "网络错误"))
@@ -494,9 +494,9 @@ object ChatPolicyRepo {
     private fun readUrls(): List<String> {
         val cb = System.currentTimeMillis() / 60_000
         return listOf(
-            "https://raw.githubusercontent.com/ETQWFD/LocalDreamET-Chat/main/$FILE?cb=$cb",
-            "https://cdn.jsdelivr.net/gh/ETQWFD/LocalDreamET-Chat@main/$FILE?cb=$cb",
-            "https://raw.gitmirror.com/ETQWFD/LocalDreamET-Chat/main/$FILE?cb=$cb",
+            "https://raw.githubusercontent.com/ETQWFD/NightmareRoad-ET-Chat/main/$FILE?cb=$cb",
+            "https://cdn.jsdelivr.net/gh/ETQWFD/NightmareRoad-ET-Chat@main/$FILE?cb=$cb",
+            "https://raw.gitmirror.com/ETQWFD/NightmareRoad-ET-Chat/main/$FILE?cb=$cb",
         )
     }
 
@@ -565,7 +565,7 @@ object ChatPolicyRepo {
         withContext(Dispatchers.IO) {
             val token = ChatRepository.writeToken(context)
             if (token.isBlank()) return@withContext Result.failure(IllegalStateException("缺少 GitHub 令牌"))
-            val api = "https://api.github.com/repos/ETQWFD/LocalDreamET-Chat/contents/$FILE"
+            val api = "https://api.github.com/repos/ETQWFD/NightmareRoad-ET-Chat/contents/$FILE"
             repeat(3) { attempt ->
                 try {
                     var sha = ""

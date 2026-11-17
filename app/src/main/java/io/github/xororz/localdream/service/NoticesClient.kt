@@ -11,7 +11,7 @@ import java.util.Base64
 
 /** 2026-11：个人公告（转账到账、悬赏驳回/支付），只写给自己用户名下的目录。 */
 object NoticesClient {
-    private const val API = "https://api.github.com/repos/ETQWFD/LocalDreamET-Gallery/contents"
+    private const val API = "https://api.github.com/repos/ETQWFD/NightmareRoad-ET-Gallery/contents"
 
     private fun safe(login: String) = login.filter { it.isLetterOrDigit() || it in "._-" }.ifBlank { "anonymous" }
 

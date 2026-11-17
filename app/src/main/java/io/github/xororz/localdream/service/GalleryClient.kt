@@ -19,7 +19,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 
 /**
- * et.132: public image gallery backed by the public repo ETQWFD/LocalDreamET-Gallery.
+ * et.132: public image gallery backed by the public repo ETQWFD/NightmareRoad-ET-Gallery.
  * Images live under png/; sidecar <name>.meta.json holds author/price/ts.
  * Upload token comes from BuildConfig.GALLERY_TOKEN (git-ignored local.properties).
  *
@@ -80,17 +80,17 @@ object GalleryClient {
     @Volatile
     private var cached: List<GalleryItem>? = null
     fun invalidate() { cached = null }
-    private const val API = "https://api.github.com/repos/ETQWFD/LocalDreamET-Gallery/contents"
+    private const val API = "https://api.github.com/repos/ETQWFD/NightmareRoad-ET-Gallery/contents"
     // et.149: 国内优先 jsdelivr / gitmirror，raw 作为兜底，图片和元数据都走镜像。
     private val IMG_BASES = listOf(
-        "https://cdn.jsdelivr.net/gh/ETQWFD/LocalDreamET-Gallery@main",
-        "https://raw.gitmirror.com/ETQWFD/LocalDreamET-Gallery/main",
-        "https://raw.githubusercontent.com/ETQWFD/LocalDreamET-Gallery/main",
+        "https://cdn.jsdelivr.net/gh/ETQWFD/NightmareRoad-ET-Gallery@main",
+        "https://raw.gitmirror.com/ETQWFD/NightmareRoad-ET-Gallery/main",
+        "https://raw.githubusercontent.com/ETQWFD/NightmareRoad-ET-Gallery/main",
     )
     private val META_BASES = listOf(
-        "https://cdn.jsdelivr.net/gh/ETQWFD/LocalDreamET-Gallery@main",
-        "https://raw.gitmirror.com/ETQWFD/LocalDreamET-Gallery/main",
-        "https://raw.githubusercontent.com/ETQWFD/LocalDreamET-Gallery/main",
+        "https://cdn.jsdelivr.net/gh/ETQWFD/NightmareRoad-ET-Gallery@main",
+        "https://raw.gitmirror.com/ETQWFD/NightmareRoad-ET-Gallery/main",
+        "https://raw.githubusercontent.com/ETQWFD/NightmareRoad-ET-Gallery/main",
     )
 
     data class GalleryItem(
@@ -199,7 +199,7 @@ object GalleryClient {
     private fun enumerateViaJsdelivr(): List<String> {
         return try {
             val (code, text) = http(
-                "https://data.jsdelivr.com/v1/packages/gh/ETQWFD/LocalDreamET-Gallery@main?structure=flat",
+                "https://data.jsdelivr.com/v1/packages/gh/ETQWFD/NightmareRoad-ET-Gallery@main?structure=flat",
                 "GET"
             )
             if (code != 200) return emptyList()
@@ -219,7 +219,7 @@ object GalleryClient {
     private fun enumerateViaApi(): List<String> {
         return try {
             val (code, text) = http(
-                "https://api.github.com/repos/ETQWFD/LocalDreamET-Gallery/git/trees/main?recursive=1",
+                "https://api.github.com/repos/ETQWFD/NightmareRoad-ET-Gallery/git/trees/main?recursive=1",
                 "GET",
             )
             if (code != 200) return emptyList()
@@ -253,13 +253,13 @@ object GalleryClient {
                 val m = metas[stem]
                 // Mirror chain, jsDelivr first because it is reachable in China.
                 val mirrors = listOf(
-                    "https://cdn.jsdelivr.net/gh/ETQWFD/LocalDreamET-Gallery@main/png/$n",
-                    "https://raw.gitmirror.com/ETQWFD/LocalDreamET-Gallery/main/png/$n",
-                    "https://raw.githubusercontent.com/ETQWFD/LocalDreamET-Gallery/main/png/$n",
+                    "https://cdn.jsdelivr.net/gh/ETQWFD/NightmareRoad-ET-Gallery@main/png/$n",
+                    "https://raw.gitmirror.com/ETQWFD/NightmareRoad-ET-Gallery/main/png/$n",
+                    "https://raw.githubusercontent.com/ETQWFD/NightmareRoad-ET-Gallery/main/png/$n",
                 )
                 val thumbs = listOf(
-                    "https://cdn.jsdelivr.net/gh/ETQWFD/LocalDreamET-Gallery@main/thumb/$stem.jpg",
-                    "https://raw.githubusercontent.com/ETQWFD/LocalDreamET-Gallery/main/thumb/$stem.jpg",
+                    "https://cdn.jsdelivr.net/gh/ETQWFD/NightmareRoad-ET-Gallery@main/thumb/$stem.jpg",
+                    "https://raw.githubusercontent.com/ETQWFD/NightmareRoad-ET-Gallery/main/thumb/$stem.jpg",
                 )
                 GalleryItem(
                     n, mirrors.first(),
@@ -401,15 +401,15 @@ object GalleryClient {
                         .put("content", Base64.getEncoder().encodeToString(jpeg))
                         .toString().toByteArray()
                     putWithProgress("$API/thumb/$dir/pic_$id.jpg", thumbBody, token, null)
-                    MirrorPurge.jsdelivr("LocalDreamET-Gallery", "thumb/$dir/pic_$id.jpg")
+                    MirrorPurge.jsdelivr("NightmareRoad-ET-Gallery", "thumb/$dir/pic_$id.jpg")
                 }
             }
             // 2026-11：公开库成功后，尽力镜像一份到私密备份仓库（失败不影响发布）。
             runCatching {
                 mirrorPrivate(dir, id, pngBytes, meta.toString(), BuildConfig.GALLERY_TOKEN)
             }
-            MirrorPurge.jsdelivr("LocalDreamET-Gallery", "png/$dir/pic_$id.png")
-            MirrorPurge.jsdelivr("LocalDreamET-Gallery", "png/$dir/pic_$id.meta.json")
+            MirrorPurge.jsdelivr("NightmareRoad-ET-Gallery", "png/$dir/pic_$id.png")
+            MirrorPurge.jsdelivr("NightmareRoad-ET-Gallery", "png/$dir/pic_$id.meta.json")
             // Read the file back so "发布成功" can never be a lie: if the commit
             // did not land (409 race, revoked token) we report it immediately.
             val verified = runCatching {
@@ -579,7 +579,7 @@ object GalleryClient {
                 if (c.responseCode !in 200..299) {
                     // 兜底：直接从 git tree 找 stats/*.json
                     runCatching {
-                        val treeUrl = "https://api.github.com/repos/ETQWFD/LocalDreamET-Gallery/git/trees/main?recursive=1"
+                        val treeUrl = "https://api.github.com/repos/ETQWFD/NightmareRoad-ET-Gallery/git/trees/main?recursive=1"
                         val t = (URL(treeUrl).openConnection() as java.net.HttpURLConnection).apply {
                             requestMethod = "GET"; connectTimeout = 8000; readTimeout = 20000
                             setRequestProperty("Authorization", "token $token")
@@ -594,7 +594,7 @@ object GalleryClient {
                             if (!path.startsWith("stats/") || !path.endsWith(".json")) null
                             else {
                                 val name = path.removePrefix("stats/").removeSuffix(".json")
-                                name to "https://api.github.com/repos/ETQWFD/LocalDreamET-Gallery/contents/$path"
+                                name to "https://api.github.com/repos/ETQWFD/NightmareRoad-ET-Gallery/contents/$path"
                             }
                         }
                     }.getOrDefault(emptyList())
@@ -631,7 +631,7 @@ object GalleryClient {
     /** 私密备份仓库写入（best-effort）。 */
     private fun mirrorPrivate(dir: String, id: String, png: ByteArray, meta: String, token: String) {
         if (token.isBlank()) return
-        val api = "https://api.github.com/repos/ETQWFD/LocalDreamET-Gallery-Private/contents"
+        val api = "https://api.github.com/repos/ETQWFD/NightmareRoad-ET-Gallery-Private/contents"
         fun put(path: String, bytes: ByteArray, msg: String) {
             runCatching {
                 val b64 = Base64.getEncoder().encodeToString(bytes)
@@ -658,7 +658,7 @@ object GalleryClient {
 
     /** 作者下架自己的作品：删除 png、meta、thumb 三个文件。 */
     suspend fun delete(name: String, token: String): Pair<Boolean, String> = withContext(Dispatchers.IO) {
-        val api = "https://api.github.com/repos/ETQWFD/LocalDreamET-Gallery/contents"
+        val api = "https://api.github.com/repos/ETQWFD/NightmareRoad-ET-Gallery/contents"
         // et.220：新图在 png/{作者}/ 下，name 可能是相对路径；删除时必须跟着目录走，
         // 否则永远删不到旧平铺路径，表现就是“作者下架不了自己的作品”。
         val rel = name.removePrefix("png/")
@@ -708,7 +708,7 @@ object GalleryClient {
         withContext(Dispatchers.IO) {
             try {
                 val path = "users/$androidId/purchased/$imageName.json"
-                val quotaApi = "https://api.github.com/repos/ETQWFD/LocalDreamET-Quota/contents"
+                val quotaApi = "https://api.github.com/repos/ETQWFD/NightmareRoad-ET-Quota/contents"
                 val (existsCode, _) = http("$quotaApi/$path", "GET")
                 if (existsCode == 200) return@withContext false
                 val body = JSONObject().put("image", imageName).put("ts", System.currentTimeMillis())

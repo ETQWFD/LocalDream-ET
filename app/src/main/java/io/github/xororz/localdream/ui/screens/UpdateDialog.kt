@@ -114,13 +114,22 @@ internal fun UpdateDialog(
                 if (!part.exists() && finalApk.exists() &&
                     (expected <= 0 || finalApk.length() >= expected)
                 ) {
+                    // 2026-11：下载到的包必须确实比当前版本新。镜像/缓存偶尔
+                    // 会回旧包，装上去等于没更新；这里直接丢弃并报错。
+                    if (!AppUpdater.isNewerApk(context, finalApk)) {
+                        val badCode = AppUpdater.apkVersionCode(context, finalApk)
+                        runCatching { finalApk.delete() }
+                        errorText = "下载到的安装包不是新版本（versionCode " +
+                            badCode + "），已删除，请重试"
+                        phase = UpdatePhase.ERROR
+                        break
+                    }
                     downloadedFile = finalApk
                     break
                 }
             }
             if (AppUpdater.canInstall(context)) {
                 phase = UpdatePhase.READY
-                onDismiss()
             } else {
                 phase = UpdatePhase.NEED_PERMISSION
             }
@@ -141,6 +150,21 @@ internal fun UpdateDialog(
                 context.getString(R.string.update_permission_denied),
                 Toast.LENGTH_LONG,
             ).show()
+        }
+    }
+
+    // 2026-11：下载校验通过后直接交给系统安装器。之前 READY 状态只显示
+    // 一句“准备安装”，没有任何按钮或自动动作，用户只能去文件管理器里点。
+    LaunchedEffect(phase, downloadedFile) {
+        if (phase == UpdatePhase.READY) {
+            val apk = downloadedFile ?: return@LaunchedEffect
+            kotlinx.coroutines.delay(400)
+            runCatching { AppUpdater.install(context, apk) }
+                .onSuccess { onDismiss() }
+                .onFailure { e ->
+                    errorText = e.message ?: e.toString()
+                    phase = UpdatePhase.ERROR
+                }
         }
     }
 
@@ -260,6 +284,17 @@ internal fun UpdateDialog(
                 UpdatePhase.AVAILABLE -> TextButton(onClick = { info?.let { startDownload(it) } }) {
                     Text(stringResource(R.string.update_download_now))
                 }
+
+                UpdatePhase.READY -> TextButton(onClick = {
+                    downloadedFile?.let { apk ->
+                        runCatching { AppUpdater.install(context, apk) }
+                            .onSuccess { onDismiss() }
+                            .onFailure { e ->
+                                errorText = e.message ?: e.toString()
+                                phase = UpdatePhase.ERROR
+                            }
+                    }
+                }) { Text("立即安装") }
 
                 UpdatePhase.NEED_PERMISSION -> TextButton(onClick = {
                     permLauncher.launch(AppUpdater.installPermissionSettingsIntent(context))

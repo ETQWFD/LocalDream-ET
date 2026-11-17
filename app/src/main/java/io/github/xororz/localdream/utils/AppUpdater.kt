@@ -416,6 +416,20 @@ object AppUpdater {
      * ACTION_VIEW, explicitly pinned to the on-device system installer package
      * rather than any user-installed app.
      */
+    /** versionCode of a downloaded APK, or -1 when it cannot be parsed. */
+    fun apkVersionCode(context: Context, apk: File): Long = runCatching {
+        val info = context.packageManager.getPackageArchiveInfo(
+            apk.absolutePath,
+            android.content.pm.PackageManager.GET_ACTIVITIES,
+        ) ?: return@runCatching -1L
+        if (android.os.Build.VERSION.SDK_INT >= 28) info.longVersionCode
+        else @Suppress("DEPRECATION") info.versionCode.toLong()
+    }.getOrDefault(-1L)
+
+    /** True only when the downloaded APK is a genuinely newer build. */
+    fun isNewerApk(context: Context, apk: File): Boolean =
+        apkVersionCode(context, apk) > BuildConfig.VERSION_CODE.toLong()
+
     fun install(context: Context, apk: File) {
         if (!apk.exists() || apk.length() <= 0L) error("downloaded APK is missing or empty")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
