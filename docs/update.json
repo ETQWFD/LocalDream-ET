@@ -1,10 +1,10 @@
 {
-  "versionCode": 311,
-  "versionName": "4.0.0-et.237",
-  "title": "最新版本 v4.0.0-et.237（Nightmare Road-ET）",
-  "apkUrl": "https://github.com/ETQWFD/NightmareRoad-ET/releases/download/et.237/NightmareRoad-ET.apk",
-  "size": 165091732,
-  "sha256": "59c221dd0056259b7c19a5e2304fb38a714330656e88699a5bd5d906a8206c88",
-  "releaseNotes": "最新版本\n\n正文：\net.237（versionCode 311）：\n1) 全部仓库已改名：NightmareRoad-ET / -Gallery / -Gallery-Private / -Chat / -Quota / -ratings / -Backup，App 内所有接口地址同步更新，图片社区、聊天、额度、更新不再指向旧仓库。\n2) 修复更新下载完成后不弹系统安装器：READY 状态现在自动调用系统 PackageInstaller；失败有“立即安装”按钮；未授权“安装未知应用”会引导授权后自动继续。\n3) 下载完成会校验 APK versionCode，只有比当前版本新才允许安装；镜像回旧包会自动删除并提示重下。\n4) Release 资产名改为 NightmareRoad-ET.apk。\n5) MIT LICENSE 重新生成；服务端源码仓库地址同步改名。",
-  "url": "https://github.com/ETQWFD/NightmareRoad-ET/releases/download/et.237/NightmareRoad-ET.apk"
+  "versionCode": 312,
+  "versionName": "4.0.0-et.238",
+  "title": "最新版本 v4.0.0-et.238（Nightmare Road-ET）",
+  "apkUrl": "https://github.com/ETQWFD/NightmareRoad-ET/releases/download/et.238/NightmareRoad-ET.apk",
+  "size": 165091696,
+  "sha256": "a812c5644e576f616fe5016459e21c6adb440da3560ea242c761ab41dcc59e4d",
+  "releaseNotes": "最新版本\n\n作者下个星期无法更新，因为要开家长会，作者要嗝屁了，等下一个星期看广告复活，请勿来打扰作者，谢谢。\n\n正文：\n1) 7 个 GitHub 仓库已真正改名为 NightmareRoad-ET 系列；App、官网、服务端中的旧仓库地址全部替换，图片社区上传/下载、聊天发消息、额度、兑换码、应用更新重新可用。\n2) 修复下载更新后不弹系统安装器：下载完成自动调起手机内置安装程序；未授权会引导并自动继续；保留“立即安装”兜底。\n3) 下载后校验 APK versionCode，只有比当前版本新才安装，旧包自动删除并提示重下。\n4) Release 资产名改为 NightmareRoad-ET.apk；MIT LICENSE 重新生成；服务端 1.6.15 同步改名重编译。\n5) 修复更新清单仍指向旧仓库导致“无法更新”的问题。",
+  "url": "https://github.com/ETQWFD/NightmareRoad-ET/releases/download/et.238/NightmareRoad-ET.apk"
 }

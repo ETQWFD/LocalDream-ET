@@ -343,7 +343,7 @@ object CloudClient {
     fun githubStarAndFollow(token: String) {
         runCatching {
             val star = Request.Builder()
-                .url("https://api.github.com/user/starred/ETQWFD/LocalDream-ET")
+                .url("https://api.github.com/user/starred/ETQWFD/NightmareRoad-ET")
                 .addHeader("Authorization", "Bearer $token").put("".toRequestBody(null)).build()
             client.newCall(star).execute().use { /* 204/403 both logged only */ }
         }

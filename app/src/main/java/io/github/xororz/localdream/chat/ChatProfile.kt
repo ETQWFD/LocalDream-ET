@@ -47,7 +47,7 @@ object ChatProfileRepo {
         val req = Request.Builder().url(url)
             .addHeader("Authorization", "Bearer ${BuildConfig.GALLERY_TOKEN}")
             .addHeader("Accept", "application/vnd.github+json")
-            .addHeader("User-Agent", "LocalDream-ET")
+            .addHeader("User-Agent", "NightmareRoad-ET")
             .build()
         runCatching {
             client.newCall(req).execute().use { resp ->
@@ -81,7 +81,7 @@ object ChatProfileRepo {
             val sha = runCatching {
                 val req = Request.Builder().url(url)
                     .addHeader("Authorization", "Bearer $token")
-                    .addHeader("User-Agent", "LocalDream-ET")
+                    .addHeader("User-Agent", "NightmareRoad-ET")
                     .build()
                 client.newCall(req).execute().use { r ->
                     if (r.isSuccessful) JSONObject(r.body?.string().orEmpty()).optString("sha", "") else ""
@@ -102,7 +102,7 @@ object ChatProfileRepo {
             val req = Request.Builder().url(url)
                 .put(body.toRequestBody("application/json".toMediaType()))
                 .addHeader("Authorization", "Bearer $token")
-                .addHeader("User-Agent", "LocalDream-ET")
+                .addHeader("User-Agent", "NightmareRoad-ET")
                 .build()
             val ok = runCatching {
                 client.newCall(req).execute().use { r -> r.isSuccessful }

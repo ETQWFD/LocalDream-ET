@@ -19,13 +19,13 @@ object CloudConfig {
      * edit them to the real account once the user creates the mirror. A missing
      * / unreachable Gitee channel must silently fall back to GitHub.
      */
-    const val GITEE_OWNER = "LocalDream-ET"
-    const val GITEE_REPO = "LocalDream-ET"
+    const val GITEE_OWNER = "ETQWFD"
+    const val GITEE_REPO = "NightmareRoad-ET"
 
     val githubUpdateJson: String
-        get() = "https://etqwfd.github.io/LocalDream-ET/update.json"
+        get() = "https://etc.tw.kg/update.json"
     val githubUpdateJsonRaw: String
-        get() = "https://raw.githubusercontent.com/ETQWFD/LocalDream-ET/main/docs/update.json"
+        get() = "https://raw.githubusercontent.com/ETQWFD/NightmareRoad-ET/main/docs/update.json"
 
     /** Gitee Pages/raw update.json; replace owner/repo once the mirror exists. */
     val giteeUpdateJson: String

@@ -32,7 +32,7 @@ private const val ACTION_INSTALL_COMMIT =
  * In-app self updater.
  *
  * Update manifest (authoritative, hosted on GitHub Pages):
- *   https://etqwfd.github.io/LocalDream-ET/update.json
+ *   https://etc.tw.kg/update.json
  * Fallback: the latest GitHub release of the ET fork.
  *
  * The whole flow lives inside the app: check -> download with a progress
@@ -59,7 +59,7 @@ object AppUpdater {
     // Gitee mirror is only a fallback and a 404/unreachable Gitee must NOT fail
     // the check — any one channel being available is enough.
     private const val RELEASES_API =
-        "https://api.github.com/repos/ETQWFD/LocalDream-ET/releases/latest"
+        "https://api.github.com/repos/ETQWFD/NightmareRoad-ET/releases/latest"
 
     private val client: OkHttpClient by lazy {
         OkHttpClient.Builder()
@@ -119,7 +119,7 @@ object AppUpdater {
         val request = Request.Builder()
             .url(url)
             .header("Accept", "application/json")
-            .header("User-Agent", "LocalDream-ET/${BuildConfig.VERSION_NAME}")
+            .header("User-Agent", "NightmareRoad-ET/${BuildConfig.VERSION_NAME}")
             .build()
         return client.newCall(request).execute().use { resp ->
             if (!resp.isSuccessful) error("HTTP ${resp.code}")
@@ -206,7 +206,7 @@ object AppUpdater {
                         connectTimeout = 6000
                         readTimeout = 6000
                         instanceFollowRedirects = true
-                        setRequestProperty("User-Agent", "LocalDream-ET/${BuildConfig.VERSION_NAME}")
+                        setRequestProperty("User-Agent", "NightmareRoad-ET/${BuildConfig.VERSION_NAME}")
                         setRequestProperty("Range", "bytes=0-0")
                     }
                     conn.connect()
@@ -379,7 +379,7 @@ object AppUpdater {
     ): Long {
         val builder = Request.Builder()
             .url(mirror)
-            .header("User-Agent", "LocalDream-ET/${BuildConfig.VERSION_NAME}")
+            .header("User-Agent", "NightmareRoad-ET/${BuildConfig.VERSION_NAME}")
         if (from > 0) builder.header("Range", "bytes=$from-")
         stallClient.newCall(builder.build()).execute().use { resp ->
             if (resp.code != 200 && resp.code != 206) error("HTTP ${resp.code} on $mirror")

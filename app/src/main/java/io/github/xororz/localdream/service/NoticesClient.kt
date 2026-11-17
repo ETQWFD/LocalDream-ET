@@ -21,7 +21,7 @@ object NoticesClient {
             connectTimeout = 8000; readTimeout = 15000
             setRequestProperty("Authorization", "token ${BuildConfig.GALLERY_TOKEN}")
             setRequestProperty("Accept", "application/vnd.github+json")
-            setRequestProperty("User-Agent", "LocalDream-ET")
+            setRequestProperty("User-Agent", "NightmareRoad-ET")
         }
 
     suspend fun post(login: String, title: String, body: String = ""): Boolean = withContext(Dispatchers.IO) {

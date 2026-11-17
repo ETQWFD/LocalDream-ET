@@ -64,7 +64,7 @@ object GithubDeviceAuth {
             readTimeout = 12000
             setRequestProperty("Accept", "application/json")
             setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
-            setRequestProperty("User-Agent", "LocalDream-ET")
+            setRequestProperty("User-Agent", "NightmareRoad-ET")
         }
         c.outputStream.use { it.write(body.toByteArray()) }
         val text = (if (c.responseCode in 200..299) c.inputStream else c.errorStream)

@@ -102,7 +102,7 @@ private fun loadAll(context: Context): List<AnnouncementItem> {
                 if (host == "api.github.com" || host == "raw.githubusercontent.com") {
                     setRequestProperty("Authorization", "token " + tok.orEmpty())
                 }
-                setRequestProperty("User-Agent", "LocalDream-ET")
+                setRequestProperty("User-Agent", "NightmareRoad-ET")
             }
             val code = c.responseCode
             val body = (if (code == 200) c.inputStream else c.errorStream)

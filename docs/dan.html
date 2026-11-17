@@ -136,7 +136,7 @@
   <div class="kpis">
     <div class="kpi"><div class="k">最新发布 <span class="src ok">真实</span></div><div class="v small" id="kLatest">—</div><div class="sub" id="kLatestSub">读取中…</div></div>
     <div class="kpi"><div class="k">GitHub 下载总量 <span class="src ok">真实</span></div><div class="v" id="kDlTotal">—</div><div class="sub">全部 release 资产累计 <span class="delta flat" id="kDlDelta"></span></div></div>
-    <div class="kpi"><div class="k">手机端下载（最新版） <span class="src ok">真实</span></div><div class="v" id="kPhone">—</div><div class="sub" id="kPhoneSub">LocalDream-ET.apk</div></div>
+    <div class="kpi"><div class="k">手机端下载（最新版） <span class="src ok">真实</span></div><div class="v" id="kPhone">—</div><div class="sub" id="kPhoneSub">NightmareRoad-ET.apk</div></div>
     <div class="kpi"><div class="k">服务端下载（最新版合计） <span class="src ok">真实</span></div><div class="v" id="kServer">—</div><div class="sub" id="kServerSub">EXE + tar.gz</div></div>
     <div class="kpi"><div class="k">访问 PV（页面打开） <span class="src tp">第三方</span></div><div class="v info" id="kPV">—</div><div class="sub">自 et.41 起埋点·不去重</div></div>
     <div class="kpi"><div class="k">下载点击 PV <span class="src tp">第三方</span></div><div class="v info" id="kClick">—</div><div class="sub">点击真实下载链接·不去重</div></div>
@@ -284,7 +284,7 @@
 <script>
 (function(){
   "use strict";
-  var REPO="ETQWFD/LocalDream-ET";
+  var REPO="ETQWFD/NightmareRoad-ET";
   var GH_URL="https://api.github.com/repos/"+REPO+"/releases?per_page=100";
   var GH_CACHE="etld_gh_releases", CACHE_TTL=120000;
   var DL_SEEN="etld_dl_seen";
@@ -319,7 +319,7 @@
   function classify(name){
     name=name||"";
     if(/LocalDream-Chat-ET\.apk$/i.test(name)) return "chat";
-    if(/LocalDream-ET\.apk$/i.test(name)) return "phone";
+    if(/NightmareRoad-ET\.apk$/i.test(name)) return "phone";
     if(/\.exe$/i.test(name)) return "win";
     if(/\.tar\.gz$/i.test(name)) return "linux";
     return "other";

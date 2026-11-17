@@ -61,7 +61,7 @@ object GalleryEarnings {
     private fun readInfo(name: String, token: String): EarningInfo {
         val req = Request.Builder().url(apiUrl(name))
             .addHeader("Authorization", "Bearer $token")
-            .addHeader("User-Agent", "LocalDream-ET")
+            .addHeader("User-Agent", "NightmareRoad-ET")
             .build()
         runCatching {
             client.newCall(req).execute().use { resp ->
@@ -133,7 +133,7 @@ object GalleryEarnings {
             val req = Request.Builder().url(apiUrl(name))
                 .put(body.toRequestBody("application/json".toMediaType()))
                 .addHeader("Authorization", "Bearer $token")
-                .addHeader("User-Agent", "LocalDream-ET")
+                .addHeader("User-Agent", "NightmareRoad-ET")
                 .build()
             runCatching {
                 client.newCall(req).execute().use { resp ->

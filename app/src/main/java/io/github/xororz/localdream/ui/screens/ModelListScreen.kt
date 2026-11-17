@@ -5358,7 +5358,7 @@ suspend fun downloadRemoteThenConvertModel(
                     connectTimeout = 20000
                     readTimeout = 30000
                     instanceFollowRedirects = true
-                    setRequestProperty("User-Agent", "LocalDream-ET")
+                    setRequestProperty("User-Agent", "NightmareRoad-ET")
                 }
                 conn.connect()
                 val code = conn.responseCode
@@ -5975,10 +5975,10 @@ private fun EtAboutDialog(onDismiss: () -> Unit) {
     androidx.compose.runtime.LaunchedEffect(Unit) {
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             runCatching {
-                val c = (java.net.URL("https://api.github.com/repos/ETQWFD/LocalDream-ET/contributors")
+                val c = (java.net.URL("https://api.github.com/repos/ETQWFD/NightmareRoad-ET/contributors")
                     .openConnection() as java.net.HttpURLConnection).apply {
                     connectTimeout = 8000; readTimeout = 8000
-                    setRequestProperty("User-Agent", "LocalDream-ET")
+                    setRequestProperty("User-Agent", "NightmareRoad-ET")
                 }
                 if (c.responseCode == 200) {
                     val arr = org.json.JSONArray(c.inputStream.bufferedReader().readText())

@@ -78,7 +78,7 @@ object ChatRepository {
                 .url("https://api.github.com/repos/$OWNER/$REPO/contents/$path")
                 .addHeader("Authorization", "Bearer ${BuildConfig.GALLERY_TOKEN}")
                 .addHeader("Accept", "application/vnd.github+json")
-                .addHeader("User-Agent", "LocalDream-ET")
+                .addHeader("User-Agent", "NightmareRoad-ET")
                 .build()
             client.newCall(req).execute().use { resp ->
                 if (!resp.isSuccessful) return@use null
@@ -128,7 +128,7 @@ object ChatRepository {
 
     private fun readWithToken(url: String, token: String?): Pair<Int, String> {
         val req = Request.Builder().url(url).get().apply {
-            addHeader("User-Agent", "LocalDream-ET")
+            addHeader("User-Agent", "NightmareRoad-ET")
             addHeader("Accept", "application/vnd.github+json")
             if (!token.isNullOrBlank()) addHeader("Authorization", "Bearer $token")
         }.build()
@@ -217,7 +217,7 @@ object ChatRepository {
                         .put(payload.toString().toRequestBody("application/json".toMediaType()))
                         .addHeader("Authorization", "Bearer $token")
                         .addHeader("Accept", "application/vnd.github+json")
-                        .addHeader("User-Agent", "LocalDream-ET")
+                        .addHeader("User-Agent", "NightmareRoad-ET")
                         .build()
                     client.newCall(req).execute().use { resp ->
                         if (resp.isSuccessful) return@withContext Result.success(Unit)
@@ -279,7 +279,7 @@ object ChatRepository {
                 .put(body)
                 .addHeader("Authorization", "Bearer $token")
                 .addHeader("Accept", "application/vnd.github+json")
-                .addHeader("User-Agent", "LocalDream-ET")
+                .addHeader("User-Agent", "NightmareRoad-ET")
                 .build()
             val call = client.newCall(req)
             activeCall = call
@@ -504,7 +504,7 @@ object ChatPolicyRepo {
         for (url in readUrls()) {
             try {
                 val req = okhttp3.Request.Builder().url(url)
-                    .addHeader("User-Agent", "LocalDream-ET")
+                    .addHeader("User-Agent", "NightmareRoad-ET")
                     .build()
                 OkHttpClientHolder.client.newCall(req).execute().use { resp ->
                     if (resp.isSuccessful) {
@@ -571,7 +571,7 @@ object ChatPolicyRepo {
                     var sha = ""
                     val getReq = okhttp3.Request.Builder().url(api)
                         .addHeader("Authorization", "Bearer $token")
-                        .addHeader("User-Agent", "LocalDream-ET")
+                        .addHeader("User-Agent", "NightmareRoad-ET")
                         .build()
                     OkHttpClientHolder.client.newCall(getReq).execute().use { resp ->
                         if (resp.isSuccessful) {
@@ -590,7 +590,7 @@ object ChatPolicyRepo {
                     val putReq = okhttp3.Request.Builder().url(api)
                         .put(payload.toString().toRequestBody("application/json".toMediaType()))
                         .addHeader("Authorization", "Bearer $token")
-                        .addHeader("User-Agent", "LocalDream-ET")
+                        .addHeader("User-Agent", "NightmareRoad-ET")
                         .build()
                     OkHttpClientHolder.client.newCall(putReq).execute().use { resp ->
                         if (resp.isSuccessful) return@withContext Result.success(Unit)

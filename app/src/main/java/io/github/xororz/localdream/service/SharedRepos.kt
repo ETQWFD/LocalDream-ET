@@ -40,7 +40,7 @@ object SharedRepos {
         Request.Builder().url("https://api.github.com$path")
             .addHeader("Authorization", "Bearer ${token()}")
             .addHeader("Accept", "application/vnd.github+json")
-            .addHeader("User-Agent", "LocalDream-ET")
+            .addHeader("User-Agent", "NightmareRoad-ET")
 
     private fun createRepo(name: String): Boolean {
         val body = JSONObject()
@@ -56,7 +56,7 @@ object SharedRepos {
                     .post(body)
                     .addHeader("Authorization", "Bearer ${token()}")
                     .addHeader("Accept", "application/vnd.github+json")
-                    .addHeader("User-Agent", "LocalDream-ET")
+                    .addHeader("User-Agent", "NightmareRoad-ET")
                     .build(),
             ).execute().use { it.isSuccessful || it.code == 422 }
         }.getOrDefault(false)

@@ -61,7 +61,7 @@ object GalleryClient {
                     .put(body)
                     .addHeader("Authorization", "token $token")
                     .addHeader("Accept", "application/vnd.github+json")
-                    .addHeader("User-Agent", "LocalDream-ET")
+                    .addHeader("User-Agent", "NightmareRoad-ET")
                     .build(),
             )
             uploadCall = call
@@ -118,7 +118,7 @@ object GalleryClient {
                 connectTimeout = 6000
                 readTimeout = 10000
                 setRequestProperty("Accept", "application/vnd.github+json")
-                setRequestProperty("User-Agent", "LocalDream-ET")
+                setRequestProperty("User-Agent", "NightmareRoad-ET")
                 val t = BuildConfig.GALLERY_TOKEN
                 if (t.isNotEmpty()) setRequestProperty("Authorization", "token $t")
                 if (body != null) {
@@ -152,7 +152,7 @@ object GalleryClient {
                 connectTimeout = 8000
                 readTimeout = 20000
                 setRequestProperty("Accept", "application/vnd.github+json")
-                setRequestProperty("User-Agent", "LocalDream-ET")
+                setRequestProperty("User-Agent", "NightmareRoad-ET")
                 setRequestProperty("Authorization", "token $token")
                 doOutput = true
                 setRequestProperty("Content-Type", "application/json")
@@ -451,7 +451,7 @@ object GalleryClient {
                 requestMethod = "GET"; connectTimeout = 6000; readTimeout = 10000
                 setRequestProperty("Authorization", "token $token")
                 setRequestProperty("Accept", "application/vnd.github+json")
-                setRequestProperty("User-Agent", "LocalDream-ET")
+                setRequestProperty("User-Agent", "NightmareRoad-ET")
             }
             var sha = ""
             var count = 1
@@ -476,7 +476,7 @@ object GalleryClient {
                 setRequestProperty("Authorization", "token $token")
                 setRequestProperty("Accept", "application/vnd.github+json")
                 setRequestProperty("Content-Type", "application/json")
-                setRequestProperty("User-Agent", "LocalDream-ET")
+                setRequestProperty("User-Agent", "NightmareRoad-ET")
             }
             put.outputStream.use { it.write(payload.toString().toByteArray()) }
         }
@@ -501,7 +501,7 @@ object GalleryClient {
                 setRequestProperty("Authorization", "token ${BuildConfig.GALLERY_TOKEN}")
                 setRequestProperty("Accept", "application/vnd.github+json")
                 setRequestProperty("Content-Type", "application/json")
-                setRequestProperty("User-Agent", "LocalDream-ET")
+                setRequestProperty("User-Agent", "NightmareRoad-ET")
             }
             c.outputStream.use { it.write(payload) }
             (c.responseCode in 200..201) to if (c.responseCode in 200..201) "" else "HTTP ${c.responseCode}"
@@ -520,7 +520,7 @@ object GalleryClient {
                 requestMethod = "GET"; connectTimeout = 8000; readTimeout = 15000
                 setRequestProperty("Authorization", "token $token")
                 setRequestProperty("Accept", "application/vnd.github+json")
-                setRequestProperty("User-Agent", "LocalDream-ET")
+                setRequestProperty("User-Agent", "NightmareRoad-ET")
             }
             if (listConn.responseCode !in 200..299) return@runCatching
             val arr = JSONArray(listConn.inputStream.use { it.readBytes().toString(Charsets.UTF_8) })
@@ -533,7 +533,7 @@ object GalleryClient {
                     requestMethod = "GET"; connectTimeout = 6000; readTimeout = 12000
                     setRequestProperty("Authorization", "token $token")
                     setRequestProperty("Accept", "application/vnd.github+json")
-                    setRequestProperty("User-Agent", "LocalDream-ET")
+                    setRequestProperty("User-Agent", "NightmareRoad-ET")
                 }
                 if (get.responseCode != 200) continue
                 val root = JSONObject(get.inputStream.use { it.readBytes().toString(Charsets.UTF_8) })
@@ -555,7 +555,7 @@ object GalleryClient {
                     setRequestProperty("Authorization", "token $token")
                     setRequestProperty("Accept", "application/vnd.github+json")
                     setRequestProperty("Content-Type", "application/json")
-                    setRequestProperty("User-Agent", "LocalDream-ET")
+                    setRequestProperty("User-Agent", "NightmareRoad-ET")
                 }
                 pc.outputStream.use { it.write(put.toString().toByteArray()) }
             }
@@ -574,7 +574,7 @@ object GalleryClient {
                     requestMethod = "GET"; connectTimeout = 8000; readTimeout = 15000
                     setRequestProperty("Authorization", "token $token")
                     setRequestProperty("Accept", "application/vnd.github+json")
-                    setRequestProperty("User-Agent", "LocalDream-ET")
+                    setRequestProperty("User-Agent", "NightmareRoad-ET")
                 }
                 if (c.responseCode !in 200..299) {
                     // 兜底：直接从 git tree 找 stats/*.json
@@ -584,7 +584,7 @@ object GalleryClient {
                             requestMethod = "GET"; connectTimeout = 8000; readTimeout = 20000
                             setRequestProperty("Authorization", "token $token")
                             setRequestProperty("Accept", "application/vnd.github+json")
-                            setRequestProperty("User-Agent", "LocalDream-ET")
+                            setRequestProperty("User-Agent", "NightmareRoad-ET")
                         }
                         val root = JSONObject(t.inputStream.use { it.readBytes().toString(Charsets.UTF_8) })
                         val arr = root.optJSONArray("tree") ?: JSONArray()
@@ -616,7 +616,7 @@ object GalleryClient {
                             requestMethod = "GET"; connectTimeout = 6000; readTimeout = 12000
                             setRequestProperty("Authorization", "token $token")
                             setRequestProperty("Accept", "application/vnd.github+json")
-                            setRequestProperty("User-Agent", "LocalDream-ET")
+                            setRequestProperty("User-Agent", "NightmareRoad-ET")
                         }
                         val root = JSONObject(c.inputStream.use { it.readBytes().toString(Charsets.UTF_8) })
                         val b64 = root.optString("content", "").replace("\n", "")
@@ -642,7 +642,7 @@ object GalleryClient {
                     setRequestProperty("Authorization", "token $token")
                     setRequestProperty("Accept", "application/vnd.github+json")
                     setRequestProperty("Content-Type", "application/json")
-                    setRequestProperty("User-Agent", "LocalDream-ET")
+                    setRequestProperty("User-Agent", "NightmareRoad-ET")
                 }
                 c.outputStream.use { it.write(body) }
                 c.responseCode
@@ -679,7 +679,7 @@ object GalleryClient {
                     requestMethod = "GET"; connectTimeout = 6000; readTimeout = 10000
                     setRequestProperty("Authorization", "token $token")
                     setRequestProperty("Accept", "application/vnd.github+json")
-                    setRequestProperty("User-Agent", "LocalDream-ET")
+                    setRequestProperty("User-Agent", "NightmareRoad-ET")
                 }
                 if (get.responseCode != 200) return@runCatching
                 val sha = JSONObject(get.inputStream.use { it.readBytes().toString(Charsets.UTF_8) })
@@ -693,7 +693,7 @@ object GalleryClient {
                     setRequestProperty("Authorization", "token $token")
                     setRequestProperty("Accept", "application/vnd.github+json")
                     setRequestProperty("Content-Type", "application/json")
-                    setRequestProperty("User-Agent", "LocalDream-ET")
+                    setRequestProperty("User-Agent", "NightmareRoad-ET")
                 }
                 del.outputStream.use { it.write(body) }
                 if (del.responseCode in 200..299) okAny = true else err = "HTTP ${del.responseCode}"

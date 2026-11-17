@@ -38,7 +38,7 @@ object BountyClient {
             readTimeout = 20000
             setRequestProperty("Authorization", "token ${BuildConfig.GALLERY_TOKEN}")
             setRequestProperty("Accept", "application/vnd.github+json")
-            setRequestProperty("User-Agent", "LocalDream-ET")
+            setRequestProperty("User-Agent", "NightmareRoad-ET")
         }
 
     fun publicKeyBase64(ctx: Context): String {

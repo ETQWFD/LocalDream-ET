@@ -1340,7 +1340,7 @@ private suspend fun purchaseItem(ctx: Context, item: GalleryClient.GalleryItem):
                     conn.readTimeout = 30000
                     conn.setRequestProperty("Authorization", "token ${io.github.xororz.localdream.BuildConfig.GALLERY_TOKEN}")
                     conn.setRequestProperty("Accept", "application/vnd.github+json")
-                    conn.setRequestProperty("User-Agent", "LocalDream-ET")
+                    conn.setRequestProperty("User-Agent", "NightmareRoad-ET")
                     if (conn.responseCode in 200..299) {
                         val obj = org.json.JSONObject(conn.inputStream.use { it.readBytes().toString(Charsets.UTF_8) })
                         val b64 = obj.optString("content", "").replace("\n", "")
