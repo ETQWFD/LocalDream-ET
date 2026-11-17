@@ -85,7 +85,7 @@ private fun loadAll(context: Context): List<AnnouncementItem> {
         // 2026-11：jsDelivr 在国内通常可用且不需要鉴权；把它放第一位，
         // 后面才是 gitmirror / statically / gh-proxy / raw。
         "https://cdn.jsdelivr.net/gh/$repo@main/announcements/$file",
-        "https://raw.gitmirror.com/$repo/main/announcements/$file",
+        "https://gh-proxy.com/https://raw.githubusercontent.com/$repo/main/announcements/$file",
         "https://cdn.statically.io/gh/$repo@main/announcements/$file",
         "https://raw.githubusercontent.com/$repo/main/announcements/$file",
         "https://gh-proxy.com/https://raw.githubusercontent.com/$repo/main/announcements/$file",

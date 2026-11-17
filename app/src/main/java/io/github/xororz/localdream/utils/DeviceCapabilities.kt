@@ -154,6 +154,29 @@ object DeviceCapabilities {
         return totalGb >= 7.0
     }
 
+    /**
+     * et.244：本机是否可用 Vulkan（MNN 官方开源后端，不需要任何厂商 NDA）。
+     * 返回主版本号（1 表示 1.x），0 表示不可用。天玑 9000+ / 骁龙 8+ 的 Mali、
+     * Adreno 都暴露 Vulkan 1.1+，个别 ROM 阉割了 OpenCL 但保留 Vulkan。
+     */
+    fun vulkanMajorVersion(context: Context): Int = runCatching {
+        val pm = context.packageManager
+        // 用字符串常量而不是 PackageManager.FEATURE_VULKAN，避免不同 compileSdk
+        // 的 stub 缺该字段时编译不过。
+        if (!pm.hasSystemFeature("android.hardware.vulkan")) return 0
+        if (android.os.Build.VERSION.SDK_INT >= 33) {
+            // 反射调用 getSystemFeatureVersionInt(name, default)，返回 major*100+minor。
+            val m = pm.javaClass.getMethod(
+                "getSystemFeatureVersionInt", String::class.java, Int::class.javaPrimitiveType,
+            )
+            val v = (m.invoke(pm, "android.hardware.vulkan", 0) as? Int) ?: 0
+            return if (v > 0) v / 100 else 1
+        }
+        1
+    }.getOrDefault(0)
+
+    fun supportsVulkan(context: Context): Boolean = vulkanMajorVersion(context) >= 1
+
     /** Localized short label of the detected chip vendor. */
     fun vendorLabel(): String = when (socInfo.vendor) {
         SocVendor.QUALCOMM -> "高通骁龙"

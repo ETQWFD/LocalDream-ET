@@ -87,12 +87,12 @@ object GalleryClient {
     // et.149: 国内优先 jsdelivr / gitmirror，raw 作为兜底，图片和元数据都走镜像。
     private val IMG_BASES = listOf(
         "https://cdn.jsdelivr.net/gh/ETQWFD/NightmareRoad-ET-Gallery@main",
-        "https://raw.gitmirror.com/ETQWFD/NightmareRoad-ET-Gallery/main",
+        "https://gh-proxy.com/https://raw.githubusercontent.com/ETQWFD/NightmareRoad-ET-Gallery/main",
         "https://raw.githubusercontent.com/ETQWFD/NightmareRoad-ET-Gallery/main",
     )
     private val META_BASES = listOf(
         "https://cdn.jsdelivr.net/gh/ETQWFD/NightmareRoad-ET-Gallery@main",
-        "https://raw.gitmirror.com/ETQWFD/NightmareRoad-ET-Gallery/main",
+        "https://gh-proxy.com/https://raw.githubusercontent.com/ETQWFD/NightmareRoad-ET-Gallery/main",
         "https://raw.githubusercontent.com/ETQWFD/NightmareRoad-ET-Gallery/main",
     )
 
@@ -354,11 +354,20 @@ object GalleryClient {
                 } catch (_: Exception) { emptyList() }
             }
             val idx = runCatching { fetchIndex() }.getOrNull()
-            val metas: Map<String, JSONObject> = if (idx != null && idx.isNotEmpty()) {
+            var metas: Map<String, JSONObject> = if (idx != null && idx.isNotEmpty()) {
                 // 索引按 png/ 下的相对路径存；老列表 name 同样是相对路径。
                 idx.mapKeys { (k, _) -> k.substringBeforeLast(".png") }
             } else {
                 fetchMetas(names)
+            }
+            // et.244：老版本 App 发布的图不会写索引，这些图在列表里会变成
+            // “作者 ? / 售价 0”。这里只对索引缺的那几张补拉 meta，
+            // 正常情况一次都不发，仍然是 1 个请求打开社区。
+            if (idx != null && idx.isNotEmpty()) {
+                val missing = names.filter { it.substringBeforeLast(".png") !in metas }
+                if (missing.isNotEmpty() && missing.size <= 40) {
+                    metas = metas + runCatching { fetchMetas(missing) }.getOrDefault(emptyMap())
+                }
             }
             names.map { n ->
                 val stem = n.substringBeforeLast(".png")
@@ -366,7 +375,7 @@ object GalleryClient {
                 // Mirror chain, jsDelivr first because it is reachable in China.
                 val mirrors = listOf(
                     "https://cdn.jsdelivr.net/gh/ETQWFD/NightmareRoad-ET-Gallery@main/png/$n",
-                    "https://raw.gitmirror.com/ETQWFD/NightmareRoad-ET-Gallery/main/png/$n",
+                    "https://gh-proxy.com/https://raw.githubusercontent.com/ETQWFD/NightmareRoad-ET-Gallery/main/png/$n",
                     "https://raw.githubusercontent.com/ETQWFD/NightmareRoad-ET-Gallery/main/png/$n",
                 )
                 val thumbs = listOf(

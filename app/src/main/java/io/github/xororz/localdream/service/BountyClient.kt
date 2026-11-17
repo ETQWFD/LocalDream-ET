@@ -88,17 +88,42 @@ object BountyClient {
             Triple(ok, if (ok) "" else err, id)
         }
 
-    private fun writeRaw(path: String, json: JSONObject): Pair<Boolean, String> = runCatching {
-        val c = conn("$API/$path", "PUT").apply { doOutput = true }
-        c.setRequestProperty("Content-Type", "application/json")
-        val body = JSONObject().put("message", "bounty $path")
-            .put("content", Base64.getEncoder().encodeToString(json.toString().toByteArray()))
-        c.outputStream.use { it.write(body.toString().toByteArray()) }
-        val code = c.responseCode
-        if (code in 200..201) return@runCatching true to ""
-        val detail = runCatching { c.errorStream?.bufferedReader()?.readText().orEmpty() }.getOrDefault("")
-        false to "HTTP $code ${detail.take(80)}"
-    }.getOrDefault(false to "网络错误")
+    private fun writeRaw(path: String, json: JSONObject): Pair<Boolean, String> {
+        // et.244：国内直连 api.github.com 经常首包超时，表现为“悬赏发不出去 /
+        // 发了没反应”。与 GalleryClient.putRaw 一样改成三次退避重试，
+        // 并把读超时放宽到 30s；失败原因带 HTTP 详情回传给界面显示。
+        var last = "网络错误"
+        for (attempt in 1..3) {
+            val res = runCatching {
+                val c = conn("$API/$path", "PUT").apply {
+                    doOutput = true
+                    connectTimeout = 10000
+                    readTimeout = 30000
+                }
+                c.setRequestProperty("Content-Type", "application/json")
+                val body = JSONObject().put("message", "bounty $path")
+                    .put("content", Base64.getEncoder().encodeToString(json.toString().toByteArray()))
+                c.outputStream.use { it.write(body.toString().toByteArray()) }
+                val code = c.responseCode
+                if (code in 200..201) return@runCatching true to ""
+                val detail = runCatching { c.errorStream?.bufferedReader()?.readText().orEmpty() }
+                    .getOrDefault("")
+                // 已存在同名文件（时间戳撞车）：换新 id 让调用方重试即可。
+                false to "HTTP $code ${detail.take(80)}"
+            }.getOrDefault(false to "网络错误")
+            if (res.first) return res
+            last = res.second
+            // 4xx 是确定性错误（权限/路径非法），重试没意义，直接返回。
+            if (last.startsWith("HTTP 4")) return res
+            try {
+                Thread.sleep(400L * attempt)
+            } catch (_: InterruptedException) {
+                Thread.currentThread().interrupt()
+                break
+            }
+        }
+        return false to last
+    }
 
     /** 列出所有悬赏：优先读索引，索引缺失时回落到逐目录遍历。 */
     suspend fun list(): List<JSONObject> = withContext(Dispatchers.IO) {
@@ -254,7 +279,7 @@ object BountyClient {
     private fun fetchBountyIndex(): List<JSONObject>? = runCatching {
         val raw = listOf(
             "https://cdn.jsdelivr.net/gh/ETQWFD/NightmareRoad-ET-Gallery@main/$BOUNTY_INDEX",
-            "https://raw.gitmirror.com/ETQWFD/NightmareRoad-ET-Gallery/main/$BOUNTY_INDEX",
+            "https://gh-proxy.com/https://raw.githubusercontent.com/ETQWFD/NightmareRoad-ET-Gallery/main/$BOUNTY_INDEX",
             "https://raw.githubusercontent.com/ETQWFD/NightmareRoad-ET-Gallery/main/$BOUNTY_INDEX",
         )
         for (u in raw) {

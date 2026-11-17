@@ -58,8 +58,8 @@ android {
         minSdk = 28
 //        minSdk = 31
         targetSdk = 36
-        versionCode = 317
-        versionName = "4.0.0-et.243"
+        versionCode = 318
+        versionName = "4.0.0-et.244"
 
         // et.26: GitHub OAuth Device Flow client_id. Empty => device-flow entry
         // is shown disabled (no request, no fake login). Device flow needs no secret.
@@ -148,6 +148,23 @@ android {
             keepDebugSymbols += listOf("**/*.so")
         }
     }
+    // et.244：按 ABI 出两个正式包。默认仍出通用包（update.json 用的就是它），
+    // 传 -PabiOnly=arm64-v8a / armeabi-v7a 时只出对应架构：
+    //   arm64-v8a   = 高配版：DiT/NPU 引擎 + MNN OpenCL/Vulkan(CPU/GPU) + 高通 QNN 运行库
+    //   armeabi-v7a = 基础版：32 位老机型专用，只有 CPU/GPU(MNN) 引擎
+    // 32 位包里高通 QNN / DiT 的 arm64 运行库既加载不了也白占 157 MB，
+    // 用 ignoreAssetsPattern 直接把 assets 下这两个目录整棵剔除。
+    val abiOnly = (findProperty("abiOnly") as String?)?.takeIf { it.isNotBlank() }
+    if (abiOnly != null) {
+        defaultConfig {
+            ndk.abiFilters.clear()
+            ndk.abiFilters += abiOnly
+        }
+        if (abiOnly != "arm64-v8a") {
+            androidResources { ignoreAssetsPattern = "!qnnlibs:!ditlibs" }
+        }
+    }
+
     flavorDimensions += "version"
     productFlavors {
         create("basic") {

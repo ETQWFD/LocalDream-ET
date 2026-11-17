@@ -107,6 +107,8 @@ object AppUpdater {
         val channels = listOf(
             io.github.xororz.localdream.cloud.CloudConfig.githubUpdateJson,
             io.github.xororz.localdream.cloud.CloudConfig.githubUpdateJsonRaw,
+            io.github.xororz.localdream.cloud.CloudConfig.jsdelivrUpdateJson,
+            io.github.xororz.localdream.cloud.CloudConfig.ghProxyUpdateJson,
             io.github.xororz.localdream.cloud.CloudConfig.giteeUpdateJson,
         )
         for (url in channels) {
@@ -129,15 +131,35 @@ object AppUpdater {
 
     private fun fetchManifest(url: String): UpdateInfo? {
         val json = JSONObject(httpGet(url))
-        val url = json.optString("apkUrl").ifBlank { json.optString("apk_url") }
-        if (url.isBlank()) return null
+        var url2 = json.optString("apkUrl").ifBlank { json.optString("apk_url") }
+        var size = json.optLong("size", 0L)
+        var sha = json.optString("sha256", "").trim().lowercase()
+        // et.244：官网/更新通道可以按 ABI 提供两个包（高配 arm64 版 / 基础 32 位版）。
+        // 有匹配本机 ABI 的条目就用它，没有就退回通用 apkUrl，老版本清单照常工作。
+        val abi = android.os.Build.SUPPORTED_ABIS?.firstOrNull().orEmpty()
+        val variants = json.optJSONArray("variants")
+        if (variants != null && url2.isNotBlank()) {
+            for (i in 0 until variants.length()) {
+                val v = variants.optJSONObject(i) ?: continue
+                val vAbi = v.optString("abi")
+                if (vAbi.isNotBlank() && vAbi == abi &&
+                    !v.optString("apkUrl").ifBlank { v.optString("url") }.isBlank()
+                ) {
+                    url2 = v.optString("apkUrl").ifBlank { v.optString("url") }
+                    size = v.optLong("size", size)
+                    sha = v.optString("sha256", sha).trim().lowercase()
+                    break
+                }
+            }
+        }
+        if (url2.isBlank()) return null
         return UpdateInfo(
             versionName = json.optString("versionName").ifBlank { json.optString("tag") },
             versionCode = json.optLong("versionCode", json.optLong("version_code", 0L)),
             releaseNotes = json.optString("releaseNotes").ifBlank { json.optString("notes") },
-            apkUrl = url,
-            sizeBytes = json.optLong("size", 0L),
-            sha256 = json.optString("sha256", "").trim().lowercase(),
+            apkUrl = url2,
+            sizeBytes = size,
+            sha256 = sha,
             title = json.optString("title").ifBlank { json.optString("name") },
         ).takeIf { it.versionCode > BuildConfig.VERSION_CODE }
     }

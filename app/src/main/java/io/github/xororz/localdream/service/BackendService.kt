@@ -914,6 +914,9 @@ class BackendService : Service() {
             env["RAYON_NUM_THREADS"] = bigCores.toString()
             env["RAYON_RS_NUM_CPUS"] = bigCores.toString()
             env["OMP_NUM_THREADS"] = bigCores.toString()
+            // et.244：MNN 会话线程数之前在后端源码里硬编码 4，8 核天玑/骁龙
+            // 只用 4 个小核组，出图明显偏慢。自编译的引擎现在读这个变量。
+            env["SD_NUM_THREADS"] = bigCores.toString()
 
             // et.146: 天玑 9400/9400+（Mali Immortalis 新驱动）上 sd15cpu 引擎
             // 初始化 OpenCL fused projection 时直接退出(exit=0)。检测 MediaTek 平台，
@@ -926,6 +929,23 @@ class BackendService : Service() {
             }.getOrDefault(
                 android.os.Build.HARDWARE.orEmpty().lowercase().startsWith("mt")
             )
+            // et.244：自编译引擎支持 SD_MNN_GPU=opencl|vulkan。高端天玑的 Mali
+            // 驱动上 OpenCL 偶发段错误，Vulkan 往往反而是稳的那条路，所以这里
+            // 先按偏好选后端，崩溃后再自动切换，而不是直接掉回 CPU。
+            runCatching {
+                val gpuPref = getSharedPreferences("app_prefs", MODE_PRIVATE)
+                    .getString("gpu_backend", null)
+                val want = when {
+                    gpuPref == "vulkan" || gpuPref == "opencl" -> gpuPref!!
+                    io.github.xororz.localdream.utils.DeviceCapabilities
+                        .vulkanMajorVersion(this) >= 1 &&
+                        getSharedPreferences("app_prefs", MODE_PRIVATE)
+                            .getBoolean("opencl_unstable", false) -> "vulkan"
+                    else -> "opencl"
+                }
+                env["SD_MNN_GPU"] = want
+                Log.i(TAG, "MNN GPU backend = $want (vulkanApi=${io.github.xororz.localdream.utils.DeviceCapabilities.vulkanMajorVersion(this)})")
+            }
             if (isMediaTek) {
                 env["MNN_OPENCL_FUSED_PROJ_DISABLE"] = "1"
                 // et.242：天玑 9000 及以上的高端机（Mali-G710/G715/G720/G925）
@@ -1098,9 +1118,23 @@ class BackendService : Service() {
                     io.github.xororz.localdream.utils.DeviceCapabilities.socInfo.vendor ==
                     io.github.xororz.localdream.utils.DeviceCapabilities.SocVendor.MEDIATEK
                 ) {
-                    getSharedPreferences("app_prefs", MODE_PRIVATE)
-                        .edit().putBoolean("gpu_unstable", true).apply()
-                    Log.w(TAG, "MediaTek SIGSEGV: gpu_unstable=true, next run uses CPU")
+                    val sp = getSharedPreferences("app_prefs", MODE_PRIVATE)
+                    val cur = sp.getString("gpu_backend", "opencl")
+                    val vkOk = io.github.xororz.localdream.utils.DeviceCapabilities
+                        .vulkanMajorVersion(this) >= 1
+                    when {
+                        // OpenCL 崩了、Vulkan 还没试过：先换 Vulkan，仍然走 GPU。
+                        cur != "vulkan" && vkOk && !sp.getBoolean("gpu_unstable", false) -> {
+                            sp.edit().putString("gpu_backend", "vulkan").apply()
+                            Log.w(TAG, "MediaTek SIGSEGV on OpenCL -> switch to Vulkan GPU")
+                        }
+                        // Vulkan 也崩：整条 GPU 路径判死，回 CPU 保证能出图。
+                        else -> {
+                            sp.edit().putBoolean("gpu_unstable", true)
+                                .putString("gpu_backend", "cpu").apply()
+                            Log.w(TAG, "MediaTek GPU unstable: next run uses CPU")
+                        }
+                    }
                 }
                 val reason = when (exitCode) {
                     137 -> "被系统内存不足终止(SIGKILL/OOM)"

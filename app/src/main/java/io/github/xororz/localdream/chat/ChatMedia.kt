@@ -67,7 +67,7 @@ object ChatRepository {
     private val READ_URLS = listOf(
         "https://raw.githubusercontent.com/$OWNER/$REPO/main/$FILE",
         "https://cdn.jsdelivr.net/gh/$OWNER/$REPO@main/$FILE",
-        "https://raw.gitmirror.com/$OWNER/$REPO/main/$FILE",
+        "https://gh-proxy.com/https://raw.githubusercontent.com/$OWNER/$REPO/main/$FILE",
         "https://raw.kkgithub.com/$OWNER/$REPO/main/$FILE",
     )
 
@@ -99,7 +99,7 @@ object ChatRepository {
     fun mirrorUrls(path: String): List<String> = listOf(
         rawUrl(path),
         cdnUrl(path),
-        "https://raw.gitmirror.com/$OWNER/$REPO/main/$path",
+        "https://gh-proxy.com/https://raw.githubusercontent.com/$OWNER/$REPO/main/$path",
         "https://raw.kkgithub.com/$OWNER/$REPO/main/$path",
     )
 
@@ -528,7 +528,7 @@ object ChatPolicyRepo {
         return listOf(
             "https://raw.githubusercontent.com/ETQWFD/NightmareRoad-ET-Chat/main/$FILE?cb=$cb",
             "https://cdn.jsdelivr.net/gh/ETQWFD/NightmareRoad-ET-Chat@main/$FILE?cb=$cb",
-            "https://raw.gitmirror.com/ETQWFD/NightmareRoad-ET-Chat/main/$FILE?cb=$cb",
+            "https://gh-proxy.com/https://raw.githubusercontent.com/ETQWFD/NightmareRoad-ET-Chat/main/$FILE?cb=$cb",
         )
     }
 

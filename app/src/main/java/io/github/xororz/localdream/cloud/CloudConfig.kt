@@ -27,6 +27,14 @@ object CloudConfig {
     val githubUpdateJsonRaw: String
         get() = "https://raw.githubusercontent.com/ETQWFD/NightmareRoad-ET/main/docs/update.json"
 
+    /**
+     * et.244：境内 raw.githubusercontent 经常连不上、Pages 也可能被 DNS 污染，
+     * 再补两条公共 CDN 通道，检查更新不再因为单条通道挂掉而“没反应”。
+     */
+    val jsdelivrUpdateJson: String
+        get() = "https://cdn.jsdelivr.net/gh/$GITEE_OWNER/$GITEE_REPO@main/docs/update.json"
+    val ghProxyUpdateJson: String
+        get() = "https://gh-proxy.com/https://raw.githubusercontent.com/$GITEE_OWNER/$GITEE_REPO/main/docs/update.json"
     /** Gitee Pages/raw update.json; replace owner/repo once the mirror exists. */
     val giteeUpdateJson: String
         get() = "https://gitee.com/$GITEE_OWNER/$GITEE_REPO/raw/main/docs/update.json"

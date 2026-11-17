@@ -69,7 +69,7 @@ object RedemptionManager {
             { "https://raw.kkgithub.com/$REPO/main/$it" },
             { "https://gh-proxy.com/https://raw.githubusercontent.com/$REPO/main/$it" },
             { "https://ghfast.top/https://raw.githubusercontent.com/$REPO/main/$it" },
-            { "https://raw.gitmirror.com/$REPO/main/$it" },
+            { "https://gh-proxy.com/https://raw.githubusercontent.com/$REPO/main/$it" },
             { "https://raw.githubusercontent.com/$REPO/main/$it" },
         )
         return paths.flatMap { p -> hosts.map { h -> h(p) } }

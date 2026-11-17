@@ -61,7 +61,7 @@
   var API="https://api.github.com/repos/"+REPO+"/contents/png";
   // et.150: 国内优先 jsdelivr，raw 兜底；图片与 meta 都走这里。
   var RAW="https://cdn.jsdelivr.net/gh/"+REPO+"@main/png";
-  var RAW_MIRROR="https://raw.gitmirror.com/"+REPO+"/main/png";
+  var RAW_MIRROR="https://fastly.jsdelivr.net/"+REPO+"/main/png";
   var JSDIR="https://data.jsdelivr.com/v1/packages/gh/"+REPO+"@main?structure=flat";
   function $(id){return document.getElementById(id);}
   function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;","'":"&quot;"}[c];});}

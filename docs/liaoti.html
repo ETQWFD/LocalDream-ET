@@ -97,7 +97,7 @@ async function loadMessages(){
   const paths=[
     'https://raw.githubusercontent.com/'+CHAT+'/main/messages.json',
     'https://cdn.jsdelivr.net/gh/'+CHAT+'@main/messages.json',
-    'https://raw.gitmirror.com/'+CHAT+'/main/messages.json',
+    'https://fastly.jsdelivr.net/'+CHAT+'/main/messages.json',
     'https://api.github.com/repos/'+CHAT+'/contents/messages.json'
   ];
   let lastErr='';

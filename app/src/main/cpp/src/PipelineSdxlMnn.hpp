@@ -3,6 +3,7 @@
 
 #include <array>
 #include <fstream>
+#include "MnnUtils.hpp"
 #include "PipelineSdxl.hpp"
 
 // FancyAi SDXL MNN package: dynamic UNet context, dual CLIP, and fixed
@@ -137,14 +138,33 @@ class PipelineSdxlMnn : public PipelineSdxl {
     backend.precision = MNN::BackendConfig::Precision_Low;
     backend.power = MNN::BackendConfig::Power_High;
     config.backendConfig = &backend;
-    config.type = stage == 0 && req.use_opencl ? MNN_FORWARD_OPENCL : MNN_FORWARD_CPU;
-    config.numThread = 4;
-    if (config.type == MNN_FORWARD_OPENCL) {
-      config.mode = MNN_GPU_MEMORY_BUFFER | MNN_GPU_TUNING_FAST;
+    const bool gpu_wanted = stage == 0 && req.use_opencl;
+    config.type = gpu_wanted ? mnnGpuForward() : MNN_FORWARD_CPU;
+    // et.244: 与 createMnnSession 共用同一套按机型注入的线程/调优参数，
+    // 不再硬编码 4 线程 + TUNING_FAST（8 核天玑跑不满、Mali kernel 选得保守）。
+    config.numThread = mnnCpuThreads(4);
+    if (gpu_wanted) {
+      config.mode = mnnGpuMode();
       net.setCacheFile((model_dir_ + "/unet.mnnc").c_str());
     }
     if (stage == 0) net.setSessionMode(MNN::Interpreter::Session_Resize_Defer);
     sessions_[stage] = net.createSession(config);
+    // et.244: GPU 后端逐级降级 Vulkan -> OpenCL -> CPU。个别 Mali 驱动没有
+    // Vulkan 扩展、或厂商把 OpenCL 阉割掉时，旧代码直接抛"后端启动失败"，
+    // 表现为整条流程打不开；现在只是变慢，但一定能出图。
+    if (!sessions_[stage] && gpu_wanted) {
+      config.type = MNN_FORWARD_OPENCL;
+      config.mode = mnnGpuMode();
+      sessions_[stage] = net.createSession(config);
+    }
+    if (!sessions_[stage] && gpu_wanted) {
+      MNNPrint("SDXL-MNN: GPU session failed, falling back to CPU\n");
+      config.type = MNN_FORWARD_CPU;
+      config.numThread = mnnCpuThreads(4);
+      config.mode = 0;
+      backend.memory = MNN::BackendConfig::Memory_Low;
+      sessions_[stage] = net.createSession(config);
+    }
     if (!sessions_[stage]) throw std::runtime_error(path);
     if (stage != 0) net.releaseModel();
     return net;
