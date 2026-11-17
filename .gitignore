@@ -34,3 +34,4 @@ docs/*.apk
 # 构建产物禁止入库（内含令牌，会被 GitHub push protection 拦截）
 chatclient/build/
 app/build/
+server-go/dist/
