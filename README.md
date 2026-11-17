@@ -1,6 +1,6 @@
 <div align="center">
 
-# Local Dream ET  <img src="./docs/icon.png" width="32" alt="Local Dream ET">
+# Nightmare Road-ET  <img src="./docs/icon.png" width="32" alt="Local Dream ET">
 
 **安卓本地 Stable Diffusion · 骁龙 NPU / CPU / GPU 加速**
 ### ET 定制版（开发者：ET）
@@ -18,7 +18,7 @@
 ## 官网与下载
 
 - 官网（GitHub Pages）：<https://etc.tw.kg/>
-- 更新清单：<https://etqwfd.github.io/LocalDream-ET/update.json>
+- 更新清单：<https://etqwfd.github.io/Nightmare Road-ET/update.json>
 - 最新安装包：见 [Releases](https://github.com/ETQWFD/LocalDream-ET/releases)，资产固定名 `LocalDream-ET.apk`。
 
 ## 关于原生引擎与 32 位（重要）
@@ -76,7 +76,7 @@ RELEASE_KEY_PASSWORD=...
 5. `FileProvider` 授予安装器读取权限，`ACTION_VIEW` + `application/vnd.android.package-archive`
    直接打开系统打包安装程序。
 
-发布新版本时：上传新 APK 到 Release（命名 `LocalDream-ET.apk`），
+发布新版本时：上传新 APK 到 Release（命名 `Nightmare Road-ET.apk`），
 并更新 `docs/update.json` 的 `versionCode / versionName / releaseNotes`。
 
 
