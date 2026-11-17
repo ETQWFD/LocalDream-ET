@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Local Dream ET · 服务端出图窗口</title>
+<style>
+:root{--bg:#0a1020;--card:#131c31;--line:rgba(255,255,255,.12);--txt:#eef3ff;--mut:#9fb0cf;--acc:#7aa2ff}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(800px 400px at 80% -10%,#1b2b52,transparent 60%),var(--bg);
+ color:var(--txt);font:15px/1.6 -apple-system,BlinkMacSystemFont,"Seg UI","PingFang SC","Microsoft YaHei",sans-serif}
+.wrap{max-width:1180px;margin:0 auto;padding:22px 18px 40px}
+h1{font-size:22px;margin:0 0 4px}
+.sub{color:var(--mut);font-size:13px;margin-bottom:16px}
+.grid{display:grid;grid-template-columns:1fr 330px;gap:16px}
+@media(max-width:900px){.grid{grid-template-columns:1fr}}
+.card{background:linear-gradient(180deg,#151f38,#0e1730);border:1px solid var(--line);border-radius:14px;padding:16px}
+label{display:block;font-size:13px;color:var(--mut);margin-bottom:6px}
+textarea,input,select{width:100%;background:rgba(255,255,255,.07);color:#fff;border:1px solid rgba(255,255,255,.2);
+ border-radius:10px;padding:10px 12px;font:inherit;outline:none}
+textarea{resize:vertical}
+textarea:focus,input:focus,select:focus{border-color:var(--acc)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.btn{width:100%;margin-top:14px;padding:12px;border:0;border-radius:11px;background:#fff;color:#0a1020;
+ font-weight:700;font-size:15px;cursor:pointer}
+.btn:disabled{opacity:.55;cursor:not-allowed}
+.btn.ghost{background:rgba(255,255,255,.08);color:var(--txt);border:1px solid var(--line);font-weight:500;margin-top:8px}
+.out{margin-top:14px;min-height:220px;border:1px dashed rgba(255,255,255,.18);border-radius:12px;
+ display:flex;align-items:center;justify-content:center;color:var(--mut);overflow:hidden;position:relative}
+.out img{max-width:100%;max-height:520px;display:block}
+.err{margin-top:12px;display:none;background:rgba(255,90,90,.1);border:1px solid rgba(255,90,90,.4);
+ border-radius:12px;padding:12px;color:#ffc9c9;white-space:pre-wrap;word-break:break-word;font-size:13px}
+.err .bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.copy{background:#fff;color:#0a1020;border:0;border-radius:8px;padding:6px 12px;font-weight:600;cursor:pointer}
+.state{font-size:13px;color:var(--mut);margin-top:10px}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;border:1px solid var(--line);margin-right:6px}
+.ok{color:#7ef0c0;border-color:rgba(126,240,192,.4)}
+.bad{color:#ffb4b4;border-color:rgba(255,90,90,.4)}
+.kv{display:flex;gap:8px;align-items:center;margin-top:8px}
+.kv input{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px}
+.copykey{flex:none;background:rgba(255,255,255,.12);color:#fff;border:1px solid var(--line);border-radius:8px;padding:9px 12px;cursor:pointer}
+.spin{width:20px;height:20px;border-radius:50%;border:3px solid rgba(255,255,255,.2);border-top-color:#fff;
+ animation:r 1s linear infinite;margin-right:10px;display:inline-block;vertical-align:middle}
+@keyframes r{to{transform:rotate(360deg)}}
+.timer{color:var(--mut);font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>服务端 · 临时出图窗口</h1>
+  <div class="sub">调用本机已下载的模型真实出图；出图在后台排队执行，服务端仍会继续分发 IP / Key 给客户端。</div>
+
+  <div class="card" style="margin-bottom:16px">
+    <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+      <span id="pillEngine" class="pill">引擎检测中</span>
+      <span id="pillModel" class="pill">模型：—</span>
+      <span id="pillBusy" class="pill">空闲</span>
+      <span id="pillQueue" class="pill">排队 0</span>
+      <span class="timer" id="pillAddr">—</span>
+    </div>
+    <label style="margin-top:12px">连接地址（客户端填这个）</label>
+    <div class="kv"><input id="addr" readonly /><button class="copykey" onclick="cp('addr')">复制</button></div>
+    <label style="margin-top:10px">API Key</label>
+    <div class="kv"><input id="key" readonly /><button class="copykey" onclick="cp('key')">复制</button>
+      <button class="copykey" id="rotateBtn" onclick="rotateKey()">换一个</button></div>
+    <div class="state" id="keyState"></div>
+    <div id="needEngine" style="display:none;margin-top:10px;padding:10px 12px;border:1px solid rgba(255,180,80,.45);border-radius:10px;background:rgba(255,180,80,.08);color:#ffd79a;font-size:13px;line-height:1.7"></div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <label>提示语（正向）</label>
+      <textarea id="prompt" rows="5" placeholder="例如：masterpiece, best quality, 1girl, detailed face, cinematic light">masterpiece, best quality, highly detailed, sharp focus, cinematic lighting</textarea>
+      <label style="margin-top:12px">反向提示语</label>
+      <textarea id="neg" rows="4" placeholder="不想出现的内容">lowres, worst quality, low quality, blurry, jpeg artifacts, bad anatomy, bad hands, bad proportions, extra fingers, extra limbs, fused limbs, missing limbs, mutated hands, poorly drawn hands, poorly drawn face, deformed, disfigured, mutated, unfinished, cropped, watermark, text, signature</textarea>
+
+      <div class="out" id="out"><span>生成结果会显示在这里</span></div>
+      <div class="err" id="err">
+        <div class="bar"><strong>生成失败</strong><button class="copy" onclick="copyErr()">复制错误</button></div>
+        <div id="errText"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <label>步数 steps</label>
+      <input id="steps" type="number" min="1" max="150" value="28" />
+      <label style="margin-top:10px">CFG</label>
+      <input id="cfg" type="number" min="1" max="30" step="0.5" value="7" />
+      <div class="row">
+        <div><label>宽 width</label><input id="w" type="number" min="64" max="2048" step="64" value="512" /></div>
+        <div><label>高 height</label><input id="h" type="number" min="64" max="2048" step="64" value="512" /></div>
+      </div>
+      <label style="margin-top:10px">种子 seed（0 = 随机）</label>
+      <input id="seed" type="number" value="0" />
+      <label style="margin-top:10px">采样器 sampler</label>
+      <select id="sampler">
+        <option value="dpm++2m" selected>DPM++ 2M（质量优先）</option>
+        <option value="euler_a">Euler a（速度快）</option>
+        <option value="euler">Euler</option>
+        <option value="heun">Heun</option>
+        <option value="dpm2">DPM2</option>
+      </select>
+      <button class="btn" id="go" onclick="gen()">生成图片</button>
+      <button class="btn ghost" id="cancelBtn" onclick="cancelGen()" disabled>取消当前出图</button>
+      <button class="btn ghost" onclick="loadState()">刷新状态</button>
+      <div class="state" id="hint">出图期间本窗口不会卡死，服务端照常分发地址与 Key。</div>
+    </div>
+  </div>
+</div>
+
+<script>
+let lastErr = "";
+function cp(id){const el=document.getElementById(id);el.select();document.execCommand("copy");}
+function copyErr(){navigator.clipboard.writeText(lastErr).catch(()=>{});}
+function esc(v){return v===undefined||v===null?"":String(v)}
+async function loadState(){
+  try{
+    const s = await (await fetch("/admin/state")).json();
+    document.getElementById("pillEngine").textContent = s.engine_ready ? "引擎已就绪" : "引擎未就绪";
+    document.getElementById("pillEngine").className = "pill " + (s.engine_ready ? "ok" : "bad");
+    document.getElementById("pillModel").textContent = "模型：" + (s.model_name || "未找到");
+    document.getElementById("pillBusy").textContent = s.busy ? "正在出图" : "空闲";
+    document.getElementById("pillBusy").className = "pill " + (s.busy ? "bad" : "ok");
+    document.getElementById("pillQueue").textContent = "排队 " + (s.queued || 0);
+    const keyEl = document.getElementById("key");
+    keyEl.value = s.api_key || "";
+    document.getElementById("keyState").textContent = (s.key_visible === false)
+      ? "非本机访问：Key 已打码，换 Key 也已禁用。"
+      : (s.enable_api_key ? "当前要求客户端带 Key" : "当前不校验 Key（局域网可直接连）");
+    document.getElementById("addr").value = (s.addresses && s.addresses[0]) || "";
+
+    const need = document.getElementById("needEngine");
+    if (!s.engine_ready) {
+      let modelDir = "程序目录/models";
+      if (s.model_path) {
+        const i = Math.max(s.model_path.lastIndexOf("/"), s.model_path.lastIndexOf("\\"));
+        if (i > 0) modelDir = s.model_path.substring(0, i);
+      }
+      need.style.display = "block";
+      need.innerHTML = "引擎未就绪，还差两步：<br>1) 把 sd-server.exe 放进：" + esc(s.engine || "程序目录/bin")
+        + "<br>2) 把模型放进：" + esc(modelDir)
+        + "<br>放好后重启服务端，这里会变成“引擎已就绪”。";
+    } else {
+      need.style.display = "none";
+    }
+    document.getElementById("steps").value = s.steps || 28;
+    document.getElementById("cfg").value = s.cfg || 7;
+    document.getElementById("w").value = s.width || 512;
+    document.getElementById("h").value = s.height || 512;
+  }catch(e){}
+}
+async function cancelGen(){
+  try{
+    const r = await (await fetch("/admin/cancel",{method:"POST"})).json();
+    document.getElementById("hint").textContent = r.message || "已请求取消";
+  }catch(e){}
+}
+async function rotateKey(){
+  const r = await (await fetch("/admin/key/rotate",{method:"POST"})).json();
+  document.getElementById("key").value = r.api_key || "";
+}
+function showErr(obj){
+  const e = obj || {};
+  lastErr = JSON.stringify({kind:e.kind,message:e.message,http_status:e.http_status,upstream:e.upstream,hint:e.hint,elapsed_ms:obj.elapsed_ms},null,2);
+  document.getElementById("errText").textContent = "类型: " + esc(e.kind) + "\n信息: " + esc(e.message)
+    + (e.http_status ? "\nHTTP: " + e.http_status : "")
+    + (e.hint ? "\n建议: " + e.hint : "")
+    + (e.upstream ? "\n引擎原始返回:\n" + e.upstream : "");
+  document.getElementById("err").style.display = "block";
+}
+async function gen(){
+  const btn = document.getElementById("go");
+  const out = document.getElementById("out");
+  document.getElementById("err").style.display = "none";
+  btn.disabled = true;
+  document.getElementById("cancelBtn").disabled = false;
+  const t0 = Date.now();
+  out.innerHTML = '<span><span class="spin"></span>正在生成… <span id="el">0s</span></span>';
+  const timer = setInterval(()=>{const el=document.getElementById("el"); if(el) el.textContent = Math.floor((Date.now()-t0)/1000)+"s";},1000);
+  try{
+    const body = {
+      prompt: document.getElementById("prompt").value,
+      negative_prompt: document.getElementById("neg").value,
+      steps: +document.getElementById("steps").value,
+      cfg_scale: +document.getElementById("cfg").value,
+      width: +document.getElementById("w").value,
+      height: +document.getElementById("h").value,
+      seed: +document.getElementById("seed").value,
+      sampler_name: document.getElementById("sampler").value
+    };
+    const r = await fetch("/admin/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+    const j = await r.json();
+    if(j.ok && j.image){
+      out.innerHTML = "";
+      const img = new Image(); img.src = j.image; out.appendChild(img);
+      const meta = document.createElement("div");
+      meta.style.cssText="position:absolute;right:10px;bottom:8px;font-size:12px;color:#9fb0cf";
+      meta.textContent = "用时 " + (j.elapsed_ms/1000).toFixed(1) + "s";
+      out.appendChild(meta);
+      document.getElementById("hint").textContent = "完成，用时 " + (j.elapsed_ms/1000).toFixed(1) + "s";
+    }else{
+      out.innerHTML = '<span>生成失败，错误已显示在下方，可一键复制</span>';
+      showErr(j.error || j);
+    }
+  }catch(e){
+    out.innerHTML = '<span>请求失败</span>';
+    showErr({kind:"network", message:String(e), hint:"服务端可能已退出，检查终端窗口。"});
+  }finally{
+    clearInterval(timer);
+    btn.disabled = false;
+    document.getElementById("cancelBtn").disabled = true;
+    loadState();
+  }
+}
+loadState();
+setInterval(loadState, 20000);
+</script>
+</body>
+</html>

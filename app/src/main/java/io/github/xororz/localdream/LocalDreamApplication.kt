@@ -15,7 +15,42 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class LocalDreamApplication : Application() {
+class LocalDreamApplication : Application(), coil.ImageLoaderFactory {
+
+    /**
+     * et.243：全局图片加载器。之前社区/聊天用 Coil 默认配置（内存缓存很小、
+     * 无 HTTP 磁盘缓存），滑出屏幕再滑回来就重新走一遍 jsDelivr，弱网下
+     * 表现为“图片/视频加载特别慢”。这里放大缓存并复用 OkHttp 连接。
+     */
+    override fun newImageLoader(): coil.ImageLoader =
+        coil.ImageLoader.Builder(this)
+            .memoryCache {
+                coil.memory.MemoryCache.Builder(this)
+                    .maxSizePercent(0.30)
+                    .build()
+            }
+            .diskCache {
+                coil.disk.DiskCache.Builder()
+                    .directory(cacheDir.resolve("image_cache"))
+                    .maxSizeBytes(600L * 1024 * 1024)
+                    .build()
+            }
+            .okHttpClient {
+                okhttp3.OkHttpClient.Builder()
+                    .connectTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+                    .readTimeout(25, java.util.concurrent.TimeUnit.SECONDS)
+                    .callTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
+                    .retryOnConnectionFailure(true)
+                    .connectionSpecs(
+                        listOf(okhttp3.ConnectionSpec.MODERN_TLS, okhttp3.ConnectionSpec.CLEARTEXT),
+                    )
+                    .cache(
+                        okhttp3.Cache(cacheDir.resolve("http_cache"), 300L * 1024 * 1024),
+                    )
+                    .build()
+            }
+            .crossfade(true)
+            .build()
 
     override fun attachBaseContext(base: Context) {
         super.attachBaseContext(LocaleManager.wrap(base))

@@ -26,6 +26,18 @@ if(err){document.getElementById("msg").innerHTML='<span class="err">授权失败
 if(code){
   // 先尝试自动跳转；浏览器若拦截自定义 scheme，用户点按钮即可（按钮就是用户手势）。
   try{location.href=link;}catch(e){}
+  // et.243：部分浏览器（含微信内置）拦截自定义 scheme，这里额外提供
+  // “复制回跳链接”，回到 App 粘贴即可登录。
+  document.getElementById("msg").innerHTML =
+    '已拿到授权码。若应用没有自动打开，请点上面的按钮；仍不行就复制下面的链接，回到 App 的“粘贴回跳链接”框里完成登录。';
+  var box=document.createElement("textarea");
+  box.id="raw"; box.value=location.href;
+  box.style.cssText="width:100%;margin-top:14px;min-height:70px;font-size:12px;background:rgba(255,255,255,.08);color:#e8eefc;border:1px solid rgba(255,255,255,.18);border-radius:10px;padding:10px";
+  document.querySelector(".card").appendChild(box);
+  var cp=document.createElement("a");
+  cp.className="btn"; cp.href="javascript:void(0)"; cp.textContent="复制回跳链接";
+  cp.onclick=function(){box.select();try{document.execCommand("copy");cp.textContent="已复制，回到 App 粘贴"}catch(e){cp.textContent="请长按上面文本框手动复制"}};
+  document.querySelector(".card").appendChild(cp);
 }
 </script>
 </body></html>

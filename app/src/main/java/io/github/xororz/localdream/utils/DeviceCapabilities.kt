@@ -308,16 +308,23 @@ object DeviceCapabilities {
             val freqs = mutableListOf<Int>()
             var cpu = 0
             while (cpu < 64) {
+                // et.243：标准节点是 cpuinfo_max_freq，联发科/部分厂商只暴露
+                // 旧的 cpu_max_freq。之前只读后者，高通/三星/麒麟机型全部读空，
+                // bigCoreCount 退回默认 4 线程，8 核旗舰也只跑 4 核 —— 这正是
+                // “高配手机生成慢/卡顿”的一个真实原因。
                 val f = runCatching {
+                    java.io.File("/sys/devices/system/cpu/cpu$cpu/cpufreq/cpuinfo_max_freq")
+                        .readText().trim().toIntOrNull()
+                }.getOrNull() ?: runCatching {
                     java.io.File("/sys/devices/system/cpu/cpu$cpu/cpufreq/cpu_max_freq")
                         .readText().trim().toIntOrNull()
                 }.getOrNull()
-                if (f != null) freqs.add(f)
+                if (f != null && f in 100_000..8_000_000) freqs.add(f)
                 cpu++
             }
             if (freqs.size < 2) return@runCatching 4
             val maxF = freqs.maxOrNull() ?: return@runCatching 4
-            val big = freqs.count { it >= (maxF * 0.95).toInt() }
+            val big = freqs.count { it >= (maxF * 0.90).toInt() }
             // Sanity: at least 2, never more than half+2 of cores, leave headroom for UI.
             big.coerceAtLeast(2).coerceAtMost((Runtime.getRuntime().availableProcessors() / 2 + 2).coerceAtLeast(4))
         }.getOrDefault(4)

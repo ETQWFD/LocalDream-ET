@@ -1877,6 +1877,8 @@ private fun MessageRow(
     onBountyAction: (ChatMessage) -> Unit = {},
 ) {
     var showMenu by remember { mutableStateOf(false) }
+    // et.243：长按菜单新增“选择文字”，弹出可局部选取的浮层
+    var selectingText by remember { mutableStateOf(false) }
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = if (mine) Arrangement.End else Arrangement.Start,
@@ -1927,6 +1929,12 @@ private fun MessageRow(
                     onDismissRequest = { showMenu = false },
                 ) {
                     DropdownMenuItem(text = { Text("复制") }, onClick = { showMenu = false; onCopy(message) })
+                    if (message.text.isNotBlank()) {
+                        DropdownMenuItem(
+                            text = { Text("选择文字（局部复制）") },
+                            onClick = { showMenu = false; selectingText = true },
+                        )
+                    }
                     DropdownMenuItem(text = { Text("引用") }, onClick = { showMenu = false; onQuote(message) })
                     DropdownMenuItem(text = { Text("转发") }, onClick = { showMenu = false; onForward(message) })
                     if (message.kind == ChatKind.IMAGE || message.kind == ChatKind.VIDEO) {
@@ -2124,6 +2132,27 @@ private fun MessageRow(
                 modifier = Modifier.clickable { onAvatar(message.author) },
             )
         }
+    }
+
+    // et.243：长按菜单里的“复制”是整条复制；有些 ROM 上气泡内的文字
+    // 无法局部选取，用户反馈“别人发的消息不能复制/剪切”。这里补一个
+    // 可选择文字的浮层，SelectionContainer 原生支持拖动选取 + 系统复制栏。
+    if (selectingText) {
+        AlertDialog(
+            onDismissRequest = { selectingText = false },
+            title = { Text("选择要复制的文字") },
+            text = {
+                Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState())) {
+                    androidx.compose.foundation.text.selection.SelectionContainer {
+                        Text(message.text, style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { onCopy(message); selectingText = false }) { Text("复制全文") }
+            },
+            dismissButton = { TextButton(onClick = { selectingText = false }) { Text("关闭") } },
+        )
     }
 }
 

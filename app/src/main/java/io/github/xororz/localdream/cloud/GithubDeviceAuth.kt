@@ -51,6 +51,38 @@ object GithubDeviceAuth {
             ?: throw IllegalException(json.optString("error_description", "no access_token"))
     }
 
+    /**
+     * et.243：OAuth App 只能登记一个回调地址，而历史版本登记过
+     * etc.tw.kg 和 GitHub Pages 两种。这里按候选地址依次尝试换 token，
+     * 只要有一个和 App 设置里的一致就能登录成功，避免“授权完回不来”。
+     */
+    fun exchangeCodeAnyRedirect(
+        clientId: String,
+        clientSecret: String,
+        code: String,
+        redirects: List<String>,
+    ): String {
+        var last: Exception? = null
+        for (r in redirects) {
+            try {
+                val t = exchangeCode(clientId, clientSecret, code, r)
+                if (t.isNotBlank()) return t
+            } catch (e: Exception) {
+                last = e
+            }
+        }
+        throw (last ?: Exception("授权码无效或已过期，请重新授权"))
+    }
+
+    /** 从回跳链接（https://…/oauth.html?code=xx 或 localdreamet://oauth?code=xx）里取 code。 */
+    fun parseCallbackCode(text: String): String? {
+        val t = text.trim()
+        if (t.isEmpty()) return null
+        Regex("[?&]code=([0-9a-zA-Z]+)").find(t)?.let { return it.groupValues[1] }
+        if (Regex("^[0-9a-f]{20,64}$").matches(t)) return t
+        return null
+    }
+
     private class IllegalException(msg: String) : Exception(msg)
 
     private fun post(url: String, form: Map<String, String>): String {

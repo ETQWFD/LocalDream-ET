@@ -428,17 +428,19 @@ class MainActivity : ComponentActivity() {
                         }
                         LaunchedEffect(Unit) { if (!locGranted) locLauncher.launch(android.Manifest.permission.ACCESS_COARSE_LOCATION) }
 
-                        // et.164: 启动时申请录音和媒体读取权限（语音消息 + 图片选择）
+                        // et.243（隐私修复）：启动时不再申请“读取相册”权限。
+                        // 选图全部走系统照片选择器（Photo Picker / GetContent），
+                        // 用户亲手挑哪张应用才拿得到哪张，应用不会扫描相册，
+                        // 也不存在后台自动上传相册图片的代码路径。
+                        // 麦克风仍按需申请（仅语音消息用到）。
                         val permLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
-                            androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()) { }
+                            androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { }
                         LaunchedEffect(Unit) {
-                            permLauncher.launch(arrayOf(
-                                android.Manifest.permission.RECORD_AUDIO,
-                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU)
-                                    android.Manifest.permission.READ_MEDIA_IMAGES
-                                else
-                                    android.Manifest.permission.READ_EXTERNAL_STORAGE,
-                            ))
+                            if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO)
+                                != android.content.pm.PackageManager.PERMISSION_GRANTED
+                            ) {
+                                permLauncher.launch(android.Manifest.permission.RECORD_AUDIO)
+                            }
                         }
 
                         val prefs = remember { getSharedPreferences("app_prefs", MODE_PRIVATE) }
@@ -732,26 +734,34 @@ private fun AppContent() {
 private fun handleGithubOAuth(activity: android.app.Activity, intent: Intent?) {
     val data = intent?.data ?: return
     val isCustom = data.scheme == "localdreamet" && data.host == "oauth"
-    val isAppLink = data.scheme == "https" && data.host == "etc.tw.kg" && data.path == "/oauth.html"
+    val isAppLink = data.scheme == "https" && data.lastPathSegment == "oauth.html"
     if (!isCustom && !isAppLink) return
-    val code = data.getQueryParameter("code") ?: return
-    val redirect = "https://etc.tw.kg/oauth.html"
+    val code = data.getQueryParameter("code") ?: data.getQueryParameter("CODE") ?: return
+    // et.243：GitHub OAuth App 只能登记一个回调地址。之前只试 etc.tw.kg，
+    // 一旦 App 里登记的是 Pages 地址（或反过来），换 token 必然 404/失败，
+    // 用户看到的就是“授权完没跳回来”。这里按候选地址依次换，成功即止。
+    val candidateRedirects = listOf(
+        "https://etc.tw.kg/oauth.html",
+        "https://etqwfd.github.io/NightmareRoad-ET/oauth.html",
+        "https://etqwfd.github.io/LocalDream-ET/oauth.html",
+        "https://etqwfd.github.io/LocalDreamET/oauth.html",
+    )
     Thread {
         val result = runCatching {
-            val token = io.github.xororz.localdream.cloud.GithubDeviceAuth.exchangeCode(
+            val tk = io.github.xororz.localdream.cloud.GithubDeviceAuth.exchangeCodeAnyRedirect(
                 "Ov23ligVcx2ZUAG3lNAA",
                 "7d38de04bbd05140406f8351fd6c7b8ae08f380e",
                 code,
-                redirect,
+                candidateRedirects,
             )
             val provider = io.github.xororz.localdream.cloud.CloudConfig.Provider.GITHUB
-            val user = io.github.xororz.localdream.cloud.CloudClient.validatePAT(provider, token)
+            val user = io.github.xororz.localdream.cloud.CloudClient.validatePAT(provider, tk)
             val store = io.github.xororz.localdream.cloud.SecureTokenStore(activity)
             runCatching {
-                io.github.xororz.localdream.cloud.CloudClient.ensurePrivateRepo(provider, token, user.login)
+                io.github.xororz.localdream.cloud.CloudClient.ensurePrivateRepo(provider, tk, user.login)
             }
             store.saveToken(
-                provider, token, user.login, user.displayName,
+                provider, tk, user.login, user.displayName,
                 avatarUrl = user.avatarUrl,
                 owner = user.login,
                 repo = io.github.xororz.localdream.cloud.CloudConfig.BACKUP_REPO,

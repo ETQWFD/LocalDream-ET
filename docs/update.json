@@ -1,10 +1,12 @@
 {
-  "versionCode": 316,
-  "versionName": "4.0.0-et.242",
-  "title": "最新版本 v4.0.0-et.242（Nightmare Road-ET）",
-  "apkUrl": "https://github.com/ETQWFD/NightmareRoad-ET/releases/download/et.242/NightmareRoad-ET.apk",
-  "size": 165099204,
-  "sha256": "90ca775f23d267306807018dcf07bc83427add749debfe15b2dff4e5886c8c26",
-  "releaseNotes": "最新版本\n\n作者下个星期可能不更新，因为作者要嗝屁了，请勿来打扰；请在下下个星期再来打扰，因为作者又看广告复活了。纯属因为中专考试成绩出来要开家长会，作者要嗝屁了。作者不在的时候，一切由 @Qian七安~ @违规用户 负责，如有任何问题进群找管理员。本次最后一个版本更新内容：悬赏很抱歉对大家带来不便，作者承诺将在下个星期风波过后再更新，和看广告复活。\n\n1) 天玑 9000 及以上高端机（D9000/D9200/D9300/D9400）不再强制 CPU：改用 Mali GPU(OpenCL) 跑 SD1.5，画布上限 512，出图更快。\n2) 高端天玑 GPU 驱动若崩溃(SIGSEGV)，自动记录并在下一次生成回退 CPU，不需要重装。\n3) 低端天玑/Helio/PowerVR 继续强制 CPU，画布按内存压到 256–384，避免生成中被系统杀掉。\n4) NPU/DiT 页提示按芯片类型区分：高端天玑显示“GPU 加速可用”，低端显示“CPU 出图”；不再出现误导性的 32 位提示。\n5) 官方号额度、悬赏 24 小时自动结算、评分进度条、后台删除评论等修复沿用上一版。",
-  "url": "https://github.com/ETQWFD/NightmareRoad-ET/releases/download/et.242/NightmareRoad-ET.apk"
+  "versionCode": 317,
+  "versionName": "4.0.0-et.243",
+  "title": "最新版本 v4.0.0-et.243（Nightmare Road-ET）",
+  "apkUrl": "https://github.com/ETQWFD/NightmareRoad-ET/releases/download/et.243/NightmareRoad-ET.apk",
+  "size": 165137544,
+  "sha256": "9db4466d1c004b676580a9b4e9d46adcf2b9fb13a49d47065dfd1156877fd172",
+  "releaseNotes": "最新版本\n\n作者下个星期可能不更新，因为作者要嗝屁了，请勿来打扰；请在下下个星期再来打扰，因为作者又看广告复活了。纯属因为中专考试成绩出来要开家长会，作者要嗝屁了。作者不在的时候，一切由 @Qian七安~ @违规用户 负责，如有任何问题进群找管理员。本次最后一个版本更新内容：悬赏很抱歉对大家带来不便，作者承诺将在下个星期风波过后再更新，和看广告复活。\n\n1) 隐私修复：不再在启动时申请“读取相册”权限，选图改用系统照片选择器；发布改成一次只能选一张，并且必须手动勾选“确认公开发布”才会上传，杜绝相册图片被整批自动传上社区。\n2) 图片社区发布/加载提速：新增 png/index.json 索引，打开社区从“每张图一次请求”变成一次请求读全量；本机刚发布的作品立刻显示，不用反复下拉刷新；发布前按体积自动压缩（最长边 1280→640），不再因为十几 MB 的 PNG 卡住/失败。\n3) 自己发布的图可以下架了：下架走内置写权限兜底，同步删除 png/meta/thumb 并更新索引，下架后立刻从列表消失。\n4) 悬赏提速与结算修复：新增 bounties/index.json，悬赏页一次请求读全量；发布/验收/24 小时自动结算都会更新索引，已完成（paid/closed）的悬赏不再留在列表里；关闭时自动补取文件版本，解决“验收成功但悬赏不消失”。\n5) 消息长按复制：长按菜单新增“选择文字（局部复制）”，弹出可选取文本的浮层，能选中一段复制/剪切，官方 ROM 上手势被吃掉也能用。\n6) GitHub 授权登录：自动回跳换 token 支持多个候选回调地址；回跳页新增“复制回跳链接”，App 里新增“粘贴回跳链接或 code 完成登录”，浏览器拦截 scheme 或回调地址不一致时不再卡在授权页。\n7) 高配手机（含天玑 9000 及以上）：修复大核线程数在骁龙/麒麟/Exynos 上读空退化成 4 线程的问题，CPU 出图更快；高端天玑走 Mali GPU(OpenCL)，画布上限 512，GPU 驱动崩溃自动回 CPU。\n8) 图片/视频加载提速：全局图片加载器加大内存与磁盘缓存，滑走再滑回不再重新下载。\n\n说明：天玑/麒麟/Exynos 的 NPU 仍需厂商 NDA 授权（NeuroPilot/HiAI 不对外），第三方 App 无法直接调用，因此这些机型用 GPU+CPU 出图；高通旗舰仍可用 NPU。",
+  "url": "https://github.com/ETQWFD/NightmareRoad-ET/releases/download/et.243/NightmareRoad-ET.apk",
+  "force": false,
+  "mustUpdate": false
 }

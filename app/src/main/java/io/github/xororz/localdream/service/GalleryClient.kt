@@ -79,7 +79,10 @@ object GalleryClient {
     // et.153: 内存缓存，第二次进入社区秒开；下拉刷新时清空。
     @Volatile
     private var cached: List<GalleryItem>? = null
-    fun invalidate() { cached = null }
+    private var cachedAt = 0L
+    private val pendingUpserts = java.util.concurrent.ConcurrentHashMap<String, GalleryItem>()
+    private val pendingRemoves = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+    fun invalidate() { cached = null; cachedAt = 0L }
     private const val API = "https://api.github.com/repos/ETQWFD/NightmareRoad-ET-Gallery/contents"
     // et.149: 国内优先 jsdelivr / gitmirror，raw 作为兜底，图片和元数据都走镜像。
     private val IMG_BASES = listOf(
@@ -187,6 +190,106 @@ object GalleryClient {
         return if (msg.isBlank()) reason else "$reason：$msg"
     }
 
+    /**
+     * et.243: 社区索引文件 png/index.json。
+     * 旧实现要为每张图单独发一次 meta 请求（200 张 = 200 次往返），
+     * 社区打开慢、发布后刷不出来，主要就是这里。现在改为一次请求拿全量，
+     * 发布/下架时顺带更新索引；索引缺失或过旧时仍自动回落到逐图 meta。
+     */
+    private fun parseIndex(text: String): Map<String, JSONObject>? = try {
+        val arr = JSONObject(text).optJSONArray("items") ?: return null
+        val m = HashMap<String, JSONObject>()
+        for (i in 0 until arr.length()) {
+            val o = arr.optJSONObject(i) ?: continue
+            val p = o.optString("path")
+            if (p.isNotBlank()) m[p] = o
+        }
+        m
+    } catch (_: Exception) {
+        null
+    }
+
+    private fun fetchIndex(): Map<String, JSONObject>? {
+        val (code, text) = httpAny(META_BASES.map { "$it/png/index.json" })
+        if (code in 200..299) {
+            parseIndex(text)?.let { return it }
+        }
+        return try {
+            val (ac, at) = http("$API/png/index.json", "GET")
+            if (ac != 200) return null
+            val b64 = JSONObject(at).optString("content", "").replace("\n", "")
+            if (b64.isBlank()) return null
+            parseIndex(String(Base64.getDecoder().decode(b64), Charsets.UTF_8))
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    /** 读-改-写索引；返回是否成功（失败只影响下次打开速度，不影响本次发布）。 */
+    private fun patchIndex(
+        upserts: Map<String, JSONObject>,
+        removes: List<String>,
+        token: String,
+    ): Boolean {
+        return try {
+            val api = "$API/png/index.json"
+            var sha = ""
+            val cur = HashMap<String, JSONObject>()
+            val (gc, gt) = httpWithTokenGet(api, token)
+            if (gc == 200) {
+                sha = JSONObject(gt).optString("sha", "")
+                val b64 = JSONObject(gt).optString("content", "").replace("\n", "")
+                if (b64.isNotBlank()) {
+                    parseIndex(String(Base64.getDecoder().decode(b64), Charsets.UTF_8))
+                        ?.let { cur.putAll(it) }
+                }
+            }
+            upserts.forEach { (k, v) -> cur[k] = v }
+            removes.forEach { cur.remove(it) }
+            val arr = JSONArray()
+            cur.entries.sortedByDescending { it.value.optLong("ts", 0) }.take(2000).forEach { (k, v) ->
+                arr.put(JSONObject(v.toString()).put("path", k))
+            }
+            val body = JSONObject()
+                .put("v", 1)
+                .put("updated", System.currentTimeMillis())
+                .put("items", arr)
+            val payload = JSONObject()
+                .put("message", "index ${upserts.size}+${removes.size}")
+                .put("content", Base64.getEncoder().encodeToString(body.toString().toByteArray()))
+            if (sha.isNotBlank()) payload.put("sha", sha)
+            val (pc, _) = httpWithToken(api, "PUT", payload.toString().toByteArray(), token)
+            val ok = pc in 200..201
+            if (ok) {
+                MirrorPurge.jsdelivr("NightmareRoad-ET-Gallery", "png/index.json")
+            }
+            ok
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    private fun httpWithTokenGet(url: String, token: String): Pair<Int, String> {
+        var c: HttpURLConnection? = null
+        return try {
+            c = (URL(url).openConnection() as HttpURLConnection).apply {
+                requestMethod = "GET"
+                connectTimeout = 6000
+                readTimeout = 12000
+                setRequestProperty("Accept", "application/vnd.github+json")
+                setRequestProperty("User-Agent", "NightmareRoad-ET")
+                setRequestProperty("Authorization", "token $token")
+            }
+            val code = c.responseCode
+            code to (if (code in 200..299) c.inputStream else c.errorStream)
+                ?.bufferedReader()?.readText().orEmpty()
+        } catch (e: Exception) {
+            -1 to (e.message ?: "")
+        } finally {
+            c?.disconnect()
+        }
+    }
+
     /** et.149: 多镜像取字节，返回 200 时的 body。 */
     private fun httpAny(urls: List<String>): Pair<Int, String> {
         for (u in urls) {
@@ -233,7 +336,10 @@ object GalleryClient {
 
     /** 社区列表；失败返回空列表由 UI 提示。 */
     suspend fun list(force: Boolean = false): List<GalleryItem> = withContext(Dispatchers.IO) {
-        if (!force) cached?.let { return@withContext it }
+        if (!force) cached?.let {
+            // et.243: 60 秒内直接用内存缓存，切页面/返回社区不再重新拉全量列表。
+            if (System.currentTimeMillis() - cachedAt < 60_000) return@withContext it
+        }
         try {
             // et.152: 国内 jsdelivr 包目录枚举最快（<1s），优先；api.github.com 作为兜底。
             var names: List<String> = enumerateViaApi()
@@ -247,7 +353,13 @@ object GalleryClient {
                     }
                 } catch (_: Exception) { emptyList() }
             }
-            val metas = fetchMetas(names)
+            val idx = runCatching { fetchIndex() }.getOrNull()
+            val metas: Map<String, JSONObject> = if (idx != null && idx.isNotEmpty()) {
+                // 索引按 png/ 下的相对路径存；老列表 name 同样是相对路径。
+                idx.mapKeys { (k, _) -> k.substringBeforeLast(".png") }
+            } else {
+                fetchMetas(names)
+            }
             names.map { n ->
                 val stem = n.substringBeforeLast(".png")
                 val m = metas[stem]
@@ -270,10 +382,26 @@ object GalleryClient {
                     mirrors,
                     thumbs,
                 )
-            }.sortedByDescending { it.ts }.also { cached = it }
+            }.sortedByDescending { it.ts }.also {
+                cached = mergePending(it)
+                cachedAt = System.currentTimeMillis()
+            }
         } catch (_: Exception) {
             cached ?: emptyList()
         }
+    }
+
+    /**
+     * et.243: 本机刚发布/下架的作品立刻出现在列表里。GitHub 提交后
+     * jsDelivr / raw 缓存有几十秒到几分钟延迟，之前用户只能反复下拉刷新，
+     * 看起来就像“发布没反应/特别慢”。这里把待生效变更在内存里合并一次。
+     */
+    private fun mergePending(items: List<GalleryItem>): List<GalleryItem> {
+        if (pendingUpserts.isEmpty() && pendingRemoves.isEmpty()) return items
+        val out = items.filterNot { it.name in pendingRemoves || it.name.removePrefix("png/") in pendingRemoves }
+            .toMutableList()
+        pendingUpserts.values.forEach { p -> if (out.none { it.name == p.name }) out.add(p) }
+        return out.sortedByDescending { it.ts }
     }
 
     /** et.149: 元数据走多镜像并发读，单张失败不影响整页。 */
@@ -393,6 +521,17 @@ object GalleryClient {
                 .put("content", Base64.getEncoder().encodeToString(meta.toString().toByteArray()))
                 .toString().toByteArray()
             val (c2, t2) = putWithProgress("$API/png/$dir/pic_$id.meta.json", metaBody, token, null)
+            // et.243: 同步写入社区索引，别人打开社区只要一次请求就能看到这张。
+            runCatching {
+                patchIndex(
+                    mapOf(
+                        "$dir/pic_$id.png" to JSONObject(meta.toString())
+                            .put("path", "$dir/pic_$id.png"),
+                    ),
+                    emptyList(),
+                    token,
+                )
+            }
             // Small preview so the community grid does not download 1-2 MB PNGs.
             runCatching {
                 val jpeg = makeThumb(pngBytes)
@@ -429,6 +568,22 @@ object GalleryClient {
                 io.github.xororz.localdream.cloud.LogHub.Category.UPLOAD,
                 "gallery upload ok $dir/pic_$id.png (${pngBytes.size} bytes, verified=$verified)",
             )
+            // et.243: 立即插进本机列表，不等 CDN 缓存过期。
+            runCatching {
+                val rel = "$dir/pic_$id.png"
+                val stem = rel.substringBeforeLast(".png")
+                pendingUpserts[rel] = GalleryItem(
+                    rel,
+                    "https://cdn.jsdelivr.net/gh/ETQWFD/NightmareRoad-ET-Gallery@main/png/$rel",
+                    author,
+                    name.ifBlank { "作品" },
+                    price,
+                    meta.optLong("ts", System.currentTimeMillis()),
+                    IMG_BASES.map { "$it/png/$rel" },
+                    IMG_BASES.map { "$it/thumb/$stem.jpg" },
+                )
+                pendingRemoves.remove(rel)
+            }
             UploadResult(true, if (verified) "" else "已上传，仓库索引稍有延迟，请下拉刷新")
         } catch (e: Exception) {
             io.github.xororz.localdream.cloud.LogHub.log(
@@ -656,7 +811,7 @@ object GalleryClient {
         }
     }
 
-    /** 作者下架自己的作品：删除 png、meta、thumb 三个文件。 */
+    /** 作者下架自己的作品：删除 png、meta、thumb 三个文件，并同步索引。 */
     suspend fun delete(name: String, token: String): Pair<Boolean, String> = withContext(Dispatchers.IO) {
         val api = "https://api.github.com/repos/ETQWFD/NightmareRoad-ET-Gallery/contents"
         // et.220：新图在 png/{作者}/ 下，name 可能是相对路径；删除时必须跟着目录走，
@@ -671,33 +826,50 @@ object GalleryClient {
             "png/$prefix$base.meta.json",
             "thumb/$prefix$base.jpg",
         ).distinct()
+        // et.243：普通账号不是 Gallery 仓库协作者，用它自己的 token 删会 404/403，
+        // 这就是“自己发的图下架不了”的直接原因。发布走的内置令牌，下架同样兜底一次。
+        val tokens = listOfNotNull(token.takeIf { it.isNotBlank() }, BuildConfig.GALLERY_TOKEN.takeIf { it.isNotBlank() })
+            .distinct()
         var okAny = false
         var err = ""
         for (path in paths) {
+            for (tk in tokens) {
+                val done = runCatching {
+                    val get = (URL("$api/$path").openConnection() as java.net.HttpURLConnection).apply {
+                        requestMethod = "GET"; connectTimeout = 6000; readTimeout = 10000
+                        setRequestProperty("Authorization", "token $tk")
+                        setRequestProperty("Accept", "application/vnd.github+json")
+                        setRequestProperty("User-Agent", "NightmareRoad-ET")
+                    }
+                    val gc = get.responseCode
+                    if (gc == 404) return@runCatching true // 文件本来就不存在
+                    if (gc != 200) { err = brief(gc, ""); return@runCatching false }
+                    val sha = JSONObject(get.inputStream.use { it.readBytes().toString(Charsets.UTF_8) })
+                        .optString("sha", "")
+                    if (sha.isBlank()) return@runCatching false
+                    val body = JSONObject().put("message", "delete $path").put("sha", sha)
+                        .toString().toByteArray()
+                    val del = (URL("$api/$path").openConnection() as java.net.HttpURLConnection).apply {
+                        requestMethod = "DELETE"; doOutput = true
+                        connectTimeout = 8000; readTimeout = 15000
+                        setRequestProperty("Authorization", "token $tk")
+                        setRequestProperty("Accept", "application/vnd.github+json")
+                        setRequestProperty("Content-Type", "application/json")
+                        setRequestProperty("User-Agent", "NightmareRoad-ET")
+                    }
+                    del.outputStream.use { it.write(body) }
+                    val dc = del.responseCode
+                    if (dc in 200..299) true else { err = brief(dc, ""); false }
+                }.getOrElse { err = it.message ?: "删除失败"; false }
+                if (done) { okAny = true; break }
+            }
+        }
+        if (okAny) {
             runCatching {
-                val get = (URL("$api/$path").openConnection() as java.net.HttpURLConnection).apply {
-                    requestMethod = "GET"; connectTimeout = 6000; readTimeout = 10000
-                    setRequestProperty("Authorization", "token $token")
-                    setRequestProperty("Accept", "application/vnd.github+json")
-                    setRequestProperty("User-Agent", "NightmareRoad-ET")
-                }
-                if (get.responseCode != 200) return@runCatching
-                val sha = JSONObject(get.inputStream.use { it.readBytes().toString(Charsets.UTF_8) })
-                    .optString("sha", "")
-                if (sha.isBlank()) return@runCatching
-                val body = JSONObject().put("message", "delete $path").put("sha", sha)
-                    .toString().toByteArray()
-                val del = (URL("$api/$path").openConnection() as java.net.HttpURLConnection).apply {
-                    requestMethod = "DELETE"; doOutput = true
-                    connectTimeout = 8000; readTimeout = 15000
-                    setRequestProperty("Authorization", "token $token")
-                    setRequestProperty("Accept", "application/vnd.github+json")
-                    setRequestProperty("Content-Type", "application/json")
-                    setRequestProperty("User-Agent", "NightmareRoad-ET")
-                }
-                del.outputStream.use { it.write(body) }
-                if (del.responseCode in 200..299) okAny = true else err = "HTTP ${del.responseCode}"
-            }.onFailure { err = it.message ?: "删除失败" }
+                patchIndex(emptyMap(), listOf(rel), tokens.last())
+                pendingUpserts.remove(rel)
+                pendingRemoves.add(rel)
+            }
         }
         invalidate()
         okAny to err

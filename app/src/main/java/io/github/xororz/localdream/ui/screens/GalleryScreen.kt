@@ -936,22 +936,27 @@ private fun UploadDialog(ctx: Context, onPublished: () -> Unit = {}, onDismiss: 
     val token = SecureTokenStore(ctx).token(CloudConfig.Provider.GITHUB)
     val login = SecureTokenStore(ctx).state(CloudConfig.Provider.GITHUB)?.login
 
-    // 2026-11：相册支持一次选多张，逐张独立发布（后台也会分别生成条目）。
-    // 2026-11：系统照片选择器，一次最多 100 张。
+    // et.243（隐私修复）：相册选图改为**一次只能选一张**，并且必须手动勾选
+    // “确认公开”才会上传。旧版用 PickMultipleVisualMedia(100)，部分厂商相册
+    // 选择器会把“全选/分享全部”整批塞回来，用户点一次发布就把自己没打算
+    // 公开的相册图全传上社区，看起来就像“相册自动上传”。
+    var confirmedPublic by remember { mutableStateOf(false) }
     val photoPicker = rememberLauncherForActivityResult(
-        androidx.activity.result.contract.ActivityResultContracts.PickMultipleVisualMedia(100),
-    ) { uris ->
-        if (uris.isNotEmpty()) {
+        androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia(),
+    ) { uri ->
+        if (uri != null) {
             pickedFile = null
-            pickedUris = uris.take(100)
-            pickedBitmap = io.github.xororz.localdream.utils.ImageDecode.decodeSampledUri(ctx, pickedUris.first(), 1024)
+            pickedUris = listOf(uri)
+            confirmedPublic = false
+            pickedBitmap = io.github.xororz.localdream.utils.ImageDecode.decodeSampledUri(ctx, uri, 1024)
         }
     }
-    val albumLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
-        if (uris.isNotEmpty()) {
+    val albumLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) {
             pickedFile = null
-            pickedUris = uris
-            pickedBitmap = io.github.xororz.localdream.utils.ImageDecode.decodeSampledUri(ctx, uris.first(), 1024)
+            pickedUris = listOf(uri)
+            confirmedPublic = false
+            pickedBitmap = io.github.xororz.localdream.utils.ImageDecode.decodeSampledUri(ctx, uri, 1024)
         }
     }
 
@@ -1010,6 +1015,11 @@ private fun UploadDialog(ctx: Context, onPublished: () -> Unit = {}, onDismiss: 
                         else "已选：${b.width}×${b.height}",
                         style = MaterialTheme.typography.labelSmall,
                     )
+                    Text(
+                        "只会上传这一张到社区，不会读取或上传相册里的其它图片。",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
                 pickedFile?.let { f ->
                     Spacer(Modifier.height(8.dp))
@@ -1036,6 +1046,7 @@ private fun UploadDialog(ctx: Context, onPublished: () -> Unit = {}, onDismiss: 
                                     pickedUris = emptyList()
                                     pickedBitmap = null
                                     pickedFile = f
+                                    confirmedPublic = false
                                 }) {
                                     AsyncImage(
                                         model = f, contentDescription = f.name,
@@ -1074,6 +1085,20 @@ private fun UploadDialog(ctx: Context, onPublished: () -> Unit = {}, onDismiss: 
                     Spacer(Modifier.height(6.dp))
                     Text(msg, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                 }
+                // et.243：公开前必须手动勾选确认，避免“以为只是预览，结果整批相册图被传上去”。
+                if ((pickedUri != null || pickedFile != null) && !uploading) {
+                    Spacer(Modifier.height(10.dp))
+                    Row(
+                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                        modifier = Modifier.clickable { confirmedPublic = !confirmedPublic },
+                    ) {
+                        Checkbox(checked = confirmedPublic, onCheckedChange = { confirmedPublic = it })
+                        Text(
+                            "我确认把这张作品公开发布到图片社区（所有用户可见、可购买）",
+                            style = MaterialTheme.typography.labelMedium,
+                        )
+                    }
+                }
                 Spacer(Modifier.height(16.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (uploading) {
@@ -1090,11 +1115,14 @@ private fun UploadDialog(ctx: Context, onPublished: () -> Unit = {}, onDismiss: 
                     } else {
                         TextButton(onClick = onDismiss) { Text("取消") }
                     }
-                    Button(enabled = !uploading, onClick = {
+                    Button(
+                        enabled = !uploading && confirmedPublic,
+                        onClick = {
                         val p = price.toIntOrNull() ?: 0
                         when {
                             p > 9000 -> msg = "售价不能超过 9000"
                             pickedUri == null && pickedFile == null -> msg = "请先选择图片"
+                            !confirmedPublic -> msg = "请先勾选“确认公开发布”"
                             else -> {
                                 uploading = true
                                 msg = "正在压缩并上传…"
@@ -1193,23 +1221,33 @@ private fun encodeForGallery(ctx: Context, uri: Uri?, file: File?): ByteArray? {
             null
         }) ?: return null
 
-        val maxEdge = 2560
-        val scale = minOf(1f, maxEdge.toFloat() / maxOf(bitmap.width, bitmap.height))
-        val target = if (scale < 1f) {
-            Bitmap.createScaledBitmap(
-                bitmap,
-                (bitmap.width * scale).toInt().coerceAtLeast(1),
-                (bitmap.height * scale).toInt().coerceAtLeast(1),
-                true,
-            )
-        } else {
-            bitmap
+        // et.243（发布慢/发布失败修复）：之前把最长边放到 2560 再存 PNG，
+        // 相册原图传上来就是 8–15 MB，base64 后 11–20 MB，GitHub contents
+        // 接口在这种体积下经常超时或被判定过大，表现就是“发布转圈很久/失败”。
+        // 现在按体积预算逐级降边：先 1280，超过预算再 1024 / 896 / 768。
+        val budget = 1_600_000
+        var best: ByteArray? = null
+        for (edge in intArrayOf(1280, 1024, 896, 768, 640)) {
+            val sc = minOf(1f, edge.toFloat() / maxOf(bitmap.width, bitmap.height))
+            val bmp = if (sc < 1f) {
+                Bitmap.createScaledBitmap(
+                    bitmap,
+                    (bitmap.width * sc).toInt().coerceAtLeast(1),
+                    (bitmap.height * sc).toInt().coerceAtLeast(1),
+                    true,
+                )
+            } else {
+                bitmap
+            }
+            val o = ByteArrayOutputStream()
+            bmp.compress(Bitmap.CompressFormat.PNG, 100, o)
+            if (bmp !== bitmap) bmp.recycle()
+            val bytes = o.toByteArray()
+            best = bytes
+            if (bytes.size <= budget) break
         }
-        val out = ByteArrayOutputStream()
-        target.compress(Bitmap.CompressFormat.PNG, 100, out)
-        if (target !== bitmap) target.recycle()
         bitmap.recycle()
-        out.toByteArray()
+        best
     }.getOrNull()
 }
 

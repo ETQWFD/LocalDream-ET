@@ -393,8 +393,8 @@ fun CloudBackupDialog(onDismiss: () -> Unit) {
                                     }
                                 }
                             },
-                        ) { Text(if (oauthBusy) "等待浏览器授权…" else "使用 GitHub 网页授权登录") }
-                        OutlinedButton(
+                        ) { Text(if (oauthBusy) "等待浏览器授权…" else "方式一：设备码授权登录（推荐，不依赖回调地址）") }
+                        TextButton(
                             enabled = !oauthBusy,
                             onClick = {
                                 val url = "https://github.com/login/oauth/authorize" +
@@ -411,7 +411,65 @@ fun CloudBackupDialog(onDismiss: () -> Unit) {
                                 }
                                 oauthHint = "授权完成后会自动跳回本应用（若没跳回，请检查 OAuth App 的回调地址是否填了 https://etc.tw.kg/oauth.html）"
                             },
-                        ) { Text("网页授权并自动回跳") }
+                        ) { Text("方式二：网页授权自动回跳（需 OAuth App 回调地址已填 https://etc.tw.kg/oauth.html）") }
+                        // et.243：浏览器拦截自定义 scheme、或 OAuth App 回调地址与
+                        // https://etc.tw.kg/oauth.html 不一致时，用户会停在回跳页。
+                        // 这里允许把回跳链接（或 code）直接粘进来完成登录。
+                        var manualCallback by remember { mutableStateOf("") }
+                        OutlinedTextField(
+                            value = manualCallback,
+                            onValueChange = { manualCallback = it },
+                            label = { Text("没自动跳回？粘贴回跳链接或 code") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        TextButton(
+                            enabled = !oauthBusy && manualCallback.isNotBlank(),
+                            onClick = {
+                                val code = io.github.xororz.localdream.cloud.GithubDeviceAuth
+                                    .parseCallbackCode(manualCallback)
+                                if (code == null) {
+                                    status = "没识别到授权码，请粘贴浏览器地址栏里的完整链接"
+                                    return@TextButton
+                                }
+                                oauthBusy = true; status = null
+                                scope.launch {
+                                    val r = withContext(Dispatchers.IO) {
+                                        runCatching {
+                                            val tk = io.github.xororz.localdream.cloud.GithubDeviceAuth
+                                                .exchangeCodeAnyRedirect(
+                                                    "Ov23ligVcx2ZUAG3lNAA",
+                                                    "7d38de04bbd05140406f8351fd6c7b8ae08f380e",
+                                                    code,
+                                                    listOf(
+                                                        "https://etc.tw.kg/oauth.html",
+                                                        "https://etqwfd.github.io/NightmareRoad-ET/oauth.html",
+                                                        "https://etqwfd.github.io/LocalDream-ET/oauth.html",
+                                                    ),
+                                                )
+                                            val user = CloudClient.validatePAT(provider, tk)
+                                            runCatching {
+                                                CloudClient.ensurePrivateRepo(provider, tk, user.login)
+                                            }
+                                            store.saveToken(
+                                                provider, tk, user.login, user.displayName,
+                                                avatarUrl = user.avatarUrl,
+                                                owner = user.login,
+                                                repo = CloudConfig.BACKUP_REPO,
+                                                repoState = SecureTokenStore.RepoState.READY,
+                                            )
+                                            user
+                                        }
+                                    }
+                                    r.onSuccess {
+                                        auth = store.state(provider)
+                                        manualCallback = ""
+                                        status = "登录成功：${'$'}{it.login}"
+                                    }.onFailure { status = "登录失败：${'$'}{it.message}" }
+                                    oauthBusy = false
+                                }
+                            },
+                        ) { Text("用粘贴的链接完成登录") }
                         oauthHint?.let {
                             Text(it, style = androidx.compose.material3.MaterialTheme.typography.bodySmall)
                         }
