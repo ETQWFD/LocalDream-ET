@@ -582,8 +582,34 @@ class BackendService : Service() {
     private fun startBackend(config: BackendConfig): Boolean {
         val modelId = config.modelId
         var backendType = config.backendType
-        val width = config.width
-        val height = config.height
+        var width = config.width
+        var height = config.height
+
+        // et.241：天玑/麒麟/Exynos 只能走 MNN CPU 出图，它们的 NPU 是
+        // NeuroPilot/MDLA 私有栈（NDA 授权 + DLA 预编译模型），第三方 APK 无
+        // 法直接调用；既然走 CPU，就必须把画布压到能稳定出图的尺寸，否则
+        // 低端机一生成就被 LMK 杀掉（表现为闪退/无法生成）。
+        val mtkLike = io.github.xororz.localdream.utils.DeviceCapabilities.socInfo.let {
+            it.vendor != io.github.xororz.localdream.utils.DeviceCapabilities.SocVendor.QUALCOMM
+        }
+        if (mtkLike && (backendType == "sd15cpu" || backendType == "sdxlmnn")) {
+            val totalGb = io.github.xororz.localdream.utils.DeviceCapabilities
+                .totalRamBytes(this) / (1024.0 * 1024.0 * 1024.0)
+            val cap = if (totalGb <= 4.0) 256 else 384
+            val longEdge = maxOf(width, height)
+            if (longEdge > cap) {
+                val scale = cap.toDouble() / longEdge.toDouble()
+                width = ((width * scale).toInt() / 8 * 8).coerceAtLeast(128)
+                height = ((height * scale).toInt() / 8 * 8).coerceAtLeast(128)
+                Log.i(TAG, "non-Qualcomm SoC: canvas clamped to ${width}×$height (cap=$cap)")
+                runCatching {
+                    io.github.xororz.localdream.cloud.LogHub.log(
+                        io.github.xororz.localdream.cloud.LogHub.Category.ENGINE,
+                        "non-Qualcomm CPU canvas clamp -> ${width}x$height",
+                    )
+                }
+            }
+        }
         Log.i(TAG, "backend start, model: $modelId, resolution: $width×$height")
 
         // reconcile() has already stopped any previous process; just re-arm

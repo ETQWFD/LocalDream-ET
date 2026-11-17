@@ -1,10 +1,10 @@
 {
-  "versionCode": 314,
-  "versionName": "4.0.0-et.240",
-  "title": "最新版本 v4.0.0-et.240（Nightmare Road-ET）",
-  "apkUrl": "https://github.com/ETQWFD/NightmareRoad-ET/releases/download/et.240/NightmareRoad-ET.apk",
-  "size": 165096944,
-  "sha256": "e30149123f24929a4174a24fa9569dbd79f29fc567a5966792ac84d38c2809f8",
-  "releaseNotes": "最新版本\n\n作者下个星期可能不更新，因为作者要嗝屁了，请勿来打扰；请在下下个星期再来打扰，因为作者又看广告复活了。纯属因为中专考试成绩出来要开家长会，作者要嗝屁了。作者不在的时候，一切由 @Qian七安~ @违规用户 负责，如有任何问题进群找管理员。本次最后一个版本更新内容：悬赏很抱歉对大家带来不便，作者承诺将在下个星期风波过后再更新，和看广告复活。\n\n1) 官方号（ETQWFD）额度判定改为多来源识别，生成时不再被扣额度、不再出现“官方号也限额度”。\n2) 悬赏 24 小时自动结算改为任何用户打开悬赏页都会触发：超时仍 open 的悬赏默认发布者满意，托管额度付给最早未驳回的提交者，并给提交者和发布者各写一条公告。\n3) 悬赏被驳回时，聊天消息与提交者个人公告都会提示“不满意，请重新提交”。\n4) 备用额度（赚取/转账所得，默认 0、不随 7 天重置）可在黄色进度条下“提取额度”，验证锁屏密码后并入主额度，主额度硬上限 2 亿。\n5) 模型下载固定 HTTP/1.1，HEAD 被拒绝时用 Range 请求解析文件大小，减少“0 B / 未知大小”和 http-1 下载失败。\n6) 公共聊天图片/视频继续使用 raw、jsDelivr、gitmirror、kkgithub 多镜像兜底，保存相册与视频播放同链路。\n7) 官网与 App 内可见品牌统一为 Nightmare Road-ET，模型目录 NightmareRoad-ET/models，Release 资产名 NightmareRoad-ET.apk。",
-  "url": "https://github.com/ETQWFD/NightmareRoad-ET/releases/download/et.240/NightmareRoad-ET.apk"
+  "versionCode": 315,
+  "versionName": "4.0.0-et.241",
+  "title": "最新版本 v4.0.0-et.241（Nightmare Road-ET）",
+  "apkUrl": "https://github.com/ETQWFD/NightmareRoad-ET/releases/download/et.241/NightmareRoad-ET.apk",
+  "size": 165097480,
+  "sha256": "9cf401fdff078aa526fbd98ed281ac0aef88e0f59d704aec69c954c514e95a54",
+  "releaseNotes": "最新版本\n\n作者下个星期可能不更新，因为作者要嗝屁了，请勿来打扰；请在下下个星期再来打扰，因为作者又看广告复活了。纯属因为中专考试成绩出来要开家长会，作者要嗝屁了。作者不在的时候，一切由 @Qian七安~ @违规用户 负责，如有任何问题进群找管理员。本次最后一个版本更新内容：悬赏很抱歉对大家带来不便，作者承诺将在下个星期风波过后再更新，和看广告复活。\n\n1) 天玑/麒麟/Exynos 设备：明确检测芯片厂商，自动切 CPU 引擎出图；画布按内存自动压到 256–384 长边，避免生成中被系统杀进程。\n2) 非高通设备打开 NPU/DiT 页不再显示“32 位”这类误导提示，改为说明厂商 NPU 需要 NDA 授权的 NeuroPilot/DLA，第三方 App 无法调用。\n3) 低配/32 位设备继续使用 SD1.5 CPU 引擎，8–12 步即可出图；公共聊天、悬赏、额度、更新链路保持上一版修复。\n4) 官方号额度判定、悬赏 24 小时自动结算、评分进度条、后台删除评论等修复沿用 et.240。",
+  "url": "https://github.com/ETQWFD/NightmareRoad-ET/releases/download/et.241/NightmareRoad-ET.apk"
 }

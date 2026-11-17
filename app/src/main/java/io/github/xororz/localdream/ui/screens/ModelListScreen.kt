@@ -1713,8 +1713,11 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
             }
 
             if (npuUnavailable) {
+                val socLabel = io.github.xororz.localdream.utils.DeviceCapabilities.vendorLabel()
                 Text(
-                    text = "本机不是骁龙（无 Hexagon NPU），NPU/DiT 模型无法运行，会直接报“后端启动失败”。请使用 CPU Models；CPU 出图建议 512×512 以内、步数 12–20。",
+                    text = "本机为 ${socLabel} 芯片：天玑/麒麟/Exynos 的 NPU 走厂商私有 NeuroPilot/DLA 栈，" +
+                        "需要 NDA 授权和预编译模型，第三方 App 无法直接调用，因此 NPU/DiT 模型会报“后端启动失败”。" +
+                        "已自动切到 CPU 引擎出图（SD1.5，长边自动压到 256–384、步数建议 8–12），可直接使用 CPU Models。",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 6.dp),
