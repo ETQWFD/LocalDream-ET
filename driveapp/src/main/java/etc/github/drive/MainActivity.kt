@@ -27,7 +27,11 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.foundation.border
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -48,6 +52,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -80,7 +85,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            MaterialTheme { DriveRoot() }
+            // 与出图 App 同一套 tangerine 配色 / 深色跟随系统
+            val dark = androidx.compose.foundation.isSystemInDarkTheme()
+            MaterialTheme(colorScheme = driveScheme(dark)) { DriveRoot() }
         }
     }
 }
@@ -152,10 +159,19 @@ private fun LoginScreen(onLogin: (String) -> Unit) {
     var busy by remember { mutableStateOf(false) }
     var err by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
-    Surface(modifier = Modifier.fillMaxSize()) {
+    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(24.dp),
+            modifier = Modifier.fillMaxWidth().padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
+        ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(28.dp))
+                .background(MaterialTheme.colorScheme.surface)
+                .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.35f), RoundedCornerShape(28.dp))
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text("Nightmare 云盘", style = MaterialTheme.typography.headlineSmall)
             Text(
@@ -188,6 +204,7 @@ private fun LoginScreen(onLogin: (String) -> Unit) {
                 },
             ) { Text(if (busy) "登录中…" else "登录") }
             if (busy) CircularProgressIndicator(modifier = Modifier.padding(top = 4.dp))
+            }
         }
     }
 }
@@ -200,6 +217,7 @@ private fun DriveScreen(email: String, onLogout: () -> Unit) {
     var loading by remember { mutableStateOf(true) }
     var refreshToken by remember { mutableStateOf(0) }
     var viewer by remember { mutableStateOf<DriveAccount.RemoteImage?>(null) }
+    var confirmLogout by remember { mutableStateOf(false) }
     LaunchedEffect(refreshToken, email) {
         loading = true
         items = withContext(Dispatchers.IO) { DriveAccount.listImages(email) }
@@ -209,9 +227,12 @@ private fun DriveScreen(email: String, onLogout: () -> Unit) {
         topBar = {
             TopAppBar(
                 title = { Text("${email} 的云盘（${items.size}）", style = MaterialTheme.typography.titleMedium) },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                ),
                 actions = {
                     IconButton(onClick = { refreshToken++ }) { Icon(Icons.Default.Refresh, "刷新") }
-                    OutlinedButton(onClick = onLogout, modifier = Modifier.padding(end = 8.dp)) { Text("退出") }
+                    OutlinedButton(onClick = { confirmLogout = true }, modifier = Modifier.padding(end = 8.dp)) { Text("退出") }
                 },
             )
         },
@@ -241,6 +262,18 @@ private fun DriveScreen(email: String, onLogout: () -> Unit) {
         }
     }
 
+    if (confirmLogout) {
+        AlertDialog(
+            onDismissRequest = { confirmLogout = false },
+            title = { Text("退出登录") },
+            text = { Text("退出后需要重新用邮箱账号登录才能查看云盘图片。相册里已下载的图片不受影响。") },
+            confirmButton = {
+                Button(onClick = { confirmLogout = false; onLogout() }) { Text("退出") }
+            },
+            dismissButton = { OutlinedButton(onClick = { confirmLogout = false }) { Text("取消") } },
+        )
+    }
+
     viewer?.let { img ->
         ViewerDialog(
             email = email,
@@ -266,7 +299,8 @@ private fun Thumb(email: String, img: DriveAccount.RemoteImage, onClick: () -> U
         modifier = Modifier
             .fillMaxWidth()
             .aspectRatio(1f)
-            .background(Color(0xFF15181D))
+            .clip(RoundedCornerShape(14.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
             .pointerInput(img.name) { detectTapGestures(onTap = { onClick() }) },
         contentAlignment = Alignment.Center,
     ) {
