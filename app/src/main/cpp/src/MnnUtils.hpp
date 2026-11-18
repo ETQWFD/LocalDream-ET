@@ -148,18 +148,28 @@ inline MNN::Session *createMnnSessionGpu(MNN::Interpreter *interpreter,
   return interpreter->createSession(config);
 }
 
+// et.247: App 侧判定 GPU 不稳定、或用户在设置里手动选 CPU 时，会传
+// MNN_FORCE_CPU=1 / MNN_GPU_POLICY=0。之前 C++ 根本不读这两个变量，于是
+// 坏驱动机型每张图都要先花几十秒试一遍 GPU 才落 CPU（用户看到的"卡住不动"）。
+// 这里真的跳过 GPU 会话创建。
+inline bool mnnForceCpu() {
+  const char *f = getenv("MNN_FORCE_CPU");
+  const char *p = getenv("MNN_GPU_POLICY");
+  return (f && f[0] == '1') || (p && p[0] == '0');
+}
+
 inline MNN::Session *createMnnSession(MNN::Interpreter *interpreter,
                                       const MnnSessionOptions &opts) {
   MNN::ScheduleConfig config;
   MNN::BackendConfig backendConfig;
-  if (opts.use_opencl) {
+  if (opts.use_opencl && !mnnForceCpu()) {
     MNN::Session *sess = nullptr;
     const MNNForwardType want = mnnGpuForward();
     if (want == MNN_FORWARD_VULKAN) sess = createMnnSessionGpu(interpreter, opts, MNN_FORWARD_VULKAN);
     if (!sess) sess = createMnnSessionGpu(interpreter, opts, MNN_FORWARD_OPENCL);
     if (sess) return sess;
     // GPU 两个后端都不可用（驱动缺失/被禁用）：落到 CPU，出图慢但一定出图。
-    MNNPrint("MNN: GPU backend unavailable, falling back to CPU\n");
+    MNN_PRINT("MNN: GPU backend unavailable, falling back to CPU\n");
   }
   {
     config.type = MNN_FORWARD_CPU;

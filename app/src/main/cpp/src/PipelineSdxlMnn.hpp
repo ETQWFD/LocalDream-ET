@@ -158,7 +158,7 @@ class PipelineSdxlMnn : public PipelineSdxl {
       sessions_[stage] = net.createSession(config);
     }
     if (!sessions_[stage] && gpu_wanted) {
-      MNNPrint("SDXL-MNN: GPU session failed, falling back to CPU\n");
+      MNN_PRINT("SDXL-MNN: GPU session failed, falling back to CPU\n");
       config.type = MNN_FORWARD_CPU;
       config.numThread = mnnCpuThreads(4);
       config.mode = 0;

@@ -282,11 +282,30 @@ object ChatRepository {
     /** 撤回窗口：与微信一致，60 秒内可以真正从服务器抹掉。 */
     const val RECALL_WINDOW_SEC = 60L
 
-    /** 本条消息现在还能不能撤回（发送时间戳 + 60s，留 3s 时钟余量）。 */
+    /**
+     * 本机发出这条消息的真实时刻（epoch ms）。手机时钟比真实时间慢一分钟以上时，
+     * 用服务器里的 ts 判断会把"刚发出去"算成"已超时"，撤回按钮直接不出现；
+     * 自己发的消息改用本机时刻做差值，只要真实间隔没超过 60 秒就一定给撤回。
+     */
+    private val localSentAt = java.util.concurrent.ConcurrentHashMap<String, Long>()
+
+    fun markSentLocally(key: String) {
+        localSentAt[key] = System.currentTimeMillis()
+    }
+
     fun recallDeadline(m: ChatMessage): Long = (m.ts + RECALL_WINDOW_SEC) * 1000L
 
+    /** 距离撤回截止还剩多少秒（取本机时刻与消息 ts 中更宽松的一个）。 */
+    fun recallSecondsLeft(m: ChatMessage, nowMs: Long = System.currentTimeMillis()): Long {
+        val graceMs = 3_000L
+        val byServer = recallDeadline(m) - nowMs
+        val sent = localSentAt[m.key]
+        val byLocal = if (sent != null) RECALL_WINDOW_SEC * 1000L + graceMs - (nowMs - sent) else Long.MIN_VALUE
+        return (maxOf(byServer, byLocal) / 1000L).coerceAtLeast(0L)
+    }
+
     fun canRecall(m: ChatMessage, nowMs: Long = System.currentTimeMillis()): Boolean =
-        nowMs <= recallDeadline(m)
+        recallSecondsLeft(m, nowMs) > 0L
 
     /**
      * et.246：真正的"撤回"——把这条消息从 messages.json 里删掉再写回，

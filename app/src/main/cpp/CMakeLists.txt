@@ -180,10 +180,28 @@ target_compile_definitions(${PROJECT_NAME}
 )
 
 # link
-target_link_libraries(${PROJECT_NAME}
-    PRIVATE
-    ${PLATFORM_LIBS}
-    MNN
-    tokenizers_cpp
-    libzstd
-)
+# et.247：MNN 的 OpenCL / Vulkan 后端靠文件内 static 变量自注册
+# （MNNInsertExtraRuntimeCreator）。静态归档 libMNN.a 默认只抽取"被引用到"的
+# 目标文件，于是这些后端对象整个被链接器丢掉——表现就是：界面能选 Vulkan /
+# OpenCL，实际跑起来只有 CPU，或者 SD_MNN_GPU 完全无效。用 --whole-archive
+# 强制把 libMNN.a 全量链进来，后端才真的在包里。
+get_target_property(MNN_TYPE MNN TYPE)
+if(MNN_TYPE STREQUAL "STATIC_LIBRARY" AND NOT APPLE)
+    target_link_libraries(${PROJECT_NAME}
+        PRIVATE
+        ${PLATFORM_LIBS}
+        -Wl,--whole-archive
+        $<TARGET_FILE:MNN>
+        -Wl,--no-whole-archive
+        tokenizers_cpp
+        libzstd
+    )
+else()
+    target_link_libraries(${PROJECT_NAME}
+        PRIVATE
+        ${PLATFORM_LIBS}
+        MNN
+        tokenizers_cpp
+        libzstd
+    )
+endif()

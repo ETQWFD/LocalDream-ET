@@ -238,6 +238,8 @@ fun ChatScreen(onBack: () -> Unit) {
             val result = ChatRepository.send(ctx, message)
             sending = false
             result.onSuccess {
+                // 撤回窗口以本机发送时刻为准，见 ChatRepository.recallSecondsLeft
+                ChatRepository.markSentLocally(message.key)
                 messages = messages + message
                 // Media sends must not eat the text the user is still drafting.
                 if (clearInput) input = ""
@@ -758,7 +760,8 @@ fun ChatScreen(onBack: () -> Unit) {
                                     Text(n.optString("title"), style = MaterialTheme.typography.titleSmall)
                                     val body = n.optString("body")
                                     if (body.isNotBlank()) Text(body, style = MaterialTheme.typography.bodySmall)
-                                    val ts = n.optLong("ts")
+                                    val ts = io.github.xororz.localdream.ui.screens
+                                        .parseAnnounceTs(n)
                                     if (ts > 0) {
                                         val fmt = remember { java.text.SimpleDateFormat("MM-dd HH:mm", java.util.Locale.getDefault()) }
                                         Text(fmt.format(java.util.Date(ts)), style = MaterialTheme.typography.labelSmall)
@@ -1971,8 +1974,7 @@ private fun MessageRow(
                     if (mineLogin.isNotBlank() &&
                         ChatIdentity.isMine(message.author, mineLogin)
                     ) {
-                        val leftSec = ((ChatRepository.recallDeadline(message) -
-                            System.currentTimeMillis()) / 1000L).coerceAtLeast(0L)
+                        val leftSec = ChatRepository.recallSecondsLeft(message)
                         if (leftSec > 0) {
                             DropdownMenuItem(
                                 text = { Text("撤回（${leftSec} 秒内，所有人都看不到）") },
