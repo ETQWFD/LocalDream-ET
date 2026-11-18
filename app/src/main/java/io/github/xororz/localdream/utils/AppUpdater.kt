@@ -137,18 +137,28 @@ object AppUpdater {
         // et.244：官网/更新通道可以按 ABI 提供两个包（高配 arm64 版 / 基础 32 位版）。
         // 有匹配本机 ABI 的条目就用它，没有就退回通用 apkUrl，老版本清单照常工作。
         val abi = android.os.Build.SUPPORTED_ABIS?.firstOrNull().orEmpty()
-        val variants = json.optJSONArray("variants")
-        if (variants != null && url2.isNotBlank()) {
-            for (i in 0 until variants.length()) {
-                val v = variants.optJSONObject(i) ?: continue
-                val vAbi = v.optString("abi")
-                if (vAbi.isNotBlank() && vAbi == abi &&
-                    !v.optString("apkUrl").ifBlank { v.optString("url") }.isBlank()
-                ) {
-                    url2 = v.optString("apkUrl").ifBlank { v.optString("url") }
+        if (url2.isNotBlank() && abi.isNotBlank()) {
+            // et.249：清单里的 variants 从 et.244 起是"以 ABI 为键的对象"，
+            // 而这里原来只用 optJSONArray 读数组形式 —— 对象形式解析恒为 null，
+            // 结果按架构分包从来没生效，32 位旧机也在下 160MB+ 的通用包，
+            // 表现为"更新下载特别慢"。两种写法现在都认。
+            var pick: JSONObject? = null
+            json.optJSONObject("variants")?.optJSONObject(abi)?.let { pick = it }
+            if (pick == null) {
+                val arr = json.optJSONArray("variants")
+                if (arr != null) {
+                    for (i in 0 until arr.length()) {
+                        val v = arr.optJSONObject(i) ?: continue
+                        if (v.optString("abi") == abi) { pick = v; break }
+                    }
+                }
+            }
+            pick?.let { v ->
+                val u = v.optString("apkUrl").ifBlank { v.optString("url") }
+                if (u.isNotBlank()) {
+                    url2 = u
                     size = v.optLong("size", size)
                     sha = v.optString("sha256", sha).trim().lowercase()
-                    break
                 }
             }
         }
@@ -176,9 +186,14 @@ object AppUpdater {
                     .map { arr.getJSONObject(it) }
                     .firstOrNull { it.optString("name").endsWith(".apk", ignoreCase = true) }
             } ?: return null
-        val code = Regex("\\d+").find(
-            json.optString("tag_name").ifBlank { json.optString("name") },
-        )?.value?.toLongOrNull() ?: 0L
+        val tag = json.optString("tag_name").ifBlank { json.optString("name") }
+        // 原来 find() 取第一段数字：tag「et.248」会得到 248，而真实 versionCode 是 322，
+        // 248 > 322 永假 —— GitHub Releases 回退通道因此一直是死的（所有镜像都挂时
+        // 用户就再也收不到更新）。取 tag 里最大的数字串，并保证新 tag 形如
+        // v<versionCode>-et.<NNN>，回退通道才可靠。
+        val code = Regex("\\d+").findAll(tag)
+            .mapNotNull { it.value.toLongOrNull() }
+            .maxOrNull() ?: 0L
         return UpdateInfo(
             versionName = json.optString("tag_name").trimStart('v'),
             versionCode = code,

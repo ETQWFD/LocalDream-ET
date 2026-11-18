@@ -126,6 +126,26 @@ if(NOT DEFINED ANDROID_ABI)
     set(ANDROID_ABI ${CMAKE_ANDROID_ARCH_ABI} CACHE STRING "Android ABI" FORCE)
 endif()
 
+# 32 位构建的一个真实阻塞点（低配机一直拿不到新引擎的根因之一）：
+# 子模块 tokenizers-cpp 用 cargo 三元组拼 NDK 的 clang 包装器名，得到
+#   ${ANDROID_TOOLCHAIN_ROOT}/bin/armv7-linux-androideabi<api>-clang
+# 而 NDK 里真名是 armv7a-linux-androideabi<api>-clang（多一个 a）。
+# arm64 两个名字恰好相同，所以这个 bug 只在 32 位暴露：onig_sys 的 cc-rs 阶段
+# 直接 "failed to find tool" 终止。子模块内容不会被本仓库提交、整块文本改写又太脆，
+# 因此在配置期补一个别名符号链接（幂等，指向 NDK 真正的包装器）。
+if(ANDROID_ABI STREQUAL "armeabi-v7a" AND ANDROID_TOOLCHAIN_ROOT)
+  set(_v7_ok "${ANDROID_TOOLCHAIN_ROOT}/bin/armv7a-linux-androideabi${ANDROID_NATIVE_API_LEVEL}-clang")
+  if(EXISTS "${_v7_ok}")
+    execute_process(COMMAND "${CMAKE_COMMAND}" -E create_symlink "${_v7_ok}"
+        "${ANDROID_TOOLCHAIN_ROOT}/bin/armv7-linux-androideabi${ANDROID_NATIVE_API_LEVEL}-clang")
+    execute_process(COMMAND "${CMAKE_COMMAND}" -E create_symlink "${_v7_ok}++"
+        "${ANDROID_TOOLCHAIN_ROOT}/bin/armv7-linux-androideabi${ANDROID_NATIVE_API_LEVEL}-clang++")
+    message(STATUS "32 位：已为 NDK clang 包装器补上 cargo 三元组别名 (armv7-linux-androideabi${ANDROID_NATIVE_API_LEVEL}-clang)")
+  else()
+    message(WARNING "NDK 里找不到 ${_v7_ok}，32 位构建会在 onig_sys 阶段失败")
+  endif()
+endif()
+
 add_subdirectory(${TOKENZIER_CPP_PATH} tokenizers EXCLUDE_FROM_ALL)
 
 # set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)

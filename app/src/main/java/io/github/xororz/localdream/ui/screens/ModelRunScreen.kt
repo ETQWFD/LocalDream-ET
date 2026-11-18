@@ -424,6 +424,8 @@ fun ModelRunScreen(
     // Ticks once a second only while a render is running, so the ETA label
     // counts down without recomposing the screen when idle.
     var etaTick by remember { mutableStateOf(0L) }
+    // et.249：进度是否来自时间曲线（引擎没报步数）——决定剩余时间要不要标"估算"
+    var progressEstimated by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var isCheckingBackend by remember { mutableStateOf(true) }
 
@@ -1791,6 +1793,7 @@ fun ModelRunScreen(
                     generationStartTime = System.currentTimeMillis()
                 }
                 progress = state.progress
+                progressEstimated = state.estimated
                 isRunning = true
                 state.intermediateImage?.let { intermediateBitmap = it }
             }
@@ -3085,7 +3088,7 @@ fun ModelRunScreen(
                                 }
                             }
                             Text(
-                                etaText,
+                                if (progressEstimated) "$etaText（按机型历史耗时估算）" else etaText,
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )

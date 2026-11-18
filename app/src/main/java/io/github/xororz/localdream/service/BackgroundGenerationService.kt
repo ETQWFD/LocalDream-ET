@@ -141,7 +141,14 @@ class BackgroundGenerationService : Service() {
 
     sealed class GenerationState {
         object Idle : GenerationState()
-        data class Progress(val progress: Float, val intermediateImage: Bitmap? = null) : GenerationState()
+        // estimated=true 表示这个百分比来自"按机型历史耗时学出来的时间曲线"，
+        // 不是引擎真的报了步数（MNN 的 SDXL/Anima/DiT 管线不报步数）。界面上
+        // 会把剩余时间标成估算，避免用户把估的值当成精确倒计时。
+        data class Progress(
+            val progress: Float,
+            val intermediateImage: Bitmap? = null,
+            val estimated: Boolean = false,
+        ) : GenerationState()
 
         data class Complete(val bitmap: Bitmap, val seed: Long?) : GenerationState()
         data class Error(val message: String) : GenerationState()
@@ -452,14 +459,11 @@ class BackgroundGenerationService : Service() {
             // already produced a bad image once, we default to CPU. Each
             // generation attempt may be retried exactly once on CPU with safe
             // params when the GPU output fails the structural health check.
-            // et.248：32 位包里预编译的引擎没有"GPU 建会话失败自动回落 CPU"这段
-            // 逻辑（那是 et.244 才加进 C++ 源码的，本次 32 位引擎正在重编），
-            // 而 32 位的 Mali/PowerVR OpenCL 驱动一旦有问题就直接报"后端启动失败"，
-            // 用户看到的就是"低配机根本出不了图"。所以 32 位一律先走 CPU 出图，
-            // 等新的 32 位引擎（带降级链）随包发布后再放开。
-            val abi64 = android.os.Build.SUPPORTED_ABIS?.any { it.contains("64") } ?: true
+            // et.249：32 位引擎已用官方 NDK 重编（含 Vulkan→OpenCL→CPU 逐级降级），
+            // 所以 et.248 那条"32 位一律先走 CPU"的临时限制可以解除。
+            // 保留的护栏：本机一旦被判定 GPU 不稳定（上一张图重试过），后续直接走 CPU。
             var attemptOpenCL =
-                useOpenCL && abi64 && !preferences.getBoolean("gpu_unstable", false)
+                useOpenCL && !preferences.getBoolean("gpu_unstable", false)
             // et.52: any reasonable CFG (1..15) must submit; clamp + round to 1 decimal
             // instead of rejecting. Upstream passes cfg raw; we only guard against
             // out-of-range / fractional edge values that could trip the engine.
@@ -661,7 +665,7 @@ class BackgroundGenerationService : Service() {
                         while (isActive) {
                             val p = tracker.tick()
                             if (p >= 0f) {
-                                updateState(GenerationState.Progress(p, null))
+                                updateState(GenerationState.Progress(p, null, estimated = true))
                                 updateNotification(p)
                             }
                             delay(700L)
@@ -765,7 +769,7 @@ class BackgroundGenerationService : Service() {
                                         }
                                     }
 
-                                    updateState(GenerationState.Progress(progress, bitmap))
+                                    updateState(GenerationState.Progress(progress, bitmap, estimated = false))
                                     updateNotification(progress)
                                 }
 
