@@ -26,7 +26,9 @@ object DitEngine {
         // otherwise elite SoC still cannot dlopen it, so require the ABI too.
         val hasArm64 = Build.SUPPORTED_ABIS?.any { it == "arm64-v8a" } == true
         if (!hasArm64) return false
-        val soc = Build.SOC_MODEL.uppercase()
+        // et.245：不直接引用 Build.SOC_MODEL（API 31+ 字段，低版本引用即
+        // NoSuchFieldError），统一走 DeviceCapabilities 的反射安全读取。
+        val soc = io.github.xororz.localdream.utils.DeviceCapabilities.socModel().uppercase()
         if (!soc.startsWith("SM")) return false
         val partNumber = soc.dropWhile { !it.isDigit() }.takeWhile { it.isDigit() }.toIntOrNull()
         return partNumber != null && partNumber >= FIRST_SUPPORTED_PART_NUMBER

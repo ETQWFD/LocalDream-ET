@@ -64,11 +64,8 @@ object PatchScanner {
     }
 }
 
-private fun getDeviceSoc(): String = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-    Build.SOC_MODEL
-} else {
-    "CPU"
-}
+private fun getDeviceSoc(): String =
+    io.github.xororz.localdream.utils.DeviceCapabilities.socModel().ifBlank { "CPU" }
 
 @Immutable
 data class DownloadProgress(val progress: Float, val downloadedBytes: Long, val totalBytes: Long)

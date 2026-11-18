@@ -61,6 +61,28 @@ object DeviceCapabilities {
     val socInfo: SocInfo
         get() = socCache ?: detectSoc().also { socCache = it }
 
+    /**
+     * et.245：Build.SOC_MODEL / SOC_MANUFACTURER 是 API 31（Android 12）才有的
+     * 静态字段。在 Android 8~11 上哪怕只是"引用"这个字段，ART 解析时会直接抛
+     * java.lang.NoSuchFieldError，把界面渲染整个带崩（et.244 真实崩溃栈：
+     * detectSoc → vendorLabel → ModelListScreen）。所以一律走反射，
+     * 拿不到就返回空串，交给下面的 ro.soc.model 系统属性兜底。
+     */
+    private fun buildStringField(name: String): String = try {
+        if (Build.VERSION.SDK_INT < 31) "" else {
+            (Build::class.java.getField(name).get(null) as? String).orEmpty()
+        }
+    } catch (_: Throwable) {
+        ""
+    }
+
+    /** 安全的芯片型号读取（任何 API 级别都不会抛）。 */
+    fun socModel(): String =
+        buildStringField("SOC_MODEL").ifBlank { sysprop("ro.soc.model") }
+
+    fun socManufacturer(): String =
+        buildStringField("SOC_MANUFACTURER").ifBlank { sysprop("ro.soc.manufacturer") }
+
     private fun sysprop(name: String): String = try {
         val clz = Class.forName("android.os.SystemProperties")
         val m = clz.getMethod("get", String::class.java)
@@ -82,10 +104,17 @@ object DeviceCapabilities {
         ""
     }
 
-    private fun detectSoc(): SocInfo {
+    private fun detectSoc(): SocInfo = try {
+        detectSocInner()
+    } catch (_: Throwable) {
+        // 探测芯片属于"锦上添花"，任何 ROM 上的异常都不该让 App 闪退。
+        SocInfo(SocVendor.UNKNOWN, null, "")
+    }
+
+    private fun detectSocInner(): SocInfo {
         val hay = listOf(
-            Build.SOC_MODEL,
-            Build.SOC_MANUFACTURER,
+            socModel(),
+            socManufacturer(),
             Build.HARDWARE,
             Build.BOARD,
             sysprop("ro.soc.model"),
@@ -178,15 +207,14 @@ object DeviceCapabilities {
     fun supportsVulkan(context: Context): Boolean = vulkanMajorVersion(context) >= 1
 
     /** Localized short label of the detected chip vendor. */
-    fun vendorLabel(): String = when (socInfo.vendor) {
+    fun vendorLabel(): String = runCatching { when (socInfo.vendor) {
         SocVendor.QUALCOMM -> "高通骁龙"
         SocVendor.KIRIN -> "华为麒麟 (Hisilicon)"
         SocVendor.MEDIATEK -> "联发科 (MediaTek)"
         SocVendor.SAMSUNG -> "三星 Exynos"
         SocVendor.GOOGLE -> "Google Tensor"
         SocVendor.UNKNOWN -> "本机"
-    }
-
+    } }.getOrDefault("本机")
     /**
      * Whether the device very likely exposes a usable OpenCL implementation for
      * the MNN GPU backend. Read from the GL renderer; the major mobile GPUs

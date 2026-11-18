@@ -822,7 +822,7 @@ class BackgroundGenerationService : Service() {
                                         if (attemptOpenCL && !cpuRetryDone) {
                                             // Mark this device's GPU as unstable and
                                             // retry once on CPU with safe defaults.
-                                            preferences.edit().putBoolean("gpu_unstable", true).apply()
+                                            markGpuFailure(preferences)
                                             cpuRetryDone = true
                                             attemptOpenCL = false
                                             attemptCfg = 7f
@@ -1022,7 +1022,7 @@ class BackgroundGenerationService : Service() {
                 // “每次生成都崩溃”。这里在异常路径上也做一次 GPU→CPU 回退：
                 // 标记本机 GPU 不稳定，换 CPU 参数重发一次。
                 if (attemptOpenCL && !cpuRetryDone && !isBadAlloc) {
-                    preferences.edit().putBoolean("gpu_unstable", true).apply()
+                    markGpuFailure(preferences)
                     cpuRetryDone = true
                     attemptOpenCL = false
                     attemptCfg = 7f
@@ -1435,4 +1435,33 @@ class BackgroundGenerationService : Service() {
         _isServiceRunning.value = false
         Log.d("GenerationService", "service destroyed, isServiceRunning set to false")
     }
+    /**
+     * et.245：GPU 出图失败后的统一策略。本次仍然退回 CPU 保证这一张能出图，
+     * 但"下次还要不要用 GPU"不再一刀切成 CPU：只要本机有 Vulkan 且之前用的
+     * 是 OpenCL，就先把后端切成 Vulkan 再试一轮（天玑 Mali 上经常是 OpenCL
+     * 驱动有问题而 Vulkan 正常），两轮都不行才真正标记 gpu_unstable。
+     */
+    private fun markGpuFailure(prefs: android.content.SharedPreferences) {
+        runCatching {
+            val cur = prefs.getString("gpu_backend", "opencl")
+            val vkOk = io.github.xororz.localdream.utils.DeviceCapabilities
+                .vulkanMajorVersion(applicationContext) >= 1
+            if (cur != "vulkan" && vkOk && !prefs.getBoolean("gpu_unstable", false)) {
+                prefs.edit()
+                    .putBoolean("opencl_unstable", true)
+                    .putString("gpu_backend", "vulkan")
+                    .apply()
+                io.github.xororz.localdream.cloud.LogHub.log(
+                    io.github.xororz.localdream.cloud.LogHub.Category.GENERATE,
+                    "GPU 失败：OpenCL 标记不稳定，下次改用 Vulkan（暂不判死 GPU）",
+                )
+            } else {
+                prefs.edit()
+                    .putBoolean("gpu_unstable", true)
+                    .putString("gpu_backend", "cpu")
+                    .apply()
+            }
+        }
+    }
 }
+
