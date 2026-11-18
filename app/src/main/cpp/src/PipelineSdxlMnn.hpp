@@ -138,7 +138,9 @@ class PipelineSdxlMnn : public PipelineSdxl {
     backend.precision = MNN::BackendConfig::Precision_Low;
     backend.power = MNN::BackendConfig::Power_High;
     config.backendConfig = &backend;
-    const bool gpu_wanted = stage == 0 && req.use_opencl;
+    // App 判定本机 GPU 不稳定 / 用户手动选 CPU 时会传 MNN_FORCE_CPU=1，
+    // 这里必须真的不去建 GPU 会话，否则每张图都先白试一遍坏驱动。
+    const bool gpu_wanted = stage == 0 && req.use_opencl && !mnnForceCpu();
     config.type = gpu_wanted ? mnnGpuForward() : MNN_FORWARD_CPU;
     // et.244: 与 createMnnSession 共用同一套按机型注入的线程/调优参数，
     // 不再硬编码 4 线程 + TUNING_FAST（8 核天玑跑不满、Mali kernel 选得保守）。

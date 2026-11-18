@@ -419,6 +419,17 @@ class BackgroundGenerationService : Service() {
         // Set once the complete event is fully handled; a socket teardown
         // racing the service shutdown after that point is not an error.
         var completed = false
+        // et.248：真实进度/剩余时间。有步数用步数，没步数（MNN SDXL/Anima/DiT
+        // 管线压根不报步数，ultrafix 也不报）用按历史耗时学习出来的时间曲线。
+        val etaKey = EtaModel.key(effectiveWidth, effectiveHeight, steps, ultrafix,
+            if (useOpenCL) "gpu" else "cpu")
+        // 必须在外层持有句柄并在 finally 取消：withContext 会等待所有子协程，
+        // 一个不取消的无限 ticker 会让整次生成永远不返回（界面卡在进度条）。
+        var etaTicker: Job? = null
+        val tracker = ProgressTracker(
+            EtaModel.estimate(applicationContext, etaKey, effectiveWidth, effectiveHeight, steps,
+                if (useOpenCL) "gpu" else "cpu"),
+        )
         try {
             updateState(GenerationState.Progress(0f))
 
@@ -426,14 +437,29 @@ class BackgroundGenerationService : Service() {
                 applicationContext.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
             // et.74: old/slow devices need per-step progress on by default.
             val wantProcess = hasInitImageField
-            val showProcess = preferences.getBoolean("show_diffusion_process", false) || wantProcess
-            val showStride = preferences.getInt("show_diffusion_stride", 1)
+            // et.248：引擎只有在 show_diffusion_process=true 时才按步上报
+            // {step,total_steps}，而它默认是关的 —— 这正是"进度一直 0%、
+            // 预计剩余时间不出现"的直接原因。这里对普通生成常开；
+            // ultrafix 仍是双管线，步数会互相覆盖，继续交给时间曲线。
+            val userWantsProcess = preferences.getBoolean("show_diffusion_process", false)
+            val showProcess = if (ultrafix) false else true
+            val userStride = preferences.getInt("show_diffusion_stride", 1)
+            // 步数上报本身每步都有（不带图）；带图预览才受 stride 控制。
+            // 用户没主动开预览时把步长抬到 8，低端机不会被 1024² 大图拖慢。
+            val showStride = if (userWantsProcess) userStride.coerceAtLeast(1) else userStride.coerceAtLeast(8)
 
             // et.25: GPU -> CPU auto-recovery. If this device's GPU fp16 has
             // already produced a bad image once, we default to CPU. Each
             // generation attempt may be retried exactly once on CPU with safe
             // params when the GPU output fails the structural health check.
-            var attemptOpenCL = useOpenCL && !preferences.getBoolean("gpu_unstable", false)
+            // et.248：32 位包里预编译的引擎没有"GPU 建会话失败自动回落 CPU"这段
+            // 逻辑（那是 et.244 才加进 C++ 源码的，本次 32 位引擎正在重编），
+            // 而 32 位的 Mali/PowerVR OpenCL 驱动一旦有问题就直接报"后端启动失败"，
+            // 用户看到的就是"低配机根本出不了图"。所以 32 位一律先走 CPU 出图，
+            // 等新的 32 位引擎（带降级链）随包发布后再放开。
+            val abi64 = android.os.Build.SUPPORTED_ABIS?.any { it.contains("64") } ?: true
+            var attemptOpenCL =
+                useOpenCL && abi64 && !preferences.getBoolean("gpu_unstable", false)
             // et.52: any reasonable CFG (1..15) must submit; clamp + round to 1 decimal
             // instead of rejecting. Upstream passes cfg raw; we only guard against
             // out-of-range / fractional edge values that could trip the engine.
@@ -630,6 +656,18 @@ class BackgroundGenerationService : Service() {
                     // bitmap to ~7 fps. The final result image is unaffected.
                     var lastPreviewEmitMs = 0L
 
+                    // 没步数可报时，也要让进度条和"预计剩余"动起来。
+                    etaTicker = launch {
+                        while (isActive) {
+                            val p = tracker.tick()
+                            if (p >= 0f) {
+                                updateState(GenerationState.Progress(p, null))
+                                updateNotification(p)
+                            }
+                            delay(700L)
+                        }
+                    }
+
                     // Read line by line for efficiency
                     readLoop@ while (isActive) {
                         val readLineStart = System.currentTimeMillis()
@@ -649,7 +687,14 @@ class BackgroundGenerationService : Service() {
                                 "progress" -> {
                                     val step = message.optInt("step")
                                     val totalSteps = message.optInt("total_steps")
-                                    val progress = step.toFloat() / totalSteps
+                                    // total_steps=0（加载/VAE 阶段与不报步数的管线）
+                                    // 会让 progress 变成 NaN/Inf，之前直接进 UI。
+                                    val progress = if (totalSteps > 0) {
+                                        (step.toFloat() / totalSteps.toFloat()).coerceIn(0f, 0.97f)
+                                    } else {
+                                        0f
+                                    }
+                                    if (progress > 0f) tracker.noteStep(progress)
 
                                     val b64Img = message.optString("image")
                                     var bitmap: Bitmap? = null
@@ -879,6 +924,8 @@ class BackgroundGenerationService : Service() {
                                             }
                                         }
                                     }
+                                    etaTicker.cancel()
+                                    EtaModel.record(applicationContext, etaKey, tracker.elapsedMs)
                                     updateState(
                                         GenerationState.Complete(
                                             bitmap,
@@ -1317,6 +1364,7 @@ class BackgroundGenerationService : Service() {
             }
             stopSelf()
         } finally {
+            etaTicker?.cancel()
             activeCall = null
             io.github.xororz.localdream.utils.BgmManager.stop(this@BackgroundGenerationService)
             io.github.xororz.localdream.service.BackendService.notifyGenerationEnded()
