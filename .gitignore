@@ -35,3 +35,7 @@ docs/*.apk
 chatclient/build/
 app/build/
 server-go/dist/
+
+# new module build outputs (contain baked token from local.properties)
+driveapp/build/
+chatclient/build/

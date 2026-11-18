@@ -941,6 +941,9 @@ private fun UploadDialog(ctx: Context, onPublished: () -> Unit = {}, onDismiss: 
     // 选择器会把“全选/分享全部”整批塞回来，用户点一次发布就把自己没打算
     // 公开的相册图全传上社区，看起来就像“相册自动上传”。
     var confirmedPublic by remember { mutableStateOf(false) }
+    // et.246：发布的同时把原图镜像一份到自己的私密云盘目录（Nightmare 云盘 App 读它）。
+    var alsoDrive by remember { mutableStateOf(false) }
+    var driveErr by remember { mutableStateOf<String?>(null) }
     val photoPicker = rememberLauncherForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia(),
     ) { uri ->
@@ -1115,6 +1118,24 @@ private fun UploadDialog(ctx: Context, onPublished: () -> Unit = {}, onDismiss: 
                     } else {
                         TextButton(onClick = onDismiss) { Text("取消") }
                     }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = alsoDrive, onCheckedChange = { alsoDrive = it })
+                        Text(
+                            "同时存一份到我的云盘（私密，仅自己可见）",
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.clickable { alsoDrive = !alsoDrive },
+                        )
+                    }
+                    if (alsoDrive && !io.github.xororz.localdream.account.EmailAccount.isSignedIn(ctx)) {
+                        Text(
+                            "还没登录邮箱账号：请先在“云备份 / 登录”里注册邮箱，否则这项不会生效。",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                    driveErr?.let {
+                        Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                    }
                     Button(
                         enabled = !uploading && confirmedPublic,
                         onClick = {
@@ -1160,7 +1181,23 @@ private fun UploadDialog(ctx: Context, onPublished: () -> Unit = {}, onDismiss: 
                                                 }
                                             },
                                         )
-                                        if (res.ok) ok++ else { fail++; lastErr = res.reason }
+                                        if (res.ok) {
+                                            ok++
+                                            // 私密云盘镜像：文件名带时间戳，失败只在界面上提示，
+                                            // 不影响公开发布的结果。
+                                            if (alsoDrive &&
+                                                io.github.xororz.localdream.account.EmailAccount.isSignedIn(ctx)
+                                            ) {
+                                                val mail = io.github.xororz.localdream.account
+                                                    .EmailAccount.signedInEmail(ctx)
+                                                val fname = "pic_${System.currentTimeMillis()}_${i + 1}.png"
+                                                val derr = withContext(Dispatchers.IO) {
+                                                    io.github.xororz.localdream.account.EmailAccount
+                                                        .uploadImage(mail, fname, bytes)
+                                                }
+                                                if (derr != null) driveErr = "云盘镜像失败：$derr"
+                                            }
+                                        } else { fail++; lastErr = res.reason }
                                     }
                                     progress = -1f
                                     uploading = false

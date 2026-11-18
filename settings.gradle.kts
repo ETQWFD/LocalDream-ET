@@ -22,4 +22,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "LocalDream"
 include(":app")
+include(":driveapp")
 include(":chatclient")

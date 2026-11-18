@@ -279,6 +279,111 @@ object ChatRepository {
             Result.failure(IllegalStateException(lastError))
         }
 
+    /** 撤回窗口：与微信一致，60 秒内可以真正从服务器抹掉。 */
+    const val RECALL_WINDOW_SEC = 60L
+
+    /** 本条消息现在还能不能撤回（发送时间戳 + 60s，留 3s 时钟余量）。 */
+    fun recallDeadline(m: ChatMessage): Long = (m.ts + RECALL_WINDOW_SEC) * 1000L
+
+    fun canRecall(m: ChatMessage, nowMs: Long = System.currentTimeMillis()): Boolean =
+        nowMs <= recallDeadline(m)
+
+    /**
+     * et.246：真正的"撤回"——把这条消息从 messages.json 里删掉再写回，
+     * 所有人下一次刷新都看不到。旧实现只有本机隐藏，用户反馈"自己删除了，
+     * 别人还能看"，所以补上这条 read-modify-write 通路（与 send 同一套 sha
+     * 乐观锁 + 409 重试）。超过 60 秒由界面拒绝调用。
+     */
+    suspend fun recall(
+        context: Context,
+        message: ChatMessage,
+        tokenOverride: String? = null,
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        val token = tokenOverride?.takeIf { it.isNotBlank() } ?: writeToken(context)
+        if (token.isBlank()) {
+            return@withContext Result.failure(IllegalStateException("未登录 GitHub，无法撤回"))
+        }
+        var lastError = "撤回失败"
+        repeat(4) { attempt ->
+            try {
+                val api = "https://api.github.com/repos/$OWNER/$REPO/contents/$FILE"
+                val (code, text) = readWithToken(api, token)
+                if (code != 200) {
+                    return@withContext Result.failure(
+                        IllegalStateException(if (code == 404) "聊天仓库不存在或无写权限" else "读取消息失败 HTTP $code"),
+                    )
+                }
+                val obj = JSONObject(text)
+                val sha = obj.optString("sha", "")
+                val content = obj.optString("content", "").replace("\n", "")
+                val base = if (content.isNotBlank()) {
+                    ChatMessage.listFromJson(String(Base64.getDecoder().decode(content), Charsets.UTF_8))
+                } else {
+                    // 文件超过 1 MB 时 Contents API 不返回正文，改用镜像读全量。
+                    load(context)
+                }
+                val before = base.size
+                // 只删时间戳 + 作者 + 内容完全一致的条目，避免误删别人的同文本消息。
+                val kept = base.filterNot { it.key == message.key }
+                if (kept.size == before) {
+                    return@withContext Result.failure(IllegalStateException("这条消息已经不在服务器上了"))
+                }
+                val payload = JSONObject()
+                    .put("message", "chat: recall by ${message.author}")
+                    .put(
+                        "content",
+                        Base64.getEncoder().encodeToString(
+                            ChatMessage.listToJson(kept).toByteArray(Charsets.UTF_8),
+                        ),
+                    )
+                    .apply { if (sha.isNotBlank()) put("sha", sha) }
+                val req = Request.Builder()
+                    .url(api)
+                    .put(payload.toString().toRequestBody("application/json".toMediaType()))
+                    .addHeader("Authorization", "Bearer $token")
+                    .addHeader("Accept", "application/vnd.github+json")
+                    .addHeader("User-Agent", "NightmareRoad-ET")
+                    .build()
+                client.newCall(req).execute().use { resp ->
+                    if (resp.isSuccessful) return@withContext Result.success(Unit)
+                    lastError = when (resp.code) {
+                        401 -> "GitHub 令牌无效或已过期"
+                        403 -> "GitHub 拒绝写入（令牌缺少 repo 权限或被限流）"
+                        409 -> "有人同时发言，正在重试…"
+                        else -> "撤回失败 HTTP ${resp.code}"
+                    }
+                    if (resp.code == 403 || resp.code == 404 || resp.code == 401) {
+                        val other = alternateToken(context, token)
+                        if (tokenOverride == null && other != null) {
+                            return@withContext recall(context, message, other)
+                        }
+                        return@withContext Result.failure(IllegalStateException(lastError))
+                    }
+                }
+            } catch (e: Exception) {
+                lastError = e.message ?: e.javaClass.simpleName
+            }
+            Thread.sleep(400L * (attempt + 1))
+        }
+        Result.failure(IllegalStateException(lastError))
+    }
+
+    /** 本机隐藏（超过撤回窗口的"删除"只对自已生效，界面必须如实说明）。 */
+    private const val HIDDEN_PREFS = "chat_hidden"
+
+    fun hiddenKeys(context: Context): Set<String> =
+        runCatching {
+            context.getSharedPreferences(HIDDEN_PREFS, Context.MODE_PRIVATE)
+                .getStringSet("keys", emptySet()).orEmpty()
+        }.getOrDefault(emptySet())
+
+    fun hideLocally(context: Context, message: ChatMessage) {
+        runCatching {
+            val sp = context.getSharedPreferences(HIDDEN_PREFS, Context.MODE_PRIVATE)
+            sp.edit().putStringSet("keys", hiddenKeys(context) + message.key).apply()
+        }
+    }
+
     /**
      * Uploads one media file and returns (canonical, cdn) URLs, or null with a
      * human readable reason in [lastError].

@@ -90,6 +90,11 @@ fun ChatScreen(onBack: () -> Unit) {
     val meAvatar = remember { store.state(CloudConfig.Provider.GITHUB)?.avatarUrl }
 
     var messages by remember { mutableStateOf<List<ChatMessage>>(emptyList()) }
+    // et.246：超过 60 秒的消息"删除"只能对本机生效，这里存本机隐藏列表。
+    var recalling by remember { mutableStateOf(false) }
+    var hiddenKeys by remember {
+        mutableStateOf(io.github.xororz.localdream.chat.ChatRepository.hiddenKeys(ctx))
+    }
     val chatListState = rememberLazyListState()
     var loading by remember { mutableStateOf(true) }
     var input by remember { mutableStateOf("") }
@@ -964,7 +969,7 @@ fun ChatScreen(onBack: () -> Unit) {
                 contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                val visible = messages.reversed()
+                val visible = messages.reversed().filterNot { it.key in hiddenKeys }
                 items(visible, key = { it.key }) { m ->
                     val index = visible.indexOf(m)
                     val older = visible.getOrNull(index + 1)
@@ -995,6 +1000,29 @@ fun ChatScreen(onBack: () -> Unit) {
                         onLink = { url -> webUrl = url },
                         onLongPress = { actionFor = m },
                         meLogin = meLogin.orEmpty(),
+                        mineLogin = (meLogin ?: "").orEmpty(),
+                        onHideLocal = { msg ->
+                            io.github.xororz.localdream.chat.ChatRepository.hideLocally(ctx, msg)
+                            hiddenKeys = io.github.xororz.localdream.chat.ChatRepository.hiddenKeys(ctx)
+                            Toast.makeText(ctx, "已在本机隐藏（对方仍可见）", Toast.LENGTH_SHORT).show()
+                        },
+                        onRecall = { msg ->
+                            scope.launch {
+                                recalling = true
+                                val r = io.github.xororz.localdream.chat.ChatRepository.recall(ctx, msg)
+                                recalling = false
+                                if (r.isSuccess) {
+                                    Toast.makeText(ctx, "已撤回，所有人都不再显示", Toast.LENGTH_SHORT).show()
+                                    messages = ChatWindow.recent(ChatRepository.load(ctx))
+                                } else {
+                                    Toast.makeText(
+                                        ctx,
+                                        "撤回失败：" + (r.exceptionOrNull()?.message ?: "未知错误"),
+                                        Toast.LENGTH_LONG,
+                                    ).show()
+                                }
+                            }
+                        },
                         onClaimQuota = { m ->
                             scope.launch {
                                 val login = meLogin
@@ -1873,6 +1901,9 @@ private fun MessageRow(
     onLink: (String) -> Unit,
     onLongPress: () -> Unit,
     meLogin: String = "",
+    mineLogin: String = "",
+    onRecall: (ChatMessage) -> Unit = {},
+    onHideLocal: (ChatMessage) -> Unit = {},
     onClaimQuota: (ChatMessage) -> Unit = {},
     onBountyAction: (ChatMessage) -> Unit = {},
 ) {
@@ -1933,6 +1964,35 @@ private fun MessageRow(
                         DropdownMenuItem(
                             text = { Text("选择文字（局部复制）") },
                             onClick = { showMenu = false; selectingText = true },
+                        )
+                    }
+                    // et.246：60 秒内可以真撤回（服务器删除，所有人立刻看不
+                    // 到）；超时之后只提供"本机隐藏"，并如实告诉用户别人还能看见。
+                    if (mineLogin.isNotBlank() &&
+                        ChatIdentity.isMine(message.author, mineLogin)
+                    ) {
+                        val leftSec = ((ChatRepository.recallDeadline(message) -
+                            System.currentTimeMillis()) / 1000L).coerceAtLeast(0L)
+                        if (leftSec > 0) {
+                            DropdownMenuItem(
+                                text = { Text("撤回（${leftSec} 秒内，所有人都看不到）") },
+                                onClick = { showMenu = false; onRecall(message) },
+                            )
+                        } else {
+                            DropdownMenuItem(
+                                enabled = false,
+                                text = { Text("撤回（已超过 1 分钟）") },
+                                onClick = { showMenu = false },
+                            )
+                            DropdownMenuItem(
+                                text = { Text("仅对我隐藏这条") },
+                                onClick = { showMenu = false; onHideLocal(message) },
+                            )
+                        }
+                    } else if (!ChatIdentity.isMine(message.author, mineLogin)) {
+                        DropdownMenuItem(
+                            text = { Text("仅对我隐藏这条") },
+                            onClick = { showMenu = false; onHideLocal(message) },
                         )
                     }
                     DropdownMenuItem(text = { Text("引用") }, onClick = { showMenu = false; onQuote(message) })

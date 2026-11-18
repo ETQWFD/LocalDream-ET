@@ -474,6 +474,8 @@ fun CloudBackupDialog(onDismiss: () -> Unit) {
                             Text(it, style = androidx.compose.material3.MaterialTheme.typography.bodySmall)
                         }
                     }
+                    // et.246：登录区新增邮箱注册/登录（数据在私密仓库 users/<邮箱>/）
+                    EmailAccountSection(modifier = Modifier.padding(bottom = 10.dp))
                     OutlinedTextField(
                         value = pat,
                         onValueChange = { pat = it },

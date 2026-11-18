@@ -1,28 +1,26 @@
 {
-  "versionCode": 319,
-  "versionName": "4.0.0-et.245",
+  "versionCode": 320,
+  "versionName": "4.0.0-et.246",
   "title": "最新版本 v4.0.0-et.245（修复老机型闪退）",
-  "apkUrl": "https://github.com/ETQWFD/NightmareRoad-ET/releases/download/et.245/NightmareRoad-ET.apk",
-  "size": 165142276,
-  "sha256": "45431107cb575f17da7aed0e6acfeddfa71056b9303b103f82fded21fb1d8da2",
-  "releaseNotes": "最新版本\n\n作者下个星期可能不更新，因为作者要嗝屁了，请勿来打扰；请在下下个星期再来打扰，因为作者又看广告复活了。纯属因为中专考试成绩出来要开家长会，作者要嗝屁了。作者不在的时候，一切由 @Qian七安~ @违规用户 负责，如有任何问题进群找管理员。本次最后一个版本更新内容：悬赏很抱歉对大家带来不便，作者承诺将在下个星期风波过后再更新，和看广告复活。\n\n1) 隐私修复：不再在启动时申请“读取相册”权限，选图改用系统照片选择器；发布改成一次只能选一张，并且必须手动勾选“确认公开发布”才会上传，杜绝相册图片被整批自动传上社区。\n2) 图片社区发布/加载提速：新增 png/index.json 索引，打开社区从“每张图一次请求”变成一次请求读全量；本机刚发布的作品立刻显示，不用反复下拉刷新；发布前按体积自动压缩（最长边 1280→640），不再因为十几 MB 的 PNG 卡住/失败。\n3) 自己发布的图可以下架了：下架走内置写权限兜底，同步删除 png/meta/thumb 并更新索引，下架后立刻从列表消失。\n4) 悬赏提速与结算修复：新增 bounties/index.json，悬赏页一次请求读全量；发布/验收/24 小时自动结算都会更新索引，已完成（paid/closed）的悬赏不再留在列表里；关闭时自动补取文件版本，解决“验收成功但悬赏不消失”。\n5) 消息长按复制：长按菜单新增“选择文字（局部复制）”，弹出可选取文本的浮层，能选中一段复制/剪切，官方 ROM 上手势被吃掉也能用。\n6) GitHub 授权登录：自动回跳换 token 支持多个候选回调地址；回跳页新增“复制回跳链接”，App 里新增“粘贴回跳链接或 code 完成登录”，浏览器拦截 scheme 或回调地址不一致时不再卡在授权页。\n7) 高配手机（含天玑 9000 及以上）：修复大核线程数在骁龙/麒麟/Exynos 上读空退化成 4 线程的问题，CPU 出图更快；高端天玑走 Mali GPU(OpenCL)，画布上限 512，GPU 驱动崩溃自动回 CPU。\n8) 图片/视频加载提速：全局图片加载器加大内存与磁盘缓存，滑走再滑回不再重新下载。\n\n说明：天玑/麒麟/Exynos 的 NPU 仍需厂商 NDA 授权（NeuroPilot/HiAI 不对外），第三方 App 无法直接调用，因此这些机型用 GPU+CPU 出图；高通旗舰仍可用 NPU。\n9) 更新检查再加两条国内可用通道（jsDelivr、gh-proxy），之前只有官网/Pages 一条路，通道不通时点“检查更新”像没反应。\n10) 悬赏发布与验收结算写入增加退避重试：直连 api.github.com 首包超时不再直接报“发布失败”。\n11) 社区索引缺项自动补拉：早期版本发布的作品不再显示成“作者 ?”，索引对不上时只补拉缺的那几张，不额外增加请求量。\n12) 失效镜像 raw.gitmirror.com 全部替换掉（该镜像已 404），避免每次网络请求先撞一次死路。\n13) 官网提供两个单架构包：高配版 arm64（含 NPU/GPU 引擎，156 MB）、基础版 32 位（老低端机专用，72 MB，已剔除 32 位跑不了的 157 MB 高通 NPU/DiT 运行库）。App 内检查更新会按本机 CPU 架构自动选对应包。\n14) 引擎线程与 GPU 后端改为可按机型注入（不再硬编码 4 线程 / 保守调优），GPU 会话改为 Vulkan→OpenCL→CPU 逐级降级，杜绝“引擎加载错误/无法加载”直接失败；对应自编译原生库完成后随下一版正式启用。\n\n15) 【紧急修复】一进模型列表就闪退：java.lang.NoSuchFieldError: No static field SOC_MODEL。Build.SOC_MODEL / SOC_MANUFACTURER 是 Android 12(API 31) 才有的字段，之前直接引用，导致 Android 8~11 的老机型一进页面当场崩溃（该问题自 et.167 起存在）。现在一律反射读取并保留系统属性兜底，取不到就当未知芯片，绝不再闪退；同类引用点（DiT 支持判断、模型分辨率显示）也一并改掉。\n16) GPU 出图失败的处理不再一刀切：本次仍回 CPU 保证这张图能出，但下一张先自动改试 Vulkan（天玑 Mali 上常见 OpenCL 驱动有问题而 Vulkan 正常），两条 GPU 路都失败才真正标记 gpu_unstable 长期用 CPU。同时补上 opencl_unstable 记录，后台生成服务与前台走同一套策略。\n",
-  "url": "https://github.com/ETQWFD/NightmareRoad-ET/releases/download/et.245/NightmareRoad-ET.apk",
+  "apkUrl": "https://github.com/ETQWFD/NightmareRoad-ET/releases/download/et.246/NightmareRoad-ET.apk",
+  "size": 165205096,
+  "sha256": "6a60a3237890c6e83562a1986e89fc19d1cfd7e6a40164eb7e22d87e5d348753",
+  "releaseNotes": "最新版本\n\n作者下个星期可能不更新，因为作者要嗝屁了，请勿来打扰；请在下下个星期再来打扰，因为作者又看广告复活了。纯属因为中专考试成绩出来要开家长会，作者要嗝屁了。作者不在的时候，一切由 @Qian七安~ @违规用户 负责，如有任何问题进群找管理员。本次最后一个版本更新内容：悬赏很抱歉对大家带来不便，作者承诺将在下个星期风波过后再更新，和看广告复活。\n\n1) 隐私修复：不再在启动时申请“读取相册”权限，选图改用系统照片选择器；发布改成一次只能选一张，并且必须手动勾选“确认公开发布”才会上传，杜绝相册图片被整批自动传上社区。\n2) 图片社区发布/加载提速：新增 png/index.json 索引，打开社区从“每张图一次请求”变成一次请求读全量；本机刚发布的作品立刻显示，不用反复下拉刷新；发布前按体积自动压缩（最长边 1280→640），不再因为十几 MB 的 PNG 卡住/失败。\n3) 自己发布的图可以下架了：下架走内置写权限兜底，同步删除 png/meta/thumb 并更新索引，下架后立刻从列表消失。\n4) 悬赏提速与结算修复：新增 bounties/index.json，悬赏页一次请求读全量；发布/验收/24 小时自动结算都会更新索引，已完成（paid/closed）的悬赏不再留在列表里；关闭时自动补取文件版本，解决“验收成功但悬赏不消失”。\n5) 消息长按复制：长按菜单新增“选择文字（局部复制）”，弹出可选取文本的浮层，能选中一段复制/剪切，官方 ROM 上手势被吃掉也能用。\n6) GitHub 授权登录：自动回跳换 token 支持多个候选回调地址；回跳页新增“复制回跳链接”，App 里新增“粘贴回跳链接或 code 完成登录”，浏览器拦截 scheme 或回调地址不一致时不再卡在授权页。\n7) 高配手机（含天玑 9000 及以上）：修复大核线程数在骁龙/麒麟/Exynos 上读空退化成 4 线程的问题，CPU 出图更快；高端天玑走 Mali GPU(OpenCL)，画布上限 512，GPU 驱动崩溃自动回 CPU。\n8) 图片/视频加载提速：全局图片加载器加大内存与磁盘缓存，滑走再滑回不再重新下载。\n\n说明：天玑/麒麟/Exynos 的 NPU 仍需厂商 NDA 授权（NeuroPilot/HiAI 不对外），第三方 App 无法直接调用，因此这些机型用 GPU+CPU 出图；高通旗舰仍可用 NPU。\n9) 更新检查再加两条国内可用通道（jsDelivr、gh-proxy），之前只有官网/Pages 一条路，通道不通时点“检查更新”像没反应。\n10) 悬赏发布与验收结算写入增加退避重试：直连 api.github.com 首包超时不再直接报“发布失败”。\n11) 社区索引缺项自动补拉：早期版本发布的作品不再显示成“作者 ?”，索引对不上时只补拉缺的那几张，不额外增加请求量。\n12) 失效镜像 raw.gitmirror.com 全部替换掉（该镜像已 404），避免每次网络请求先撞一次死路。\n13) 官网提供两个单架构包：高配版 arm64（含 NPU/GPU 引擎，156 MB）、基础版 32 位（老低端机专用，72 MB，已剔除 32 位跑不了的 157 MB 高通 NPU/DiT 运行库）。App 内检查更新会按本机 CPU 架构自动选对应包。\n14) 引擎线程与 GPU 后端改为可按机型注入（不再硬编码 4 线程 / 保守调优），GPU 会话改为 Vulkan→OpenCL→CPU 逐级降级，杜绝“引擎加载错误/无法加载”直接失败；对应自编译原生库完成后随下一版正式启用。\n\n15) 【紧急修复】一进模型列表就闪退：java.lang.NoSuchFieldError: No static field SOC_MODEL。Build.SOC_MODEL / SOC_MANUFACTURER 是 Android 12(API 31) 才有的字段，之前直接引用，导致 Android 8~11 的老机型一进页面当场崩溃（该问题自 et.167 起存在）。现在一律反射读取并保留系统属性兜底，取不到就当未知芯片，绝不再闪退；同类引用点（DiT 支持判断、模型分辨率显示）也一并改掉。\n16) GPU 出图失败的处理不再一刀切：本次仍回 CPU 保证这张图能出，但下一张先自动改试 Vulkan（天玑 Mali 上常见 OpenCL 驱动有问题而 Vulkan 正常），两条 GPU 路都失败才真正标记 gpu_unstable 长期用 CPU。同时补上 opencl_unstable 记录，后台生成服务与前台走同一套策略。\n17) 消息撤回做好了：自己发的消息在 1 分钟内长按可以“撤回”，这是服务端真删除——别人那边也会同时消失；超过 1 分钟撤回按钮会变灰不可点，这时只能“仅对我隐藏这条”（只影响你自己，对方的记录不会消失，这点在提示里写明白了）。以前根本没有撤回功能，不是没显示。\n18) 新增邮箱账号注册/登录：在登录入口填邮箱、密码、再确认一次密码，并勾选同意协议后才能注册。密码不在任何地方明文保存（PBKDF2-SHA256 十二万次迭代 + 随机盐），账号资料存放在作者的私密仓库里，以你的邮箱命名独立目录，外人看不到别人的目录。\n19) 配套新 App「Nightmare 云盘」：用同一个邮箱账号登录，就能看到自己在发布时勾选了“同时存一份到我的云盘”的图片，支持双指/双击缩放看原图细节、一键下载回相册；按你的要求不提供删除。官网已放下载入口。\n20) 那条违规悬赏（AI 脱衣）及其聊天记录已删除，悬赏列表同步更新。\n21) 修了 arm64 单架构包曾误发成 32 位包的问题，本次三个包分别校验过内置架构，互不相同。\n",
+  "url": "https://github.com/ETQWFD/NightmareRoad-ET/releases/download/et.246/NightmareRoad-ET.apk",
   "force": false,
   "mustUpdate": false,
-  "variants": [
-    {
-      "abi": "arm64-v8a",
-      "name": "高配版（64 位旗舰）",
-      "apkUrl": "https://github.com/ETQWFD/NightmareRoad-ET/releases/download/et.245/NightmareRoad-ET-arm64.apk",
-      "size": 156843329,
-      "sha256": "519863555197d486003a13b855805c421daed3145fc9f1bfe1865f4b721ac837"
+  "variants": {
+    "arm64-v8a": {
+      "label": "arm64（骁龙8+/天玑9000+，约150MB）",
+      "apkUrl": "https://github.com/ETQWFD/NightmareRoad-ET/releases/download/et.246/NightmareRoad-ET-arm64.apk",
+      "size": 156906149,
+      "sha256": "08504e6b924b16f17346d954442ccb795727e35dfa7bc236c4b441397569ef11"
     },
-    {
-      "abi": "armeabi-v7a",
-      "name": "基础版（32 位老机型）",
-      "apkUrl": "https://github.com/ETQWFD/NightmareRoad-ET/releases/download/et.245/NightmareRoad-ET-armv7a.apk",
-      "size": 72449910,
-      "sha256": "e9abca5cad7ce7c241907cd7f4262b64cfde45c34f998cdbd958a1ce77352631"
+    "armeabi-v7a": {
+      "label": "32 位旧机（约70MB，只能 CPU/GPU 出图）",
+      "apkUrl": "https://github.com/ETQWFD/NightmareRoad-ET/releases/download/et.246/NightmareRoad-ET-armv7a.apk",
+      "size": 72512730,
+      "sha256": "c80c0d1a5f7bb25fcb19ce4b1fd56c3a65fb7a531b007c722eda90069ce07bc5"
     }
-  ]
+  }
 }
