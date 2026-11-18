@@ -179,13 +179,28 @@ object AppUpdater {
         if (json.optBoolean("draft") || json.optBoolean("prerelease")) {
             // Still honour an explicit prerelease channel if pointed here; keep simple.
         }
-        val asset = json.optJSONArray("assets")
-            ?.takeIf { it.length() > 0 }
-            ?.let { arr ->
-                (0 until arr.length())
-                    .map { arr.getJSONObject(it) }
-                    .firstOrNull { it.optString("name").endsWith(".apk", ignoreCase = true) }
-            } ?: return null
+        // et.249：GitHub 是按名称排序返回资产的，"第一个 .apk"在本仓库里其实是
+        // …-arm64.apk（"NightmareRoad-ET-arm64…" 字典序在 "NightmareRoad-ET.apk" 之前）。
+        // 回退通道若真被触发，32 位机会拿到 arm64 包，安装直接 NO_MATCHING_ABIS。
+        // 所以这里按本机 ABI 选资产，选不到再退回通用包（名字里不带架构后缀的那个）。
+        val myAbi = android.os.Build.SUPPORTED_ABIS?.firstOrNull().orEmpty()
+        val abiTag = when {
+            myAbi.contains("arm64") || myAbi.contains("aarch64") -> "arm64"
+            myAbi.contains("armeabi") || myAbi.contains("armv7") -> "armv7a"
+            else -> ""
+        }
+        val apks = json.optJSONArray("assets")
+            ?.let { arr -> (0 until arr.length()).map { arr.getJSONObject(it) } }
+            ?.filter { it.optString("name").endsWith(".apk", ignoreCase = true) }
+            .orEmpty()
+        if (apks.isEmpty()) return null
+        val asset = apks.firstOrNull {
+            abiTag.isNotEmpty() && it.optString("name").contains(abiTag, ignoreCase = true)
+        } ?: apks.firstOrNull { name ->
+            // 通用包：不含任何其它架构标记
+            !name.optString("name").contains("arm64", true) &&
+                !name.optString("name").contains("v7a", true)
+        } ?: apks.first()
         val tag = json.optString("tag_name").ifBlank { json.optString("name") }
         // 原来 find() 取第一段数字：tag「et.248」会得到 248，而真实 versionCode 是 322，
         // 248 > 322 永假 —— GitHub Releases 回退通道因此一直是死的（所有镜像都挂时
