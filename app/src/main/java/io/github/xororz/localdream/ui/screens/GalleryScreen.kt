@@ -1180,7 +1180,10 @@ private fun UploadDialog(ctx: Context, onPublished: () -> Unit = {}, onDismiss: 
                                     // 2026-11：退出登录后 login 为空时，旧代码回落成
                                     // "ETQWFD"，于是匿名发布被记到官方号名下。
                                     // 未登录必须按匿名作者发布。
-                                    val author = login?.takeIf { it.isNotBlank() } ?: "匿名"
+                                    // et.253：优先用户自己起的昵称；没填再退回 GitHub login / 匿名
+                                    val author = io.github.xororz.localdream.account.Profile
+                                        .displayName(ctx)
+                                        .ifBlank { login?.takeIf { it.isNotBlank() } ?: "匿名" }
                                     var ok = 0
                                     var fail = 0
                                     var lastErr = ""

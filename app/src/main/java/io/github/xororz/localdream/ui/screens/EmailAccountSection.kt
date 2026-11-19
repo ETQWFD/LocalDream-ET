@@ -1,5 +1,13 @@
 package io.github.xororz.localdream.ui.screens
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
+import io.github.xororz.localdream.account.EmailAccount
+import io.github.xororz.localdream.account.Profile
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -29,7 +37,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import io.github.xororz.localdream.account.EmailAccount
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -52,6 +59,9 @@ fun EmailAccountSection(modifier: Modifier = Modifier) {
     var busy by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf<String?>(null) }
     var signedIn by remember { mutableStateOf(EmailAccount.isSignedIn(context)) }
+    // et.327：重名时弹窗提示"已经有人用了"
+    var dupOpen by remember { mutableStateOf(false) }
+    var dupName by remember { mutableStateOf("") }
     // et.251：登录 / 注册必须能切。以前是把"确认密码 + 协议勾选 + 确认注册"
     // 全都常显，登录只是在旁边放一个按钮 —— 用户看到的就是"一直是注册界面"。
     // 现在默认进登录页（已注册的人直接登录），要点一下才切到注册。
@@ -78,6 +88,64 @@ fun EmailAccountSection(modifier: Modifier = Modifier) {
                     OutlinedButton(onClick = { registerMode = true; status = null }) { Text("注册") }
                 }
             }
+        }
+        // et.253：昵称 + 本地头像
+        var nick by remember { mutableStateOf(Profile.name(context)) }
+        var avatarTick by remember { mutableStateOf(0) }
+        val avatar = remember(avatarTick) { Profile.avatarBitmap(context) }
+        val avatarPicker = androidx.activity.compose.rememberLauncherForActivityResult(
+            androidx.activity.result.contract.ActivityResultContracts.GetContent(),
+        ) { uri ->
+            if (uri != null) {
+                val bytes = runCatching {
+                    context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                }.getOrNull()
+                if (bytes != null && Profile.saveAvatar(context, bytes)) {
+                    avatarTick++
+                    Toast.makeText(context, "头像已更新", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(context, "读取图片失败", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            if (avatar != null) {
+                androidx.compose.foundation.Image(
+                    bitmap = avatar.asImageBitmap(),
+                    contentDescription = "头像",
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(androidx.compose.foundation.shape.CircleShape),
+                )
+            } else {
+                Box(
+                    Modifier
+                        .size(44.dp)
+                        .clip(androidx.compose.foundation.shape.CircleShape)
+                        .background(MaterialTheme.colorScheme.primaryContainer),
+                    contentAlignment = Alignment.Center,
+                ) { Text("头像", style = MaterialTheme.typography.labelSmall) }
+            }
+            OutlinedButton(onClick = { avatarPicker.launch("image/*") }) { Text("选本地头像") }
+        }
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedTextField(
+                value = nick,
+                onValueChange = { nick = it },
+                label = { Text("昵称（发布作品/聊天时显示）") },
+                singleLine = true,
+                modifier = Modifier.weight(1f),
+            )
+            Button(onClick = {
+            val shown = Profile.displayName(context).ifBlank { nick.trim() }
+            if (io.github.xororz.localdream.account.Profile.taken(context, nick.trim())) {
+                dupName = nick.trim(); dupOpen = true
+            } else {
+                Profile.setName(context, nick)
+                nick = Profile.name(context)
+                status = "昵称已保存：" + Profile.displayName(context)
+            }
+        }) { Text("保存昵称") }
         }
         Text(
             "账号与图片存放在私密仓库 NightmareRoad-ET-Private 的 users/<邮箱>/ 目录，" +
@@ -213,6 +281,17 @@ fun EmailAccountSection(modifier: Modifier = Modifier) {
             },
             dismissButton = {
                 androidx.compose.material3.TextButton(onClick = { showTerms = false }) { Text("关闭") }
+            },
+        )
+    }
+
+    if (dupOpen) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { dupOpen = false },
+            title = { Text("昵称已被使用") },
+            text = { Text("“$dupName”已经有人用了，请换一个。") },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = { dupOpen = false }) { Text("好") }
             },
         )
     }
