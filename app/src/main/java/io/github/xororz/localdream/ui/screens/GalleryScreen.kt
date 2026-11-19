@@ -975,7 +975,15 @@ private fun UploadDialog(ctx: Context, onPublished: () -> Unit = {}, onDismiss: 
 
     Dialog(onDismissRequest = { if (!uploading) onDismiss() }) {
         Surface(shape = MaterialTheme.shapes.large) {
-            Column(Modifier.padding(20.dp)) {
+            // et.251：列内容（预览、账号区、确认行）加起来会超过屏高，
+            // 而这里不能滚动，底部按钮就被挤出屏幕 —— 表现就是
+            // "选好图片之后发布按钮不见了"。改成整列可滚动。
+            Column(
+                Modifier
+                    .padding(20.dp)
+                    .heightIn(max = 600.dp)
+                    .verticalScroll(rememberScrollState()),
+            ) {
                 Text("发布图片到社区", style = MaterialTheme.typography.titleMedium)
                 if (login == null) {
                     Text(
@@ -1126,6 +1134,16 @@ private fun UploadDialog(ctx: Context, onPublished: () -> Unit = {}, onDismiss: 
                         )
                     }
                 }
+                Text(
+                    if (io.github.xororz.localdream.account.EmailAccount.isSignedIn(ctx))
+                        "发布成功后会自动存一份原图到你账号的图片文件夹（私密，仅自己可见）"
+                    else "登录邮箱账号后，发布的同时会自动存一份到你自己的图片文件夹",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                driveErr?.let {
+                    Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                }
                 Spacer(Modifier.height(16.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (uploading) {
@@ -1141,16 +1159,6 @@ private fun UploadDialog(ctx: Context, onPublished: () -> Unit = {}, onDismiss: 
                         }
                     } else {
                         TextButton(onClick = onDismiss) { Text("取消") }
-                    }
-                    Text(
-                        if (io.github.xororz.localdream.account.EmailAccount.isSignedIn(ctx))
-                            "发布成功后会自动存一份原图到你账号的图片文件夹（私密，仅自己可见）"
-                        else "登录邮箱账号后，发布的同时会自动存一份到你自己的图片文件夹",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    driveErr?.let {
-                        Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                     }
                     Button(
                         enabled = !uploading && confirmedPublic &&

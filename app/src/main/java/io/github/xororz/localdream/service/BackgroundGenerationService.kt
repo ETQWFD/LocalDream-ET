@@ -462,8 +462,14 @@ class BackgroundGenerationService : Service() {
             // et.249：32 位引擎已用官方 NDK 重编（含 Vulkan→OpenCL→CPU 逐级降级），
             // 所以 et.248 那条"32 位一律先走 CPU"的临时限制可以解除。
             // 保留的护栏：本机一旦被判定 GPU 不稳定（上一张图重试过），后续直接走 CPU。
+            // et.251：还得看 GPU 类。DeviceCapabilities.openclRecommended() 明确把
+            // PowerVR 排除（MNN 在这类 32 位驱动上初始化就崩，SD1.5 直接闪退），
+            // 但之前只有"默认值"用到了它，真正的生成入口没调用 —— et.249 解除
+            // 32 位限制后，PowerVR 机型就会真的去撞 OpenCL。这里补上。
             var attemptOpenCL =
-                useOpenCL && !preferences.getBoolean("gpu_unstable", false)
+                useOpenCL &&
+                    !preferences.getBoolean("gpu_unstable", false) &&
+                    io.github.xororz.localdream.utils.DeviceCapabilities.openclRecommended()
             // et.52: any reasonable CFG (1..15) must submit; clamp + round to 1 decimal
             // instead of rejecting. Upstream passes cfg raw; we only guard against
             // out-of-range / fractional edge values that could trip the engine.

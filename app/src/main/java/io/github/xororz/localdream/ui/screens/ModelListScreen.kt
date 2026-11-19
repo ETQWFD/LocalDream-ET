@@ -3136,7 +3136,10 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
 
                 Text(
                     text = if (progress.totalBytes <= 0L) {
-                        "${formatBytes(progress.downloadedBytes)} / 未知大小"
+                        // et.251：源站不回 Content-Length 时（hf-mirror 对此类大文件
+                        // 经常既不给 HEAD 长度、1 字节 Range 也拿不到总长），
+                        // 原来显示 "0 B / 未知大小"，看起来像卡住了。
+                        "已下载 ${formatBytes(progress.downloadedBytes)}（总大小未知）"
                     } else {
                         "${(progress.progress * 100).toInt()}% - ${formatBytes(progress.downloadedBytes)} / ${formatBytes(progress.totalBytes)}"
                     },

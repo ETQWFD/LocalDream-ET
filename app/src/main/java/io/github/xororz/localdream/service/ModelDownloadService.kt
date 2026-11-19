@@ -67,18 +67,51 @@ class ModelDownloadService : Service() {
      */
     private fun mirrorCandidates(url: String): List<String> {
         // et.99: prefer hf-mirror.com first (huggingface.co blocked/timeout in CN).
-        if (url.contains("//huggingface.co")) {
-            val mirror = url
-                .replace("https://huggingface.co", "https://hf-mirror.com")
-                .replace("http://huggingface.co", "https://hf-mirror.com")
-            return listOf(mirror, url)
+        // et.251：原来只替换 "//huggingface.co" 这一种写法，而下载直链经常是
+        // cdn-lfs.huggingface.co / cdn-lfs-us-1.hf.co / *.hf.co 这些主机，
+        // 于是原样去连被墙的主机、重定向后报 "Unable to resolve host
+        // huggingface.co"（这正是 Z-Image Turbo 下载失败的原因）。
+        // 现在按主机判断：只要主机属于 HF 家族，就整体换成 hf-mirror.com，
+        // 路径与查询串原样保留。
+        fun hostOf(u: String): String? = runCatching {
+            java.net.URI(u).host?.lowercase()
+        }.getOrNull()
+
+        val host = hostOf(url)
+        val isHf = host != null &&
+            (host == "huggingface.co" || host.endsWith(".huggingface.co") ||
+                host == "hf.co" || host.endsWith(".hf.co"))
+        val isMirror = host != null && (host == "hf-mirror.com" || host.endsWith(".hf-mirror.com"))
+
+        fun swapHost(u: String, newHost: String): String? = runCatching {
+            val uri = java.net.URI(u)
+            val port = uri.port
+            val sb = StringBuilder("https://").append(newHost)
+            if (port > 0) sb.append(':').append(port)
+            sb.append(uri.rawPath ?: "")
+            if (uri.rawQuery != null) sb.append('?').append(uri.rawQuery)
+            sb.toString()
+        }.getOrNull()
+
+        if (isHf) {
+            val mirror = swapHost(url, "hf-mirror.com")
+            val out = linkedSetOf<String>()
+            if (mirror != null) out += mirror
+            out += url
+            // 兜底：镜像也有 CDN 主机时再试一次裸域名形态
+            runCatching {
+                val uri = java.net.URI(url)
+                out += "https://hf-mirror.com" + (uri.rawPath ?: "")
+            }
+            return out.toList()
         }
-        val out = linkedSetOf(url)
-        when {
-            url.contains("//hf-mirror.com") ->
-                out += url.replace("https://hf-mirror.com", "https://huggingface.co")
+        if (isMirror) {
+            val official = swapHost(url, "huggingface.co")
+            val out = linkedSetOf(url)
+            if (official != null) out += official
+            return out.toList()
         }
-        return out.toList()
+        return listOf(url)
     }
 
     // et.117: HEAD each mirror and (a) sort by latency, (b) capture the real
