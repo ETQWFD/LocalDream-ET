@@ -66,13 +66,61 @@ object DriveAccount {
         d
     }
 
+    /** 校验规则与主 App 完全一致，避免同一个邮箱在两边得到不同结论。 */
+    fun validate(email: String, pwd: String, pwd2: String, agreed: Boolean): String? {
+        val e = email.trim().lowercase()
+        if (!Regex("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$").matches(e)) return "邮箱格式不正确"
+        if (e.length > 120) return "邮箱太长了"
+        if (pwd.length < 6) return "密码至少 6 位"
+        if (pwd != pwd2) return "两次输入的密码不一致"
+        if (!agreed) return "请先勾选同意用户协议"
+        return null
+    }
+
+    /**
+     * 注册：把 account.json 写进 users/<邮箱>/，格式与主 App 一致
+     * （PBKDF2WithHmacSHA256 / 120000 轮 / 标准 base64 无换行）。
+     * HTTP 422 = 文件已存在，正好当"邮箱唯一"约束用。
+     */
+    fun register(ctx: Context, email: String, pwd: String, pwd2: String, agreed: Boolean): String? {
+        validate(email, pwd, pwd2, agreed)?.let { return it }
+        val e = email.trim().lowercase()
+        if (token().isBlank()) return "内置令牌缺失，暂时无法注册，请联系作者"
+        val salt = randomSalt()
+        val obj = JSONObject()
+            .put("email", e)
+            .put("algo", "PBKDF2WithHmacSHA256")
+            .put("iterations", 120_000)
+            .put("salt", salt)
+            .put("hash", pbkdf2(pwd, salt))
+            .put("created", System.currentTimeMillis())
+            .put("updated", System.currentTimeMillis())
+        val payload = JSONObject()
+            .put("message", "account: register $e (drive)")
+            .put("content", java.util.Base64.getEncoder().encodeToString(obj.toString().toByteArray()))
+        val r = call(accountPath(e), "PUT", payload)
+        return when {
+            r.code in 200..201 -> { remember(ctx, e); null }
+            r.code == 422 -> "这个邮箱已经注册过了，请直接登录"
+            r.code == 401 || r.code == 403 -> "没有写入权限（令牌被拒 HTTP ${r.code}）"
+            r.code == 0 -> "网络不通：${r.body}"
+            else -> "注册失败 HTTP ${r.code}"
+        }
+    }
+
+    private fun randomSalt(): String = runCatching {
+        val b = ByteArray(32)
+        java.security.SecureRandom().nextBytes(b)
+        Base64.encodeToString(b, Base64.NO_WRAP)
+    }.getOrElse { System.currentTimeMillis().toString() }
+
     /** 登录校验：读 account.json 比对哈希。返回 null 表示成功。 */
     fun login(email: String, pwd: String): String? {
         if (token().isBlank()) return "内置令牌缺失，无法访问云盘，请联系作者"
         val e = email.trim().lowercase()
         if (!e.contains('@')) return "邮箱格式不正确"
         val r = call(accountPath(e))
-        if (r.code == 404) return "这个邮箱还没有注册，请先在出图 App 里注册"
+        if (r.code == 404) return "这个邮箱还没有注册，点下面的「注册」创建一个"
         if (r.code !in 200..299) return if (r.code == 0) "网络不通：${r.body}" else "读取账号失败 HTTP ${r.code}"
         val obj = runCatching {
             JSONObject(

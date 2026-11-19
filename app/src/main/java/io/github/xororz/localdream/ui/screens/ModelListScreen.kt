@@ -1570,14 +1570,21 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                                     showLogsPage = true
                                 },
                             )
+                            // et.250：这里原来打开的是"本地图片多选上传"页（扫描历史/
+                            // 输出/相册目录，一堆与社区无关的选项），用户反馈"图片社区
+                            // 里没用的选项太多、而且没有发布按钮"。入口统一改成跳图片社区，
+                            // 发布只在社区的"发布图片"按钮里做，一次一张、必须手动确认公开，
+                            // 并在登录后自动存一份到用户自己账号的图片文件夹。
                             DropdownMenuItem(
-                                text = { Text(stringResource(R.string.upload_images_title)) },
+                                text = { Text("发布到图片社区") },
                                 leadingIcon = {
                                     Icon(Icons.Default.Cloud, contentDescription = null)
                                 },
                                 onClick = {
                                     menuExpanded = false
-                                    showUploadImages = true
+                                    navController.navigate(
+                                        io.github.xororz.localdream.navigation.Screen.Gallery.route,
+                                    )
                                 },
                             )
                             DropdownMenuItem(

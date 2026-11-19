@@ -158,6 +158,12 @@ private fun LoginScreen(onLogin: (String) -> Unit) {
     var pwd by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     var err by remember { mutableStateOf<String?>(null) }
+    // et.250：网盘之前只有登录、没有注册入口，也没有用户协议；
+    // 邮箱没注册过就只能回主 App 注册，体验上等于"云盘用不了"。
+    var regMode by remember { mutableStateOf(false) }
+    var pwd2 by remember { mutableStateOf("") }
+    var agreed by remember { mutableStateOf(false) }
+    var showTerms by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
         Column(
@@ -190,6 +196,22 @@ private fun LoginScreen(onLogin: (String) -> Unit) {
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 modifier = Modifier.fillMaxWidth(),
             )
+            if (regMode) {
+                OutlinedTextField(
+                    value = pwd2, onValueChange = { pwd2 = it }, label = { Text("再次输入密码确认") },
+                    singleLine = true, visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                androidx.compose.material3.Checkbox(checked = agreed, onCheckedChange = { agreed = it })
+                Text(
+                    "我已阅读并同意《用户协议与隐私政策》",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                androidx.compose.material3.TextButton(onClick = { showTerms = true }) {
+                    Text("查看协议")
+                }
+            }
             err?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
             Button(
                 enabled = !busy,
@@ -197,13 +219,55 @@ private fun LoginScreen(onLogin: (String) -> Unit) {
                 onClick = {
                     busy = true; err = null
                     scope.launch {
-                        val e = withContext(Dispatchers.IO) { DriveAccount.login(mail, pwd) }
+                        val e = withContext(Dispatchers.IO) {
+                            if (regMode) DriveAccount.register(ctx, mail, pwd, pwd2, agreed)
+                            else DriveAccount.login(mail, pwd)
+                        }
                         busy = false
                         if (e == null) onLogin(mail.trim().lowercase()) else err = e
                     }
                 },
-            ) { Text(if (busy) "登录中…" else "登录") }
+            ) {
+                Text(
+                    when {
+                        busy && regMode -> "注册中…"
+                        busy -> "登录中…"
+                        regMode -> "注册并登录"
+                        else -> "登录"
+                    },
+                )
+            }
+            androidx.compose.material3.TextButton(
+                onClick = { regMode = !regMode; err = null },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(if (regMode) "已有账号？返回登录" else "还没有账号？用邮箱注册")
+            }
             if (busy) CircularProgressIndicator(modifier = Modifier.padding(top = 4.dp))
+            if (showTerms) {
+                AlertDialog(
+                    onDismissRequest = { showTerms = false },
+                    title = { Text("用户协议与隐私政策") },
+                    text = {
+                        Text(
+                        """Nightmare 云盘 · 用户协议与隐私政策
+
+1. 账号与数据：邮箱账号与图片保存在作者的私密仓库中，目录以你的邮箱命名，只有该目录的持有者可见；仓库本身不公开。
+2. 云盘为只读：本应用提供预览与下载，不提供删除，如需清理请联系作者，避免误删已发布作品的原始文件。
+3. 图片来源：云盘里的图片来自你在 Nightmare Road-ET 中主动发布或保存的作品。应用不会自动扫描或上传相册，任何上传都需要你在发布框里手动确认。
+4. 密码：本地只保存邮箱，不保存明文密码；服务端仅保存 PBKDF2-HMAC-SHA256（120000 轮）派生的校验值与随机盐。
+5. 责任：请勿上传违法、侵权或他人隐私内容，由此造成的后果由发布者承担，作者有权下架违规内容。
+6. 协议更新：继续使用该应用即视为接受最新版本的协议。""".trimIndent()
+                        )
+                    },
+                    confirmButton = {
+                        Button(onClick = { showTerms = false; agreed = true }) { Text("同意并勾选") }
+                    },
+                    dismissButton = {
+                        androidx.compose.material3.TextButton(onClick = { showTerms = false }) { Text("关闭") }
+                    },
+                )
+            }
             }
         }
     }

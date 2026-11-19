@@ -337,9 +337,13 @@ fun GalleryScreen(navController: NavController) {
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { showUpload = true }) {
-                Icon(Icons.Default.Add, contentDescription = "上传")
-            }
+            // et.250：原来只有一个"＋"图标的悬浮按钮，用户找不到发布入口，
+            // 反馈直接是"图片社区没有发布的按钮"。改成带文字的发布按钮。
+            androidx.compose.material3.ExtendedFloatingActionButton(
+                onClick = { showUpload = true },
+                icon = { Icon(Icons.Default.Add, contentDescription = null) },
+                text = { Text("发布图片") },
+            )
         },
     ) { pad ->
         if (loading && items.isEmpty()) {
@@ -942,7 +946,11 @@ private fun UploadDialog(ctx: Context, onPublished: () -> Unit = {}, onDismiss: 
     // 公开的相册图全传上社区，看起来就像“相册自动上传”。
     var confirmedPublic by remember { mutableStateOf(false) }
     // et.246：发布的同时把原图镜像一份到自己的私密云盘目录（Nightmare 云盘 App 读它）。
-    var alsoDrive by remember { mutableStateOf(false) }
+    // et.250：按用户要求，"发布的同时存一份到自己账号的图片文件夹"改成默认行为，
+    // 不再放一个要手动勾选的开关；没登录时在同一个弹框里就地给出邮箱登录/注册
+    // （原来只写"请先去注册邮箱"，用户因此以为"只有注册没有登录"、进而以为发布不了）。
+    var alsoDrive by remember { mutableStateOf(true) }
+    var showAccount by remember { mutableStateOf(false) }
     var driveErr by remember { mutableStateOf<String?>(null) }
     val photoPicker = rememberLauncherForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia(),
@@ -968,10 +976,10 @@ private fun UploadDialog(ctx: Context, onPublished: () -> Unit = {}, onDismiss: 
     Dialog(onDismissRequest = { if (!uploading) onDismiss() }) {
         Surface(shape = MaterialTheme.shapes.large) {
             Column(Modifier.padding(20.dp)) {
-                Text("上传作品", style = MaterialTheme.typography.titleMedium)
+                Text("发布图片到社区", style = MaterialTheme.typography.titleMedium)
                 if (login == null) {
                     Text(
-                        "未登录 GitHub：作品将以匿名作者发布；登录后作品会署名你的账号。",
+                        "不登录 GitHub 也能发布，作者会显示为“匿名”；登录 GitHub 才署名你的账号。",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -1089,6 +1097,22 @@ private fun UploadDialog(ctx: Context, onPublished: () -> Unit = {}, onDismiss: 
                     Text(msg, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                 }
                 // et.243：公开前必须手动勾选确认，避免“以为只是预览，结果整批相册图被传上去”。
+                if (!io.github.xororz.localdream.account.EmailAccount.isSignedIn(ctx)) {
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedButton(onClick = { showAccount = !showAccount }, modifier = Modifier.fillMaxWidth()) {
+                        Text(if (showAccount) "收起邮箱登录" else "登录 / 注册邮箱账号（用于存进自己的文件夹）")
+                    }
+                    if (showAccount) {
+                        Column(
+                            Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = 300.dp)
+                                .verticalScroll(rememberScrollState()),
+                        ) {
+                            EmailAccountSection()
+                        }
+                    }
+                }
                 if ((pickedUri != null || pickedFile != null) && !uploading) {
                     Spacer(Modifier.height(10.dp))
                     Row(
@@ -1118,26 +1142,19 @@ private fun UploadDialog(ctx: Context, onPublished: () -> Unit = {}, onDismiss: 
                     } else {
                         TextButton(onClick = onDismiss) { Text("取消") }
                     }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Checkbox(checked = alsoDrive, onCheckedChange = { alsoDrive = it })
-                        Text(
-                            "同时存一份到我的云盘（私密，仅自己可见）",
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.clickable { alsoDrive = !alsoDrive },
-                        )
-                    }
-                    if (alsoDrive && !io.github.xororz.localdream.account.EmailAccount.isSignedIn(ctx)) {
-                        Text(
-                            "还没登录邮箱账号：请先在“云备份 / 登录”里注册邮箱，否则这项不会生效。",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error,
-                        )
-                    }
+                    Text(
+                        if (io.github.xororz.localdream.account.EmailAccount.isSignedIn(ctx))
+                            "发布成功后会自动存一份原图到你账号的图片文件夹（私密，仅自己可见）"
+                        else "登录邮箱账号后，发布的同时会自动存一份到你自己的图片文件夹",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                     driveErr?.let {
                         Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                     }
                     Button(
-                        enabled = !uploading && confirmedPublic,
+                        enabled = !uploading && confirmedPublic &&
+                            (pickedUri != null || pickedFile != null || pickedUris.isNotEmpty()),
                         onClick = {
                         val p = price.toIntOrNull() ?: 0
                         when {
