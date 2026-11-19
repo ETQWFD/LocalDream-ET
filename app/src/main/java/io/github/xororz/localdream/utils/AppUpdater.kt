@@ -191,7 +191,14 @@ object AppUpdater {
         }
         val apks = json.optJSONArray("assets")
             ?.let { arr -> (0 until arr.length()).map { arr.getJSONObject(it) } }
-            ?.filter { it.optString("name").endsWith(".apk", ignoreCase = true) }
+            ?.filter {
+                val nm = it.optString("name")
+                // 只认主程序包：Release 里现在还有 NightmareDrive.apk（网盘），
+                // 它既不带架构后缀、又排在字母序最前，必须显式排除，
+                // 否则非 ARM 设备走回退通道会把网盘当主程序装上。
+                nm.endsWith(".apk", ignoreCase = true) &&
+                    nm.startsWith("NightmareRoad-ET", ignoreCase = true)
+            }
             .orEmpty()
         if (apks.isEmpty()) return null
         val asset = apks.firstOrNull {
