@@ -19,6 +19,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -85,9 +87,15 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            // 与出图 App 同一套 tangerine 配色 / 深色跟随系统
+            // et.252：主题色可在网盘里自己换（5 套），深色跟随系统。
+            var accent by remember { mutableStateOf(DrivePrefs.accent(this)) }
             val dark = androidx.compose.foundation.isSystemInDarkTheme()
-            MaterialTheme(colorScheme = driveScheme(dark)) { DriveRoot() }
+            MaterialTheme(colorScheme = driveScheme(dark, accent)) {
+                DriveRoot(
+                    accent = accent,
+                    onAccent = { i -> DrivePrefs.setAccent(this, i); accent = i },
+                )
+            }
         }
     }
 }
@@ -141,13 +149,41 @@ private fun saveToGallery(ctx: android.content.Context, bytes: ByteArray, name: 
     }.getOrDefault(false)
 
 @Composable
-private fun DriveRoot() {
+private fun DriveRoot(accent: Int, onAccent: (Int) -> Unit) {
     val ctx = LocalContext.current
     var email by remember { mutableStateOf(DriveAccount.email(ctx)) }
-    if (email.isBlank()) {
-        LoginScreen(onLogin = { e -> DriveAccount.remember(ctx, e); email = e })
-    } else {
-        DriveScreen(email = email, onLogout = { DriveAccount.signOut(ctx); email = "" })
+    var showAccent by remember { mutableStateOf(false) }
+    // 登录页与云盘之间做淡入淡出，不再"啪"一下换屏。
+    androidx.compose.animation.Crossfade(
+        targetState = email.isNotBlank(),
+        animationSpec = androidx.compose.animation.core.tween(320),
+        label = "driveRoot",
+    ) { signedIn ->
+        if (!signedIn) {
+            Box(Modifier.fillMaxSize()) {
+                LoginScreen(
+                    onLogin = { e -> DriveAccount.remember(ctx, e); email = e },
+                )
+                androidx.compose.material3.TextButton(
+                    onClick = { showAccent = true },
+                    modifier = Modifier.align(Alignment.BottomEnd).padding(12.dp),
+                ) { Text("主题色") }
+            }
+        } else {
+            DriveScreen(
+                email = email,
+                accent = accent,
+                onAccent = onAccent,
+                onLogout = { DriveAccount.signOut(ctx); email = "" },
+            )
+        }
+    }
+    if (showAccent) {
+        AccentDialog(
+            current = accent,
+            onPick = { i -> onAccent(i); showAccent = false },
+            onDismiss = { showAccent = false },
+        )
     }
 }
 
@@ -273,43 +309,140 @@ private fun LoginScreen(onLogin: (String) -> Unit) {
     }
 }
 
+/** 主题色选择：5 套色板，点一下立刻生效并记住。 */
+@Composable
+private fun AccentDialog(current: Int, onPick: (Int) -> Unit, onDismiss: () -> Unit) {
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("主题色") },
+        text = {
+            Column {
+                DRIVE_ACCENTS.forEachIndexed { i, a ->
+                    androidx.compose.material3.TextButton(
+                        onClick = { onPick(i) },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Box(
+                            Modifier
+                                .width(18.dp)
+                                .height(18.dp)
+                                .clip(RoundedCornerShape(9.dp))
+                                .background(a.light),
+                        )
+                        Text(
+                            "  ${a.label}${if (i == current) "（当前）" else ""}",
+                            color = if (i == current) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            androidx.compose.material3.TextButton(onClick = onDismiss) { Text("关闭") }
+        },
+    )
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun DriveScreen(email: String, onLogout: () -> Unit) {
+private fun DriveScreen(
+    email: String,
+    accent: Int,
+    onAccent: (Int) -> Unit,
+    onLogout: () -> Unit,
+) {
     val ctx = LocalContext.current
     var items by remember { mutableStateOf<List<DriveAccount.RemoteImage>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
     var refreshToken by remember { mutableStateOf(0) }
     var viewer by remember { mutableStateOf<DriveAccount.RemoteImage?>(null) }
     var confirmLogout by remember { mutableStateOf(false) }
+    var uploading by remember { mutableStateOf(false) }
+    var showHelp by remember { mutableStateOf(false) }
+    var showAccent2 by remember { mutableStateOf(false) }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    // et.252：网盘内自助上传——相册选一张，直接进 users/<邮箱>/images/
+    val picker = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.GetContent(),
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        uploading = true
+        scope.launch {
+            val raw = withContext(Dispatchers.IO) {
+                runCatching { ctx.contentResolver.openInputStream(uri)?.use { it.readBytes() } }.getOrNull()
+            }
+            if (raw == null) {
+                uploading = false
+                Toast.makeText(ctx, "读取图片失败", Toast.LENGTH_SHORT).show()
+                return@launch
+            }
+            val payload: ByteArray = if (raw.size > 6 * 1024 * 1024) {
+                withContext(Dispatchers.IO) {
+                    runCatching {
+                        val bm = BitmapFactory.decodeByteArray(raw, 0, raw.size)
+                        val out = java.io.ByteArrayOutputStream()
+                        bm.compress(Bitmap.CompressFormat.JPEG, 92, out)
+                        out.toByteArray()
+                    }.getOrDefault(raw)
+                }
+            } else raw
+            val name = "pic_${System.currentTimeMillis()}_1.png"
+            val up = withContext(Dispatchers.IO) { DriveAccount.uploadImage(email, name, payload) }
+            uploading = false
+            if (up.code in 200..299) {
+                Toast.makeText(ctx, "已上传到你的云盘", Toast.LENGTH_SHORT).show()
+                refreshToken++
+            } else {
+                Toast.makeText(ctx, "上传失败 ${up.code}: ${up.body.take(80)}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
     LaunchedEffect(refreshToken, email) {
         loading = true
         items = withContext(Dispatchers.IO) { DriveAccount.listImages(email) }
         loading = false
     }
     Scaffold(
+        containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
-                title = { Text("${email} 的云盘（${items.size}）", style = MaterialTheme.typography.titleMedium) },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                ),
+                title = {
+                    Text(
+                        "${email} 的云盘（${items.size}）",
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
                 actions = {
+                    androidx.compose.material3.TextButton(onClick = { showAccent2 = true }) { Text("主题") }
+                    androidx.compose.material3.TextButton(onClick = { showHelp = true }) { Text("帮助") }
                     IconButton(onClick = { refreshToken++ }) { Icon(Icons.Default.Refresh, "刷新") }
                     OutlinedButton(onClick = { confirmLogout = true }, modifier = Modifier.padding(end = 8.dp)) { Text("退出") }
                 },
             )
         },
     ) { pad ->
-        Box(modifier = Modifier.fillMaxSize().padding(pad)) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(pad)
+                // 琉璃底：三层深紫—墨蓝渐变，卡片半透明压在它上面
+                .background(
+                    androidx.compose.ui.graphics.Brush.verticalGradient(
+                        listOf(Color(0xFF171018), Color(0xFF241726), Color(0xFF12151E)),
+                    ),
+                ),
+        ) {
             if (loading) {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
             } else if (items.isEmpty()) {
                 Text(
-                    "还没有图片。在 Nightmare Road-ET 的「图片社区 → 发布」里勾选" +
-                        "「同时存到我的云盘」，图片就会出现在这里。",
+                    "这个文件夹还是空的。\n\n· 点右下角「上传图片」可以直接把相册里的图存到自己云盘；\n" +
+                        "· 在 Nightmare Road-ET 里发布作品（登录同一邮箱）也会自动存一份到这里。",
                     modifier = Modifier.align(Alignment.Center).padding(24.dp),
                     style = MaterialTheme.typography.bodyMedium,
+                    color = Color.White.copy(alpha = 0.85f),
                 )
             } else {
                 LazyVerticalGrid(
@@ -320,6 +453,20 @@ private fun DriveScreen(email: String, onLogout: () -> Unit) {
                 ) {
                     items(items, key = { it.name }) { img ->
                         Thumb(email = email, img = img, onClick = { viewer = img })
+                    }
+                }
+            }
+            androidx.compose.material3.FloatingActionButton(
+                onClick = { if (!uploading) picker.launch("image/*") },
+                modifier = Modifier.align(Alignment.BottomEnd).padding(18.dp),
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+            ) { Text(if (uploading) "上传中…" else "上传图片") }
+            if (uploading) {
+                Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.35f)), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        CircularProgressIndicator(color = Color.White)
+                        Text("正在上传…", color = Color.White, modifier = Modifier.padding(top = 10.dp))
                     }
                 }
             }
@@ -335,6 +482,32 @@ private fun DriveScreen(email: String, onLogout: () -> Unit) {
                 Button(onClick = { confirmLogout = false; onLogout() }) { Text("退出") }
             },
             dismissButton = { OutlinedButton(onClick = { confirmLogout = false }) { Text("取消") } },
+        )
+    }
+
+    if (showHelp) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showHelp = false },
+            title = { Text("帮助与反馈") },
+            text = {
+                Text(
+                    "· 云盘只显示你自己账号文件夹里的图片，别人看不到；\n" +
+                        "· 支持预览（双指放大，最高原图）与下载到相册 Pictures/Nightmare云盘；\n" +
+                        "· 按约定云盘不提供删除；如需清理请联系作者。\n\n" +
+                        "反馈：GitHub 仓库 ETQWFD/NightmareRoad-ET 提 Issue，或在群里 @管理员。",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = { showHelp = false }) { Text("知道了") }
+            },
+        )
+    }
+    if (showAccent2) {
+        AccentDialog(
+            current = accent,
+            onPick = { i -> onAccent(i); showAccent2 = false },
+            onDismiss = { showAccent2 = false },
         )
     }
 
@@ -359,12 +532,22 @@ private fun Thumb(email: String, img: DriveAccount.RemoteImage, onClick: () -> U
             fetchBytes("${DriveAccount.imagesDir(email)}/${img.name}")?.let { decodeBitmap(it, 400) }
         }
     }
+    // 琉璃卡片：半透明填充 + 细白描边 + 载入时淡入放大
+    var appeared by remember(img.name) { mutableStateOf(false) }
+    LaunchedEffect(img.name) { appeared = true }
+    val alpha by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (appeared) 1f else 0f,
+        animationSpec = androidx.compose.animation.core.tween(280),
+        label = "thumbFade",
+    )
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .aspectRatio(1f)
+            .graphicsLayer { this.alpha = alpha; scaleX = 0.94f + 0.06f * alpha; scaleY = 0.94f + 0.06f * alpha }
             .clip(RoundedCornerShape(14.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .background(Color.White.copy(alpha = 0.07f))
+            .border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(14.dp))
             .pointerInput(img.name) { detectTapGestures(onTap = { onClick() }) },
         contentAlignment = Alignment.Center,
     ) {

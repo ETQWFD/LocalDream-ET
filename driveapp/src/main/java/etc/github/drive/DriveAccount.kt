@@ -25,6 +25,16 @@ object DriveAccount {
             .replace(Regex("[^a-z0-9_\\-]"), "")
 
     fun accountPath(email: String): String = "${userDir(email)}/account.json"
+
+    /** 上传一张图片到 users/&lt;邮箱&gt;/images/（名字带时间戳，不会覆盖旧图）。 */
+    fun uploadImage(email: String, name: String, bytes: ByteArray): Http {
+        val payload = JSONObject().apply {
+            put("message", "drive upload $name")
+            put("content", Base64.encodeToString(bytes, Base64.NO_WRAP))
+            put("branch", "main")
+        }
+        return call("${imagesDir(email)}/$name", "PUT", payload)
+    }
     fun imagesDir(email: String): String = "${userDir(email)}/images"
 
     private fun token(): String = BuildConfig.GALLERY_TOKEN
