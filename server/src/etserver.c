@@ -90,7 +90,7 @@
 
 /* ============================ 全局配置 ============================ */
 #define APP_NAME      "Nightmare Road-ET Server"
-#define APP_VERSION   "1.6.17"
+#define APP_VERSION   "1.6.18"
 #define COPYRIGHT_STR "Copyright (C) 2026 etc"
 
 #define DEFAULT_PORT 4080      /* 对外监听端口 */
