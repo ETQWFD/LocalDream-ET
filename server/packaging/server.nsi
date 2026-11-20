@@ -6,7 +6,7 @@ ManifestDPIAware true
 !include "x64.nsh"
 
 Name "Local Dream ET Server"
-OutFile "LocalDreamET-Server-Setup-1.6.6.exe"
+OutFile "LocalDreamET-Server-Setup-1.6.16.exe"
 Unicode true
 RequestExecutionLevel user
 SetCompressor /SOLID lzma
