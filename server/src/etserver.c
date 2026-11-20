@@ -90,13 +90,16 @@
 
 /* ============================ 全局配置 ============================ */
 #define APP_NAME      "Nightmare Road-ET Server"
-#define APP_VERSION   "1.6.15"
+#define APP_VERSION   "1.6.16"
 #define COPYRIGHT_STR "Copyright (C) 2026 etc"
 
 #define DEFAULT_PORT 4080      /* 对外监听端口 */
 #define DEFAULT_BIND       "0.0.0.0"
 #define UPSTREAM_BASE_PORT 17860     /* sd-server 内部端口起点 */
 #define KEY_LEN            46        /* API Key 固定长度 */
+#ifdef _WIN32
+static void wu8(const wchar_t* w, char* s, int sn);   /* 前置声明：网卡名 UTF-16->UTF-8 */
+#endif
 #define MAX_LINE           8192
 #define MAX_BODY_BYTES     (32*1024*1024)  /* v1.6.6：请求体上限 32MB，超出返回 413 */
 
@@ -116,6 +119,7 @@ typedef struct {
     int   batch_size;       /* 默认批量(GUI batch)；txt2img=batch_size，OpenAI=n，默认 1 */
     int   unload_after_gen;  /* v1.4.0：出完图后释放模型 buffer（杀引擎），默认 1 */
     int   enable_api_key;     /* v1.6.5：1=校验 api_key；默认 0=不校验 */
+    long long rent_until;     /* v1.6.16：临时出租到期时间(秒级时间戳)，0=未出租 */
     char  engine_args[512];   /* v1.6.9：追加给 sd-server 的额外参数，如 --type f16 */
 } Config;
 
@@ -452,6 +456,7 @@ static void default_config(void) {
     g_cfg.unload_after_gen = 0; /* v1.6.6：默认常驻模型，避免每次调用都重新加载；可配 1 恢复出图即卸载 */
     g_cfg.api_key[0]=0;        /* v1.6.5：默认空密码直接可用；在 config 填 api_key=xxx 才启用 */
     g_cfg.enable_api_key = 0;  /* v1.6.5：默认不校验密钥 */
+    g_cfg.rent_until = 0;      /* v1.6.16：默认未出租 */
     g_cfg.model_path[0]=0; g_cfg.model_id[0]=0;
 }
 
@@ -474,6 +479,7 @@ static void save_config(void) {
     fprintf(f, "batch_size=%d\n", g_cfg.batch_size);
     fprintf(f, "unload_after_gen=%d\n", g_cfg.unload_after_gen);
     fprintf(f, "enable_api_key=%d\n", g_cfg.enable_api_key);
+    fprintf(f, "rent_until=%lld\n", g_cfg.rent_until);
     fprintf(f, "config_version=2\n");
     fclose(f);
 }
@@ -502,6 +508,7 @@ static int load_config(void) {
         else if (!strcmp(k,"batch_size")) g_cfg.batch_size=atoi(v);
         else if (!strcmp(k,"unload_after_gen")) g_cfg.unload_after_gen=atoi(v);
         else if (!strcmp(k,"enable_api_key")) g_cfg.enable_api_key=atoi(v);
+        else if (!strcmp(k,"rent_until"))  g_cfg.rent_until=atoll(v);
         else if (!strcmp(k,"engine_args")) strncpy(g_cfg.engine_args,v,sizeof(g_cfg.engine_args)-1);
         else if (!strcmp(k,"config_version")) cfgver=atoi(v);
     }
@@ -605,7 +612,10 @@ static void collect_ips(void) {
     if(r==NO_ERROR){
         for(IP_ADAPTER_ADDRESSES* a=ads; a; a=a->Next){
             if(a->IfType==IF_TYPE_SOFTWARE_LOOPBACK) continue;
-            const char* name = a->FriendlyName ? a->FriendlyName : (a->AdapterName?a->AdapterName:"");
+            char namebuf[256]={0};
+            if(a->FriendlyName) wu8(a->FriendlyName,namebuf,sizeof(namebuf));
+            else snprintf(namebuf,sizeof(namebuf),"%.200s", a->AdapterName?a->AdapterName:"");
+            const char* name = namebuf;
             int virt = nic_is_virtual(name);
             for(IP_ADAPTER_UNICAST_ADDRESS* u=a->FirstUnicastAddress; u; u=u->Next){
                 if(u->Address.lpSockaddr->sa_family!=AF_INET) continue;
@@ -1160,6 +1170,11 @@ static void* watchdog_thread(void* arg) {
     while(g_running) {
         poll_sleep_ms(2000);
         if(!g_running) break;
+        /* v1.6.16：临时出租到期自动收回 */
+        if(g_cfg.rent_until>0 && (long long)time(NULL)>=g_cfg.rent_until){
+            g_cfg.rent_until=0; g_cfg.enable_api_key=0; save_config();
+            log_line("临时出租已到期，已自动关闭 API Key 校验");
+        }
 
         /* 未选择/下载模型时没有可运行的引擎：保持代理外壳，绝不空转重启 */
         if(g_cfg.model_path[0]==0){ g_engine_ready=0; g_engine_alive=0; continue; }
@@ -1229,6 +1244,8 @@ static void* watchdog_thread(void* arg) {
 static int check_auth(const char* hdr_block, const char* query) {
     /* v1.6.5：enable_api_key=0（默认）时不校验密钥，直接放行 */
     if(!g_cfg.enable_api_key) return 1;
+    /* v1.6.16：临时出租到期后一律拒绝 */
+    if(g_cfg.rent_until>0 && (long long)time(NULL)>=g_cfg.rent_until) return 0;
     /* 1) Authorization: Bearer <key> */
     const char* p = strcasestr(hdr_block, "authorization:");
     if (p) { p += 14; while(*p==' '||*p=='\t') p++;
@@ -2177,7 +2194,13 @@ static BOOL WINAPI win_ctrl_handler(DWORD type) {
 #define IDC_STEPS_VAL 1011
 #define IDC_CFG_VAL   1012
 #define IDC_BATCH_VAL 1013
-#define IDC_APIKEY    1014   /* v1.6.16：是否校验 API Key（对应 g_cfg.enable_api_key） */
+#define IDC_APIKEY    1014
+#define IDC_RENT_BTN  1015   /* v1.6.16：打开“临时出租”窗口 */
+#define IDC_RENT_HOURS 1016
+#define IDC_RENT_INFO  1017
+#define IDC_RENT_START 1018
+#define IDC_RENT_STOP  1019
+#define IDC_RENT_CLOSE 1020   /* v1.6.16：是否校验 API Key（对应 g_cfg.enable_api_key） */
 static HWND gh_main=NULL; static NOTIFYICONDATAW gh_nid={0}; static int gh_has_tray=0;
 static HFONT  gh_font=NULL;
 static HBRUSH g_bgbrush=NULL; static COLORREF g_bgcol=RGB(28,28,30);
@@ -2289,6 +2312,73 @@ static void ui_refresh(HWND h){
     snprintf(buf,sizeof(buf),"= %d 张", g_cfg.batch_size); ui_set_text(h,IDC_BATCH_VAL,buf);
 }
 
+/* ============================ v1.6.16 临时出租窗口 ============================ */
+static HWND gh_rent=NULL;
+static void rent_status_text(char* out,int n){
+    if(g_cfg.rent_until<=0){
+        snprintf(out,n,"当前未出租。\\n设置时长后点“开始出租”：会重新生成一次性 API Key，并只在租期内接受调用；到期自动收回。");
+    }else{
+        long long left=(long long)g_cfg.rent_until-(long long)time(NULL);
+        if(left<0) left=0;
+        snprintf(out,n,"出租中：剩余 %lld 小时 %lld 分\\n对外端口：%d\\n当前密钥：%s\\n到期后自动关闭 API Key 校验。",
+                 left/3600,(left%3600)/60,g_cfg.port,g_cfg.api_key);
+    }
+}
+static void rent_refresh(HWND h){
+    char t[700]; rent_status_text(t,sizeof(t)); ui_set_text(h,IDC_RENT_INFO,t);
+}
+static void rent_start(HWND h){
+    wchar_t wb[32]; GetWindowTextW(GetDlgItem(h,IDC_RENT_HOURS),wb,32);
+    char b[32]={0}; wu8(wb,b,sizeof(b));
+    int hours=atoi(b); if(hours<=0) hours=24; if(hours>24*365) hours=24*365;
+    gen_api_key(g_cfg.api_key);
+    g_cfg.enable_api_key=1;
+    g_cfg.rent_until=(long long)time(NULL)+(long long)hours*3600;
+    save_config();
+    log_line("临时出租开启：%d 小时，端口 %d", hours, g_cfg.port);
+    rent_refresh(h);
+}
+static void rent_stop(HWND h){
+    g_cfg.rent_until=0; g_cfg.enable_api_key=0; save_config();
+    log_line("临时出租已手动结束");
+    rent_refresh(h);
+}
+static LRESULT CALLBACK RentProc(HWND h,UINT m,WPARAM w,LPARAM l){
+    switch(m){
+    case WM_CREATE: {
+        HWND c;
+        c=CreateWindowW(L"STATIC",L"出租时长（小时）",WS_CHILD|WS_VISIBLE,12,14,130,20,h,NULL,NULL,NULL); SendMessageW(c,WM_SETFONT,(WPARAM)gh_font,1);
+        c=CreateWindowW(L"EDIT",L"24",WS_CHILD|WS_VISIBLE|WS_BORDER|ES_NUMBER,150,12,80,24,h,(HMENU)IDC_RENT_HOURS,NULL,NULL); SendMessageW(c,WM_SETFONT,(WPARAM)gh_font,1);
+        c=CreateWindowW(L"STATIC",L"",WS_CHILD|WS_VISIBLE,12,46,360,86,h,(HMENU)IDC_RENT_INFO,NULL,NULL); SendMessageW(c,WM_SETFONT,(WPARAM)gh_font,1);
+        c=CreateWindowW(L"BUTTON",L"开始出租",WS_CHILD|WS_VISIBLE|BS_PUSHBUTTON,12,140,110,28,h,(HMENU)IDC_RENT_START,NULL,NULL); SendMessageW(c,WM_SETFONT,(WPARAM)gh_font,1);
+        c=CreateWindowW(L"BUTTON",L"立即结束",WS_CHILD|WS_VISIBLE|BS_PUSHBUTTON,132,140,110,28,h,(HMENU)IDC_RENT_STOP,NULL,NULL); SendMessageW(c,WM_SETFONT,(WPARAM)gh_font,1);
+        c=CreateWindowW(L"BUTTON",L"关闭",WS_CHILD|WS_VISIBLE|BS_PUSHBUTTON,252,140,110,28,h,(HMENU)IDC_RENT_CLOSE,NULL,NULL); SendMessageW(c,WM_SETFONT,(WPARAM)gh_font,1);
+        rent_refresh(h);
+        return 0; }
+    case WM_COMMAND: {
+        int id=LOWORD(w);
+        if(id==IDC_RENT_START){ rent_start(h); return 0; }
+        if(id==IDC_RENT_STOP){ rent_stop(h); return 0; }
+        if(id==IDC_RENT_CLOSE){ ShowWindow(h,SW_HIDE); return 0; }
+        return 0; }
+    case WM_CLOSE: ShowWindow(h,SW_HIDE); return 0;
+    case WM_PAINT: { PAINTSTRUCT ps; HDC dc=BeginPaint(h,&ps); FillRect(dc,&ps.rcPaint,g_bgbrush); EndPaint(h,&ps); return 0; }
+    }
+    return DefWindowProcW(h,m,w,l);
+}
+static void rent_show(HWND owner){
+    if(!gh_rent){
+        WNDCLASSW wc; memset(&wc,0,sizeof(wc));
+        wc.lpfnWndProc=RentProc; wc.hInstance=GetModuleHandleW(NULL);
+        wc.hCursor=LoadCursor(NULL,IDC_ARROW); wc.hbrBackground=g_bgbrush; wc.lpszClassName=L"ETRentWnd";
+        RegisterClassW(&wc);
+        gh_rent=CreateWindowExW(WS_EX_TOOLWINDOW,L"ETRentWnd",L"临时出租 · Nightmare Road-ET",
+            WS_OVERLAPPED|WS_CAPTION|WS_SYSMENU,CW_USEDEFAULT,CW_USEDEFAULT,400,215,owner,NULL,GetModuleHandleW(NULL),NULL);
+    }
+    rent_refresh(gh_rent);
+    ShowWindow(gh_rent,SW_SHOW); SetForegroundWindow(gh_rent);
+}
+
 static LRESULT CALLBACK WndProc(HWND h,UINT m,WPARAM w,LPARAM l){
     switch(m){
     case WM_CREATE: {
@@ -2309,6 +2399,7 @@ static LRESULT CALLBACK WndProc(HWND h,UINT m,WPARAM w,LPARAM l){
         /* v1.6.16：之前只有 enable_api_key 配置项、界面上没有开关，用户找不到"是否允许使用 API Key" */
         c=CreateWindowW(L"BUTTON",L"校验 API Key",WS_CHILD|WS_VISIBLE|BS_AUTOCHECKBOX,436,154,100,22,h,(HMENU)IDC_APIKEY,NULL,NULL); SendMessageW(c,WM_SETFONT,(WPARAM)gh_font,1);
         SendMessageW(c,BM_SETCHECK, g_cfg.enable_api_key?BST_CHECKED:BST_UNCHECKED, 0);
+        c=CreateWindowW(L"BUTTON",L"临时出租",WS_CHILD|WS_VISIBLE|BS_PUSHBUTTON,436,188,100,22,h,(HMENU)IDC_RENT_BTN,NULL,NULL); SendMessageW(c,WM_SETFONT,(WPARAM)gh_font,1);
         c=CreateWindowW(L"STATIC",L"主题：",WS_CHILD|WS_VISIBLE,10,190,60,22,h,(HMENU)NULL,NULL,NULL); SendMessageW(c,WM_SETFONT,(WPARAM)gh_font,1);
         c=CreateWindowW(L"COMBOBOX",NULL,WS_CHILD|WS_VISIBLE|CBS_DROPDOWNLIST,80,188,140,220,h,(HMENU)IDC_THEME_CB,NULL,NULL); SendMessageW(c,WM_SETFONT,(WPARAM)gh_font,1);
         SendMessageW(c,CB_ADDSTRING,0,(LPARAM)L"暗黑"); SendMessageW(c,CB_ADDSTRING,0,(LPARAM)L"明亮");
@@ -2348,6 +2439,7 @@ static LRESULT CALLBACK WndProc(HWND h,UINT m,WPARAM w,LPARAM l){
         FillRect((HDC)w,&rc,g_bgbrush); return 1; }
     case WM_COMMAND: {
         int id=LOWORD(w);
+        if(id==IDC_RENT_BTN){ rent_show(h); return 0; }
         if(HIWORD(w)==BN_CLICKED && id==IDC_APIKEY){
             g_cfg.enable_api_key = (IsDlgButtonChecked(h,IDC_APIKEY)==BST_CHECKED);
             save_config();
@@ -2393,7 +2485,7 @@ static LRESULT CALLBACK WndProc(HWND h,UINT m,WPARAM w,LPARAM l){
         save_config();   /* 改动即写 config/etserver.conf，代理层随后按默认补字段 */
         ui_refresh(h);
         return 0; }
-    case WM_TIMER: ui_refresh(h); return 0;
+    case WM_TIMER: ui_refresh(h); if(gh_rent && IsWindowVisible(gh_rent)) rent_refresh(gh_rent); return 0;
     case WM_SIZE: return 0;
     case WM_CLOSE: ShowWindow(h,SW_HIDE); return 0;  /* 关闭=隐藏到托盘 */
     case WM_DESTROY:
