@@ -2177,6 +2177,7 @@ static BOOL WINAPI win_ctrl_handler(DWORD type) {
 #define IDC_STEPS_VAL 1011
 #define IDC_CFG_VAL   1012
 #define IDC_BATCH_VAL 1013
+#define IDC_APIKEY    1014   /* v1.6.16：是否校验 API Key（对应 g_cfg.enable_api_key） */
 static HWND gh_main=NULL; static NOTIFYICONDATAW gh_nid={0}; static int gh_has_tray=0;
 static HFONT  gh_font=NULL;
 static HBRUSH g_bgbrush=NULL; static COLORREF g_bgcol=RGB(28,28,30);
@@ -2305,6 +2306,9 @@ static LRESULT CALLBACK WndProc(HWND h,UINT m,WPARAM w,LPARAM l){
         c=CreateWindowW(L"STATIC",L"切换已下载模型：",WS_CHILD|WS_VISIBLE,10,122,140,22,h,(HMENU)NULL,NULL,NULL); SendMessageW(c,WM_SETFONT,(WPARAM)gh_font,1);
         c=CreateWindowW(L"COMBOBOX",NULL,WS_CHILD|WS_VISIBLE|CBS_DROPDOWNLIST|WS_VSCROLL,150,120,400,220,h,(HMENU)IDC_MODEL_CB,NULL,NULL); SendMessageW(c,WM_SETFONT,(WPARAM)gh_font,1);
         c=CreateWindowW(L"BUTTON",L"内容限制（默认无限制；勾选后重启引擎生效）",WS_CHILD|WS_VISIBLE|BS_AUTOCHECKBOX,10,154,420,22,h,(HMENU)IDC_FILTER,NULL,NULL); SendMessageW(c,WM_SETFONT,(WPARAM)gh_font,1);
+        /* v1.6.16：之前只有 enable_api_key 配置项、界面上没有开关，用户找不到"是否允许使用 API Key" */
+        c=CreateWindowW(L"BUTTON",L"校验 API Key",WS_CHILD|WS_VISIBLE|BS_AUTOCHECKBOX,436,154,100,22,h,(HMENU)IDC_APIKEY,NULL,NULL); SendMessageW(c,WM_SETFONT,(WPARAM)gh_font,1);
+        SendMessageW(c,BM_SETCHECK, g_cfg.enable_api_key?BST_CHECKED:BST_UNCHECKED, 0);
         c=CreateWindowW(L"STATIC",L"主题：",WS_CHILD|WS_VISIBLE,10,190,60,22,h,(HMENU)NULL,NULL,NULL); SendMessageW(c,WM_SETFONT,(WPARAM)gh_font,1);
         c=CreateWindowW(L"COMBOBOX",NULL,WS_CHILD|WS_VISIBLE|CBS_DROPDOWNLIST,80,188,140,220,h,(HMENU)IDC_THEME_CB,NULL,NULL); SendMessageW(c,WM_SETFONT,(WPARAM)gh_font,1);
         SendMessageW(c,CB_ADDSTRING,0,(LPARAM)L"暗黑"); SendMessageW(c,CB_ADDSTRING,0,(LPARAM)L"明亮");
@@ -2344,6 +2348,13 @@ static LRESULT CALLBACK WndProc(HWND h,UINT m,WPARAM w,LPARAM l){
         FillRect((HDC)w,&rc,g_bgbrush); return 1; }
     case WM_COMMAND: {
         int id=LOWORD(w);
+        if(HIWORD(w)==BN_CLICKED && id==IDC_APIKEY){
+            g_cfg.enable_api_key = (IsDlgButtonChecked(h,IDC_APIKEY)==BST_CHECKED);
+            save_config();
+            log_line("UI 切换 API Key 校验 -> %s", g_cfg.enable_api_key?"开启":"关闭");
+            ui_msg(h, g_cfg.enable_api_key ? "已开启 API Key 校验（下一次请求起生效）" : "已关闭 API Key 校验（任何人无需密钥即可调用）");
+            return 0;
+        }
         if(HIWORD(w)==CBN_SELCHANGE && id==IDC_MODEL_CB){
             wchar_t wfn[600]; GetWindowTextW(GetDlgItem(h,IDC_MODEL_CB),wfn,600);
             char fn[600]; wu8(wfn,fn,sizeof(fn));
