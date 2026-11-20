@@ -90,7 +90,7 @@
 
 /* ============================ 全局配置 ============================ */
 #define APP_NAME      "Nightmare Road-ET Server"
-#define APP_VERSION   "1.6.16"
+#define APP_VERSION   "1.6.17"
 #define COPYRIGHT_STR "Copyright (C) 2026 etc"
 
 #define DEFAULT_PORT 4080      /* 对外监听端口 */
@@ -134,6 +134,11 @@ static volatile int g_engine_ready = 0;  /* 仅由看门狗探测更新；/healt
 static volatile int g_gen_active = 0;    /* v1.6.6：当前正在出图的请求数（引擎忙时健康探测会失败） */
 static volatile int g_engine_missing = 0;/* 引擎可执行文件缺失(永久错误)：看门狗不再疯狂重启 */
 static volatile int g_engine_alive = 0;  /* 引擎进程是否在跑（不论是否就绪） */
+#ifdef _WIN32
+static volatile unsigned long g_last_exit = 0; /* v1.6.17：最近一次引擎退出码，用于界面/503 直说原因 */
+#else
+static volatile unsigned long g_last_exit = 0;
+#endif
 static volatile int g_intentional_unload = 0; /* v1.4.0：出图后主动卸载模型，看门狗不自动重启 */
 static volatile long g_load_start_ms = 0;/* 本轮引擎拉起时刻（用于“已用时 Ns”显示），0=无加载 */
 static volatile long g_last_load_log_s = -1; /* 上次打印加载进度的整秒，避免刷屏 */
@@ -1154,13 +1159,11 @@ static int upstream_healthy(void) {
     a.sin_family=AF_INET; a.sin_port=htons((uint16_t)g_cfg.inner_port);
     a.sin_addr.s_addr=inet_addr("127.0.0.1");
     if (connect(s,(struct sockaddr*)&a,sizeof(a))!=0){ close_socket(s); return 0; }
-    const char* req="GET / HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n";
-    send(s, req, (int)strlen(req), MSG_NOSIGNAL);
-    char buf[256]; int n=recv(s,buf,sizeof(buf)-1,0);
+    /* v1.6.17：sd-server 是“先加载模型、加载完才 listen”，
+       所以端口能连上就等于模型已就绪。不再要求 GET / 返回 200
+       （无内置前端/SD 新版的 GET / 可能是 404，旧逻辑会永远“未就绪”）。 */
     close_socket(s);
-    if(n<=0) return 0;
-    buf[n]=0;
-    return (strstr(buf," 200 ")!=NULL);
+    return 1;
 }
 
 /* ============================ 看门狗线程 ============================ */
@@ -1218,6 +1221,9 @@ static void* watchdog_thread(void* arg) {
 
         /* 走到这里：进程已退出(alive=0)。 */
         g_engine_ready=0; g_engine_alive=0;
+#ifdef _WIN32
+        if(g_child.hProcess){ DWORD ec=0; if(GetExitCodeProcess(g_child.hProcess,&ec)) g_last_exit=ec; }
+#endif
         /* v1.4.0：出图后主动卸载（省内存），看门狗不自动重启，等下次出图懒加载 */
         if(g_intentional_unload){
             g_intentional_unload=0;
@@ -1534,7 +1540,18 @@ static void forward_to_upstream(sock_t c, const char* method, const char* target
     a.sin_addr.s_addr=inet_addr("127.0.0.1");
     if (connect(u,(struct sockaddr*)&a,sizeof(a))!=0) {
         close_socket(u);
-        send_json(c,503,"Service Unavailable","{\"error\":\"engine not ready, try again\"}");
+        { char jb[320];
+          long el = g_load_start_ms ? (long)time(NULL)-g_load_start_ms : 0;
+          snprintf(jb,sizeof(jb),
+            "{\"error\":\"engine not ready, try again\",\"engine_missing\":%d,\"exit_code\":%lu,\"loading_seconds\":%ld}",
+            g_engine_missing?1:0,
+#ifdef _WIN32
+            (unsigned long)g_last_exit,
+#else
+            0UL,
+#endif
+            el);
+          send_json(c,503,"Service Unavailable",jb); }
         return;
     }
     /* v1.6.6：给上游 socket 加收发超时。旧版 recv 无超时，引擎卡住时
@@ -2291,6 +2308,15 @@ static void ui_refresh(HWND h){
     if(g_engine_ready)            snprintf(ready,sizeof(ready),"✅ 就绪 · 可出图");
     else if(g_engine_missing)     snprintf(ready,sizeof(ready),"⛔ 引擎缺失（见控制台：杀软隔离/加白名单）");
     else if(g_cfg.model_path[0]==0) snprintf(ready,sizeof(ready),"⏳ 未就绪：请先在控制台向导下载/选择模型");
+    else if(g_last_exit!=0 && g_restart_count>0){
+           const char* hint = "未知错误";
+           switch(g_last_exit){
+             case 0xC0000135UL: hint="缺少 DLL（多为 VC++ 运行库或 ggml 后端 DLL）"; break;
+             case 0xC000007BUL: hint="DLL 位数不符/文件损坏"; break;
+             case 0xC000001DUL: hint="CPU 指令不兼容（换 sse42/x64 后端）"; break;
+             case 0xC0000005UL: hint="内存/后端崩溃"; break;
+           }
+           snprintf(ready,sizeof(ready),"⛔ 引擎反复退出（0x%lX：%s）第 %d 次", (unsigned long)g_last_exit, hint, (int)g_restart_count); }
     else { long el=g_load_start_ms?(long)time(NULL)-g_load_start_ms:0;
            snprintf(ready,sizeof(ready),"⏳ 正在后台加载模型… 已用时 %lds（界面不卡死）", el); }
     snprintf(buf,sizeof(buf),"状态: %s\n看门狗重启次数: %d   内容限制: %s   数据目录: %s",
