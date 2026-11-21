@@ -1614,7 +1614,24 @@ fun ChatScreen(onBack: () -> Unit) {
                                 settings.loadWithOverviewMode = true
                                 settings.builtInZoomControls = true
                                 settings.displayZoomControls = false
+                                // et.328：国内站点常见 http 图片/重定向，不放开会被拦成白屏
+                                settings.mixedContentMode =
+                                    android.webkit.WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                                settings.mediaPlaybackRequiresUserGesture = false
                                 webViewClient = object : WebViewClient() {
+                                    // 站内链接一律留在内置浏览器里，不再跳到系统（很多机型
+                                    // 没有默认浏览器，跳出去就是"点了没反应"）
+                                    override fun shouldOverrideUrlLoading(
+                                        view: WebView?,
+                                        request: android.webkit.WebResourceRequest?,
+                                    ): Boolean {
+                                        val u = request?.url?.toString() ?: return false
+                                        if (u.startsWith("http://") || u.startsWith("https://")) {
+                                            view?.loadUrl(u); return true
+                                        }
+                                        return false
+                                    }
+
                                     private fun syncHistory(view: WebView?, target: String?) {
                                         canGoBack = view?.canGoBack() == true
                                         canGoForward = view?.canGoForward() == true

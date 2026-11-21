@@ -60,14 +60,26 @@ object Profile {
         return (g + c).any { it == n }
     }
 
+    /** et.328：只有作者本人的账号可以用"官方"这两个字，其他人一律 ***。 */
+    private val ownerEmails = setOf(
+        "2416444244@qq.com",
+        "et2416444244@outlook.com",
+    )
+
+    fun isOwner(ctx: Context): Boolean = runCatching {
+        val mail = io.github.xororz.localdream.account.EmailAccount.signedInEmail(ctx).trim()
+        ownerEmails.any { it.equals(mail, true) }
+    }.getOrDefault(false)
+
     fun displayName(ctx: Context): String {
-        val v = run {
         val manual = name(ctx)
-        if (manual.isNotBlank()) return manual
-        val email = EmailAccount.signedInEmail(ctx)
-        if (email.isNotBlank()) email.substringBefore('@').take(24)
-        return ""
-    }
+        val v = if (manual.isNotBlank()) {
+            manual
+        } else {
+            val email = EmailAccount.signedInEmail(ctx)
+            if (email.isNotBlank()) email.substringBefore('@').take(24) else ""
+        }
+        if (isOwner(ctx)) return v.trim()
         return if (v.trim().isBlank()) "" else maskOfficial(v)
     }
 
